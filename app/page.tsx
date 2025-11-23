@@ -20,6 +20,11 @@ export default function Home() {
           <SocialLink text="X" href="https://x.com/dappdesigner" />
         </div>
       </div>
+
+      {/* Fixed button in top right */}
+      <div className="fixed top-6 right-6 z-50 pointer-events-auto">
+        <SocialLink text="Book a call" href="https://cal.com/komolkin" />
+      </div>
     </div>
   );
 }
