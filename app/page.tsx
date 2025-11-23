@@ -2,6 +2,7 @@ import Slides from "@/components/slides/Slides";
 import WidgetCanvas from "@/components/widgets/WidgetCanvas";
 import Name from "@/components/Name";
 import SocialLink from "@/components/SocialLink";
+import BookingButton from "@/components/BookingButton";
 
 export default function Home() {
   return (
@@ -23,7 +24,7 @@ export default function Home() {
 
       {/* Fixed button in top right */}
       <div className="fixed top-6 right-6 z-50 pointer-events-auto">
-        <SocialLink text="Book a call" href="https://cal.com/komolkin" />
+        <BookingButton />
       </div>
     </div>
   );
