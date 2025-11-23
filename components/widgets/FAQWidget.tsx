@@ -27,7 +27,7 @@ const FAQ_DATA: FAQItem[] = [
 ];
 
 export default function FAQWidget() {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   const toggleQuestion = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
@@ -65,7 +65,15 @@ export default function FAQWidget() {
                 animate={{ rotate: openIndex === index ? 180 : 0 }}
                 transition={{ duration: 0.2 }}
               >
-                <path d="M2 3.5L5 6.5L8 3.5" />
+                {/* Horizontal line (always visible) */}
+                <path d="M2 5L8 5" />
+                {/* Vertical line (visible only when closed, creating a +) */}
+                <motion.path
+                  d="M5 2L5 8"
+                  initial={{ opacity: 1 }}
+                  animate={{ opacity: openIndex === index ? 0 : 1 }}
+                  transition={{ duration: 0.2 }}
+                />
               </motion.svg>
             </button>
 
