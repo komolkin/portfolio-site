@@ -96,14 +96,14 @@ export default function PricingWidget() {
 
   return (
     <div className="p-4 w-[280px]">
-      <div className="flex bg-muted p-[2px] rounded-sm mb-4 relative isolate">
+      <div className="flex border-b border-white/10 mb-3 relative">
         {(Object.keys(PLANS) as Plan[]).map((plan) => (
           <button
             key={plan}
             onClick={() => setActivePlan(plan)}
             onPointerDown={(e) => e.stopPropagation()}
             className={`
-              flex-1 py-1.5 text-xs font-medium rounded-md transition-colors duration-200 relative z-10
+              flex-1 pb-3 text-xs font-medium transition-colors duration-200 relative
               ${
                 activePlan === plan
                   ? "text-foreground"
@@ -111,19 +111,19 @@ export default function PricingWidget() {
               }
             `}
           >
+            {PLANS[plan].label}
             {activePlan === plan && (
               <motion.div
                 layoutId="activeTab"
-                className="absolute inset-0 bg-background rounded-[0.25rem] shadow-sm -z-10"
-                transition={{ type: "spring", duration: 0.5, bounce: 0.2 }}
+                className="absolute bottom-[-1px] left-0 right-0 h-[1px] bg-foreground"
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
               />
             )}
-            {PLANS[plan].label}
           </button>
         ))}
       </div>
 
-      <div className="mb-4">
+      <div className="mb-2">
         <div className="flex items-baseline gap-1 text-foreground font-mono">
           <span className="text-xl">€</span>
           <NumberFlow

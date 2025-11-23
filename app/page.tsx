@@ -1,7 +1,7 @@
-import Slides from '@/components/slides/Slides';
-import WidgetCanvas from '@/components/widgets/WidgetCanvas';
-import Name from '@/components/Name';
-import SocialLink from '@/components/SocialLink';
+import Slides from "@/components/slides/Slides";
+import WidgetCanvas from "@/components/widgets/WidgetCanvas";
+import Name from "@/components/Name";
+import SocialLink from "@/components/SocialLink";
 
 export default function Home() {
   return (
@@ -28,4 +28,3 @@ export default function Home() {
     </div>
   );
 }
-
