@@ -1,10 +1,11 @@
-import type { Metadata } from 'next';
-import './globals.css';
-import { HeartRateProvider } from '@/lib/heartRateContext';
+import type { Metadata } from "next";
+import "./globals.css";
+import { Providers } from "./providers";
+import CursorCanvas from "@/components/CursorCanvas";
 
 export const metadata: Metadata = {
-  title: 'Ilya — Portfolio',
-  description: 'Personal site with 3D and widgets',
+  title: "Ilya — Portfolio",
+  description: "Personal site with 3D and widgets",
 };
 
 export default function RootLayout({
@@ -15,9 +16,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <HeartRateProvider>{children}</HeartRateProvider>
+        <Providers>
+          {children}
+          <CursorCanvas />
+        </Providers>
       </body>
     </html>
   );
 }
-
