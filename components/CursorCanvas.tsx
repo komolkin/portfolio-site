@@ -254,8 +254,8 @@ export default function CursorCanvas() {
           name: string;
         };
 
-        // Don't show our own cursor
-        if (cursorData.id === userIdRef.current) return;
+        // Uncomment the next line to hide your own cursor (for production)
+        // if (cursorData.id === userIdRef.current) return;
 
         setCursors((prev) => {
           const next = new Map(prev);
