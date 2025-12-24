@@ -4,22 +4,163 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useRealtime } from "@/lib/realtime-client";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Generate a random color for the cursor
+// Figma-like color palette
 const CURSOR_COLORS = [
-  "#FF6B6B", // Red
-  "#4ECDC4", // Teal
-  "#45B7D1", // Blue
-  "#96CEB4", // Green
-  "#FFEAA7", // Yellow
-  "#DDA0DD", // Plum
-  "#98D8C8", // Mint
-  "#F7DC6F", // Gold
-  "#BB8FCE", // Purple
-  "#85C1E9", // Light Blue
+  "#F24822", // Red-Orange
+  "#FFC700", // Yellow
+  "#14AE5C", // Green
+  "#0D99FF", // Blue
+  "#9747FF", // Purple
+  "#FF6B6B", // Coral
+  "#1ABCFE", // Cyan
+  "#A259FF", // Violet
+  "#FF7262", // Salmon
+  "#00C48C", // Emerald
+];
+
+// Random name lists for generating Figma-like names
+const FIRST_NAMES = [
+  "Alex",
+  "Jordan",
+  "Taylor",
+  "Morgan",
+  "Casey",
+  "Riley",
+  "Quinn",
+  "Avery",
+  "Blake",
+  "Cameron",
+  "Drew",
+  "Emery",
+  "Finley",
+  "Gray",
+  "Harper",
+  "Indigo",
+  "Jamie",
+  "Kendall",
+  "Lane",
+  "Madison",
+  "Noah",
+  "Oakley",
+  "Parker",
+  "Reese",
+  "Sage",
+  "Tatum",
+  "Umber",
+  "Vale",
+  "Winter",
+  "Zara",
+  "Aiden",
+  "Bailey",
+  "Charlie",
+  "Dakota",
+  "Eden",
+  "Flynn",
+  "Genesis",
+  "Hayden",
+  "Iris",
+  "Jesse",
+  "Kai",
+  "London",
+  "Marley",
+  "Nico",
+  "Ocean",
+  "Phoenix",
+  "River",
+  "Sawyer",
+  "Teagan",
+  "Uma",
+  "Vesper",
+  "Wren",
+  "Xen",
+  "Yuki",
+  "Zephyr",
+  "Aria",
+  "Bellamy",
+  "Cruz",
+  "Devin",
+  "Ellis",
+  "Frankie",
+  "Gemma",
+  "Haven",
+  "Ira",
+];
+
+const LAST_NAMES = [
+  "Anderson",
+  "Bennett",
+  "Carter",
+  "Davis",
+  "Evans",
+  "Foster",
+  "Garcia",
+  "Harris",
+  "Ibrahim",
+  "Johnson",
+  "Kim",
+  "Lee",
+  "Martinez",
+  "Nelson",
+  "O'Brien",
+  "Patel",
+  "Quinn",
+  "Robinson",
+  "Smith",
+  "Taylor",
+  "Upton",
+  "Valdez",
+  "Williams",
+  "Xavier",
+  "Young",
+  "Zhang",
+  "Adams",
+  "Brooks",
+  "Clark",
+  "Diaz",
+  "Edwards",
+  "Fisher",
+  "Green",
+  "Hall",
+  "Ingram",
+  "Jones",
+  "King",
+  "Lopez",
+  "Moore",
+  "Nguyen",
+  "Ortiz",
+  "Parker",
+  "Reed",
+  "Scott",
+  "Thomas",
+  "Underwood",
+  "Vargas",
+  "White",
+  "York",
+  "Zimmerman",
+  "Baker",
+  "Campbell",
+  "Douglas",
+  "Ellis",
+  "Franklin",
+  "Grant",
+  "Hayes",
+  "Irving",
+  "Jackson",
+  "Knight",
+  "Lambert",
+  "Mitchell",
+  "Nash",
+  "Oliver",
 ];
 
 function getRandomColor() {
   return CURSOR_COLORS[Math.floor(Math.random() * CURSOR_COLORS.length)];
+}
+
+function generateRandomName() {
+  const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+  const lastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+  return `${firstName} ${lastName}`;
 }
 
 function generateUserId() {
@@ -31,27 +172,26 @@ interface CursorData {
   x: number;
   y: number;
   color: string;
-  name?: string;
+  name: string;
   lastSeen: number;
 }
 
-// Cursor pointer SVG component
+// Figma-style cursor pointer SVG
 function CursorPointer({ color }: { color: string }) {
   return (
     <svg
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))" }}
+      style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.3))" }}
     >
       <path
-        d="M5.65376 12.4561L4.65376 3.95605C4.55376 3.05605 5.55376 2.35605 6.35376 2.85605L20.3538 11.4561C21.1538 11.9561 21.0538 13.1561 20.1538 13.4561L13.6538 15.4561L10.6538 21.4561C10.1538 22.3561 8.85376 22.2561 8.55376 21.2561L5.65376 12.4561Z"
+        d="M4.5 3L16 10L10 11.5L7.5 17.5L4.5 3Z"
         fill={color}
         stroke="white"
         strokeWidth="1.5"
-        strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
@@ -60,16 +200,28 @@ function CursorPointer({ color }: { color: string }) {
 
 export default function CursorCanvas() {
   const [cursors, setCursors] = useState<Map<string, CursorData>>(new Map());
+  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
   const userIdRef = useRef<string>("");
   const userColorRef = useRef<string>("");
+  const userNameRef = useRef<string>("");
   const lastEmitRef = useRef<number>(0);
   const throttleMs = 50; // Throttle cursor updates to 20 per second
 
-  // Initialize user ID and color
+  // Track window size for cursor positioning
   useEffect(() => {
-    // Check if we have a stored user ID, otherwise generate one
+    const updateSize = () => {
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    };
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
+
+  // Initialize user ID, color, and name
+  useEffect(() => {
     let storedId = sessionStorage.getItem("cursor_user_id");
     let storedColor = sessionStorage.getItem("cursor_user_color");
+    let storedName = sessionStorage.getItem("cursor_user_name");
 
     if (!storedId) {
       storedId = generateUserId();
@@ -79,9 +231,14 @@ export default function CursorCanvas() {
       storedColor = getRandomColor();
       sessionStorage.setItem("cursor_user_color", storedColor);
     }
+    if (!storedName) {
+      storedName = generateRandomName();
+      sessionStorage.setItem("cursor_user_name", storedName);
+    }
 
     userIdRef.current = storedId;
     userColorRef.current = storedColor;
+    userNameRef.current = storedName;
   }, []);
 
   // Subscribe to cursor events
@@ -94,7 +251,7 @@ export default function CursorCanvas() {
           x: number;
           y: number;
           color: string;
-          name?: string;
+          name: string;
         };
 
         // Don't show our own cursor
@@ -140,6 +297,7 @@ export default function CursorCanvas() {
             x: xPercent,
             y: yPercent,
             color: userColorRef.current,
+            name: userNameRef.current,
           },
         }),
       });
@@ -219,12 +377,8 @@ export default function CursorCanvas() {
             animate={{
               opacity: 1,
               scale: 1,
-              x:
-                (cursor.x / 100) *
-                (typeof window !== "undefined" ? window.innerWidth : 0),
-              y:
-                (cursor.y / 100) *
-                (typeof window !== "undefined" ? window.innerHeight : 0),
+              x: (cursor.x / 100) * windowSize.width,
+              y: (cursor.y / 100) * windowSize.height,
             }}
             exit={{ opacity: 0, scale: 0.5 }}
             transition={{
@@ -236,15 +390,16 @@ export default function CursorCanvas() {
             className="absolute top-0 left-0"
             style={{ willChange: "transform" }}
           >
+            {/* Cursor pointer */}
             <CursorPointer color={cursor.color} />
-            {cursor.name && (
-              <div
-                className="ml-4 mt-4 px-2 py-1 rounded-md text-xs font-medium text-white whitespace-nowrap"
-                style={{ backgroundColor: cursor.color }}
-              >
-                {cursor.name}
-              </div>
-            )}
+
+            {/* Name label - positioned below and to the right of cursor */}
+            <div
+              className="absolute left-4 top-4 px-2 py-1 rounded text-xs font-medium text-white whitespace-nowrap shadow-lg"
+              style={{ backgroundColor: cursor.color }}
+            >
+              {cursor.name}
+            </div>
           </motion.div>
         ))}
       </AnimatePresence>

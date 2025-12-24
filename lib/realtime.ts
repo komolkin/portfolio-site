@@ -10,7 +10,7 @@ const schema = {
       x: z.number(), // X position (percentage of viewport)
       y: z.number(), // Y position (percentage of viewport)
       color: z.string(), // Cursor color
-      name: z.string().optional(), // Optional user name
+      name: z.string(), // Random generated username
     }),
     // User left the page
     leave: z.object({
