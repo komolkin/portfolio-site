@@ -23,10 +23,9 @@ export default function About() {
           relevant voice.
         </p>
         <p>
-          To him, “brand” is a wide concept: not just companies or products, but
-          also films, musicians, artists, and creative worlds. Anything that
-          brings material or spiritual value can — and should — communicate more
-          clearly, look more distinct, and have stronger influence.
+          To him, anything that brings material or spiritual value can — and
+          should — communicate more clearly, look more distinct, and have
+          stronger influence.
         </p>
       </div>
     </div>
