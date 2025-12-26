@@ -1,9 +1,24 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+let supabaseInstance: SupabaseClient | null = null;
+
+function getSupabaseClient(): SupabaseClient | null {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn("Supabase credentials not configured");
+    return null;
+  }
+
+  if (!supabaseInstance) {
+    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  }
+
+  return supabaseInstance;
+}
+
+export const supabase = getSupabaseClient();
 
 export interface PortfolioItem {
   id: string;
@@ -21,7 +36,14 @@ export interface PortfolioItem {
 }
 
 export async function getPortfolioItems(): Promise<PortfolioItem[]> {
-  const { data, error } = await supabase
+  const client = getSupabaseClient();
+  
+  if (!client) {
+    console.warn("Supabase not configured, returning empty portfolio");
+    return [];
+  }
+
+  const { data, error } = await client
     .from("portfolio_items")
     .select("*")
     .order("order", { ascending: true });
@@ -33,4 +55,3 @@ export async function getPortfolioItems(): Promise<PortfolioItem[]> {
 
   return data || [];
 }
-
