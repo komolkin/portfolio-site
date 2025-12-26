@@ -1,25 +1,20 @@
-import SplineSlide from "./SplineSlide";
-import Slide from "./Slide";
+import { unstable_noStore as noStore } from "next/cache";
+import TopSlide from "./TopSlide";
+import AboutSlide from "./AboutSlide";
+import PortfolioSlide from "./PortfolioSlide";
+import { getPortfolioItems } from "@/lib/supabase";
 
-export default function Slides() {
+export default async function Slides() {
+  noStore();
+  const portfolioItems = await getPortfolioItems();
+
   return (
     <div className="slides-scroll h-full">
-      <SplineSlide />
-      <Slide>
-        <div className="flex items-center justify-center h-full">
-          <p className="text-muted-foreground">Slide 1</p>
-        </div>
-      </Slide>
-      <Slide>
-        <div className="flex items-center justify-center h-full">
-          <p className="text-muted-foreground">Slide 2</p>
-        </div>
-      </Slide>
-      <Slide>
-        <div className="flex items-center justify-center h-full">
-          <p className="text-muted-foreground">Slide 3</p>
-        </div>
-      </Slide>
+      <TopSlide />
+      {portfolioItems.map((item, index) => (
+        <PortfolioSlide key={item.id} item={item} index={index} />
+      ))}
+      <AboutSlide />
     </div>
   );
 }

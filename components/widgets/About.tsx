@@ -1,7 +1,7 @@
 export default function About() {
   return (
     <div className="p-4 w-[280px]">
-      <div className="text-xs text-white leading-[1.4] space-y-3">
+      <div className="text-xs text-foreground leading-[1.4] space-y-3">
         <p>
           Ilya Komolkin is a multidisciplinary designer living and working in
           Paris, France.

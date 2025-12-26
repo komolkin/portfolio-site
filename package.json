@@ -6,15 +6,19 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:setup": "npx tsx --env-file=.env.local scripts/setup-database.ts",
+    "seed": "npx tsx --env-file=.env.local scripts/seed-portfolio.ts"
   },
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",
     "@number-flow/react": "^0.4.0",
+    "@supabase/supabase-js": "^2.89.0",
     "@upstash/realtime": "^1.0.0",
     "@upstash/redis": "^1.35.8",
     "framer-motion": "^12.23.24",
     "next": "14.2.35",
+    "postgres": "^3.4.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zod": "^4.2.1"
@@ -26,6 +30,7 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.13",
+    "tsx": "^4.21.0",
     "typescript": "^5.6.2"
   }
 }

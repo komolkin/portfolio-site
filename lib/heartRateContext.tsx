@@ -1,12 +1,20 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 
 interface HeartRateContextType {
   bpm: number;
 }
 
-const HeartRateContext = createContext<HeartRateContextType | undefined>(undefined);
+const HeartRateContext = createContext<HeartRateContextType | undefined>(
+  undefined
+);
 
 export function HeartRateProvider({ children }: { children: ReactNode }) {
   const [bpm, setBpm] = useState(72);
@@ -15,7 +23,7 @@ export function HeartRateProvider({ children }: { children: ReactNode }) {
     const interval = setInterval(() => {
       // Random BPM between 58-110
       setBpm(58 + Math.floor(Math.random() * 53));
-    }, 2500);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, []);
@@ -30,8 +38,7 @@ export function HeartRateProvider({ children }: { children: ReactNode }) {
 export function useHeartRate() {
   const context = useContext(HeartRateContext);
   if (context === undefined) {
-    throw new Error('useHeartRate must be used within a HeartRateProvider');
+    throw new Error("useHeartRate must be used within a HeartRateProvider");
   }
   return context;
 }
-

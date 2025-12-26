@@ -185,7 +185,7 @@ export default function SpotifyWidget() {
         >
           <ScrollingText
             text={fullText}
-            className="text-xs text-white leading-[1.4]"
+            className="text-xs text-foreground leading-[1.4]"
           />
         </a>
       </div>

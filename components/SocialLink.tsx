@@ -8,7 +8,7 @@ interface SocialLinkProps {
 export default function SocialLink({ text, href }: SocialLinkProps) {
   const content = (
     <div className="px-4 py-2">
-      <div className="text-xs text-white leading-[1.4]">
+      <div className="text-xs text-foreground leading-[1.4]">
         {text}
       </div>
     </div>

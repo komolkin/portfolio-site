@@ -8,32 +8,32 @@ export default {
   theme: {
     extend: {
       colors: {
-        border: "hsl(240 3.7% 15.9%)",
-        background: "hsl(0 0% 3.9%)",
-        foreground: "hsl(0 0% 98%)",
+        border: "hsl(var(--border))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         muted: {
-          DEFAULT: "hsl(0 0% 14.9%)",
-          foreground: "hsl(0 0% 63.9%)",
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
         },
         card: {
-          DEFAULT: "hsl(0 0% 7%)",
-          foreground: "hsl(0 0% 98%)",
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
         },
         primary: {
-          DEFAULT: "hsl(0 0% 98%)",
-          foreground: "hsl(0 0% 9%)",
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
-          DEFAULT: "hsl(0 0% 14.9%)",
-          foreground: "hsl(0 0% 98%)",
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
         },
         accent: {
-          DEFAULT: "hsl(0 0% 14.9%)",
-          foreground: "hsl(0 0% 98%)",
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
         },
         destructive: {
-          DEFAULT: "hsl(0 62.8% 30.6%)",
-          foreground: "hsl(0 0% 98%)",
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
         },
       },
       borderRadius: {
@@ -45,4 +45,3 @@ export default {
   },
   plugins: [],
 } satisfies Config;
-
