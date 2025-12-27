@@ -40,7 +40,7 @@ export default function PortfolioSlide({ item, index }: PortfolioSlideProps) {
       </div>
 
       {/* Metadata - Bottom Left */}
-      <div className="absolute bottom-8 left-8 md:bottom-12 md:left-12 lg:bottom-16 lg:left-16 max-w-md space-y-4 z-10">
+      <div className="absolute bottom-6 left-6 md:bottom-8 md:left-8 lg:bottom-10 lg:left-10 max-w-md space-y-4 z-10">
         {/* Title */}
         <h2 className="text-xs font-medium tracking-tight text-white leading-[1.4]">
           {item.title}

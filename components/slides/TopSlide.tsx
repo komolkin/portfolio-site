@@ -88,7 +88,7 @@ export default function TopSlide() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center px-8 md:px-12 lg:px-16">
+      <div className="flex-1 flex items-center px-6 md:px-8 lg:px-10">
         <h1 className="text-3xl md:text-4xl lg:text-5xl font-normal text-foreground leading-[1.2] max-w-2xl">
           Constant research,
           <br />
@@ -99,7 +99,7 @@ export default function TopSlide() {
       </div>
 
       {/* Bottom Info Bar */}
-      <div className="px-8 md:px-12 lg:px-16 pb-8 md:pb-12">
+      <div className="px-6 md:px-8 lg:px-10 pb-6 md:pb-8 lg:pb-10">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 md:gap-4">
           {/* Current Role */}
           <div className="space-y-1">

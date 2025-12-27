@@ -2,7 +2,7 @@ export default function AboutSlide() {
   return (
     <div
       id="about"
-      className="slide w-full h-screen flex items-center px-8 md:px-12 lg:px-16 relative"
+      className="slide w-full h-screen flex items-center px-6 md:px-8 lg:px-10 relative"
     >
       <p className="text-3xl md:text-4xl lg:text-5xl font-normal text-foreground leading-[1.2] max-w-4xl">
         Ilya approaches aesthetics not just as a visual discipline but as an
@@ -13,7 +13,7 @@ export default function AboutSlide() {
       </p>
 
       {/* Copyright */}
-      <div className="absolute bottom-8 left-8 md:bottom-12 md:left-12 lg:bottom-12 lg:left-16">
+      <div className="absolute bottom-6 left-6 md:bottom-8 md:left-8 lg:bottom-10 lg:left-10">
         <span className="text-xs text-muted-foreground">© 2025</span>
       </div>
     </div>
