@@ -12,7 +12,11 @@ export default function PortfolioSlide({ item, index }: PortfolioSlideProps) {
     <div
       id={index === 0 ? "works" : undefined}
       className="slide w-full h-screen relative overflow-hidden"
-      style={!hasMedia && item.background_color ? { backgroundColor: item.background_color } : undefined}
+      style={
+        !hasMedia && item.background_color
+          ? { backgroundColor: item.background_color }
+          : undefined
+      }
     >
       {/* Full-screen Media Background */}
       <div className="absolute inset-0">
@@ -42,7 +46,7 @@ export default function PortfolioSlide({ item, index }: PortfolioSlideProps) {
       {/* Metadata - Bottom Left */}
       <div className="absolute bottom-6 left-6 md:bottom-8 md:left-8 lg:bottom-10 lg:left-10 max-w-md space-y-4 z-10">
         {/* Title */}
-        <h2 className="text-xs font-medium tracking-tight text-white leading-[1.4]">
+        <h2 className="text-3xl md:text-4xl lg:text-5xl font-normal text-white leading-[1.2]">
           {item.title}
         </h2>
 
