@@ -216,10 +216,9 @@ export default function CursorCanvas() {
       storedId = generateUserId();
       sessionStorage.setItem("cursor_user_id", storedId);
     }
-    if (!storedColor) {
-      storedColor = getRandomColor();
-      sessionStorage.setItem("cursor_user_color", storedColor);
-    }
+    // Always use black color regardless of stored value
+    storedColor = "#000000";
+    sessionStorage.setItem("cursor_user_color", storedColor);
     if (!storedName) {
       storedName = generateRandomName();
       sessionStorage.setItem("cursor_user_name", storedName);
