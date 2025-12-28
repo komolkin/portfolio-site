@@ -4,6 +4,14 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ["@number-flow/react"],
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "ik.imagekit.io",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

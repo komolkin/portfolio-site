@@ -5,18 +5,7 @@ import { useRealtime } from "@/lib/realtime-client";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Figma-like color palette
-const CURSOR_COLORS = [
-  "#F24822", // Red-Orange
-  "#FFC700", // Yellow
-  "#14AE5C", // Green
-  "#0D99FF", // Blue
-  "#9747FF", // Purple
-  "#FF6B6B", // Coral
-  "#1ABCFE", // Cyan
-  "#A259FF", // Violet
-  "#FF7262", // Salmon
-  "#00C48C", // Emerald
-];
+const CURSOR_COLORS = ["#000000"];
 
 // Random name lists for generating Figma-like names
 const FIRST_NAMES = [

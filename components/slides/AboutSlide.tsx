@@ -14,7 +14,7 @@ export default function AboutSlide() {
 
       {/* Copyright */}
       <div className="absolute bottom-6 left-6 md:bottom-8 md:left-8 lg:bottom-10 lg:left-10">
-        <span className="text-xs text-muted-foreground">© 2025</span>
+        <span className="text-sm text-muted-foreground">© 2025</span>
       </div>
     </div>
   );

@@ -50,6 +50,13 @@ export default function HeaderNav() {
 
         entries.forEach((entry) => {
           if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            // Check for data-section attribute first (for portfolio slides)
+            const section = entry.target.getAttribute("data-section");
+            if (section && tabs.some((tab) => tab.id === section)) {
+              setActiveTab(section);
+              return;
+            }
+            // Fallback to id-based detection
             const id = entry.target.id;
             if (tabs.some((tab) => tab.id === id)) {
               setActiveTab(id);
@@ -60,10 +67,15 @@ export default function HeaderNav() {
       { threshold: 0.5 }
     );
 
+    // Observe elements by ID
     tabs.forEach((tab) => {
       const element = document.getElementById(tab.id);
       if (element) observer.observe(element);
     });
+
+    // Also observe all portfolio slides (data-section="works")
+    const portfolioSlides = document.querySelectorAll('[data-section="works"]');
+    portfolioSlides.forEach((slide) => observer.observe(slide));
 
     return () => observer.disconnect();
   }, []);
@@ -99,7 +111,18 @@ export default function HeaderNav() {
   }, []);
 
   return (
-    <nav ref={navRef} className="relative flex items-center">
+    <motion.nav
+      ref={navRef}
+      className="relative flex items-center"
+      animate={{
+        x: activeTab !== "top" ? -8 : 0,
+      }}
+      transition={{
+        type: "spring",
+        stiffness: 500,
+        damping: 25,
+      }}
+    >
       {/* Sliding background indicator */}
       <motion.div
         className="absolute h-full bg-foreground/10 rounded"
@@ -132,6 +155,6 @@ export default function HeaderNav() {
           {tab.label}
         </button>
       ))}
-    </nav>
+    </motion.nav>
   );
 }

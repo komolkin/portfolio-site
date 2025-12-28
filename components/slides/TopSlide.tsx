@@ -103,16 +103,16 @@ export default function TopSlide() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 md:gap-4">
           {/* Current Role */}
           <div className="space-y-1">
-            <div className="text-xs text-muted-foreground">Current Role</div>
-            <div className="text-xs text-foreground">
+            <div className="text-sm text-muted-foreground">Current Role</div>
+            <div className="text-sm text-foreground">
               Head of Design at Rarible
             </div>
           </div>
 
           {/* Location */}
           <div className="space-y-1">
-            <div className="text-xs text-muted-foreground">Location</div>
-            <div className="text-xs text-foreground flex items-center gap-1">
+            <div className="text-sm text-muted-foreground">Location</div>
+            <div className="text-sm text-foreground flex items-center gap-1">
               <span>Paris,</span>
               <span className="font-mono flex items-center">
                 <NumberFlow
@@ -135,16 +135,16 @@ export default function TopSlide() {
 
           {/* Heart Rate */}
           <div className="space-y-1">
-            <div className="text-xs text-muted-foreground">Heart Rate</div>
-            <div className="text-xs text-foreground font-mono">
+            <div className="text-sm text-muted-foreground">Heart Rate</div>
+            <div className="text-sm text-foreground font-mono">
               <NumberFlow value={bpm} suffix=" BPM" />
             </div>
           </div>
 
           {/* Socials */}
           <div className="space-y-1">
-            <div className="text-xs text-muted-foreground">Socials</div>
-            <div className="text-xs text-foreground">
+            <div className="text-sm text-muted-foreground">Socials</div>
+            <div className="text-sm text-foreground">
               <a
                 href="https://x.com/dappdesigner"
                 target="_blank"
@@ -167,10 +167,10 @@ export default function TopSlide() {
 
           {/* Recently Played */}
           <div className="space-y-1">
-            <div className="text-xs text-muted-foreground">
+            <div className="text-sm text-muted-foreground">
               {spotifyData?.isPlaying ? "Now playing" : "Recently played"}
             </div>
-            <div className="text-xs text-foreground">
+            <div className="text-sm text-foreground">
               {spotifyData?.track ? (
                 <a
                   ref={songLinkRef}
