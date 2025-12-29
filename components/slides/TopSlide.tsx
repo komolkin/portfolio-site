@@ -68,7 +68,7 @@ export default function TopSlide() {
   };
 
   return (
-    <div id="top" className="slide w-full h-screen relative flex flex-col">
+    <div id="top" className="slide w-full h-[60vh] relative flex flex-col">
       {/* Album Cover Popup */}
       {isHovering && spotifyData?.track?.artwork && cursorPosition.y > 0 && (
         <div
@@ -141,9 +141,9 @@ export default function TopSlide() {
             </div>
           </div>
 
-          {/* Socials */}
+          {/* Social */}
           <div className="space-y-1">
-            <div className="text-sm text-muted-foreground">Socials</div>
+            <div className="text-sm text-muted-foreground">Quick links</div>
             <div className="text-sm text-foreground">
               <a
                 href="https://x.com/dappdesigner"
@@ -161,6 +161,15 @@ export default function TopSlide() {
                 className="hover:text-muted-foreground transition-colors"
               >
                 Instagram
+              </a>
+              ,{" "}
+              <a
+                href="https://github.com/komolkin"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-muted-foreground transition-colors"
+              >
+                GitHub
               </a>
             </div>
           </div>

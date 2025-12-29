@@ -42,6 +42,7 @@ async function setupDatabase() {
         media_url TEXT,
         media_type TEXT NOT NULL CHECK (media_type IN ('image', 'video')),
         background_color TEXT,
+        text_invert BOOLEAN NOT NULL DEFAULT FALSE,
         "order" INTEGER NOT NULL DEFAULT 0,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
@@ -66,6 +67,20 @@ async function setupDatabase() {
       ALTER TABLE portfolio_items ALTER COLUMN media_url DROP NOT NULL
     `;
     console.log("✅ Column 'background_color' ensured!");
+
+    // Add text_invert column if it doesn't exist (for existing tables)
+    await sql`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'portfolio_items' AND column_name = 'text_invert'
+        ) THEN
+          ALTER TABLE portfolio_items ADD COLUMN text_invert BOOLEAN NOT NULL DEFAULT FALSE;
+        END IF;
+      END $$
+    `;
+    console.log("✅ Column 'text_invert' ensured!");
 
     // Enable RLS
     await sql`ALTER TABLE portfolio_items ENABLE ROW LEVEL SECURITY`;

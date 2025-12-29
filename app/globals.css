@@ -70,8 +70,6 @@ body {
 
 .slide {
   scroll-snap-align: start;
-  min-height: 100vh;
-  height: 100vh;
 }
 
 @layer base {

@@ -31,6 +31,7 @@ export interface PortfolioItem {
   media_url: string | null;
   media_type: "image" | "video";
   background_color: string | null;
+  text_invert: boolean;
   order: number;
   created_at: string;
 }

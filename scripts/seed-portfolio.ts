@@ -20,9 +20,10 @@ const portfolioItems = [
     role: "Lead Product Designer",
     scope: "Concept, UI/UX Design",
     link: "https://yandex.com/covid",
-    media_url: "https://images.unsplash.com/photo-1584036561566-baf8f5f1b144?w=1200&h=800&fit=crop",
+    media_url: "https://images.unsplash.com/photo-1584036561566-baf8f5f1b144?w=3840&q=100&fit=crop",
     media_type: "image",
     background_color: "#1a1a2e",
+    text_invert: false,
     order: 1,
   },
   {
@@ -33,9 +34,10 @@ const portfolioItems = [
     role: "Senior Product Designer",
     scope: "Product Strategy, UI/UX Design, Prototyping",
     link: null,
-    media_url: "https://images.unsplash.com/photo-1611339555312-e607c8352fd7?w=1200&h=800&fit=crop",
+    media_url: "https://images.unsplash.com/photo-1611339555312-e607c8352fd7?w=3840&q=100&fit=crop",
     media_type: "image",
     background_color: "#16213e",
+    text_invert: false,
     order: 2,
   },
   {
@@ -46,9 +48,10 @@ const portfolioItems = [
     role: "Design Lead",
     scope: "AI/UX Research, Interaction Design, Visual Design",
     link: "https://example.com/ai-writer",
-    media_url: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1200&h=800&fit=crop",
+    media_url: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=3840&q=100&fit=crop",
     media_type: "image",
     background_color: "#0f3460",
+    text_invert: false,
     order: 3,
   },
   {
@@ -59,9 +62,10 @@ const portfolioItems = [
     role: "Product Designer",
     scope: "Mobile Design, Design System, User Research",
     link: "https://example.com/fintech",
-    media_url: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1200&h=800&fit=crop",
+    media_url: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=3840&q=100&fit=crop",
     media_type: "image",
     background_color: "#1a1a2e",
+    text_invert: false,
     order: 4,
   },
   {
@@ -72,14 +76,27 @@ const portfolioItems = [
     role: "Principal Designer",
     scope: "IoT Design, Dashboard UI, Accessibility",
     link: null,
-    media_url: "https://images.unsplash.com/photo-1558002038-1055907df827?w=1200&h=800&fit=crop",
+    media_url: "https://images.unsplash.com/photo-1558002038-1055907df827?w=3840&q=100&fit=crop",
     media_type: "image",
     background_color: "#2d3436",
+    text_invert: false,
     order: 5,
   },
 ];
 
 async function seed() {
+  console.log("🗑️  Clearing existing portfolio items...");
+  
+  const { error: deleteError } = await supabase
+    .from("portfolio_items")
+    .delete()
+    .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all rows
+  
+  if (deleteError) {
+    console.error("❌ Error clearing data:", deleteError);
+    process.exit(1);
+  }
+  
   console.log("🌱 Seeding portfolio items...");
 
   const { data, error } = await supabase
