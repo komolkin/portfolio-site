@@ -90,11 +90,8 @@ export default function TopSlide() {
       {/* Main Content */}
       <div className="flex-1 flex items-center px-6 md:px-8 lg:px-10">
         <h1 className="text-3xl md:text-4xl lg:text-5xl font-normal text-foreground leading-[1.2] max-w-2xl">
-          Constant research,
-          <br />
-          experimentation, & exploration
-          <br />
-          of new technologies
+          I'm Ilya, a Paris-based generalist designer focused on building
+          impactful products and brands.
         </h1>
       </div>
 

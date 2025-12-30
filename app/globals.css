@@ -55,9 +55,7 @@ body {
 
 body {
   @apply text-foreground antialiased;
-  background: linear-gradient(to bottom, hsl(var(--gradient-start)) 0%, hsl(var(--gradient-end)) 100%);
-  background-attachment: fixed;
-  transition: background 0.3s ease;
+  background: #000;
 }
 
 /* Scroll snapping for slides */

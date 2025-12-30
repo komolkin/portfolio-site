@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { PortfolioItem } from "@/lib/supabase";
 import Image from "next/image";
 import Link from "next/link";
@@ -8,6 +11,7 @@ interface PortfolioSlideProps {
 }
 
 export default function PortfolioSlide({ item, index }: PortfolioSlideProps) {
+  const [mediaLoaded, setMediaLoaded] = useState(false);
   const hasMedia = item.media_url && item.media_url.trim() !== "";
   const hasLink = item.link && item.link.trim() !== "";
 
@@ -23,7 +27,10 @@ export default function PortfolioSlide({ item, index }: PortfolioSlideProps) {
               loop
               muted
               playsInline
-              className="w-full h-full object-cover"
+              onLoadedData={() => setMediaLoaded(true)}
+              className={`w-full h-full object-cover transition-opacity duration-700 ease-out ${
+                mediaLoaded ? "opacity-100" : "opacity-0"
+              }`}
             />
           ) : (
             <Image
@@ -33,7 +40,10 @@ export default function PortfolioSlide({ item, index }: PortfolioSlideProps) {
               sizes="100vw"
               quality={100}
               priority={index === 0}
-              className="object-cover"
+              onLoad={() => setMediaLoaded(true)}
+              className={`object-cover transition-opacity duration-700 ease-out ${
+                mediaLoaded ? "opacity-100" : "opacity-0"
+              }`}
             />
           )
         ) : null}
