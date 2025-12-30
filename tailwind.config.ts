@@ -7,6 +7,9 @@ export default {
   ],
   theme: {
     extend: {
+      fontSize: {
+        sm: ["0.9375rem", { lineHeight: "1.4" }], // 15px
+      },
       colors: {
         border: "hsl(var(--border))",
         background: "hsl(var(--background))",
