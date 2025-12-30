@@ -1,6 +1,7 @@
 import Slides from "@/components/slides/Slides";
 import BookingButton from "@/components/BookingButton";
 import HeaderNav from "@/components/HeaderNav";
+import SelectedWorkIndicator from "@/components/SelectedWorkIndicator";
 
 export default function Home() {
   return (
@@ -15,6 +16,9 @@ export default function Home() {
       <div className="fixed top-6 right-6 md:top-8 md:right-8 lg:top-10 lg:right-10 z-50 pointer-events-auto">
         <BookingButton />
       </div>
+
+      {/* Selected Work indicator at bottom */}
+      <SelectedWorkIndicator />
     </div>
   );
 }
