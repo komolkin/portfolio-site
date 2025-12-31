@@ -1,20 +1,51 @@
+import Image from "next/image";
+
 export default function AboutSlide() {
   return (
     <div
       id="about"
-      className="slide w-full h-screen flex items-center px-6 md:px-8 lg:px-10 relative"
+      className="slide w-full min-h-[200vh] flex flex-col lg:flex-row relative"
     >
-      <p className="text-3xl md:text-4xl lg:text-5xl font-normal text-foreground leading-[1.2] max-w-4xl">
-        Ilya approaches aesthetics not just as a visual discipline but as an
-        ethical category — a way design shapes contemporary culture, influences
-        behavior, and defines how ideas are understood. His work is rooted in
-        constant research and experimentation, searching for innovative ways to
-        craft visual language and communication.
-      </p>
+      {/* Text Column - 2/3 width on desktop */}
+      <div className="w-full lg:w-2/3 px-6 md:px-8 lg:px-10 pt-20 lg:pt-24">
+        <p className="text-3xl md:text-4xl lg:text-5xl font-normal text-foreground leading-[1.2] max-w-4xl">
+          Ilya approaches aesthetics not just as a visual discipline but as an
+          ethical category — a way design shapes contemporary culture, influences
+          behavior, and defines how ideas are understood. His work is rooted in
+          constant research and experimentation, searching for innovative ways to
+          craft visual language and communication.
+        </p>
 
-      {/* Copyright */}
-      <div className="absolute bottom-6 left-6 md:bottom-8 md:left-8 lg:bottom-10 lg:left-10">
-        <span className="text-sm text-muted-foreground">© 2026</span>
+        {/* Copyright */}
+        <div className="mt-auto pt-20 pb-6 md:pb-8 lg:pb-10">
+          <span className="text-sm text-muted-foreground">© 2026</span>
+        </div>
+      </div>
+
+      {/* Photo Column - 1/3 width on desktop, sticky */}
+      <div className="hidden lg:block w-1/3 h-[200vh] pr-6 md:pr-8 lg:pr-10">
+        <div className="sticky top-0 h-screen w-full flex items-center py-20">
+          <div className="relative w-full h-[calc(100%-80px)] rounded-[10px] overflow-hidden">
+            <Image
+              src="https://ik.imagekit.io/mm8hrnl43/Portfolio/Selfie.png"
+              alt="Ilya Komolkin"
+              fill
+              className="object-cover grayscale"
+              priority
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile photo - shown at top on smaller screens */}
+      <div className="lg:hidden w-full h-[50vh] relative order-first mx-6 mt-20 rounded-[10px] overflow-hidden" style={{ width: 'calc(100% - 48px)' }}>
+        <Image
+          src="https://ik.imagekit.io/mm8hrnl43/Portfolio/Selfie.png"
+          alt="Ilya Komolkin"
+          fill
+          className="object-cover grayscale"
+          priority
+        />
       </div>
     </div>
   );

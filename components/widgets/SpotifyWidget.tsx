@@ -14,6 +14,63 @@ interface SpotifyData {
   track: SpotifyTrack | null;
 }
 
+// Album cover component with smooth loading transition
+function AlbumCover({
+  src,
+  alt,
+}: {
+  src: string;
+  alt: string;
+}) {
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Preload image off-DOM before displaying
+  useEffect(() => {
+    if (!src) return;
+
+    // Reset visibility when src changes
+    setIsVisible(false);
+
+    const img = new Image();
+    img.src = src;
+    
+    img.onload = () => {
+      setLoadedSrc(src);
+      // Small delay to ensure the image is rendered before transitioning
+      requestAnimationFrame(() => {
+        setIsVisible(true);
+      });
+    };
+
+    return () => {
+      img.onload = null;
+    };
+  }, [src]);
+
+  return (
+    <div className="w-16 h-16 rounded-[4px] flex-shrink-0 relative overflow-hidden bg-muted">
+      {/* Placeholder skeleton */}
+      <div
+        className={`absolute inset-0 bg-muted animate-pulse transition-opacity duration-300 ${
+          isVisible ? "opacity-0" : "opacity-100"
+        }`}
+      />
+      {/* Only render image after it's fully loaded */}
+      {loadedSrc && (
+        <img
+          src={loadedSrc}
+          alt={alt}
+          className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-300 ${
+            isVisible ? "opacity-100" : "opacity-0"
+          }`}
+          draggable="false"
+        />
+      )}
+    </div>
+  );
+}
+
 // Scrolling text component for long text
 function ScrollingText({
   text,
@@ -149,12 +206,10 @@ export default function SpotifyWidget() {
       key={`${track.title}-${track.artist}`}
     >
       {track.artwork ? (
-        <img
+        <AlbumCover
           src={track.artwork}
           alt={`${track.title} by ${track.artist}`}
-          className="w-16 h-16 rounded-[4px] flex-shrink-0 object-cover transition-opacity duration-300 pointer-events-none"
           key={track.artwork}
-          draggable="false"
         />
       ) : (
         <div className="w-16 h-16 bg-muted rounded-[4px] flex-shrink-0 flex items-center justify-center">
