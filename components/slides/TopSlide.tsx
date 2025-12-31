@@ -172,7 +172,12 @@ export default function TopSlide() {
           </div>
 
           {/* Recently Played */}
-          <div className="space-y-1">
+          <div
+            className="space-y-1 cursor-pointer"
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
+            onMouseMove={handleMouseMove}
+          >
             <div className="text-sm text-muted-foreground">
               {spotifyData?.isPlaying ? "Now playing" : "Recently played"}
             </div>
@@ -184,9 +189,6 @@ export default function TopSlide() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-muted-foreground transition-colors"
-                  onMouseEnter={() => setIsHovering(true)}
-                  onMouseLeave={() => setIsHovering(false)}
-                  onMouseMove={handleMouseMove}
                 >
                   {spotifyData.track.title} – {spotifyData.track.artist}
                 </a>

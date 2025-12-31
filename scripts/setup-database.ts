@@ -82,6 +82,20 @@ async function setupDatabase() {
     `;
     console.log("✅ Column 'text_invert' ensured!");
 
+    // Add link_text column if it doesn't exist (for existing tables)
+    await sql`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'portfolio_items' AND column_name = 'link_text'
+        ) THEN
+          ALTER TABLE portfolio_items ADD COLUMN link_text TEXT;
+        END IF;
+      END $$
+    `;
+    console.log("✅ Column 'link_text' ensured!");
+
     // Enable RLS
     await sql`ALTER TABLE portfolio_items ENABLE ROW LEVEL SECURITY`;
     console.log("✅ Row Level Security enabled!");

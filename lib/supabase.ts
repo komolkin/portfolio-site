@@ -28,6 +28,7 @@ export interface PortfolioItem {
   role: string;
   scope: string;
   link: string | null;
+  link_text: string | null;
   media_url: string | null;
   media_type: "image" | "video";
   background_color: string | null;
