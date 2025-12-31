@@ -14,6 +14,7 @@ interface PortfolioSlideProps {
 export default function PortfolioSlide({ item, index }: PortfolioSlideProps) {
   const [mediaLoaded, setMediaLoaded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const hasMedia = item.media_url && item.media_url.trim() !== "";
   const hasLink = item.link && item.link.trim() !== "";
   const hasLinkText = item.link_text && item.link_text.trim() !== "";
@@ -131,13 +132,23 @@ export default function PortfolioSlide({ item, index }: PortfolioSlideProps) {
           data-section="works"
           className={`${slideClassName} block cursor-pointer`}
           style={slideStyle}
-          onMouseEnter={() => setIsHovered(true)}
+          onMouseEnter={(e) => {
+            setMousePosition({ x: e.clientX, y: e.clientY });
+            setIsHovered(true);
+          }}
+          onMouseMove={(e) => {
+            setMousePosition({ x: e.clientX, y: e.clientY });
+          }}
           onMouseLeave={() => setIsHovered(false)}
         >
           {slideContent}
         </Link>
         {hasLinkText && (
-          <CursorTooltip text={item.link_text} isActive={isHovered} />
+          <CursorTooltip
+            text={item.link_text}
+            isActive={isHovered}
+            position={mousePosition}
+          />
         )}
       </>
     );
