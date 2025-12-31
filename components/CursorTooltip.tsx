@@ -17,7 +17,7 @@ export default function CursorTooltip({ text, isActive, position }: CursorToolti
         top: position.y + 16,
       }}
     >
-      <div className="bg-black/80 text-white px-3 py-2 rounded-[6px] text-[15px] font-medium whitespace-nowrap">
+      <div className="bg-black/40 backdrop-blur-md text-white px-2.5 py-1.5 rounded-[6px] text-[15px] whitespace-nowrap">
         {text}
       </div>
     </div>

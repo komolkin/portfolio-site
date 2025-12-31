@@ -125,7 +125,7 @@ export default function HeaderNav() {
     >
       {/* Sliding background indicator */}
       <motion.div
-        className="absolute h-full bg-foreground/10 rounded"
+        className="absolute h-full bg-foreground/10 backdrop-blur-md rounded"
         initial={false}
         animate={{
           left: indicatorStyle.left,
@@ -149,7 +149,7 @@ export default function HeaderNav() {
           className={`relative z-10 px-2.5 py-1 text-sm transition-colors ${
             activeTab === tab.id
               ? "text-foreground"
-              : "text-muted-foreground hover:text-foreground"
+              : "text-white/60 hover:text-foreground"
           }`}
         >
           {tab.label}
