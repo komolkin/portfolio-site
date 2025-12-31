@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 import CursorCanvas from "@/components/CursorCanvas";
+import SelectionColor from "@/components/SelectionColor";
 
 export const metadata: Metadata = {
   title: "Ilya — Portfolio",
@@ -19,6 +20,7 @@ export default function RootLayout({
         <Providers>
           {children}
           <CursorCanvas />
+          <SelectionColor />
         </Providers>
       </body>
     </html>
