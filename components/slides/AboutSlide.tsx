@@ -4,16 +4,26 @@ export default function AboutSlide() {
   return (
     <div
       id="about"
+      data-section="about"
       className="slide w-full min-h-[200vh] flex flex-col lg:flex-row relative"
     >
       {/* Text Column - 2/3 width on desktop */}
       <div className="w-full lg:w-2/3 px-6 md:px-8 lg:px-10 pt-20 lg:pt-24">
         <p className="text-3xl md:text-4xl lg:text-5xl font-normal text-foreground leading-[1.2] max-w-4xl">
           Ilya approaches aesthetics not just as a visual discipline but as an
-          ethical category — a way design shapes contemporary culture, influences
-          behavior, and defines how ideas are understood. His work is rooted in
-          constant research and experimentation, searching for innovative ways to
-          craft visual language and communication.
+          ethical category — a way design shapes contemporary culture,
+          influences behavior, and defines how ideas are understood. His work is
+          rooted in constant research and experimentation, searching for
+          innovative ways to craft visual language and communication.
+        </p>
+        <p className="text-3xl md:text-4xl lg:text-5xl font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
+          Previously he was a Senior Product Designer at Yandex Media Labs.
+        </p>
+        <p className="text-3xl md:text-4xl lg:text-5xl font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
+          Currently he is the co-founder and Head of Design at Rarible.
+        </p>
+        <p className="text-3xl md:text-4xl lg:text-5xl font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
+          Fields of interest.
         </p>
 
         {/* Copyright */}
@@ -38,7 +48,10 @@ export default function AboutSlide() {
       </div>
 
       {/* Mobile photo - shown at top on smaller screens */}
-      <div className="lg:hidden w-full h-[50vh] relative order-first mx-6 mt-20 rounded-[10px] overflow-hidden" style={{ width: 'calc(100% - 48px)' }}>
+      <div
+        className="lg:hidden w-full h-[50vh] relative order-first mx-6 mt-20 rounded-[10px] overflow-hidden"
+        style={{ width: "calc(100% - 48px)" }}
+      >
         <Image
           src="https://ik.imagekit.io/mm8hrnl43/Portfolio/Selfie.png"
           alt="Ilya Komolkin"

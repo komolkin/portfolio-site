@@ -2,6 +2,7 @@ import Slides from "@/components/slides/Slides";
 import BookingButton from "@/components/BookingButton";
 import HeaderNav from "@/components/HeaderNav";
 import SelectedWorkIndicator from "@/components/SelectedWorkIndicator";
+import SlideDotsIndicator from "@/components/SlideDotsIndicator";
 
 export default function Home() {
   return (
@@ -19,6 +20,9 @@ export default function Home() {
 
       {/* Selected Work indicator at bottom */}
       <SelectedWorkIndicator />
+
+      {/* Slide dots indicator on right side for portfolio slides */}
+      <SlideDotsIndicator />
     </div>
   );
 }
