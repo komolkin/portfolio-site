@@ -3,6 +3,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import CursorCanvas from "@/components/CursorCanvas";
 import SelectionColor from "@/components/SelectionColor";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "Ilya — Portfolio",
@@ -22,6 +23,7 @@ export default function RootLayout({
           <CursorCanvas />
           <SelectionColor />
         </Providers>
+        <Analytics />
       </body>
     </html>
   );

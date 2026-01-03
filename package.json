@@ -16,6 +16,7 @@
     "@supabase/supabase-js": "^2.89.0",
     "@upstash/realtime": "^1.0.0",
     "@upstash/redis": "^1.35.8",
+    "@vercel/analytics": "^1.6.1",
     "framer-motion": "^12.23.24",
     "next": "14.2.35",
     "postgres": "^3.4.7",
