@@ -1,4 +1,5 @@
 import Image from "next/image";
+import AboutTimeAndMusic from "@/components/AboutTimeAndMusic";
 
 export default function AboutSlide() {
   return (
@@ -22,6 +23,7 @@ export default function AboutSlide() {
         <p className="text-3xl md:text-4xl lg:text-5xl font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
           Currently he is the co-founder and Head of Design at Rarible.
         </p>
+        <AboutTimeAndMusic />
         <p className="text-3xl md:text-4xl lg:text-5xl font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
           Fields of interest.
         </p>
