@@ -59,7 +59,7 @@ export default function PortfolioSlide({ item, index }: PortfolioSlideProps) {
           {/* Title & Description */}
           <div className="flex flex-col gap-2">
             <h2
-              className={`text-sm font-semibold ${
+              className={`text-4xl md:text-[36px] font-normal ${
                 item.text_invert ? "text-black" : "text-white"
               }`}
             >

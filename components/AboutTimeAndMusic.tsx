@@ -69,18 +69,11 @@ export default function AboutTimeAndMusic() {
       <span className="font-mono inline-flex items-baseline gap-0.5">
         <NumberFlow value={parisHours} format={{ minimumIntegerDigits: 2 }} />
         <span>:</span>
-        <NumberFlow
-          value={parisMinutes}
-          format={{ minimumIntegerDigits: 2 }}
-        />
+        <NumberFlow value={parisMinutes} format={{ minimumIntegerDigits: 2 }} />
         <span>:</span>
-        <NumberFlow
-          value={parisSeconds}
-          format={{ minimumIntegerDigits: 2 }}
-        />
+        <NumberFlow value={parisSeconds} format={{ minimumIntegerDigits: 2 }} />
       </span>{" "}
-      in Paris right now{trackName ? ` and I recently listened to ${trackName}` : ""}.
+      in Paris right now.
     </p>
   );
 }
-

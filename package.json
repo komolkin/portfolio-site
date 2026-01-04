@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "db:setup": "npx tsx --env-file=.env.local scripts/setup-database.ts",
-    "seed": "npx tsx --env-file=.env.local scripts/seed-portfolio.ts"
+    "seed": "npx tsx --env-file=.env.local scripts/seed-portfolio.ts",
+    "seed:snippets": "npx tsx --env-file=.env.local scripts/seed-snippets.ts"
   },
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",

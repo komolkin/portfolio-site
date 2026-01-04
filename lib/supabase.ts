@@ -37,6 +37,15 @@ export interface PortfolioItem {
   created_at: string;
 }
 
+export interface Snippet {
+  id: string;
+  image_url: string;
+  alt: string | null;
+  link: string | null;
+  order: number;
+  created_at: string;
+}
+
 export async function getPortfolioItems(): Promise<PortfolioItem[]> {
   const client = getSupabaseClient();
   
@@ -52,6 +61,27 @@ export async function getPortfolioItems(): Promise<PortfolioItem[]> {
 
   if (error) {
     console.error("Error fetching portfolio items:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function getSnippets(): Promise<Snippet[]> {
+  const client = getSupabaseClient();
+  
+  if (!client) {
+    console.warn("Supabase not configured, returning empty snippets");
+    return [];
+  }
+
+  const { data, error } = await client
+    .from("snippets")
+    .select("*")
+    .order("order", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching snippets:", error);
     return [];
   }
 

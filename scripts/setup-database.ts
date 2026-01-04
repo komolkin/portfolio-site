@@ -96,11 +96,11 @@ async function setupDatabase() {
     `;
     console.log("✅ Column 'link_text' ensured!");
 
-    // Enable RLS
+    // Enable RLS for portfolio_items
     await sql`ALTER TABLE portfolio_items ENABLE ROW LEVEL SECURITY`;
-    console.log("✅ Row Level Security enabled!");
+    console.log("✅ Row Level Security enabled for portfolio_items!");
 
-    // Create read policy (drop first if exists)
+    // Create read policy for portfolio_items (drop first if exists)
     await sql`
       DO $$ 
       BEGIN
@@ -108,7 +108,48 @@ async function setupDatabase() {
         CREATE POLICY "Allow public read" ON portfolio_items FOR SELECT USING (true);
       END $$
     `;
-    console.log("✅ Public read policy created!");
+    console.log("✅ Public read policy created for portfolio_items!");
+
+    // Create the snippets table for Random Snippets masonry grid
+    await sql`
+      CREATE TABLE IF NOT EXISTS snippets (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        image_url TEXT NOT NULL,
+        alt TEXT,
+        link TEXT,
+        "order" INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+    console.log("✅ Table 'snippets' created!");
+
+    // Drop aspect_ratio column if it exists (no longer needed, calculated from image)
+    await sql`
+      DO $$ 
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'snippets' AND column_name = 'aspect_ratio'
+        ) THEN
+          ALTER TABLE snippets DROP COLUMN aspect_ratio;
+        END IF;
+      END $$
+    `;
+    console.log("✅ Column 'aspect_ratio' removed (if existed)!");
+
+    // Enable RLS for snippets
+    await sql`ALTER TABLE snippets ENABLE ROW LEVEL SECURITY`;
+    console.log("✅ Row Level Security enabled for snippets!");
+
+    // Create read policy for snippets (drop first if exists)
+    await sql`
+      DO $$ 
+      BEGIN
+        DROP POLICY IF EXISTS "Allow public read" ON snippets;
+        CREATE POLICY "Allow public read" ON snippets FOR SELECT USING (true);
+      END $$
+    `;
+    console.log("✅ Public read policy created for snippets!");
 
     console.log("\n🎉 Database setup complete!");
   } catch (error: any) {

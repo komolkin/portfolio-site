@@ -6,7 +6,7 @@ export default function AboutSlide() {
     <div
       id="about"
       data-section="about"
-      className="slide w-full min-h-[200vh] flex flex-col lg:flex-row relative"
+      className="slide w-full min-h-screen flex flex-col lg:flex-row relative"
     >
       {/* Text Column - 2/3 width on desktop */}
       <div className="w-full lg:w-2/3 px-6 md:px-8 lg:px-10 pt-20 lg:pt-24">
@@ -23,7 +23,7 @@ export default function AboutSlide() {
         <p className="text-3xl md:text-4xl lg:text-5xl font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
           Currently he is the co-founder and Head of Design at Rarible.
         </p>
-        <AboutTimeAndMusic />
+        {/* <AboutTimeAndMusic /> */}
         <p className="text-3xl md:text-4xl lg:text-5xl font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
           Fields of interest.
         </p>
@@ -35,7 +35,7 @@ export default function AboutSlide() {
       </div>
 
       {/* Photo Column - 1/3 width on desktop, sticky */}
-      <div className="hidden lg:block w-1/3 h-[200vh] pr-6 md:pr-8 lg:pr-10">
+      <div className="hidden lg:block w-1/3 pr-6 md:pr-8 lg:pr-10">
         <div className="sticky top-0 h-screen w-full flex items-center py-20">
           <div className="relative w-full h-[calc(100%-80px)] rounded-[10px] overflow-hidden">
             <Image
