@@ -27,7 +27,9 @@ export default function AboutSlide() {
         <p className="text-3xl md:text-4xl lg:text-5xl font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
           Fields of interest.
         </p>
-
+        <p className="text-3xl md:text-4xl lg:text-5xl font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
+          Tech Stack.
+        </p>
         {/* Copyright */}
         <div className="mt-auto pt-20 pb-6 md:pb-8 lg:pb-10">
           <span className="text-sm text-muted-foreground">© 2026</span>

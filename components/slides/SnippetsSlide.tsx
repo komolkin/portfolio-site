@@ -30,7 +30,7 @@ function SnippetCard({ snippet }: { snippet: Snippet }) {
         src={snippet.image_url}
         alt={snippet.alt || "Snippet"}
         fill
-        sizes="(max-width: 768px) 50vw, 33vw"
+        sizes="(max-width: 768px) 50vw, 20vw"
         className={`object-cover transition-opacity duration-500 ${
           loaded ? "opacity-100" : "opacity-0"
         }`}
@@ -67,7 +67,7 @@ export default function SnippetsSlide({ snippets }: SnippetsSlideProps) {
     return columns;
   };
 
-  const desktopColumns = distributeToColumns(snippets, 3);
+  const desktopColumns = distributeToColumns(snippets, 5);
   const mobileColumns = distributeToColumns(snippets, 2);
 
   return (
@@ -80,7 +80,7 @@ export default function SnippetsSlide({ snippets }: SnippetsSlideProps) {
         Random Snippets
       </h2>
 
-      {/* Masonry Grid - Desktop (3 columns) */}
+      {/* Masonry Grid - Desktop (5 columns) */}
       <div className="hidden md:flex gap-3">
         {desktopColumns.map((column, colIndex) => (
           <div key={colIndex} className="flex-1 flex flex-col gap-3">
