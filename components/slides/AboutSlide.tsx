@@ -31,19 +31,11 @@ export default function AboutSlide() {
         <p className="text-4xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
           Previously he was a Senior Product Designer at Yandex Media Labs.
         </p>
-        <p className="text-4xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
-          Currently he is the co-founder and Head of Design at Rarible.
-        </p>
         {/* <AboutTimeAndMusic /> */}
         <p className="text-4xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
-          Fields of interest.
-        </p>
-        <p className="text-4xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
-          Tech Stack.
-        </p>
-        <p className="text-4xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
-          Currently not open for new work, but if you have any exciting and
-          challenging projects —{" "}
+          Currently he is the co-founder and Head of Design at Rarible and not
+          open for new work, but if you have any exciting and challenging
+          projects —{" "}
           <button
             data-cal-namespace="30min"
             data-cal-link="komolkin/30min"
@@ -53,6 +45,12 @@ export default function AboutSlide() {
             let's talk
           </button>
           .
+        </p>
+        <p className="text-4xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
+          Fields of interest.
+        </p>
+        <p className="text-4xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
+          Tech Stack.
         </p>
         {/* Copyright */}
         <div className="mt-auto pt-20 pb-6 md:pb-8 lg:pb-10">
