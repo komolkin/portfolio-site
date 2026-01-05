@@ -72,7 +72,7 @@ export default function TopSlide() {
       {/* Album Cover Popup */}
       {isHovering && spotifyData?.track?.artwork && cursorPosition.y > 0 && (
         <div
-          className="fixed pointer-events-none z-[100]"
+          className="fixed pointer-events-none z-[100] w-[240px] h-[240px] flex-shrink-0"
           style={{
             left: cursorPosition.x,
             top: Math.max(16, cursorPosition.y - 240 - 16),
@@ -82,7 +82,7 @@ export default function TopSlide() {
           <img
             src={spotifyData.track.artwork}
             alt={`${spotifyData.track.title} album cover`}
-            className="w-[240px] h-[240px] object-cover rounded-lg shadow-2xl"
+            className="w-[240px] h-[240px] min-w-[240px] min-h-[240px] object-cover rounded-lg shadow-2xl"
           />
         </div>
       )}
