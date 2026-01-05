@@ -26,10 +26,14 @@ export default function AboutSlide() {
           ethical category — a way design shapes contemporary culture,
           influences behavior, and defines how ideas are understood. His work is
           rooted in constant research and experimentation, searching for
-          innovative ways to craft visual language and communication.
+          innovative ways to craft visual language and user behavior.
         </p>
         <p className="text-4xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
-          Previously he was a Senior Product Designer at Yandex Media Labs.
+          Fields of interest & Tech Stack.
+        </p>
+        <p className="text-4xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
+          Previously he was a Senior Product Designer at Yandex Media Labs,
+          helped multiple projects to move from zero to one and beyond.
         </p>
         {/* <AboutTimeAndMusic /> */}
         <p className="text-4xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
@@ -45,12 +49,6 @@ export default function AboutSlide() {
             let's talk
           </button>
           .
-        </p>
-        <p className="text-4xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
-          Fields of interest.
-        </p>
-        <p className="text-4xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
-          Tech Stack.
         </p>
         {/* Copyright */}
         <div className="mt-auto pt-20 pb-6 md:pb-8 lg:pb-10">
