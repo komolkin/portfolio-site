@@ -30,7 +30,7 @@ function SnippetCard({ snippet }: { snippet: Snippet }) {
         src={snippet.image_url}
         alt={snippet.alt || "Snippet"}
         fill
-        sizes="(max-width: 768px) 50vw, 20vw"
+        sizes="(max-width: 768px) 50vw, 33vw"
         className={`object-cover transition-opacity duration-500 ${
           loaded ? "opacity-100" : "opacity-0"
         }`}
@@ -67,7 +67,7 @@ export default function SnippetsSlide({ snippets }: SnippetsSlideProps) {
     return columns;
   };
 
-  const desktopColumns = distributeToColumns(snippets, 5);
+  const desktopColumns = distributeToColumns(snippets, 3);
   const mobileColumns = distributeToColumns(snippets, 2);
 
   return (
