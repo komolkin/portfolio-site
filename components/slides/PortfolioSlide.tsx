@@ -78,10 +78,10 @@ export default function PortfolioSlide({ item, index }: PortfolioSlideProps) {
           <div className="flex flex-wrap gap-2 text-xs">
             {item.year && (
               <span
-                className={`px-3 py-1.5 rounded ${
+                className={`px-3 py-1.5 rounded border ${
                   item.text_invert
-                    ? "bg-black/10 text-black/80"
-                    : "bg-white/10 text-white/80"
+                    ? "border-black/20 text-black/80"
+                    : "border-white/20 text-white/80"
                 }`}
               >
                 {item.year}
@@ -89,10 +89,10 @@ export default function PortfolioSlide({ item, index }: PortfolioSlideProps) {
             )}
             {item.role && (
               <span
-                className={`px-3 py-1.5 rounded ${
+                className={`px-3 py-1.5 rounded border ${
                   item.text_invert
-                    ? "bg-black/10 text-black/80"
-                    : "bg-white/10 text-white/80"
+                    ? "border-black/20 text-black/80"
+                    : "border-white/20 text-white/80"
                 }`}
               >
                 {item.role}
@@ -100,10 +100,10 @@ export default function PortfolioSlide({ item, index }: PortfolioSlideProps) {
             )}
             {item.scope && (
               <span
-                className={`px-3 py-1.5 rounded ${
+                className={`px-3 py-1.5 rounded border ${
                   item.text_invert
-                    ? "bg-black/10 text-black/80"
-                    : "bg-white/10 text-white/80"
+                    ? "border-black/20 text-black/80"
+                    : "border-white/20 text-white/80"
                 }`}
               >
                 {item.scope}
