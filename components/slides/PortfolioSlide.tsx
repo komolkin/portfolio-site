@@ -55,7 +55,7 @@ export default function PortfolioSlide({ item, index }: PortfolioSlideProps) {
 
       {/* Title, Description & Metadata - Bottom Left */}
       <div className="absolute bottom-6 left-6 right-6 md:bottom-8 md:left-8 md:right-8 lg:bottom-10 lg:left-10 lg:right-10 z-10">
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 max-w-[360px]">
           {/* Title & Description */}
           <div className="flex flex-col gap-2">
             <h2
@@ -75,10 +75,10 @@ export default function PortfolioSlide({ item, index }: PortfolioSlideProps) {
           </div>
 
           {/* Metadata Tags */}
-          <div className="flex flex-wrap gap-2 text-xs">
+          <div className="flex flex-wrap gap-2 text-xs font-mono uppercase">
             {item.year && (
               <span
-                className={`px-3 py-1.5 rounded border ${
+                className={`px-1.5 py-0.5 rounded border ${
                   item.text_invert
                     ? "border-black/20 text-black/80"
                     : "border-white/20 text-white/80"
@@ -89,7 +89,7 @@ export default function PortfolioSlide({ item, index }: PortfolioSlideProps) {
             )}
             {item.role && (
               <span
-                className={`px-3 py-1.5 rounded border ${
+                className={`px-1.5 py-0.5 rounded border ${
                   item.text_invert
                     ? "border-black/20 text-black/80"
                     : "border-white/20 text-white/80"
@@ -100,7 +100,7 @@ export default function PortfolioSlide({ item, index }: PortfolioSlideProps) {
             )}
             {item.scope && (
               <span
-                className={`px-3 py-1.5 rounded border ${
+                className={`px-1.5 py-0.5 rounded border ${
                   item.text_invert
                     ? "border-black/20 text-black/80"
                     : "border-white/20 text-white/80"

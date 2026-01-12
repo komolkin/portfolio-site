@@ -130,17 +130,9 @@ export default function TopSlide() {
             </div>
           </div>
 
-          {/* Heart Rate */}
+          {/* Quick Links */}
           <div className="space-y-1">
-            <div className="text-sm text-muted-foreground">Heart Rate</div>
-            <div className="text-sm text-foreground font-mono">
-              <NumberFlow value={bpm} suffix=" BPM" />
-            </div>
-          </div>
-
-          {/* Social */}
-          <div className="space-y-1">
-            <div className="text-sm text-muted-foreground">Quick links</div>
+            <div className="text-sm text-muted-foreground">Quick Links</div>
             <div className="text-sm text-foreground">
               <a
                 href="https://x.com/dappdesigner"
@@ -168,6 +160,14 @@ export default function TopSlide() {
               >
                 GitHub
               </a>
+            </div>
+          </div>
+
+          {/* Heart Rate */}
+          <div className="space-y-1">
+            <div className="text-sm text-muted-foreground">Heart Rate</div>
+            <div className="text-sm text-foreground font-mono">
+              <NumberFlow value={bpm} suffix=" BPM" />
             </div>
           </div>
 
