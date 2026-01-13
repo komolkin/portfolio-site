@@ -137,6 +137,20 @@ async function setupDatabase() {
     `;
     console.log("✅ Column 'aspect_ratio' removed (if existed)!");
 
+    // Add media_type column if it doesn't exist (for video support)
+    await sql`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'snippets' AND column_name = 'media_type'
+        ) THEN
+          ALTER TABLE snippets ADD COLUMN media_type TEXT NOT NULL DEFAULT 'image' CHECK (media_type IN ('image', 'video'));
+        END IF;
+      END $$
+    `;
+    console.log("✅ Column 'media_type' ensured for snippets!");
+
     // Enable RLS for snippets
     await sql`ALTER TABLE snippets ENABLE ROW LEVEL SECURITY`;
     console.log("✅ Row Level Security enabled for snippets!");

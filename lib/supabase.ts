@@ -42,6 +42,7 @@ export interface Snippet {
   image_url: string;
   alt: string | null;
   link: string | null;
+  media_type: "image" | "video";
   order: number;
   created_at: string;
 }

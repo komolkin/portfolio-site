@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Snippet } from "@/lib/supabase";
@@ -12,6 +12,7 @@ interface SnippetsSlideProps {
 function SnippetCard({ snippet }: { snippet: Snippet }) {
   const [loaded, setLoaded] = useState(false);
   const [aspectRatio, setAspectRatio] = useState<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
@@ -21,21 +22,46 @@ function SnippetCard({ snippet }: { snippet: Snippet }) {
     setLoaded(true);
   };
 
+  const handleVideoLoad = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget;
+    if (video.videoWidth && video.videoHeight) {
+      setAspectRatio(video.videoWidth / video.videoHeight);
+    }
+    setLoaded(true);
+  };
+
+  const isVideo = snippet.media_type === "video";
+
   const content = (
     <div
       className="relative w-full overflow-hidden rounded-lg bg-[#1a1a1a]"
       style={{ aspectRatio: aspectRatio || 1 }}
     >
-      <Image
-        src={snippet.image_url}
-        alt={snippet.alt || "Snippet"}
-        fill
-        sizes="(max-width: 768px) 50vw, 20vw"
-        className={`object-cover transition-opacity duration-500 ${
-          loaded ? "opacity-100" : "opacity-0"
-        }`}
-        onLoad={handleImageLoad}
-      />
+      {isVideo ? (
+        <video
+          ref={videoRef}
+          src={snippet.image_url}
+          autoPlay
+          loop
+          muted
+          playsInline
+          onLoadedMetadata={handleVideoLoad}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+            loaded ? "opacity-100" : "opacity-0"
+          }`}
+        />
+      ) : (
+        <Image
+          src={snippet.image_url}
+          alt={snippet.alt || "Snippet"}
+          fill
+          sizes="(max-width: 768px) 50vw, 20vw"
+          className={`object-cover transition-opacity duration-500 ${
+            loaded ? "opacity-100" : "opacity-0"
+          }`}
+          onLoad={handleImageLoad}
+        />
+      )}
     </div>
   );
 

@@ -25,47 +25,110 @@ const sampleSnippets = [
   {
     image_url: "https://picsum.photos/seed/snippet1/600/800",
     alt: "Design exploration 1",
+    media_type: "image",
     order: 1,
   },
   {
     image_url: "https://picsum.photos/seed/snippet2/600/400",
     alt: "Design exploration 2",
+    media_type: "image",
     order: 2,
   },
   {
     image_url: "https://picsum.photos/seed/snippet3/600/600",
     alt: "Design exploration 3",
+    media_type: "image",
     order: 3,
   },
   {
     image_url: "https://picsum.photos/seed/snippet4/600/900",
     alt: "Design exploration 4",
+    media_type: "image",
     order: 4,
   },
   {
     image_url: "https://picsum.photos/seed/snippet5/600/500",
     alt: "Design exploration 5",
+    media_type: "image",
     order: 5,
   },
   {
     image_url: "https://picsum.photos/seed/snippet6/600/700",
     alt: "Design exploration 6",
+    media_type: "image",
     order: 6,
   },
   {
     image_url: "https://picsum.photos/seed/snippet7/600/450",
     alt: "Design exploration 7",
+    media_type: "image",
     order: 7,
   },
   {
     image_url: "https://picsum.photos/seed/snippet8/600/850",
     alt: "Design exploration 8",
+    media_type: "image",
     order: 8,
   },
   {
     image_url: "https://picsum.photos/seed/snippet9/600/550",
     alt: "Design exploration 9",
+    media_type: "image",
     order: 9,
+  },
+  {
+    image_url: "https://picsum.photos/seed/snippet10/600/750",
+    alt: "Design exploration 10",
+    media_type: "image",
+    order: 10,
+  },
+  {
+    image_url: "https://picsum.photos/seed/snippet11/600/480",
+    alt: "Design exploration 11",
+    media_type: "image",
+    order: 11,
+  },
+  {
+    image_url: "https://picsum.photos/seed/snippet12/600/920",
+    alt: "Design exploration 12",
+    media_type: "image",
+    order: 12,
+  },
+  {
+    image_url: "https://picsum.photos/seed/snippet13/600/560",
+    alt: "Design exploration 13",
+    media_type: "image",
+    order: 13,
+  },
+  {
+    image_url: "https://picsum.photos/seed/snippet14/600/680",
+    alt: "Design exploration 14",
+    media_type: "image",
+    order: 14,
+  },
+  {
+    image_url: "https://picsum.photos/seed/snippet15/600/420",
+    alt: "Design exploration 15",
+    media_type: "image",
+    order: 15,
+  },
+  {
+    image_url: "https://picsum.photos/seed/snippet16/600/780",
+    alt: "Design exploration 16",
+    media_type: "image",
+    order: 16,
+  },
+  {
+    image_url: "https://picsum.photos/seed/snippet17/600/600",
+    alt: "Design exploration 17",
+    media_type: "image",
+    order: 17,
+  },
+  {
+    image_url: "https://picsum.photos/seed/snippet18/600/520",
+    alt: "Design exploration 18",
+    media_type: "image",
+    order: 18,
   },
 ];
 
@@ -84,8 +147,8 @@ async function seedSnippets() {
     // Insert sample snippets
     for (const snippet of sampleSnippets) {
       await sql`
-        INSERT INTO snippets (image_url, alt, "order")
-        VALUES (${snippet.image_url}, ${snippet.alt}, ${snippet.order})
+        INSERT INTO snippets (image_url, alt, media_type, "order")
+        VALUES (${snippet.image_url}, ${snippet.alt}, ${snippet.media_type}, ${snippet.order})
       `;
     }
     console.log(`✅ Inserted ${sampleSnippets.length} snippets!`);
