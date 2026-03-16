@@ -8,11 +8,6 @@ interface TimelineItem {
 
 const timelineData: TimelineItem[] = [
   {
-    year: "2024",
-    title: "Current Role",
-    description: "Co-founder & Head of Design at Rarible",
-  },
-  {
     year: "2022",
     title: "Major Project",
     description: "Launched innovative NFT marketplace features",

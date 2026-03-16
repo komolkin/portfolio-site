@@ -97,15 +97,7 @@ export default function TopSlide() {
 
       {/* Bottom Info Bar */}
       <div className="px-6 md:px-8 lg:px-10 pb-6 md:pb-8 lg:pb-10">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 md:gap-4">
-          {/* Current Role */}
-          <div className="space-y-1">
-            <div className="text-sm text-muted-foreground">Current Role</div>
-            <div className="text-sm text-foreground">
-              Head of Design at Rarible
-            </div>
-          </div>
-
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4">
           {/* Location */}
           <div className="space-y-1">
             <div className="text-sm text-muted-foreground">Location</div>

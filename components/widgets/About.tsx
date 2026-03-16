@@ -7,8 +7,7 @@ export default function About() {
           Paris, France.
         </p>
         <p>
-          He is the co-founder and Head of Design at Rarible, previously a
-          Senior Product Designer at Yandex Media Labs.
+          He was previously a Senior Product Designer at Yandex Media Labs.
         </p>
         <p>
           Ilya approaches aesthetics not just as a visual discipline but as an
@@ -27,10 +26,6 @@ export default function About() {
           should — communicate more clearly, look more distinct, and have
           stronger influence.
         </p>
-        <p>
-          Previously: he was a Senior Product Designer at Yandex Media Labs.
-        </p>
-        <p>Currently: he is the co-founder and Head of Design at Rarible.</p>
       </div>
     </div>
   );

@@ -34,9 +34,8 @@ export default function AboutSlide() {
         </p>
         {/* <AboutTimeAndMusic /> */}
         <p className="text-4xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
-          Currently he is the co-founder and Head of Design at Rarible and not
-          open for new work, but if you have any exciting and challenging
-          projects —{" "}
+          Currently he is not open for new work, but if you have any exciting
+          and challenging projects —{" "}
           <button
             data-cal-namespace="30min"
             data-cal-link="komolkin/30min"
