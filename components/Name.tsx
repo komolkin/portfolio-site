@@ -17,7 +17,7 @@ export default function Name() {
         className="hover:opacity-80 transition-opacity block px-4 py-2"
       >
         <div className="text-xs text-foreground leading-[1.4] uppercase">
-          Ilya Komolkin
+          About
         </div>
       </button>
     </WidgetChrome>

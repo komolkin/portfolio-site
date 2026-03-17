@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 
 const tabs = [
   { id: "playground", label: "Playground" },
-  { id: "top", label: "Ilya Komolkin" },
+  { id: "top", label: "About" },
 ];
 
 export default function HeaderNav() {
