@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
-import "hover-tilt/web-component";
 
 // Figma MCP asset URLs (use within ~7 days or re-fetch from Figma)
 const IMG_AVATAR =
@@ -19,6 +18,8 @@ export default function ResolvedCard() {
   const lastMoveRef = useRef<{ x: number; y: number; t: number } | null>(null);
 
   useEffect(() => {
+    // Ensure the web component is only registered in the browser.
+    import("hover-tilt/web-component");
     return () => {
       if (timerRef.current) {
         window.clearTimeout(timerRef.current);
@@ -90,7 +91,6 @@ export default function ResolvedCard() {
           </mask>
         </defs>
       </svg>
-      {/* @ts-expect-error hover-tilt is a web component */}
       <hover-tilt
         tilt-factor="0.8"
         scale-factor="1.02"
