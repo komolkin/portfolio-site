@@ -68,7 +68,7 @@ export default function TopSlide() {
   };
 
   return (
-    <div id="top" className="slide w-full h-[75vh] relative flex flex-col">
+    <div id="top" className="slide w-full h-screen relative flex flex-col">
       {/* Album Cover Popup */}
       {isHovering && spotifyData?.track?.artwork && cursorPosition.y > 0 && (
         <div
@@ -90,8 +90,7 @@ export default function TopSlide() {
       {/* Main Content */}
       <div className="flex-1 flex items-center px-6 md:px-8 lg:px-10">
         <h1 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-[1.2] max-w-2xl xl:max-w-4xl">
-          Paris-based generalist design engineer focused on building impactful
-          products and brands.
+          hi
         </h1>
       </div>
 

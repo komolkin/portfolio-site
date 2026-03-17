@@ -1,11 +1,11 @@
 import TopSlide from "./TopSlide";
-import AboutSlide from "./AboutSlide";
+import PlaygroundSlide from "./PlaygroundSlide";
 
 export default function Slides() {
   return (
     <div className="slides-scroll h-full">
+      <PlaygroundSlide />
       <TopSlide />
-      <AboutSlide />
     </div>
   );
 }

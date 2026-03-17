@@ -39,7 +39,7 @@ export default function AboutSlide() {
             data-cal-config='{"layout":"month_view"}'
             className="underline underline-offset-4 hover:text-muted-foreground transition-colors"
           >
-            let's talk
+            let&apos;s talk
           </button>
           .
         </p>

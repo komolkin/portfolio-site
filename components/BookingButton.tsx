@@ -18,7 +18,7 @@ export default function BookingButton() {
       data-cal-config='{"layout":"month_view"}'
       className="text-sm text-foreground hover:text-muted-foreground transition-colors"
     >
-      Book an Intro
+      Book a Call
     </button>
   );
 }

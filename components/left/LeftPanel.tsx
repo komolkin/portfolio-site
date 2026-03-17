@@ -207,7 +207,7 @@ export default function LeftPanel() {
     <div className="p-8 space-y-8">
       {/* Header */}
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">Hi, I'm Ilya</h1>
+        <h1 className="text-2xl font-semibold">Hi, I&apos;m Ilya</h1>
         <div className="text-sm text-muted-foreground leading-relaxed">
           <p>
             Passionate about creating beautiful digital experiences and building products that matter.
