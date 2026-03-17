@@ -12,27 +12,45 @@ const IMG_LINE =
   "https://www.figma.com/api/mcp/asset/f2e92dab-dcd5-4f23-baa3-cff80caaf101";
 
 export default function ResolvedCard() {
-  const [isClaiming, setIsClaiming] = useState(false);
+  const [claimState, setClaimState] = useState<"idle" | "claiming" | "claimed">("idle");
+  const [isVisible, setIsVisible] = useState(false);
   const timerRef = useRef<number | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const lastMoveRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // Ensure the web component is only registered in the browser.
-    import("hover-tilt/web-component");
+    let cancelled = false;
+    // Register the web component on client only (prevents SSR `customElements` crash).
+    import("hover-tilt/web-component").finally(() => {
+      if (cancelled) return;
+      rafRef.current = window.requestAnimationFrame(() => {
+        setIsVisible(true);
+        rafRef.current = null;
+      });
+    });
+
     return () => {
+      cancelled = true;
       if (timerRef.current) {
         window.clearTimeout(timerRef.current);
+      }
+      if (rafRef.current) {
+        window.cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
       }
     };
   }, []);
 
   const handleClaim = () => {
-    if (isClaiming) return;
-    setIsClaiming(true);
+    if (claimState !== "idle") return;
+    setClaimState("claiming");
     timerRef.current = window.setTimeout(() => {
-      setIsClaiming(false);
-      timerRef.current = null;
+      setClaimState("claimed");
+      timerRef.current = window.setTimeout(() => {
+        setClaimState("idle");
+        timerRef.current = null;
+      }, 3000);
     }, 3000);
   };
 
@@ -101,13 +119,17 @@ export default function ResolvedCard() {
         shadow
         className="resolvedCardTilt block w-full"
       >
-        <div
-          ref={cardRef}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-          className="resolvedCardRainbow relative w-full overflow-hidden rounded-[32px]"
-          style={{ height: 468 }}
-        >
+        <div className="relative w-full" style={{ height: 468 }}>
+          {/* Reserve final size and fade in smoothly once ready */}
+          <div
+            ref={cardRef}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            className={`resolvedCardRainbow relative w-full overflow-hidden rounded-[32px] transition-[opacity,transform] duration-300 ease-out ${
+              isVisible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-1 scale-[0.99]"
+            }`}
+            style={{ height: 468 }}
+          >
           {/* Green gradient background (Figma) */}
           <div
             className="absolute inset-0 rounded-[32px]"
@@ -118,8 +140,8 @@ export default function ResolvedCard() {
             aria-hidden
           />
           {/* Content overlay */}
-          <div className="relative z-30 flex flex-col gap-4 p-4">
-            <div className="flex flex-col items-center pt-10 pb-10">
+          <div className="relative z-30 flex h-full flex-col gap-4 p-4">
+            <div className="flex flex-1 flex-col items-center justify-center pt-10 pb-4">
               <div className="flex flex-col items-center gap-6">
                 <div className="relative h-[120px] w-[120px] shrink-0">
                   <div className="absolute inset-0 rounded-xl border border-white/20">
@@ -150,46 +172,100 @@ export default function ResolvedCard() {
                 </div>
               </div>
             </div>
-            {/* Divider */}
-            <div className="relative h-px w-full shrink-0">
-              <img
-                src={IMG_LINE}
-                alt=""
-                className="block size-full max-w-none"
-                aria-hidden
-              />
-            </div>
-            {/* Cost / Won */}
-            <div className="flex w-full flex-col gap-1.5">
-              <div className="flex w-full items-center justify-between text-sm">
-                <p className="text-white/60">Cost</p>
-                <p className="text-white">$32.00</p>
-              </div>
-              <div className="flex w-full items-center justify-between">
-                <p className="text-sm text-white/60">Won</p>
-                <p className="text-[30px] font-semibold leading-[1.25] text-white">
-                  $1,534.00
-                </p>
-              </div>
-            </div>
-            {/* Claim button */}
-            <button
-              type="button"
-              onClick={handleClaim}
-              disabled={isClaiming}
-              aria-busy={isClaiming}
-              className="h-12 w-full shrink-0 overflow-hidden rounded-full bg-white text-center text-base font-semibold leading-[1.25] text-[#141414] hover:bg-white/95 disabled:opacity-80 disabled:cursor-not-allowed transition-transform active:scale-[0.98]"
-            >
-              {isClaiming ? (
-                <span
-                  className="inline-block h-4 w-4 rounded-full border-2 border-[#141414]/25 border-t-[#141414] animate-spin"
+            <div className="mt-auto flex w-full flex-col gap-4">
+              {/* Divider */}
+              <div className="relative h-px w-full shrink-0">
+                <img
+                  src={IMG_LINE}
+                  alt=""
+                  className="block size-full max-w-none"
                   aria-hidden
                 />
-              ) : (
-                "Claim"
-              )}
-            </button>
+              </div>
+              {/* Cost / Won */}
+              <div className="flex w-full flex-col gap-1.5">
+                <div className="flex w-full items-center justify-between text-sm">
+                  <p className="text-white/60">Cost</p>
+                  <p className="text-white">$32.00</p>
+                </div>
+                <div className="flex w-full items-center justify-between">
+                  <p className="text-sm text-white/60">Won</p>
+                  <p className="text-[30px] font-semibold leading-[1.25] text-white">
+                    $1,534.00
+                  </p>
+                </div>
+              </div>
+              {/* Claim button */}
+              <button
+                type="button"
+                onClick={handleClaim}
+                disabled={claimState !== "idle"}
+                aria-busy={claimState === "claiming"}
+                className="h-12 w-full shrink-0 overflow-hidden rounded-full bg-white text-center text-base font-semibold leading-[1.25] text-[#141414] hover:bg-white/95 disabled:opacity-80 disabled:cursor-not-allowed transition-transform active:scale-[0.98]"
+              >
+                <span className="relative inline-flex h-full w-full items-center justify-center">
+                  <span
+                    className={`absolute inset-0 inline-flex items-center justify-center gap-2 transition-all duration-200 ease-out ${
+                      claimState === "idle"
+                        ? "opacity-100 translate-y-0"
+                        : "opacity-0 translate-y-0.5"
+                    }`}
+                    aria-hidden={claimState !== "idle"}
+                  >
+                    <span>Claim</span>
+                  </span>
+
+                  <span
+                    className={`absolute inset-0 inline-flex items-center justify-center gap-2 transition-all duration-200 ease-out ${
+                      claimState === "claiming"
+                        ? "opacity-100 translate-y-0"
+                        : "opacity-0 translate-y-0.5"
+                    }`}
+                    aria-hidden={claimState !== "claiming"}
+                  >
+                    <span
+                      className="inline-block h-4 w-4 rounded-full border-2 border-[#141414]/25 border-t-[#141414] animate-spin"
+                      aria-hidden
+                    />
+                    <span>Claiming</span>
+                  </span>
+
+                  <span
+                    className={`absolute inset-0 inline-flex items-center justify-center gap-2 transition-all duration-200 ease-out ${
+                      claimState === "claimed"
+                        ? "opacity-100 translate-y-0"
+                        : "opacity-0 translate-y-0.5"
+                    }`}
+                    aria-hidden={claimState !== "claimed"}
+                  >
+                    <span
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#00FF84]"
+                      aria-hidden
+                    >
+                      <svg
+                        width="10"
+                        height="8"
+                        viewBox="0 0 12 9"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M1 4.5L4.25 7.75L11 1"
+                          stroke="white"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                    <span>Claimed</span>
+                  </span>
+                </span>
+              </button>
+            </div>
           </div>
+          </div>
+
         </div>
       </hover-tilt>
       <style jsx>{`
