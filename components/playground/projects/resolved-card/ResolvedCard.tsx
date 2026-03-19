@@ -42,6 +42,21 @@ export default function ResolvedCard() {
     };
   }, []);
 
+  useEffect(() => {
+    // Preload static Figma assets once for smoother first paint.
+    const preloaded = [IMG_AVATAR, IMG_YES, IMG_LINE].map((src) => {
+      const img = new window.Image();
+      img.src = src;
+      return img;
+    });
+    return () => {
+      preloaded.forEach((img) => {
+        img.onload = null;
+        img.onerror = null;
+      });
+    };
+  }, []);
+
   const handleClaim = () => {
     if (claimState !== "idle") return;
     setClaimState("claiming");

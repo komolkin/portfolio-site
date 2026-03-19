@@ -1,8 +1,8 @@
 "use client";
 
 const PROJECTS = [
+  { id: "leverage-selector", label: "Leverage Selector" },
   { id: "resolved-card", label: "Resolved Card" },
-  { id: "userpic-studio", label: "Userpic Studio" },
 ] as const;
 
 export type ProjectId = (typeof PROJECTS)[number]["id"];

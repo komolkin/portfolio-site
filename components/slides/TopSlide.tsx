@@ -29,6 +29,7 @@ export default function TopSlide() {
   const [isHovering, setIsHovering] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const songLinkRef = useRef<HTMLAnchorElement>(null);
+  const artwork = spotifyData?.track?.artwork ?? "";
 
   // Update Paris time every second
   useEffect(() => {
@@ -43,6 +44,16 @@ export default function TopSlide() {
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (!artwork) return;
+    const img = new window.Image();
+    img.src = artwork;
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [artwork]);
 
   // Fetch Spotify now playing
   useEffect(() => {
@@ -70,22 +81,29 @@ export default function TopSlide() {
   return (
     <div id="top" className="slide w-full h-screen relative flex flex-col">
       {/* Album Cover Popup */}
-      {isHovering && spotifyData?.track?.artwork && cursorPosition.y > 0 && (
-        <div
-          className="fixed pointer-events-none z-[100] w-[240px] h-[240px] flex-shrink-0"
-          style={{
-            left: cursorPosition.x,
-            top: Math.max(16, cursorPosition.y - 240 - 16),
-            transform: "translateX(-50%)",
-          }}
-        >
+      <div
+        className={`fixed z-[100] w-[240px] h-[240px] flex-shrink-0 transition-opacity duration-150 ${
+          isHovering && Boolean(artwork) && cursorPosition.y > 0
+            ? "pointer-events-none opacity-100"
+            : "pointer-events-none opacity-0"
+        }`}
+        style={{
+          left: cursorPosition.x,
+          top: Math.max(16, cursorPosition.y - 240 - 16),
+          transform: "translateX(-50%)",
+        }}
+        aria-hidden={!isHovering || !artwork}
+      >
+        {artwork && (
           <img
-            src={spotifyData.track.artwork}
-            alt={`${spotifyData.track.title} album cover`}
+            src={artwork}
+            alt={
+              spotifyData?.track ? `${spotifyData.track.title} album cover` : "Spotify album cover"
+            }
             className="w-[240px] h-[240px] min-w-[240px] min-h-[240px] object-cover rounded-lg shadow-2xl"
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Main Content */}
       <div className="flex-1 flex items-center px-6 md:px-8 lg:px-10">
