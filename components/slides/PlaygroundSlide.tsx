@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import PlaygroundNav, { type ProjectId } from "@/components/playground/PlaygroundNav";
+import PlaygroundNav, { PROJECTS, type ProjectId } from "@/components/playground/PlaygroundNav";
 import ResolvedCard from "@/components/playground/projects/resolved-card/ResolvedCard";
 import LeverageSelector from "@/components/playground/projects/leverage-selector/LeverageSelector";
 
 export default function PlaygroundSlide() {
-  const [activeProject, setActiveProject] = useState<ProjectId>("leverage-selector");
+  const [activeProject, setActiveProject] = useState<ProjectId>(PROJECTS[0].id);
 
   return (
     <div

@@ -368,7 +368,7 @@ export default function LeverageSelector() {
           </div>
           <div className="relative h-[23px] w-full">
             <div
-              className="absolute top-[-3px] z-10 flex h-7 w-14 cursor-grab items-center justify-center rounded-full bg-[#141414] px-2 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.2)] active:cursor-grabbing"
+              className="absolute top-[-3px] z-10 flex h-7 w-14 cursor-grab items-center justify-center rounded-full bg-[#141414] px-2 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.2)] transition-transform active:cursor-grabbing active:scale-[0.95]"
               style={{ left: thumbLeft }}
               onPointerDown={(event) => {
                 event.preventDefault();
@@ -443,7 +443,7 @@ export default function LeverageSelector() {
                 key={label}
                 type="button"
                 onClick={() => handleAmountShortcut(label, value)}
-                className="min-w-0 flex h-[34px] flex-1 items-center justify-center rounded-full border-2 border-white/20 px-4 text-sm leading-[1.25] text-white transition-colors hover:border-white/30"
+                className="min-w-0 flex h-[34px] flex-1 items-center justify-center rounded-full border-2 border-white/20 px-4 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/30"
               >
                 {label === "Max" ? label : <NumberFlow value={value} trend={0} />}
               </button>
@@ -468,9 +468,12 @@ export default function LeverageSelector() {
         </button>
 
         {/* CTA */}
-        <div
+        <button
+          type="button"
           className={`flex h-12 w-full items-center justify-center overflow-hidden rounded-full ${
-            amount > 0 ? "bg-white" : "bg-white/10"
+            amount > 0
+              ? "bg-white transition-[transform,border-color] active:scale-[0.98]"
+              : "bg-white/10"
           }`}
         >
           <span
@@ -480,7 +483,7 @@ export default function LeverageSelector() {
           >
             {amount > 0 ? "Place Order" : "Enter Amount"}
           </span>
-        </div>
+        </button>
       </div>
     </div>
   );
