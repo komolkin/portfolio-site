@@ -358,7 +358,7 @@ export default function LeverageSelector() {
             >
               Leverage
             </span>
-            <span className="animate-shine-text text-4xl font-semibold leading-[1.25]">
+            <span className="text-4xl font-semibold leading-[1.25] text-white">
               <NumberFlow
                 value={leverage}
                 suffix="×"
