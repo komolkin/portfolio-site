@@ -350,61 +350,65 @@ export default function LeverageSelector() {
         </div>
 
         {/* Leverage */}
-        <div className="flex w-full flex-col gap-2 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
-          <div className="flex w-full items-start justify-between gap-2">
-            <span
-              className="text-base leading-[1.25] text-white/60"
-              style={{ fontVariantNumeric: "tabular-nums" }}
-            >
-              Leverage
-            </span>
-            <span className="text-4xl font-semibold leading-[1.25] text-white">
-              <NumberFlow
-                value={leverage}
-                suffix="×"
-                format={{ minimumFractionDigits: leverageIntegerDigits, maximumFractionDigits: 1 }}
-              />
-            </span>
-          </div>
-          <div className="relative h-[23px] w-full">
-            <div
-              className="absolute top-[-3px] z-10 flex h-7 w-14 cursor-grab items-center justify-center rounded-full bg-[#141414] px-2 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.2)] transition-transform active:cursor-grabbing active:scale-[0.95]"
-              style={{ left: thumbLeft }}
-              onPointerDown={(event) => {
-                event.preventDefault();
-                startLeverageDrag(event.clientX);
-              }}
-            >
-              <span className="w-full text-center text-xs font-semibold leading-[1.25] text-white">
-                {formatLeverage(leverage)}
+        <div className="wrapper leverage-rainbow-wrapper">
+          <div className="spinner" />
+          <div className="mask" />
+          <div className="content leverage-rainbow-content">
+            <div className="flex w-full items-start justify-between gap-2">
+              <span
+                className="text-base leading-[1.25] text-white/60"
+                style={{ fontVariantNumeric: "tabular-nums" }}
+              >
+                Leverage
+              </span>
+              <span className="text-4xl font-semibold leading-[1.25] text-white">
+                <NumberFlow
+                  value={leverage}
+                  suffix="×"
+                  format={{ minimumFractionDigits: leverageIntegerDigits, maximumFractionDigits: 1 }}
+                />
               </span>
             </div>
-            <div
-              ref={trackRef}
-              tabIndex={0}
-              className="absolute left-0 right-0 top-[7px] h-2 cursor-pointer rounded-full bg-white/10 outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-              role="slider"
-              aria-valuemin={0}
-              aria-valuemax={dotCount - 1}
-              aria-valuenow={leverageIdx}
-              aria-valuetext={formatLeverage(leverage)}
-              aria-label="Leverage"
-              onKeyDown={handleLeverageKeyDown}
-              onPointerDown={(event) => {
-                event.preventDefault();
-                startLeverageDrag(event.clientX);
-              }}
-            >
-              {Array.from({ length: dotCount }, (_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setLeverageIdx(i)}
-                  className="absolute top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20 transition-transform hover:scale-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                  style={{ left: `${(i / Math.max(1, dotCount - 1)) * 100}%` }}
-                  aria-label={`Leverage ${LEVERAGE_STEPS[i]}×`}
-                />
-              ))}
+            <div className="relative h-[23px] w-full">
+              <div
+                className="absolute top-[-3px] z-10 flex h-7 w-14 cursor-grab items-center justify-center rounded-full bg-[#141414] px-2 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.2)] transition-transform active:cursor-grabbing active:scale-[0.95]"
+                style={{ left: thumbLeft }}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  startLeverageDrag(event.clientX);
+                }}
+              >
+                <span className="w-full text-center text-xs font-semibold leading-[1.25] text-white">
+                  {formatLeverage(leverage)}
+                </span>
+              </div>
+              <div
+                ref={trackRef}
+                tabIndex={0}
+                className="absolute left-0 right-0 top-[7px] h-2 cursor-pointer rounded-full bg-white/10 outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                role="slider"
+                aria-valuemin={0}
+                aria-valuemax={dotCount - 1}
+                aria-valuenow={leverageIdx}
+                aria-valuetext={formatLeverage(leverage)}
+                aria-label="Leverage"
+                onKeyDown={handleLeverageKeyDown}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  startLeverageDrag(event.clientX);
+                }}
+              >
+                {Array.from({ length: dotCount }, (_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setLeverageIdx(i)}
+                    className="absolute top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20 transition-transform hover:scale-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                    style={{ left: `${(i / Math.max(1, dotCount - 1)) * 100}%` }}
+                    aria-label={`Leverage ${LEVERAGE_STEPS[i]}×`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>
