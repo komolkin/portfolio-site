@@ -25,14 +25,12 @@ const AMOUNT_PRESETS = [
   { label: "Max", value: 10_000 },
 ] as const;
 const MAX_AMOUNT = 10_000;
-const YES_PERCENT = 62;
-const NO_PERCENT = 38;
 const PERSON_OPTIONS = [
-  { name: "Timothée Chalamet", image: IMG_TIMOTHEE_CHALAMET },
-  { name: "Zendaya", image: IMG_ZENDAYA },
-  { name: "Florence Pugh", image: IMG_FLORENCE_PUGH },
-  { name: "Paul Mescal", image: IMG_PAUL_MESCAL },
-  { name: "Saoirse Ronan", image: IMG_SAOIRSE_RONAN },
+  { name: "Timothée Chalamet", image: IMG_TIMOTHEE_CHALAMET, yesPercent: 61 },
+  { name: "Zendaya", image: IMG_ZENDAYA, yesPercent: 67 },
+  { name: "Florence Pugh", image: IMG_FLORENCE_PUGH, yesPercent: 62 },
+  { name: "Paul Mescal", image: IMG_PAUL_MESCAL, yesPercent: 70 },
+  { name: "Saoirse Ronan", image: IMG_SAOIRSE_RONAN, yesPercent: 64 },
 ] as const;
 
 function ChevronDown({ className }: { className?: string }) {
@@ -456,7 +454,7 @@ export default function LeverageSelector() {
           >
             <span className="text-white/60">Yes</span>{" "}
             <span className="text-white">
-              <NumberFlow value={YES_PERCENT} trend={0} />
+              <NumberFlow value={selectedPerson.yesPercent} trend={0} />
               %
             </span>
           </button>
@@ -468,7 +466,7 @@ export default function LeverageSelector() {
           >
             <span className="text-white/60">No</span>{" "}
             <span className="text-white">
-              <NumberFlow value={NO_PERCENT} trend={0} />
+              <NumberFlow value={100 - selectedPerson.yesPercent} trend={0} />
               %
             </span>
           </button>
@@ -486,11 +484,14 @@ export default function LeverageSelector() {
               >
                 Leverage
               </span>
-              <span className="text-4xl font-semibold leading-[1.25] text-white">
+              <span className="text-4xl font-semibold leading-none text-white">
                 <NumberFlow
                   value={leverage}
                   suffix="×"
                   format={{ minimumFractionDigits: leverageIntegerDigits, maximumFractionDigits: 1 }}
+                  className="leading-none"
+                  // Match the glyph line box height by removing number-flow's default mask padding.
+                  style={{ ["--number-flow-mask-height" as any]: "0em" }}
                 />
               </span>
             </div>
@@ -557,20 +558,29 @@ export default function LeverageSelector() {
               Amount
             </span>
             <label
-              className={`relative inline-flex items-center gap-0.5 text-4xl font-semibold leading-[1.25] ${
+              className={`relative inline-flex items-baseline gap-0.5 text-4xl font-semibold leading-none ${
                 amount > 0 ? "text-white" : "text-white/40"
               }`}
               style={{ fontVariantNumeric: "tabular-nums" }}
             >
               <span aria-hidden>$</span>
-              <NumberFlow value={amount} format={{ useGrouping: false }} trend={0} />
+              <NumberFlow
+                value={amount}
+                format={{ useGrouping: false }}
+                trend={0}
+                className="leading-none"
+                // `number-flow` adds vertical padding based on `--number-flow-mask-height` (default 0.25em),
+                // which makes the element taller than the glyph line box. Setting it to `0em` keeps the
+                // height aligned with the text symbols/baseline.
+                style={{ ["--number-flow-mask-height" as any]: "0em" }}
+              />
               <input
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
                 value={amount}
                 onChange={(event) => handleAmountInputChange(event.target.value)}
-                className="absolute inset-0 w-full bg-transparent text-right text-transparent caret-white outline-none"
+                className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-right text-transparent caret-white outline-none leading-none"
                 aria-label="Amount input"
               />
             </label>
