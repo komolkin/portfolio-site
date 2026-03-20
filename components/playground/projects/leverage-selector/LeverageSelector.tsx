@@ -209,6 +209,7 @@ export default function LeverageSelector() {
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [outcome, setOutcome] = useState<"yes" | "no">("yes");
   const [leverageIdx, setLeverageIdx] = useState(0);
+  const [isLeverageDragging, setIsLeverageDragging] = useState(false);
   const [amount, setAmount] = useState(0);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const personMenuRef = useRef<HTMLDivElement | null>(null);
@@ -222,11 +223,9 @@ export default function LeverageSelector() {
   const dotCount = LEVERAGE_STEPS.length;
   const ratio = leverageIdx / Math.max(1, dotCount - 1);
   const thumbWidthPx = 56;
-  // Tailwind `size-1` is 0.25rem (~4px), so its radius is ~2px.
-  // We want a 2px visual gap from the dot to the track border.
-  const dotPaddingPx = 2;
-  const dotSizePx = 4;
-  const dotCenterInsetPx = dotPaddingPx + dotSizePx / 2;
+  const thumbHalfPx = thumbWidthPx / 2;
+  // Keep the thumb fully inside the track while aligning dot centers with it.
+  const stepCenterInsetPx = thumbHalfPx;
   const thumbLeft = `calc(${ratio} * (100% - ${thumbWidthPx}px))`;
   const leverageIntegerDigits = Number.isInteger(leverage) ? 0 : 1;
 
@@ -310,22 +309,25 @@ export default function LeverageSelector() {
       if (!track) return;
       const rect = track.getBoundingClientRect();
       if (rect.width <= 0) return;
-      const raw = (clientX - rect.left) / rect.width;
+      const usableWidth = Math.max(1, rect.width - thumbWidthPx);
+      const raw = (clientX - rect.left - thumbHalfPx) / usableWidth;
       const clamped = Math.min(1, Math.max(0, raw));
       const nextIdx = Math.round(clamped * (dotCount - 1));
       setLeverageIdx(nextIdx);
     },
-    [dotCount],
+    [dotCount, thumbHalfPx, thumbWidthPx],
   );
 
   const startLeverageDrag = useCallback(
     (startX: number) => {
+      setIsLeverageDragging(true);
       updateLeverageFromClientX(startX);
 
       const onMove = (event: PointerEvent) => {
         updateLeverageFromClientX(event.clientX);
       };
       const onUp = () => {
+        setIsLeverageDragging(false);
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
       };
@@ -590,7 +592,11 @@ export default function LeverageSelector() {
               </div>
               <div className="relative h-[23px] w-full">
                 <div
-                  className="absolute top-[-3px] z-10 flex h-7 w-14 cursor-grab items-center justify-center rounded-full bg-[#141414] px-2 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.2)] transition-transform active:cursor-grabbing active:scale-[0.95]"
+                  className={`absolute top-[-3px] z-10 flex h-7 w-14 cursor-grab items-center justify-center rounded-full bg-[#141414] px-2 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.2)] active:cursor-grabbing active:scale-[0.95] ${
+                    isLeverageDragging
+                      ? "transition-none"
+                      : "transition-transform duration-150 ease-out"
+                  }`}
                   style={{ left: thumbLeft }}
                   onMouseEnter={sparkle.onMouseEnter}
                   onMouseLeave={sparkle.onMouseLeave}
@@ -627,10 +633,9 @@ export default function LeverageSelector() {
                       onClick={() => setLeverageIdx(i)}
                       className="absolute top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20 transition-transform hover:scale-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                       style={{
-                        // Position the *center* of each dot so its outer edge
-                        // stays inside with a `dotPaddingPx` gap.
-                        left: `calc(${dotCenterInsetPx}px + ${(i / Math.max(1, dotCount - 1))} * (100% - ${
-                          dotCenterInsetPx * 2
+                        // Dot centers match the thumb center at each step.
+                        left: `calc(${stepCenterInsetPx}px + ${(i / Math.max(1, dotCount - 1))} * (100% - ${
+                          stepCenterInsetPx * 2
                         }px))`,
                       }}
                       aria-label={`Leverage ${LEVERAGE_STEPS[i]}×`}
