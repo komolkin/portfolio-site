@@ -34,12 +34,6 @@ export default function PlaygroundNav({ activeProject, onSelect }: PlaygroundNav
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {isActive && (
-                  <span
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-foreground/80 rounded-r"
-                    aria-hidden
-                  />
-                )}
                 {label}
               </button>
             </li>

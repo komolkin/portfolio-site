@@ -516,7 +516,7 @@ export default function LeverageSelector() {
         </div>
 
         {/* Yes / No */}
-        <div className="relative flex h-12 w-full overflow-hidden rounded-full bg-white/[0.04] p-0.5">
+        <div className="relative flex h-12 w-full overflow-hidden rounded-full bg-white/[0.04] p-0.5 transition-colors duration-200 hover:bg-white/[0.06]">
           <div
             className={`absolute bottom-0.5 top-0.5 w-[calc(50%-2px)] rounded-full transition-transform duration-200 ease-out ${
               outcome === "yes" ? "translate-x-0" : "translate-x-full"

@@ -20,11 +20,27 @@ export default function ResolvedCard() {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const lastMoveRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const rafRef = useRef<number | null>(null);
+  const PRELOAD_ASSETS = [IMG_AVATAR, IMG_YES, IMG_LINE, IMG_SHARE];
 
   useEffect(() => {
     let cancelled = false;
-    // Register the web component on client only (prevents SSR `customElements` crash).
-    import("hover-tilt/web-component").finally(() => {
+
+    const preloadAssets = async () => {
+      await Promise.allSettled(
+        PRELOAD_ASSETS.map(
+          (src) =>
+            new Promise<void>((resolve) => {
+              const img = new window.Image();
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+              img.src = src;
+            }),
+        ),
+      );
+    };
+
+    // Register the web component and preload all card assets before revealing.
+    Promise.allSettled([import("hover-tilt/web-component"), preloadAssets()]).finally(() => {
       if (cancelled) return;
       rafRef.current = window.requestAnimationFrame(() => {
         setIsVisible(true);
@@ -41,21 +57,6 @@ export default function ResolvedCard() {
         window.cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
-    };
-  }, []);
-
-  useEffect(() => {
-    // Preload static Figma assets once for smoother first paint.
-    const preloaded = [IMG_AVATAR, IMG_YES, IMG_LINE, IMG_SHARE].map((src) => {
-      const img = new window.Image();
-      img.src = src;
-      return img;
-    });
-    return () => {
-      preloaded.forEach((img) => {
-        img.onload = null;
-        img.onerror = null;
-      });
     };
   }, []);
 
@@ -141,7 +142,7 @@ export default function ResolvedCard() {
   };
 
   return (
-    <div className="relative w-full max-w-[348px] flex items-center justify-center p-4">
+    <div className="relative flex items-center justify-center p-4">
       <svg width="0" height="0" aria-hidden="true" focusable="false">
         <defs>
           <mask id="resolvedCardRoundMask" maskUnits="userSpaceOnUse">
@@ -157,7 +158,7 @@ export default function ResolvedCard() {
         glare-mask="url(#resolvedCardRoundMask)"
         glare-mask-mode="alpha"
         shadow
-        className="resolvedCardTilt block w-full"
+        className="resolvedCardTilt block w-[320px] shrink-0"
       >
         <div className="relative w-full" style={{ height: 468 }}>
           {/* Reserve final size and fade in smoothly once ready */}
@@ -165,8 +166,8 @@ export default function ResolvedCard() {
             ref={cardRef}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
-            className={`resolvedCardRainbow relative w-full overflow-hidden rounded-[32px] transition-[opacity,transform] duration-300 ease-out ${
-              isVisible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-1 scale-[0.99]"
+            className={`resolvedCardRainbow relative w-full overflow-hidden rounded-[32px] transition-opacity duration-300 ease-out ${
+              isVisible ? "opacity-100" : "opacity-0"
             }`}
             style={{ height: 468 }}
           >
