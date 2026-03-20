@@ -10,6 +10,8 @@ const IMG_YES =
   "https://www.figma.com/api/mcp/asset/1fde7823-fb1e-4f18-ad45-4655ac86ec4d";
 const IMG_LINE =
   "https://www.figma.com/api/mcp/asset/f2e92dab-dcd5-4f23-baa3-cff80caaf101";
+const IMG_SHARE =
+  "https://www.figma.com/api/mcp/asset/4328aae4-8484-42fa-b0ff-7d4151a93e8a";
 
 export default function ResolvedCard() {
   const [claimState, setClaimState] = useState<"idle" | "claiming" | "claimed">("idle");
@@ -44,7 +46,7 @@ export default function ResolvedCard() {
 
   useEffect(() => {
     // Preload static Figma assets once for smoother first paint.
-    const preloaded = [IMG_AVATAR, IMG_YES, IMG_LINE].map((src) => {
+    const preloaded = [IMG_AVATAR, IMG_YES, IMG_LINE, IMG_SHARE].map((src) => {
       const img = new window.Image();
       img.src = src;
       return img;
@@ -67,6 +69,29 @@ export default function ResolvedCard() {
         timerRef.current = null;
       }, 3000);
     }, 3000);
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    const nav = navigator as Navigator & { share?: (data: { url: string; title?: string }) => Promise<unknown> };
+
+    try {
+      if (nav.share) {
+        await nav.share({
+          url,
+          title: document.title || "Portfolio",
+        });
+        return;
+      }
+    } catch {
+      // Fall back to clipboard below.
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // Intentionally no-op: sharing is a progressive enhancement.
+    }
   };
 
   const handleMouseMove = (e: MouseEvent) => {
@@ -211,72 +236,90 @@ export default function ResolvedCard() {
                 </div>
               </div>
               {/* Claim button */}
-              <button
-                type="button"
-                onClick={handleClaim}
-                disabled={claimState !== "idle"}
-                aria-busy={claimState === "claiming"}
-                className="h-12 w-full shrink-0 overflow-hidden rounded-full bg-white text-center text-base font-semibold leading-[1.25] text-[#141414] hover:bg-white/95 disabled:opacity-80 disabled:cursor-not-allowed transition-transform active:scale-[0.98]"
-              >
-                <span className="relative inline-flex h-full w-full items-center justify-center">
-                  <span
-                    className={`absolute inset-0 inline-flex items-center justify-center gap-2 transition-all duration-200 ease-out ${
-                      claimState === "idle"
-                        ? "opacity-100 translate-y-0"
-                        : "opacity-0 translate-y-0.5"
-                    }`}
-                    aria-hidden={claimState !== "idle"}
-                  >
-                    <span>Claim</span>
-                  </span>
-
-                  <span
-                    className={`absolute inset-0 inline-flex items-center justify-center gap-2 transition-all duration-200 ease-out ${
-                      claimState === "claiming"
-                        ? "opacity-100 translate-y-0"
-                        : "opacity-0 translate-y-0.5"
-                    }`}
-                    aria-hidden={claimState !== "claiming"}
-                  >
+              <div className="flex w-full items-center gap-[10px]">
+                <button
+                  type="button"
+                  onClick={handleClaim}
+                  disabled={claimState !== "idle"}
+                  aria-busy={claimState === "claiming"}
+                  className="h-12 flex-1 shrink-0 overflow-hidden rounded-full border-2 border-white/20 bg-transparent text-center text-base font-semibold leading-[1.25] text-white hover:bg-white/10 disabled:opacity-80 disabled:cursor-not-allowed transition-transform transition-colors duration-200 ease-out active:scale-[0.98]"
+                >
+                  <span className="relative inline-flex h-full w-full items-center justify-center">
                     <span
-                      className="inline-block h-4 w-4 rounded-full border-2 border-[#141414]/25 border-t-[#141414] animate-spin"
-                      aria-hidden
-                    />
-                    <span>Claiming</span>
-                  </span>
-
-                  <span
-                    className={`absolute inset-0 inline-flex items-center justify-center gap-2 transition-all duration-200 ease-out ${
-                      claimState === "claimed"
-                        ? "opacity-100 translate-y-0"
-                        : "opacity-0 translate-y-0.5"
-                    }`}
-                    aria-hidden={claimState !== "claimed"}
-                  >
-                    <span
-                      className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#00FF84]"
-                      aria-hidden
+                      className={`absolute inset-0 inline-flex items-center justify-center gap-2 transition-all duration-200 ease-out ${
+                        claimState === "idle"
+                          ? "opacity-100 translate-y-0"
+                          : "opacity-0 translate-y-0.5"
+                      }`}
+                      aria-hidden={claimState !== "idle"}
                     >
-                      <svg
-                        width="10"
-                        height="8"
-                        viewBox="0 0 12 9"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M1 4.5L4.25 7.75L11 1"
-                          stroke="white"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
+                      <span>Claim</span>
                     </span>
-                    <span>Claimed</span>
+
+                    <span
+                      className={`absolute inset-0 inline-flex items-center justify-center gap-2 transition-all duration-200 ease-out ${
+                        claimState === "claiming"
+                          ? "opacity-100 translate-y-0"
+                          : "opacity-0 translate-y-0.5"
+                      }`}
+                      aria-hidden={claimState !== "claiming"}
+                    >
+                      <span
+                        className="inline-block h-4 w-4 rounded-full border-2 border-white/25 border-t-white animate-spin"
+                        aria-hidden
+                      />
+                      <span>Claiming</span>
+                    </span>
+
+                    <span
+                      className={`absolute inset-0 inline-flex items-center justify-center gap-2 transition-all duration-200 ease-out ${
+                        claimState === "claimed"
+                          ? "opacity-100 translate-y-0"
+                          : "opacity-0 translate-y-0.5"
+                      }`}
+                      aria-hidden={claimState !== "claimed"}
+                    >
+                      <span
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-white"
+                        aria-hidden
+                      >
+                        <svg
+                          width="10"
+                          height="8"
+                          viewBox="0 0 12 9"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M1 4.5L4.25 7.75L11 1"
+                            stroke="#009D59"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </span>
+                      <span>Claimed</span>
+                    </span>
                   </span>
-                </span>
-              </button>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  aria-label="Sharing"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white/20 bg-transparent hover:bg-white/10 transition-transform transition-colors duration-200 ease-out active:scale-[0.98]"
+                >
+                  <div className="relative h-[20px] w-[20px]">
+                    <img
+                      src={IMG_SHARE}
+                      alt=""
+                      aria-hidden
+                      className="absolute inset-0 block h-full w-full object-contain"
+                    />
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
           </div>
