@@ -227,7 +227,9 @@ export default function LeverageSelector() {
   }, [side]);
 
   useEffect(() => {
-    const handlePointerDown = (event: MouseEvent) => {
+    // Must match the `"pointerdown"` DOM event type (`PointerEvent`), otherwise TS
+    // fails the build (e.g. on Vercel/CI where `next build` checks types).
+    const handlePointerDown = (event: PointerEvent) => {
       const root = personMenuRef.current;
       if (!root) return;
       if (root.contains(event.target as Node)) return;
