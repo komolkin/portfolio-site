@@ -184,6 +184,7 @@ export default function LeverageSelector() {
   const tabsRef = useRef<HTMLDivElement | null>(null);
   const buyTextRef = useRef<HTMLSpanElement | null>(null);
   const sellTextRef = useRef<HTMLSpanElement | null>(null);
+  const amountInputRef = useRef<HTMLInputElement | null>(null);
   const [tabIndicator, setTabIndicator] = useState({ left: 0, width: 0 });
 
   const leverage = LEVERAGE_STEPS[leverageIdx];
@@ -213,6 +214,14 @@ export default function LeverageSelector() {
         img.onerror = null;
       });
     };
+  }, []);
+
+  useEffect(() => {
+    // Make the "Amount" input usable immediately (no extra click needed).
+    // `requestAnimationFrame` helps ensure the input is mounted and measurable.
+    requestAnimationFrame(() => {
+      amountInputRef.current?.focus({ preventScroll: true });
+    });
   }, []);
 
   useLayoutEffect(() => {
@@ -428,7 +437,7 @@ export default function LeverageSelector() {
               </button>
             </div>
             <div
-              className="flex items-center gap-1 text-base text-white"
+              className="flex items-center gap-1 text-base text-white/40 select-none"
               style={{ fontVariantNumeric: "tabular-nums" }}
             >
               <span>Market</span>
@@ -587,8 +596,9 @@ export default function LeverageSelector() {
                 inputMode="numeric"
                 pattern="[0-9]*"
                 value={amount}
+                ref={amountInputRef}
                 onChange={(event) => handleAmountInputChange(event.target.value)}
-                className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-right text-transparent caret-white outline-none leading-none"
+                className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-right text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                 aria-label="Amount input"
               />
             </label>
@@ -599,7 +609,7 @@ export default function LeverageSelector() {
                 key={label}
                 type="button"
                 onClick={() => handleAmountShortcut(label, value)}
-                className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full border-2 border-white/20 px-4 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/30"
+                className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full border-[1px] border-white/20 px-4 text-xs leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/30"
               >
                 {label === "Max" ? label : <NumberFlow value={value} trend={0} />}
               </button>
