@@ -192,6 +192,11 @@ export default function LeverageSelector() {
   const dotCount = LEVERAGE_STEPS.length;
   const ratio = leverageIdx / Math.max(1, dotCount - 1);
   const thumbWidthPx = 56;
+  // Tailwind `size-1` is 0.25rem (~4px), so its radius is ~2px.
+  // We want a 2px visual gap from the dot to the track border.
+  const dotPaddingPx = 2;
+  const dotSizePx = 4;
+  const dotCenterInsetPx = dotPaddingPx + dotSizePx / 2;
   const thumbLeft = `calc(${ratio} * (100% - ${thumbWidthPx}px))`;
   const leverageIntegerDigits = Number.isInteger(leverage) ? 0 : 1;
 
@@ -527,7 +532,13 @@ export default function LeverageSelector() {
                     type="button"
                     onClick={() => setLeverageIdx(i)}
                     className="absolute top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20 transition-transform hover:scale-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                    style={{ left: `${(i / Math.max(1, dotCount - 1)) * 100}%` }}
+                    style={{
+                      // Position the *center* of each dot so its outer edge
+                      // stays inside with a `dotPaddingPx` gap.
+                      left: `calc(${dotCenterInsetPx}px + ${(i / Math.max(1, dotCount - 1))} * (100% - ${
+                        dotCenterInsetPx * 2
+                      }px))`,
+                    }}
                     aria-label={`Leverage ${LEVERAGE_STEPS[i]}×`}
                   />
                 ))}
