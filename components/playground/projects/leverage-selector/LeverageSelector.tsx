@@ -330,7 +330,7 @@ export default function LeverageSelector() {
         style={{ background: "#1d1d1d" }}
       >
         {/* Profile row */}
-        <div className="flex w-full items-center gap-3">
+        <div className="flex w-full items-center gap-3.5">
           <div className="relative size-12 shrink-0 overflow-hidden rounded-lg">
             <Image
               src={selectedPerson.image}
@@ -473,76 +473,84 @@ export default function LeverageSelector() {
         </div>
 
         {/* Leverage */}
-        <div className="wrapper leverage-rainbow-wrapper">
-          <div className="spinner" />
-          <div className="mask" />
-          <div className="content leverage-rainbow-content">
-            <div className="flex w-full items-start justify-between gap-2">
-              <span
-                className="text-base leading-[1.25] text-white/60"
-                style={{ fontVariantNumeric: "tabular-nums" }}
-              >
-                Leverage
-              </span>
-              <span className="text-4xl font-semibold leading-none text-white">
-                <NumberFlow
-                  value={leverage}
-                  suffix="×"
-                  format={{ minimumFractionDigits: leverageIntegerDigits, maximumFractionDigits: 1 }}
-                  className="leading-none"
-                  // Match the glyph line box height by removing number-flow's default mask padding.
-                  style={{ ["--number-flow-mask-height" as any]: "0em" }}
-                />
-              </span>
-            </div>
-            <div className="relative h-[23px] w-full">
-              <div
-                className="absolute top-[-3px] z-10 flex h-7 w-14 cursor-grab items-center justify-center rounded-full bg-[#141414] px-2 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.2)] transition-transform active:cursor-grabbing active:scale-[0.95]"
-                style={{ left: thumbLeft }}
-                onMouseEnter={sparkle.onMouseEnter}
-                onMouseLeave={sparkle.onMouseLeave}
-                onMouseMove={sparkle.onMouseMove}
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  startLeverageDrag(event.clientX);
-                }}
-              >
-                <span className="w-full text-center text-xs font-semibold leading-[1.25] text-white">
-                  {formatLeverage(leverage)}
+        <div className="leverage-rainbow-outer">
+          <div className="leverage-rainbow-glow" aria-hidden>
+            <div className="spinner" />
+          </div>
+          <div className="wrapper leverage-rainbow-wrapper">
+            <div className="spinner" aria-hidden />
+            <div className="mask" />
+            <div className="content leverage-rainbow-content">
+              <div className="flex w-full items-start justify-between gap-2">
+                <span
+                  className="text-base leading-[1.25] text-white/60"
+                  style={{ fontVariantNumeric: "tabular-nums" }}
+                >
+                  Leverage
+                </span>
+                <span className="text-4xl font-semibold leading-none text-white">
+                  <NumberFlow
+                    value={leverage}
+                    suffix="×"
+                    format={{
+                      minimumFractionDigits: leverageIntegerDigits,
+                      maximumFractionDigits: 1,
+                    }}
+                    className="leading-none"
+                    // Match the glyph line box height by removing number-flow's default mask padding.
+                    style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                  />
                 </span>
               </div>
-              <div
-                ref={trackRef}
-                tabIndex={0}
-                className="absolute left-0 right-0 top-[7px] h-2 cursor-pointer rounded-full bg-white/10 outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                role="slider"
-                aria-valuemin={0}
-                aria-valuemax={dotCount - 1}
-                aria-valuenow={leverageIdx}
-                aria-valuetext={formatLeverage(leverage)}
-                aria-label="Leverage"
-                onKeyDown={handleLeverageKeyDown}
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  startLeverageDrag(event.clientX);
-                }}
-              >
-                {Array.from({ length: dotCount }, (_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setLeverageIdx(i)}
-                    className="absolute top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20 transition-transform hover:scale-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                    style={{
-                      // Position the *center* of each dot so its outer edge
-                      // stays inside with a `dotPaddingPx` gap.
-                      left: `calc(${dotCenterInsetPx}px + ${(i / Math.max(1, dotCount - 1))} * (100% - ${
-                        dotCenterInsetPx * 2
-                      }px))`,
-                    }}
-                    aria-label={`Leverage ${LEVERAGE_STEPS[i]}×`}
-                  />
-                ))}
+              <div className="relative h-[23px] w-full">
+                <div
+                  className="absolute top-[-3px] z-10 flex h-7 w-14 cursor-grab items-center justify-center rounded-full bg-[#141414] px-2 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.2)] transition-transform active:cursor-grabbing active:scale-[0.95]"
+                  style={{ left: thumbLeft }}
+                  onMouseEnter={sparkle.onMouseEnter}
+                  onMouseLeave={sparkle.onMouseLeave}
+                  onMouseMove={sparkle.onMouseMove}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    startLeverageDrag(event.clientX);
+                  }}
+                >
+                  <span className="w-full text-center text-xs font-semibold leading-[1.25] text-white">
+                    {formatLeverage(leverage)}
+                  </span>
+                </div>
+                <div
+                  ref={trackRef}
+                  tabIndex={0}
+                  className="absolute left-0 right-0 top-[7px] h-2 cursor-pointer rounded-full bg-white/10 outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  role="slider"
+                  aria-valuemin={0}
+                  aria-valuemax={dotCount - 1}
+                  aria-valuenow={leverageIdx}
+                  aria-valuetext={formatLeverage(leverage)}
+                  aria-label="Leverage"
+                  onKeyDown={handleLeverageKeyDown}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    startLeverageDrag(event.clientX);
+                  }}
+                >
+                  {Array.from({ length: dotCount }, (_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setLeverageIdx(i)}
+                      className="absolute top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20 transition-transform hover:scale-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                      style={{
+                        // Position the *center* of each dot so its outer edge
+                        // stays inside with a `dotPaddingPx` gap.
+                        left: `calc(${dotCenterInsetPx}px + ${(i / Math.max(1, dotCount - 1))} * (100% - ${
+                          dotCenterInsetPx * 2
+                        }px))`,
+                      }}
+                      aria-label={`Leverage ${LEVERAGE_STEPS[i]}×`}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -591,7 +599,7 @@ export default function LeverageSelector() {
                 key={label}
                 type="button"
                 onClick={() => handleAmountShortcut(label, value)}
-                className="min-w-0 flex h-[34px] flex-1 items-center justify-center rounded-full border-2 border-white/20 px-4 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/30"
+                className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full border-2 border-white/20 px-4 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/30"
               >
                 {label === "Max" ? label : <NumberFlow value={value} trend={0} />}
               </button>

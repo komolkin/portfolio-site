@@ -95,6 +95,30 @@ body {
   display: inline-flex;
 }
 
+/* Leverage rainbow glow underlay */
+.leverage-rainbow-outer {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.leverage-rainbow-glow {
+  position: absolute;
+  inset: -8px;
+  border-radius: 32px; /* (24px button radius) + (8px glow spread) */
+  padding: 1px;
+  overflow: hidden;
+  filter: blur(6px);
+  opacity: 0.22;
+  transition: opacity 0.3s;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.leverage-rainbow-outer:hover .leverage-rainbow-glow {
+  opacity: 0.42;
+}
+
 .spinner {
   position: absolute;
   inset: -1000%;
@@ -136,6 +160,7 @@ body {
   border-radius: 24px;
   padding: 2px;
   display: flex;
+  z-index: 1;
 }
 
 .leverage-rainbow-wrapper .mask {
