@@ -77,10 +77,11 @@ function formatMoney(n: number) {
   return `$${n}`;
 }
 
-function useSparkle() {
+function useSparkle(sparkleMultiplier: number) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isHovering = useRef(false);
   const mouse = useRef({ x: 0, y: 0 });
+  const sparkleMultiplierRef = useRef(sparkleMultiplier);
   const particles = useRef<
     Array<{
       x: number;
@@ -145,8 +146,18 @@ function useSparkle() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (isHovering.current && t - lastSpawn > 40) {
-        // ~25 particles/sec
-        spawn();
+        // Spawn more particles as leverage increases (1x..5x), but keep the default
+        // feeling subtle. We map:
+        //   1x -> ~0.12 particles/tick (usually 0; sometimes 1)
+        //   5x -> ~1.2 particles/tick
+        const m = Math.min(5, Math.max(1, sparkleMultiplierRef.current));
+        const tNorm = (m - 1) / 4; // 0..1
+        const spawnRate = 0.12 + tNorm * 1.08; // 0.12..1.2
+
+        const full = Math.floor(spawnRate);
+        const frac = spawnRate - full;
+        const spawnCount = full + (Math.random() < frac ? 1 : 0);
+        for (let i = 0; i < spawnCount; i++) spawn();
         lastSpawn = t;
       }
 
@@ -172,6 +183,10 @@ function useSparkle() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    sparkleMultiplierRef.current = sparkleMultiplier;
+  }, [sparkleMultiplier]);
 
   return {
     canvasRef,
@@ -215,7 +230,8 @@ export default function LeverageSelector() {
   const thumbLeft = `calc(${ratio} * (100% - ${thumbWidthPx}px))`;
   const leverageIntegerDigits = Number.isInteger(leverage) ? 0 : 1;
 
-  const sparkle = useSparkle();
+  // 1x..5x; used to scale hover sparkles intensity.
+  const sparkle = useSparkle(leverage);
 
   const imagePreloadPromisesRef = useRef<Map<string, Promise<void>>>(new Map());
   const preloadPersonImage = useCallback((src: string) => {
