@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
-import CursorCanvas from "@/components/CursorCanvas";
 import SelectionColor from "@/components/SelectionColor";
 import { Analytics } from "@vercel/analytics/next";
 
@@ -21,7 +20,6 @@ export default function RootLayout({
       <body>
         <Providers>
           {children}
-          <CursorCanvas />
           <SelectionColor />
         </Providers>
         <Analytics />

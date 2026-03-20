@@ -33,6 +33,22 @@ const PERSON_OPTIONS = [
   { name: "Saoirse Ronan", image: IMG_SAOIRSE_RONAN, yesPercent: 64 },
 ] as const;
 
+// Start fetching avatar images as soon as the module is evaluated on the client.
+// This avoids the first user interaction triggering a cold fetch/decode.
+const avatarPreloadSrcs = new Set<string>();
+if (typeof window !== "undefined") {
+  PERSON_OPTIONS.forEach((person) => {
+    if (avatarPreloadSrcs.has(person.image)) return;
+    avatarPreloadSrcs.add(person.image);
+
+    const img = new window.Image();
+    img.src = person.image;
+    img.decode?.().catch(() => {
+      // Ignore decode errors; the image may still render fine.
+    });
+  });
+}
+
 function ChevronDown({ className }: { className?: string }) {
   return (
     <svg
@@ -201,20 +217,38 @@ export default function LeverageSelector() {
 
   const sparkle = useSparkle();
 
+  const imagePreloadPromisesRef = useRef<Map<string, Promise<void>>>(new Map());
+  const preloadPersonImage = useCallback((src: string) => {
+    const existing = imagePreloadPromisesRef.current.get(src);
+    if (existing) return existing;
+
+    // Preload + decode so the avatar swap happens as soon as `selectedPerson` changes.
+    const promise = new Promise<void>((resolve) => {
+      const img = new window.Image();
+      img.src = src;
+
+      img.onload = async () => {
+        try {
+          await img.decode();
+        } catch {
+          // If decode fails for any reason, still resolve so UI isn't blocked forever.
+        }
+        resolve();
+      };
+
+      img.onerror = () => resolve();
+    });
+
+    imagePreloadPromisesRef.current.set(src, promise);
+    return promise;
+  }, []);
+
   useEffect(() => {
     // Warm up browser cache so avatar images do not blink on first open.
-    const preloaded = PERSON_OPTIONS.map((person) => {
-      const img = new window.Image();
-      img.src = person.image;
-      return img;
+    PERSON_OPTIONS.forEach((person) => {
+      preloadPersonImage(person.image);
     });
-    return () => {
-      preloaded.forEach((img) => {
-        img.onload = null;
-        img.onerror = null;
-      });
-    };
-  }, []);
+  }, [preloadPersonImage]);
 
   useEffect(() => {
     // Make the "Amount" input usable immediately (no extra click needed).
@@ -341,14 +375,22 @@ export default function LeverageSelector() {
         {/* Profile row */}
         <div className="flex w-full items-center gap-3.5">
           <div className="relative size-12 shrink-0 overflow-hidden rounded-lg">
-            <Image
-              src={selectedPerson.image}
-              alt={selectedPerson.name}
-              fill
-              sizes="48px"
-              unoptimized
-              className="object-cover"
-            />
+            {/* Render all avatars up-front (hidden) so switching feels instantaneous. */}
+            {PERSON_OPTIONS.map((person) => (
+              <img
+                key={person.image}
+                src={person.image}
+                alt={person.name}
+                aria-hidden={person.name !== selectedPerson.name}
+                className={`absolute inset-0 size-full object-cover ${
+                  person.name === selectedPerson.name ? "opacity-100" : "opacity-0"
+                }`}
+                style={{ transition: "none" }}
+                loading="eager"
+                decoding="async"
+                draggable={false}
+              />
+            ))}
           </div>
           <div ref={personMenuRef} className="relative min-w-0 flex-1">
             <button
@@ -356,7 +398,16 @@ export default function LeverageSelector() {
               className="flex min-w-0 w-full items-center gap-2 text-left"
               aria-haspopup="listbox"
               aria-expanded={isPersonMenuOpen}
-              onClick={() => setIsPersonMenuOpen((prev) => !prev)}
+              onClick={() => {
+                setIsPersonMenuOpen((prev) => {
+                  const next = !prev;
+                  if (next) {
+                    // If the user opens the dropdown, eagerly preload everything they might pick.
+                    PERSON_OPTIONS.forEach((person) => preloadPersonImage(person.image));
+                  }
+                  return next;
+                });
+              }}
             >
               <span className="truncate text-xl font-semibold leading-[1.25] text-white">
                 {selectedPerson.name}
@@ -389,6 +440,8 @@ export default function LeverageSelector() {
                   role="option"
                   aria-selected={person.name === selectedPerson.name}
                   onClick={() => {
+                    // Kick off loading immediately, then update state.
+                    preloadPersonImage(person.image);
                     setSelectedPerson(person);
                     setIsPersonMenuOpen(false);
                   }}
@@ -447,7 +500,7 @@ export default function LeverageSelector() {
         </div>
 
         {/* Yes / No */}
-        <div className="relative flex w-full overflow-hidden rounded-full bg-white/[0.04] p-0.5">
+        <div className="relative flex h-12 w-full overflow-hidden rounded-full bg-white/[0.04] p-0.5">
           <div
             className={`absolute bottom-0.5 top-0.5 w-[calc(50%-2px)] rounded-full transition-transform duration-200 ease-out ${
               outcome === "yes" ? "translate-x-0" : "translate-x-full"
@@ -458,7 +511,7 @@ export default function LeverageSelector() {
           <button
             type="button"
             onClick={() => setOutcome("yes")}
-            className="relative z-10 w-1/2 rounded-full py-3.5 text-center text-base font-semibold leading-[1.25] transition-colors text-white"
+            className="relative z-10 h-full w-1/2 rounded-full text-center text-base font-semibold leading-[1.25] transition-colors text-white"
             aria-pressed={outcome === "yes"}
           >
             <span className="text-white/60">Yes</span>{" "}
@@ -470,7 +523,7 @@ export default function LeverageSelector() {
           <button
             type="button"
             onClick={() => setOutcome("no")}
-            className="relative z-10 w-1/2 rounded-full py-3.5 text-center text-base font-semibold leading-[1.25] transition-colors text-white"
+            className="relative z-10 h-full w-1/2 rounded-full text-center text-base font-semibold leading-[1.25] transition-colors text-white"
             aria-pressed={outcome === "no"}
           >
             <span className="text-white/60">No</span>{" "}
@@ -483,12 +536,20 @@ export default function LeverageSelector() {
 
         {/* Leverage */}
         <div className="leverage-rainbow-outer">
-          <div className="leverage-rainbow-glow" aria-hidden>
-            <div className="spinner" />
-          </div>
           <div className="wrapper leverage-rainbow-wrapper">
-            <div className="spinner" aria-hidden />
-            <div className="mask" />
+            {/* Shimmer border layers (replaces the old rainbow spinner border). */}
+            <div className="layer-blur" aria-hidden>
+              <div className="slide">
+                <div className="spin" />
+              </div>
+            </div>
+            <div className="layer-sharp" aria-hidden>
+              <div className="slide">
+                <div className="spin" />
+              </div>
+            </div>
+            <div className="highlight" aria-hidden />
+            <div className="bg-mask" aria-hidden />
             <div className="content leverage-rainbow-content">
               <div className="flex w-full items-start justify-between gap-2">
                 <span
@@ -595,7 +656,7 @@ export default function LeverageSelector() {
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                value={amount}
+                value={amount === 0 ? "" : String(amount)}
                 ref={amountInputRef}
                 onChange={(event) => handleAmountInputChange(event.target.value)}
                 className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-right text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
