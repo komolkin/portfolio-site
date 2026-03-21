@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { KeyboardEvent, MouseEvent } from "react";
+import type { KeyboardEvent } from "react";
 import NumberFlow from "@number-flow/react";
 import Image from "next/image";
 
@@ -77,132 +77,6 @@ function formatMoney(n: number) {
   return `$${n}`;
 }
 
-function useSparkle(sparkleMultiplier: number) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const isHovering = useRef(false);
-  const mouse = useRef({ x: 0, y: 0 });
-  const sparkleMultiplierRef = useRef(sparkleMultiplier);
-  const particles = useRef<
-    Array<{
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      alpha: number;
-      symbol: string;
-      color: string;
-      size: number;
-    }>
-  >([]);
-  const raf = useRef<number | null>(null);
-
-  // EXACT symbols used (copy these)
-  const SYMBOLS = ["✦", "˚", "⁺", "⟠", "˖", "◎", "⋅", "⊹", "⋆", "★", "✧", "₿", "·", "∘"] as const;
-  // EXACT colors used (match rainbow border)
-  const COLORS = [
-    "#efcb39",
-    "#39ef51",
-    "#39efcb",
-    "#39b2ef",
-    "#9a5ff2",
-    "#ef39cb",
-    "#8239ef",
-    "#ff9900",
-    "#eb2314",
-  ] as const;
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const resize = () => {
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * dpr;
-      canvas.style.width = window.innerWidth + "px";
-      canvas.style.height = window.innerHeight + "px";
-      ctx.scale(dpr, dpr);
-    };
-    resize();
-    window.addEventListener("resize", resize);
-
-    const spawn = () => {
-      particles.current.push({
-        x: mouse.current.x,
-        y: mouse.current.y,
-        vx: (Math.random() - 0.5) * 2,
-        vy: -(Math.random() * 2.5 + 0.5),
-        alpha: 1,
-        symbol: SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
-        color: COLORS[Math.floor(Math.random() * COLORS.length)],
-        size: Math.random() * 10 + 9, // 9–19px, matches original
-      });
-    };
-
-    let lastSpawn = 0;
-    const loop = (t: number) => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      if (isHovering.current && t - lastSpawn > 40) {
-        // Spawn more particles as leverage increases (1x..5x), but keep the default
-        // feeling subtle. We map:
-        //   1x -> ~0.12 particles/tick (usually 0; sometimes 1)
-        //   5x -> ~1.2 particles/tick
-        const m = Math.min(5, Math.max(1, sparkleMultiplierRef.current));
-        const tNorm = (m - 1) / 4; // 0..1
-        const spawnRate = 0.12 + tNorm * 1.08; // 0.12..1.2
-
-        const full = Math.floor(spawnRate);
-        const frac = spawnRate - full;
-        const spawnCount = full + (Math.random() < frac ? 1 : 0);
-        for (let i = 0; i < spawnCount; i++) spawn();
-        lastSpawn = t;
-      }
-
-      particles.current = particles.current.filter((p) => p.alpha > 0.01);
-      for (const p of particles.current) {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.04; // slight gravity
-        p.alpha -= 0.018; // fade speed
-        ctx.globalAlpha = Math.max(0, p.alpha);
-        ctx.fillStyle = p.color;
-        ctx.font = `${p.size}px "SF Mono", "Fira Code", monospace`;
-        ctx.fillText(p.symbol, p.x, p.y);
-      }
-      ctx.globalAlpha = 1;
-      raf.current = requestAnimationFrame(loop);
-    };
-
-    raf.current = requestAnimationFrame(loop);
-    return () => {
-      if (raf.current) cancelAnimationFrame(raf.current);
-      window.removeEventListener("resize", resize);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    sparkleMultiplierRef.current = sparkleMultiplier;
-  }, [sparkleMultiplier]);
-
-  return {
-    canvasRef,
-    onMouseEnter: (e: MouseEvent<HTMLDivElement>) => {
-      isHovering.current = true;
-      mouse.current = { x: e.clientX, y: e.clientY };
-    },
-    onMouseLeave: () => {
-      isHovering.current = false;
-    },
-    onMouseMove: (e: MouseEvent<HTMLDivElement>) => {
-      mouse.current = { x: e.clientX, y: e.clientY };
-    },
-  };
-}
-
 export default function LeverageSelector() {
   const [selectedPerson, setSelectedPerson] = useState<(typeof PERSON_OPTIONS)[number]>(PERSON_OPTIONS[0]);
   const [isPersonMenuOpen, setIsPersonMenuOpen] = useState(false);
@@ -228,9 +102,6 @@ export default function LeverageSelector() {
   const stepCenterInsetPx = thumbHalfPx;
   const thumbLeft = `calc(${ratio} * (100% - ${thumbWidthPx}px))`;
   const leverageIntegerDigits = Number.isInteger(leverage) ? 0 : 1;
-
-  // 1x..5x; used to scale hover sparkles intensity.
-  const sparkle = useSparkle(leverage);
 
   const imagePreloadPromisesRef = useRef<Map<string, Promise<void>>>(new Map());
   const preloadPersonImage = useCallback((src: string) => {
@@ -381,11 +252,6 @@ export default function LeverageSelector() {
 
   return (
     <div className="relative w-[380px] max-w-[calc(100vw-2rem)] p-4">
-      {/* Fixed canvas sparkle overlay (particles drawn via canvas fillText, not DOM). */}
-      <canvas
-        ref={sparkle.canvasRef}
-        style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 9999 }}
-      />
       <div
         className="flex w-full flex-col gap-2.5 rounded-3xl p-4"
         style={{ background: "#1d1d1d" }}
@@ -529,7 +395,7 @@ export default function LeverageSelector() {
           <button
             type="button"
             onClick={() => setOutcome("yes")}
-            className="relative z-10 h-full w-1/2 rounded-full text-center text-base font-semibold leading-[1.25] transition-colors text-white"
+            className="relative z-10 h-full w-1/2 rounded-full text-center text-base font-semibold leading-[1.25] text-white transition-[color,transform] duration-150 ease-out active:scale-[0.95]"
             aria-pressed={outcome === "yes"}
           >
             <span className="text-white/60">Yes</span>{" "}
@@ -541,7 +407,7 @@ export default function LeverageSelector() {
           <button
             type="button"
             onClick={() => setOutcome("no")}
-            className="relative z-10 h-full w-1/2 rounded-full text-center text-base font-semibold leading-[1.25] transition-colors text-white"
+            className="relative z-10 h-full w-1/2 rounded-full text-center text-base font-semibold leading-[1.25] text-white transition-[color,transform] duration-150 ease-out active:scale-[0.95]"
             aria-pressed={outcome === "no"}
           >
             <span className="text-white/60">No</span>{" "}
@@ -598,9 +464,6 @@ export default function LeverageSelector() {
                       : "transition-transform duration-150 ease-out"
                   }`}
                   style={{ left: thumbLeft }}
-                  onMouseEnter={sparkle.onMouseEnter}
-                  onMouseLeave={sparkle.onMouseLeave}
-                  onMouseMove={sparkle.onMouseMove}
                   onPointerDown={(event) => {
                     event.preventDefault();
                     startLeverageDrag(event.clientX);
