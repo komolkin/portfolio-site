@@ -671,7 +671,7 @@ export default function LeverageSelector() {
                   onClick={() =>
                     setLimitPriceCents((c) => Math.max(0, c - 1))
                   }
-                  className="flex h-8 w-10 items-center justify-center rounded-full border-[1.5px] border-white/10 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/20"
+                  className="flex h-8 w-10 items-center justify-center rounded-full border-[1.5px] border-white/10 pb-0.5 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/20"
                   aria-label="Decrease limit price"
                 >
                   −
@@ -683,7 +683,7 @@ export default function LeverageSelector() {
                       Math.min(MAX_LIMIT_CENTS, c + 1),
                     )
                   }
-                  className="flex h-8 w-10 items-center justify-center rounded-full border-[1.5px] border-white/10 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/20"
+                  className="flex h-8 w-10 items-center justify-center rounded-full border-[1.5px] border-white/10 pb-0.5 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/20"
                   aria-label="Increase limit price"
                 >
                   +
@@ -730,7 +730,7 @@ export default function LeverageSelector() {
                 <button
                   type="button"
                   onClick={() => setShares((s) => Math.max(0, s - 1))}
-                  className="flex h-8 w-10 items-center justify-center rounded-full border-[1.5px] border-white/10 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/20"
+                  className="flex h-8 w-10 items-center justify-center rounded-full border-[1.5px] border-white/10 pb-0.5 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/20"
                   aria-label="Decrease shares"
                 >
                   −
@@ -740,7 +740,7 @@ export default function LeverageSelector() {
                   onClick={() =>
                     setShares((s) => Math.min(MAX_AMOUNT, s + 1))
                   }
-                  className="flex h-8 w-10 items-center justify-center rounded-full border-[1.5px] border-white/10 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/20"
+                  className="flex h-8 w-10 items-center justify-center rounded-full border-[1.5px] border-white/10 pb-0.5 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/20"
                   aria-label="Increase shares"
                 >
                   +
