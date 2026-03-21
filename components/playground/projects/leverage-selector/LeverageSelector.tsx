@@ -25,6 +25,7 @@ const AMOUNT_PRESETS = [
   { label: "Max", value: 10_000 },
 ] as const;
 const MAX_AMOUNT = 10_000;
+const MAX_LIMIT_CENTS = 1_000_000;
 const PERSON_OPTIONS = [
   { name: "Timothée Chalamet", image: IMG_TIMOTHEE_CHALAMET, yesPercent: 61 },
   { name: "Zendaya", image: IMG_ZENDAYA, yesPercent: 67 },
@@ -68,6 +69,20 @@ function ChevronDown({ className }: { className?: string }) {
   );
 }
 
+function SwapVertical({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" className={className} aria-hidden>
+      <path
+        d="M5 4.5L8 1.5L11 4.5M11 11.5L8 14.5L5 11.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function formatLeverage(n: number) {
   return `${n}×`;
 }
@@ -85,12 +100,17 @@ export default function LeverageSelector() {
   const [leverageIdx, setLeverageIdx] = useState(0);
   const [isLeverageDragging, setIsLeverageDragging] = useState(false);
   const [amount, setAmount] = useState(0);
+  const [orderType, setOrderType] = useState<"market" | "limit">("market");
+  const [limitPriceCents, setLimitPriceCents] = useState(0);
+  const [shares, setShares] = useState(0);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const personMenuRef = useRef<HTMLDivElement | null>(null);
   const tabsRef = useRef<HTMLDivElement | null>(null);
   const buyTextRef = useRef<HTMLSpanElement | null>(null);
   const sellTextRef = useRef<HTMLSpanElement | null>(null);
   const amountInputRef = useRef<HTMLInputElement | null>(null);
+  const limitPriceInputRef = useRef<HTMLInputElement | null>(null);
+  const sharesInputRef = useRef<HTMLInputElement | null>(null);
   const [tabIndicator, setTabIndicator] = useState({ left: 0, width: 0 });
 
   const leverage = LEVERAGE_STEPS[leverageIdx];
@@ -137,12 +157,15 @@ export default function LeverageSelector() {
   }, [preloadPersonImage]);
 
   useEffect(() => {
-    // Make the "Amount" input usable immediately (no extra click needed).
-    // `requestAnimationFrame` helps ensure the input is mounted and measurable.
+    // Make the active order-type field usable immediately (no extra click needed).
     requestAnimationFrame(() => {
-      amountInputRef.current?.focus({ preventScroll: true });
+      if (orderType === "market") {
+        amountInputRef.current?.focus({ preventScroll: true });
+      } else {
+        limitPriceInputRef.current?.focus({ preventScroll: true });
+      }
     });
-  }, []);
+  }, [orderType]);
 
   useLayoutEffect(() => {
     const root = tabsRef.current;
@@ -249,6 +272,39 @@ export default function LeverageSelector() {
     }
     setAmount(Math.min(MAX_AMOUNT, parsed));
   };
+
+  const handleLimitPriceInputChange = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, "");
+    if (digitsOnly.length === 0) {
+      setLimitPriceCents(0);
+      return;
+    }
+    const parsed = Number.parseInt(digitsOnly, 10);
+    if (Number.isNaN(parsed)) {
+      setLimitPriceCents(0);
+      return;
+    }
+    setLimitPriceCents(Math.min(MAX_LIMIT_CENTS, parsed));
+  };
+
+  const handleSharesInputChange = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, "");
+    if (digitsOnly.length === 0) {
+      setShares(0);
+      return;
+    }
+    const parsed = Number.parseInt(digitsOnly, 10);
+    if (Number.isNaN(parsed)) {
+      setShares(0);
+      return;
+    }
+    setShares(Math.min(MAX_AMOUNT, parsed));
+  };
+
+  const canPlaceOrder =
+    orderType === "market"
+      ? amount > 0
+      : limitPriceCents > 0 && shares > 0;
 
   return (
     <div className="relative w-[380px] max-w-[calc(100vw-2rem)] p-4">
@@ -373,12 +429,21 @@ export default function LeverageSelector() {
                 <span ref={sellTextRef}>Sell</span>
               </button>
             </div>
-            <div
+            <button
+              type="button"
+              onClick={() => setOrderType((t) => (t === "market" ? "limit" : "market"))}
               className="flex items-center gap-1 text-base text-white/40 select-none"
               style={{ fontVariantNumeric: "tabular-nums" }}
+              aria-pressed={orderType === "limit"}
+              aria-label={
+                orderType === "market"
+                  ? "Switch to limit order"
+                  : "Switch to market order"
+              }
             >
-              <span>Market</span>
-            </div>
+              <span>{orderType === "market" ? "Market" : "Limit"}</span>
+              <SwapVertical className="size-4 shrink-0 text-white/40" />
+            </button>
           </div>
           <div className="h-px w-full bg-white/10" />
         </div>
@@ -510,57 +575,180 @@ export default function LeverageSelector() {
           </div>
         </div>
 
-        {/* Amount */}
-        <div className="flex w-full flex-col gap-3 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
-          <div className="flex w-full items-start justify-between gap-2">
-            <span
-              className="text-base leading-[1.25] text-white/60"
-              style={{ fontVariantNumeric: "tabular-nums" }}
-            >
-              Amount
-            </span>
-            <label
-              className={`relative inline-flex items-baseline gap-0.5 text-4xl font-semibold leading-none ${
-                amount > 0 ? "text-white" : "text-white/40"
-              }`}
-              style={{ fontVariantNumeric: "tabular-nums" }}
-            >
-              <span aria-hidden>$</span>
-              <NumberFlow
-                value={amount}
-                format={{ useGrouping: false }}
-                trend={0}
-                className="leading-none"
-                // `number-flow` adds vertical padding based on `--number-flow-mask-height` (default 0.25em),
-                // which makes the element taller than the glyph line box. Setting it to `0em` keeps the
-                // height aligned with the text symbols/baseline.
-                style={{ ["--number-flow-mask-height" as any]: "0em" }}
-              />
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={amount === 0 ? "" : String(amount)}
-                ref={amountInputRef}
-                onChange={(event) => handleAmountInputChange(event.target.value)}
-                className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-right text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
-                aria-label="Amount input"
-              />
-            </label>
-          </div>
-          <div className="flex w-full gap-1.5">
-            {AMOUNT_PRESETS.map(({ label, value }) => (
-              <button
-                key={label}
-                type="button"
-                onClick={() => handleAmountShortcut(label, value)}
-                className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full border-[1px] border-white/20 px-4 text-xs leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/30"
+        {/* Amount (market) or Limit Price / Shares (limit) */}
+        {orderType === "market" ? (
+          <div className="flex w-full flex-col gap-3 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
+            <div className="flex w-full items-start justify-between gap-2">
+              <span
+                className="text-base leading-[1.25] text-white/60"
+                style={{ fontVariantNumeric: "tabular-nums" }}
               >
-                {label === "Max" ? label : <NumberFlow value={value} trend={0} />}
-              </button>
-            ))}
+                Amount
+              </span>
+              <label
+                className={`relative inline-flex items-baseline gap-0.5 text-4xl font-semibold leading-none ${
+                  amount > 0 ? "text-white" : "text-white/40"
+                }`}
+                style={{ fontVariantNumeric: "tabular-nums" }}
+              >
+                <span aria-hidden>$</span>
+                <NumberFlow
+                  value={amount}
+                  format={{ useGrouping: false }}
+                  trend={0}
+                  className="leading-none"
+                  // `number-flow` adds vertical padding based on `--number-flow-mask-height` (default 0.25em),
+                  // which makes the element taller than the glyph line box. Setting it to `0em` keeps the
+                  // height aligned with the text symbols/baseline.
+                  style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={amount === 0 ? "" : String(amount)}
+                  ref={amountInputRef}
+                  onChange={(event) => handleAmountInputChange(event.target.value)}
+                  className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-right text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
+                  aria-label="Amount input"
+                />
+              </label>
+            </div>
+            <div className="flex w-full gap-1.5">
+              {AMOUNT_PRESETS.map(({ label, value }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => handleAmountShortcut(label, value)}
+                  className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full border-[1px] border-white/20 px-4 text-xs leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/30"
+                >
+                  {label === "Max" ? label : <NumberFlow value={value} trend={0} />}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex w-full flex-col gap-2 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
+            <label
+              id="leverage-limit-price-label"
+              htmlFor="leverage-limit-price"
+              className="block cursor-text text-base leading-[1.25] text-white/60"
+              style={{ fontVariantNumeric: "tabular-nums" }}
+            >
+              Limit Price
+            </label>
+            <div className="flex w-full min-w-0 items-center justify-between gap-2">
+              <div
+                className={`relative flex min-w-0 flex-1 items-baseline text-4xl font-semibold leading-none tabular-nums ${
+                  limitPriceCents > 0 ? "text-white" : "text-white/40"
+                }`}
+              >
+                <NumberFlow
+                  value={limitPriceCents}
+                  suffix="¢"
+                  format={{ useGrouping: false }}
+                  trend={0}
+                  className="leading-none"
+                  style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                />
+                <input
+                  id="leverage-limit-price"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={limitPriceCents === 0 ? "" : String(limitPriceCents)}
+                  ref={limitPriceInputRef}
+                  onChange={(event) =>
+                    handleLimitPriceInputChange(event.target.value)
+                  }
+                  className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
+                  aria-labelledby="leverage-limit-price-label"
+                />
+              </div>
+              <div className="flex shrink-0 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLimitPriceCents((c) => Math.max(0, c - 1))
+                  }
+                  className="flex h-8 w-10 items-center justify-center rounded-full border-[1.5px] border-white/10 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/20"
+                  aria-label="Decrease limit price"
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLimitPriceCents((c) =>
+                      Math.min(MAX_LIMIT_CENTS, c + 1),
+                    )
+                  }
+                  className="flex h-8 w-10 items-center justify-center rounded-full border-[1.5px] border-white/10 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/20"
+                  aria-label="Increase limit price"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            <div className="h-px w-full bg-white/10" />
+            <label
+              id="leverage-shares-label"
+              htmlFor="leverage-shares"
+              className="block cursor-text text-base leading-[1.25] text-white/60"
+              style={{ fontVariantNumeric: "tabular-nums" }}
+            >
+              Shares
+            </label>
+            <div className="flex w-full min-w-0 items-center justify-between gap-2">
+              <div
+                className={`relative flex min-w-0 flex-1 items-baseline text-4xl font-semibold leading-none tabular-nums ${
+                  shares > 0 ? "text-white" : "text-white/40"
+                }`}
+              >
+                <NumberFlow
+                  value={shares}
+                  format={{ useGrouping: false }}
+                  trend={0}
+                  className="leading-none"
+                  style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                />
+                <input
+                  id="leverage-shares"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={shares === 0 ? "" : String(shares)}
+                  ref={sharesInputRef}
+                  onChange={(event) =>
+                    handleSharesInputChange(event.target.value)
+                  }
+                  className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
+                  aria-labelledby="leverage-shares-label"
+                />
+              </div>
+              <div className="flex shrink-0 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setShares((s) => Math.max(0, s - 1))}
+                  className="flex h-8 w-10 items-center justify-center rounded-full border-[1.5px] border-white/10 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/20"
+                  aria-label="Decrease shares"
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShares((s) => Math.min(MAX_AMOUNT, s + 1))
+                  }
+                  className="flex h-8 w-10 items-center justify-center rounded-full border-[1.5px] border-white/10 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/20"
+                  aria-label="Increase shares"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* TP / SL */}
         <button
@@ -582,17 +770,21 @@ export default function LeverageSelector() {
         <button
           type="button"
           className={`flex h-12 w-full items-center justify-center overflow-hidden rounded-full ${
-            amount > 0
+            canPlaceOrder
               ? "bg-white transition-[transform,border-color] active:scale-[0.98]"
               : "bg-white/10"
           }`}
         >
           <span
             className={`text-center text-base font-semibold leading-[1.25] ${
-              amount > 0 ? "text-[#141414]" : "text-white/40"
+              canPlaceOrder ? "text-[#141414]" : "text-white/40"
             }`}
           >
-            {amount > 0 ? "Place Order" : "Enter Amount"}
+            {canPlaceOrder
+              ? "Place Order"
+              : orderType === "market"
+                ? "Enter Amount"
+                : "Enter price & shares"}
           </span>
         </button>
       </div>
