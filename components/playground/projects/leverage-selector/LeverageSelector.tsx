@@ -432,7 +432,7 @@ export default function LeverageSelector() {
             <button
               type="button"
               onClick={() => setOrderType((t) => (t === "market" ? "limit" : "market"))}
-              className="flex items-center gap-1 text-base text-white/40 select-none"
+              className="flex items-center gap-1 text-base text-white/40 select-none transition-colors hover:text-white/60"
               style={{ fontVariantNumeric: "tabular-nums" }}
               aria-pressed={orderType === "limit"}
               aria-label={
@@ -442,7 +442,7 @@ export default function LeverageSelector() {
               }
             >
               <span>{orderType === "market" ? "Market" : "Limit"}</span>
-              <SwapVertical className="size-4 shrink-0 text-white/40" />
+              <SwapVertical className="size-4 shrink-0 text-inherit" />
             </button>
           </div>
           <div className="h-px w-full bg-white/10" />
