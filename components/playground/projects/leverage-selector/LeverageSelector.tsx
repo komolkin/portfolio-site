@@ -515,6 +515,7 @@ export default function LeverageSelector() {
     stopLossValue > 0 ? -positionNotionalDollars * leverage * stopLossPercent : 0;
   const formatTpSlSummaryValue = (value: number, unit: "$" | "%") =>
     value > 0 ? `${value}${unit === "$" ? "¢" : "%"}` : "–";
+  const hasTpSlValues = takeProfitValue > 0 || stopLossValue > 0;
   const tpSlSummary = `TP: ${formatTpSlSummaryValue(takeProfitValue, takeProfitUnit)} / SL: ${formatTpSlSummaryValue(
     stopLossValue,
     stopLossUnit,
@@ -1025,7 +1026,11 @@ export default function LeverageSelector() {
                 className="text-base leading-[1.25] text-white/60"
                 style={{ fontVariantNumeric: "tabular-nums" }}
               >
-                {isTpSlOpen ? "Take Profit" : tpSlSummary}
+                {isTpSlOpen
+                  ? "Take Profit"
+                  : hasTpSlValues
+                    ? tpSlSummary
+                    : "Take Profit / Stop Loss"}
               </span>
               <ChevronDown
                 className={`size-4 shrink-0 text-white/70 transition-transform ${
