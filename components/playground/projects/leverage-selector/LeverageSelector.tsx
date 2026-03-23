@@ -284,7 +284,8 @@ export default function LeverageSelector() {
     )
       .then((urls) => {
         if (cancelled) return;
-        setPnlIconObjectUrls(urls as readonly [string, string, string]);
+        // `Promise.all()` is typed as `string[]` here, so cast via `unknown` to the fixed 3-item tuple.
+        setPnlIconObjectUrls(urls as unknown as readonly [string, string, string]);
       })
       .catch(() => {
         // Ignore.
