@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import type { KeyboardEvent } from "react";
 import NumberFlow from "@number-flow/react";
 import Image from "next/image";
+import { AnimatePresence, motion } from "framer-motion";
 
 const IMG_SAOIRSE_RONAN =
   "https://www.figma.com/api/mcp/asset/ec9b83a9-2570-4f9a-baad-c9a30b43db87";
@@ -14,17 +15,34 @@ const IMG_TIMOTHEE_CHALAMET =
   "https://www.figma.com/api/mcp/asset/eeb8bcdc-4c8c-48a6-af4f-2c0a2000fc1c";
 const IMG_PAUL_MESCAL =
   "https://www.figma.com/api/mcp/asset/3c1cea27-7216-47cf-b669-9c38dfc57c6d";
+const IMG_PNL_VECTOR_0 =
+  "https://www.figma.com/api/mcp/asset/1dc54a4f-d104-4ce0-b429-8feb9261a180";
+const IMG_PNL_VECTOR_1 =
+  "https://www.figma.com/api/mcp/asset/a1ad4f7a-95ec-4ac6-b9bd-e05b14094bc0";
+const IMG_PNL_VECTOR_2 =
+  "https://www.figma.com/api/mcp/asset/ff2b7417-646d-4337-b863-9fee6cda7ad1";
 
 const LEVERAGE_STEPS = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5] as const;
 
 const AMOUNT_PRESETS = [
-  { label: "1", value: 1 },
-  { label: "5", value: 5 },
-  { label: "10", value: 10 },
-  { label: "100", value: 100 },
-  { label: "Max", value: 10_000 },
+  { label: "+1", increment: 1 },
+  { label: "+5", increment: 5 },
+  { label: "+10", increment: 10 },
+  { label: "+100", increment: 100 },
+  { label: "Max", increment: null },
 ] as const;
 const MAX_AMOUNT = 10_000;
+// Used as the fallback "entry price" for PNL when the order is a market order.
+// This is only for the playground UI (so PNL can update live while typing).
+const MARKET_DEFAULT_ENTRY_PRICE_CENTS = 1617; // $16.17
+/** Max shares used for sell % shortcuts and cap (matches limit-order shares cap). */
+const MAX_SHARES = MAX_AMOUNT;
+const SELL_SHARE_PRESETS = [
+  { label: "10%", fraction: 0.1 },
+  { label: "25%", fraction: 0.25 },
+  { label: "50%", fraction: 0.5 },
+  { label: "Max" as const, fraction: null },
+] as const;
 const MAX_LIMIT_CENTS = 1_000_000;
 const PERSON_OPTIONS = [
   { name: "Timothée Chalamet", image: IMG_TIMOTHEE_CHALAMET, yesPercent: 61 },
@@ -47,6 +65,49 @@ if (typeof window !== "undefined") {
     img.decode?.().catch(() => {
       // Ignore decode errors; the image may still render fine.
     });
+  });
+}
+
+// Preload the PNL "trash" icon vectors once so open/close doesn't repeatedly fetch/decode them.
+const pnlIconObjectUrlCache = new Map<string, string>();
+const pnlIconObjectUrlPromises = new Map<string, Promise<string>>();
+const PNL_ICON_SRCS = [IMG_PNL_VECTOR_0, IMG_PNL_VECTOR_1, IMG_PNL_VECTOR_2] as const;
+
+async function getPnlIconObjectUrl(src: string): Promise<string> {
+  const cached = pnlIconObjectUrlCache.get(src);
+  if (cached) return cached;
+
+  const existingPromise = pnlIconObjectUrlPromises.get(src);
+  if (existingPromise) return existingPromise;
+
+  const promise = fetch(src)
+    .then(async (res) => {
+      // If the server doesn't allow CORS for blob reads, fall back to the original src.
+      // (In that case, browser caching may still help depending on headers.)
+      const blob = await res.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      pnlIconObjectUrlCache.set(src, objectUrl);
+      return objectUrl;
+    })
+    .catch(() => src);
+
+  pnlIconObjectUrlPromises.set(src, promise);
+  return promise;
+}
+
+if (typeof window !== "undefined") {
+  // Kick off prefetch immediately on module load (best-effort).
+  for (const src of PNL_ICON_SRCS) {
+    // Also warm up the browser's image cache (in case blob reads are blocked by CORS).
+    const img = new window.Image();
+    img.src = src;
+    img.decode?.().catch(() => {
+      // Ignore decode errors.
+    });
+  }
+
+  void Promise.all(PNL_ICON_SRCS.map((src) => getPnlIconObjectUrl(src))).catch(() => {
+    // Ignore failures; UI will fall back to using the original remote URLs.
   });
 }
 
@@ -92,6 +153,55 @@ function formatMoney(n: number) {
   return `$${n}`;
 }
 
+function PnLIcon({
+  className,
+  iconSrcs,
+}: {
+  className?: string;
+  iconSrcs?: readonly [string, string, string];
+}) {
+  const [src0, src1, src2] = iconSrcs ?? [
+    IMG_PNL_VECTOR_0,
+    IMG_PNL_VECTOR_1,
+    IMG_PNL_VECTOR_2,
+  ];
+
+  return (
+    <div
+      className={className || "overflow-clip relative shrink-0 size-[16px]"}
+      aria-hidden
+    >
+      <div className="absolute bottom-3/4 left-[12.5%] right-[12.5%] top-1/4">
+        <div className="absolute inset-[-0.67px_-5.56%]">
+          <img
+            alt=""
+            className="block max-w-none size-full"
+            src={src0}
+          />
+        </div>
+      </div>
+      <div className="absolute bottom-[8.33%] left-[20.83%] right-[20.83%] top-1/4">
+        <div className="absolute inset-[-6.25%_-7.14%]">
+          <img
+            alt=""
+            className="block max-w-none size-full"
+            src={src1}
+          />
+        </div>
+      </div>
+      <div className="absolute bottom-3/4 left-[33.33%] right-[33.33%] top-[8.33%]">
+        <div className="absolute inset-[-25%_-12.5%]">
+          <img
+            alt=""
+            className="block max-w-none size-full"
+            src={src2}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LeverageSelector() {
   const [selectedPerson, setSelectedPerson] = useState<(typeof PERSON_OPTIONS)[number]>(PERSON_OPTIONS[0]);
   const [isPersonMenuOpen, setIsPersonMenuOpen] = useState(false);
@@ -103,6 +213,13 @@ export default function LeverageSelector() {
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPriceCents, setLimitPriceCents] = useState(0);
   const [shares, setShares] = useState(0);
+  const [isTpSlOpen, setIsTpSlOpen] = useState(false);
+  const [takeProfitUnit, setTakeProfitUnit] = useState<"$" | "%">("$");
+  const [stopLossUnit, setStopLossUnit] = useState<"$" | "%">("$");
+  const [takeProfitValue, setTakeProfitValue] = useState(0);
+  const [stopLossValue, setStopLossValue] = useState(0);
+  const [pnlIconObjectUrls, setPnlIconObjectUrls] =
+    useState<readonly [string, string, string] | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const personMenuRef = useRef<HTMLDivElement | null>(null);
   const tabsRef = useRef<HTMLDivElement | null>(null);
@@ -111,6 +228,8 @@ export default function LeverageSelector() {
   const amountInputRef = useRef<HTMLInputElement | null>(null);
   const limitPriceInputRef = useRef<HTMLInputElement | null>(null);
   const sharesInputRef = useRef<HTMLInputElement | null>(null);
+  const takeProfitInputRef = useRef<HTMLInputElement | null>(null);
+  const stopLossInputRef = useRef<HTMLInputElement | null>(null);
   const [tabIndicator, setTabIndicator] = useState({ left: 0, width: 0 });
 
   const leverage = LEVERAGE_STEPS[leverageIdx];
@@ -157,15 +276,46 @@ export default function LeverageSelector() {
   }, [preloadPersonImage]);
 
   useEffect(() => {
+    // Load object URLs for the PNL icon so open/close doesn't refetch.
+    // (Best-effort; if it fails, the component will keep using the remote URLs.)
+    let cancelled = false;
+    Promise.all(
+      PNL_ICON_SRCS.map((src) => getPnlIconObjectUrl(src)) as unknown as Promise<string>[],
+    )
+      .then((urls) => {
+        if (cancelled) return;
+        setPnlIconObjectUrls(urls as readonly [string, string, string]);
+      })
+      .catch(() => {
+        // Ignore.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     // Make the active order-type field usable immediately (no extra click needed).
     requestAnimationFrame(() => {
       if (orderType === "market") {
-        amountInputRef.current?.focus({ preventScroll: true });
+        if (side === "buy") {
+          amountInputRef.current?.focus({ preventScroll: true });
+        } else {
+          sharesInputRef.current?.focus({ preventScroll: true });
+        }
       } else {
         limitPriceInputRef.current?.focus({ preventScroll: true });
       }
     });
-  }, [orderType]);
+  }, [orderType, side]);
+
+  useEffect(() => {
+    // When opening TP/SL, focus the first field so user can type immediately.
+    if (!isTpSlOpen) return;
+    requestAnimationFrame(() => {
+      takeProfitInputRef.current?.focus({ preventScroll: true });
+    });
+  }, [isTpSlOpen]);
 
   useLayoutEffect(() => {
     const root = tabsRef.current;
@@ -254,9 +404,18 @@ export default function LeverageSelector() {
     }
   };
 
-  const handleAmountShortcut = (label: string, value: number) => {
-    const presetValue = label === "Max" ? MAX_AMOUNT : value;
-    setAmount((prev) => (prev === presetValue ? 0 : presetValue));
+  const handleAmountShortcut = (increment: number | null) => {
+    if (increment === null) {
+      setAmount(MAX_AMOUNT);
+      return;
+    }
+    setAmount((prev) => Math.min(MAX_AMOUNT, prev + increment));
+  };
+
+  const handleSellSharesShortcut = (label: string, fraction: number | null) => {
+    const presetValue =
+      fraction === null ? MAX_SHARES : Math.floor(MAX_SHARES * fraction);
+    setShares((prev) => (prev === presetValue ? 0 : presetValue));
   };
 
   const handleAmountInputChange = (value: string) => {
@@ -298,16 +457,68 @@ export default function LeverageSelector() {
       setShares(0);
       return;
     }
-    setShares(Math.min(MAX_AMOUNT, parsed));
+    setShares(Math.min(MAX_SHARES, parsed));
+  };
+
+  const handleTakeProfitInputChange = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, "");
+    if (digitsOnly.length === 0) {
+      setTakeProfitValue(0);
+      return;
+    }
+    const parsed = Number.parseInt(digitsOnly, 10);
+    if (Number.isNaN(parsed)) {
+      setTakeProfitValue(0);
+      return;
+    }
+    // Value is stored as an integer in the selected unit.
+    const next = Math.min(MAX_LIMIT_CENTS, parsed);
+    setTakeProfitValue(next);
+  };
+
+  const handleStopLossInputChange = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, "");
+    if (digitsOnly.length === 0) {
+      setStopLossValue(0);
+      return;
+    }
+    const parsed = Number.parseInt(digitsOnly, 10);
+    if (Number.isNaN(parsed)) {
+      setStopLossValue(0);
+      return;
+    }
+    const next = Math.min(MAX_LIMIT_CENTS, parsed);
+    setStopLossValue(next);
   };
 
   const canPlaceOrder =
     orderType === "market"
-      ? amount > 0
+      ? side === "buy"
+        ? amount > 0
+        : shares > 0
       : limitPriceCents > 0 && shares > 0;
 
+  const pnlEntryPriceCents =
+    orderType === "limit" && limitPriceCents > 0 ? limitPriceCents : MARKET_DEFAULT_ENTRY_PRICE_CENTS;
+  const positionNotionalDollars =
+    orderType === "limit" ? (shares * pnlEntryPriceCents) / 100 : amount;
+  const takeProfitPercent =
+    takeProfitUnit === "$" ? takeProfitValue / Math.max(1, pnlEntryPriceCents) : takeProfitValue / 100;
+  const takeProfitPnLDollars = takeProfitValue > 0 ? positionNotionalDollars * leverage * takeProfitPercent : 0;
+
+  const stopLossPercent =
+    stopLossUnit === "$"
+      ? stopLossValue / Math.max(1, pnlEntryPriceCents)
+      : stopLossValue / 100;
+  const stopLossPnLDollars =
+    stopLossValue > 0 ? -positionNotionalDollars * leverage * stopLossPercent : 0;
+  const hasTpSlValues = takeProfitValue > 0 || stopLossValue > 0;
+  const tpSlSummary = `TP: ${takeProfitValue}${takeProfitUnit === "$" ? "¢" : "%"} / SL: ${stopLossValue}${
+    stopLossUnit === "$" ? "¢" : "%"
+  }`;
+
   return (
-    <div className="relative w-[380px] max-w-[calc(100vw-2rem)] p-4">
+    <div className="relative w-[380px] max-w-[calc(100vw-2rem)] p-0">
       <div
         className="flex w-full flex-col gap-2.5 rounded-3xl p-4"
         style={{ background: "#1d1d1d" }}
@@ -483,150 +694,197 @@ export default function LeverageSelector() {
           </button>
         </div>
 
-        {/* Leverage */}
-        <div className="leverage-rainbow-outer">
-          <div className="wrapper leverage-rainbow-wrapper">
-            {/* Shimmer border layers (replaces the old rainbow spinner border). */}
-            <div className="layer-blur" aria-hidden>
-              <div className="slide">
+        {/* Leverage (buy only) */}
+        {side === "buy" && (
+          <div className="leverage-rainbow-outer">
+            <div className="wrapper leverage-rainbow-wrapper">
+              {/* Single slow linear shimmer (rotating highlight on the border). */}
+              <div className="layer-blur" aria-hidden>
                 <div className="spin" />
               </div>
-            </div>
-            <div className="layer-sharp" aria-hidden>
-              <div className="slide">
+              <div className="layer-sharp" aria-hidden>
                 <div className="spin" />
               </div>
+              <div className="highlight" aria-hidden />
+              <div className="bg-mask" aria-hidden />
+              <div className="content leverage-rainbow-content">
+                <div className="flex w-full items-start justify-between gap-2">
+                  <span
+                    className="text-base leading-[1.25] text-white/60"
+                    style={{ fontVariantNumeric: "tabular-nums" }}
+                  >
+                    Leverage
+                  </span>
+                  <span className="text-4xl font-semibold leading-none text-white">
+                    <NumberFlow
+                      value={leverage}
+                      suffix="×"
+                      format={{
+                        minimumFractionDigits: leverageIntegerDigits,
+                        maximumFractionDigits: 1,
+                      }}
+                      className="leading-none"
+                      // Match the glyph line box height by removing number-flow's default mask padding.
+                      style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                    />
+                  </span>
+                </div>
+                <div className="relative h-[23px] w-full">
+                  <div
+                    className={`absolute top-[-3px] z-10 flex h-7 w-14 cursor-grab items-center justify-center rounded-full bg-[#141414] px-2 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.2)] active:cursor-grabbing active:scale-[0.95] ${
+                      isLeverageDragging
+                        ? "transition-none"
+                        : "transition-transform duration-150 ease-out"
+                    }`}
+                    style={{ left: thumbLeft }}
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      startLeverageDrag(event.clientX);
+                    }}
+                  >
+                    <span className="w-full text-center text-xs font-semibold leading-[1.25] text-white">
+                      {formatLeverage(leverage)}
+                    </span>
+                  </div>
+                  <div
+                    ref={trackRef}
+                    tabIndex={0}
+                    className="absolute left-0 right-0 top-[7px] h-2 cursor-pointer rounded-full bg-white/10 outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                    role="slider"
+                    aria-valuemin={0}
+                    aria-valuemax={dotCount - 1}
+                    aria-valuenow={leverageIdx}
+                    aria-valuetext={formatLeverage(leverage)}
+                    aria-label="Leverage"
+                    onKeyDown={handleLeverageKeyDown}
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      startLeverageDrag(event.clientX);
+                    }}
+                  >
+                    {Array.from({ length: dotCount }, (_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setLeverageIdx(i)}
+                        className="absolute top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20 transition-transform hover:scale-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                        style={{
+                          // Dot centers match the thumb center at each step.
+                          left: `calc(${stepCenterInsetPx}px + ${(i / Math.max(1, dotCount - 1))} * (100% - ${
+                            stepCenterInsetPx * 2
+                          }px))`,
+                        }}
+                        aria-label={`Leverage ${LEVERAGE_STEPS[i]}×`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="highlight" aria-hidden />
-            <div className="bg-mask" aria-hidden />
-            <div className="content leverage-rainbow-content">
+          </div>
+        )}
+
+        {/* Amount (market buy) / Shares (market sell) or Limit Price / Shares (limit) */}
+        {orderType === "market" ? (
+          side === "buy" ? (
+            <div className="flex w-full flex-col gap-3 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
               <div className="flex w-full items-start justify-between gap-2">
                 <span
                   className="text-base leading-[1.25] text-white/60"
                   style={{ fontVariantNumeric: "tabular-nums" }}
                 >
-                  Leverage
+                  Amount
                 </span>
-                <span className="text-4xl font-semibold leading-none text-white">
+                <label
+                  className={`relative inline-flex items-baseline gap-0.5 text-4xl font-semibold leading-none ${
+                    amount > 0 ? "text-white" : "text-white/40"
+                  }`}
+                  style={{ fontVariantNumeric: "tabular-nums" }}
+                >
+                  <span aria-hidden>$</span>
                   <NumberFlow
-                    value={leverage}
-                    suffix="×"
-                    format={{
-                      minimumFractionDigits: leverageIntegerDigits,
-                      maximumFractionDigits: 1,
-                    }}
+                    value={amount}
+                    format={{ useGrouping: false }}
+                    trend={0}
                     className="leading-none"
-                    // Match the glyph line box height by removing number-flow's default mask padding.
+                    // `number-flow` adds vertical padding based on `--number-flow-mask-height` (default 0.25em),
+                    // which makes the element taller than the glyph line box. Setting it to `0em` keeps the
+                    // height aligned with the text symbols/baseline.
                     style={{ ["--number-flow-mask-height" as any]: "0em" }}
                   />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={amount === 0 ? "" : String(amount)}
+                    ref={amountInputRef}
+                    onChange={(event) => handleAmountInputChange(event.target.value)}
+                    className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-right text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
+                    aria-label="Amount input"
+                  />
+                </label>
+              </div>
+              <div className="flex w-full gap-1.5">
+                {AMOUNT_PRESETS.map(({ label, increment }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => handleAmountShortcut(increment)}
+                    className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full border-[1px] border-white/20 px-2 text-xs leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/30"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex w-full flex-col gap-3 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
+              <div className="flex w-full items-start justify-between gap-2">
+                <span
+                  className="text-base leading-[1.25] text-white/60"
+                  style={{ fontVariantNumeric: "tabular-nums" }}
+                >
+                  Shares
                 </span>
-              </div>
-              <div className="relative h-[23px] w-full">
-                <div
-                  className={`absolute top-[-3px] z-10 flex h-7 w-14 cursor-grab items-center justify-center rounded-full bg-[#141414] px-2 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.2)] active:cursor-grabbing active:scale-[0.95] ${
-                    isLeverageDragging
-                      ? "transition-none"
-                      : "transition-transform duration-150 ease-out"
+                <label
+                  className={`relative inline-flex items-baseline text-4xl font-semibold leading-none ${
+                    shares > 0 ? "text-white" : "text-white/40"
                   }`}
-                  style={{ left: thumbLeft }}
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    startLeverageDrag(event.clientX);
-                  }}
+                  style={{ fontVariantNumeric: "tabular-nums" }}
                 >
-                  <span className="w-full text-center text-xs font-semibold leading-[1.25] text-white">
-                    {formatLeverage(leverage)}
-                  </span>
-                </div>
-                <div
-                  ref={trackRef}
-                  tabIndex={0}
-                  className="absolute left-0 right-0 top-[7px] h-2 cursor-pointer rounded-full bg-white/10 outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                  role="slider"
-                  aria-valuemin={0}
-                  aria-valuemax={dotCount - 1}
-                  aria-valuenow={leverageIdx}
-                  aria-valuetext={formatLeverage(leverage)}
-                  aria-label="Leverage"
-                  onKeyDown={handleLeverageKeyDown}
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    startLeverageDrag(event.clientX);
-                  }}
-                >
-                  {Array.from({ length: dotCount }, (_, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setLeverageIdx(i)}
-                      className="absolute top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20 transition-transform hover:scale-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                      style={{
-                        // Dot centers match the thumb center at each step.
-                        left: `calc(${stepCenterInsetPx}px + ${(i / Math.max(1, dotCount - 1))} * (100% - ${
-                          stepCenterInsetPx * 2
-                        }px))`,
-                      }}
-                      aria-label={`Leverage ${LEVERAGE_STEPS[i]}×`}
-                    />
-                  ))}
-                </div>
+                  <NumberFlow
+                    value={shares}
+                    format={{ useGrouping: false }}
+                    trend={0}
+                    className="leading-none"
+                    style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                  />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={shares === 0 ? "" : String(shares)}
+                    ref={sharesInputRef}
+                    onChange={(event) => handleSharesInputChange(event.target.value)}
+                    className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-right text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
+                    aria-label="Shares input"
+                  />
+                </label>
+              </div>
+              <div className="flex w-full gap-1.5">
+                {SELL_SHARE_PRESETS.map(({ label, fraction }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => handleSellSharesShortcut(label, fraction)}
+                    className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full border-[1px] border-white/20 px-2 text-xs leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/30"
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Amount (market) or Limit Price / Shares (limit) */}
-        {orderType === "market" ? (
-          <div className="flex w-full flex-col gap-3 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
-            <div className="flex w-full items-start justify-between gap-2">
-              <span
-                className="text-base leading-[1.25] text-white/60"
-                style={{ fontVariantNumeric: "tabular-nums" }}
-              >
-                Amount
-              </span>
-              <label
-                className={`relative inline-flex items-baseline gap-0.5 text-4xl font-semibold leading-none ${
-                  amount > 0 ? "text-white" : "text-white/40"
-                }`}
-                style={{ fontVariantNumeric: "tabular-nums" }}
-              >
-                <span aria-hidden>$</span>
-                <NumberFlow
-                  value={amount}
-                  format={{ useGrouping: false }}
-                  trend={0}
-                  className="leading-none"
-                  // `number-flow` adds vertical padding based on `--number-flow-mask-height` (default 0.25em),
-                  // which makes the element taller than the glyph line box. Setting it to `0em` keeps the
-                  // height aligned with the text symbols/baseline.
-                  style={{ ["--number-flow-mask-height" as any]: "0em" }}
-                />
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={amount === 0 ? "" : String(amount)}
-                  ref={amountInputRef}
-                  onChange={(event) => handleAmountInputChange(event.target.value)}
-                  className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-right text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
-                  aria-label="Amount input"
-                />
-              </label>
-            </div>
-            <div className="flex w-full gap-1.5">
-              {AMOUNT_PRESETS.map(({ label, value }) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => handleAmountShortcut(label, value)}
-                  className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full border-[1px] border-white/20 px-4 text-xs leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/30"
-                >
-                  {label === "Max" ? label : <NumberFlow value={value} trend={0} />}
-                </button>
-              ))}
-            </div>
-          </div>
+          )
         ) : (
           <div className="flex w-full flex-col gap-2 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
             <label
@@ -738,7 +996,7 @@ export default function LeverageSelector() {
                 <button
                   type="button"
                   onClick={() =>
-                    setShares((s) => Math.min(MAX_AMOUNT, s + 1))
+                    setShares((s) => Math.min(MAX_SHARES, s + 1))
                   }
                   className="flex h-8 w-10 items-center justify-center rounded-full border-[1.5px] border-white/10 pb-0.5 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/20"
                   aria-label="Increase shares"
@@ -750,21 +1008,263 @@ export default function LeverageSelector() {
           </div>
         )}
 
-        {/* TP / SL */}
-        <button
-          type="button"
-          className="flex w-full flex-col gap-2 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4 text-left"
-        >
-          <div className="flex w-full items-center justify-between">
-            <span
-              className="text-base leading-[1.25] text-white/60"
-              style={{ fontVariantNumeric: "tabular-nums" }}
+        {/* TP / SL (buy only) */}
+        {side === "buy" && (
+          <div className="flex w-full flex-col gap-2 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
+            <button
+              type="button"
+              onClick={() => setIsTpSlOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between text-left"
+              aria-expanded={isTpSlOpen}
+              aria-controls="tp-sl-content"
             >
-              Take Profit / Stop Loss
-            </span>
-            <ChevronDown className="size-4 shrink-0 text-white/70" />
+              <span
+                className="text-base leading-[1.25] text-white/60"
+                style={{ fontVariantNumeric: "tabular-nums" }}
+              >
+                {isTpSlOpen
+                  ? "Take Profit"
+                  : hasTpSlValues
+                    ? tpSlSummary
+                    : "Take Profit / Stop Loss"}
+              </span>
+              <ChevronDown
+                className={`size-4 shrink-0 text-white/70 transition-transform ${
+                  isTpSlOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            <AnimatePresence initial={false}>
+              {isTpSlOpen && (
+                <motion.div
+                  id="tp-sl-content"
+                  className="overflow-hidden"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                >
+                  <div className="flex w-full flex-col gap-2">
+                    <div className="flex w-full items-center justify-between">
+                      <div
+                        className={`relative flex items-baseline text-4xl font-semibold leading-none tabular-nums ${
+                          takeProfitValue > 0 ? "text-white" : "text-white/40"
+                        }`}
+                      >
+                        <NumberFlow
+                          value={takeProfitValue}
+                          suffix={takeProfitUnit === "$" ? "¢" : "%"}
+                          format={{ useGrouping: false }}
+                          trend={0}
+                          className="leading-none"
+                          style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                        />
+                        <input
+                          ref={takeProfitInputRef}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={takeProfitValue === 0 ? "" : String(takeProfitValue)}
+                          onChange={(event) => handleTakeProfitInputChange(event.target.value)}
+                          className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
+                          aria-label="Take profit value"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {takeProfitValue > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTakeProfitValue(0);
+                              takeProfitInputRef.current?.focus({
+                                preventScroll: true,
+                              });
+                            }}
+                            className="group flex h-8 items-center gap-[8px] rounded-full bg-white/[0.06] px-[12px] transition-colors hover:bg-white/[0.08] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                            aria-label="Clear take profit"
+                          >
+                            <div className="transition-opacity group-hover:opacity-90">
+                              <PnLIcon
+                                iconSrcs={pnlIconObjectUrls ?? undefined}
+                              />
+                            </div>
+                            <span className="text-xs font-semibold leading-[1.25] text-white/60">
+                              PNL{" "}
+                            </span>
+                            <span className="text-xs font-semibold leading-[1.25] text-[#5dd978] flex items-baseline gap-[2px]">
+                              <span aria-hidden>$</span>
+                              <NumberFlow
+                                value={takeProfitPnLDollars}
+                                trend={0}
+                                format={{
+                                  useGrouping: false,
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                }}
+                                className="leading-none"
+                                style={{
+                                  ["--number-flow-mask-height" as any]: "0em",
+                                }}
+                              />
+                            </span>
+                          </button>
+                        )}
+                        <div className="relative flex h-8 shrink-0 items-center gap-1 rounded-full bg-white/[0.06] p-1">
+                          <div
+                            className={`pointer-events-none absolute bottom-1 top-1 w-[calc(50%-4px)] rounded-full bg-[#141414] transition-transform duration-200 ease-out ${
+                              takeProfitUnit === "$" ? "translate-x-0" : "translate-x-full"
+                            }`}
+                            aria-hidden
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setTakeProfitUnit("$")}
+                            className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
+                              takeProfitUnit === "$"
+                                ? "text-white"
+                                : "text-white/80 hover:text-white"
+                            }`}
+                            aria-pressed={takeProfitUnit === "$"}
+                          >
+                            $
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTakeProfitUnit("%")}
+                            className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
+                              takeProfitUnit === "%"
+                                ? "text-white"
+                                : "text-white/80 hover:text-white"
+                            }`}
+                            aria-pressed={takeProfitUnit === "%"}
+                          >
+                            %
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="h-px w-full bg-white/10" />
+
+                    <div
+                      className="text-base leading-[1.25] text-white/60"
+                      style={{ fontVariantNumeric: "tabular-nums" }}
+                    >
+                      Stop Loss
+                    </div>
+
+                    <div className="flex w-full items-center justify-between">
+                      <div
+                        className={`relative flex items-baseline text-4xl font-semibold leading-none tabular-nums ${
+                          stopLossValue > 0 ? "text-white" : "text-white/40"
+                        }`}
+                      >
+                        <NumberFlow
+                          value={stopLossValue}
+                          suffix={stopLossUnit === "$" ? "¢" : "%"}
+                          format={{ useGrouping: false }}
+                          trend={0}
+                          className="leading-none"
+                          style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                        />
+                        <input
+                          ref={stopLossInputRef}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={stopLossValue === 0 ? "" : String(stopLossValue)}
+                          onChange={(event) =>
+                            handleStopLossInputChange(event.target.value)
+                          }
+                          className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
+                          aria-label="Stop loss value"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {stopLossValue > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStopLossValue(0);
+                              stopLossInputRef.current?.focus({
+                                preventScroll: true,
+                              });
+                            }}
+                            className="group flex h-8 items-center gap-[8px] rounded-full bg-white/[0.06] px-[12px] transition-colors hover:bg-white/[0.08] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                            aria-label="Clear stop loss"
+                          >
+                            <div className="transition-opacity group-hover:opacity-90">
+                              <PnLIcon
+                                iconSrcs={pnlIconObjectUrls ?? undefined}
+                              />
+                            </div>
+                            <span className="text-xs font-semibold leading-[1.25] text-white/60">
+                              PNL{" "}
+                            </span>
+                            <span className="text-xs font-semibold leading-[1.25] text-[#ff4d5e] flex items-baseline gap-[2px]">
+                              {stopLossPnLDollars < 0 && (
+                                <span aria-hidden>-</span>
+                              )}
+                              <span aria-hidden>$</span>
+                              <NumberFlow
+                                value={Math.abs(stopLossPnLDollars)}
+                                trend={0}
+                                format={{
+                                  useGrouping: false,
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                }}
+                                className="leading-none"
+                                style={{
+                                  ["--number-flow-mask-height" as any]: "0em",
+                                }}
+                              />
+                            </span>
+                          </button>
+                        )}
+                        <div className="relative flex h-8 shrink-0 items-center gap-1 rounded-full bg-white/[0.06] p-1">
+                          <div
+                            className={`pointer-events-none absolute bottom-1 top-1 w-[calc(50%-4px)] rounded-full bg-[#141414] transition-transform duration-200 ease-out ${
+                              stopLossUnit === "$"
+                                ? "translate-x-0"
+                                : "translate-x-full"
+                            }`}
+                            aria-hidden
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setStopLossUnit("$")}
+                            className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
+                              stopLossUnit === "$"
+                                ? "text-white"
+                                : "text-white/80 hover:text-white"
+                            }`}
+                            aria-pressed={stopLossUnit === "$"}
+                          >
+                            $
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setStopLossUnit("%")}
+                            className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
+                              stopLossUnit === "%"
+                                ? "text-white"
+                                : "text-white/80 hover:text-white"
+                            }`}
+                            aria-pressed={stopLossUnit === "%"}
+                          >
+                            %
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        </button>
+        )}
 
         {/* CTA */}
         <button
@@ -783,7 +1283,9 @@ export default function LeverageSelector() {
             {canPlaceOrder
               ? "Place Order"
               : orderType === "market"
-                ? "Enter Amount"
+                ? side === "buy"
+                  ? "Enter Amount"
+                  : "Enter Shares"
                 : "Enter price & shares"}
           </span>
         </button>

@@ -152,11 +152,11 @@ body {
 
 /* Leverage block sizing/layout overrides */
 .leverage-rainbow-wrapper {
-  /* Shimmer border (monochrome) */
-  --spread: 90deg;
-  --shimmer-color: #ffffff;
+  /* Slow linear border shimmer (one rotating highlight) */
+  --spread: 72deg;
+  --shimmer-color: rgba(255, 255, 255, 0.42);
   --radius: 24px;
-  --speed: 3s;
+  --speed: 10s;
   --cut: 0.05em;
   --bg: linear-gradient(90deg, #2a2a2a 0%, #262626 100%);
 
@@ -173,22 +173,18 @@ body {
   position: absolute;
   inset: -100%;
   width: auto;
-  animation: spin-around calc(var(--speed) * 2) linear infinite;
+  animation: spin var(--speed) linear infinite;
+  /* Soft reflection: fade in → peak → fade out (symmetric on both arc edges). */
   background: conic-gradient(
     from calc(270deg - (var(--spread) * 0.5)),
-    transparent 0,
-    var(--shimmer-color) var(--spread),
+    transparent 0deg,
+    color-mix(in srgb, var(--shimmer-color) 22%, transparent) calc(var(--spread) * 0.14),
+    color-mix(in srgb, var(--shimmer-color) 65%, transparent) calc(var(--spread) * 0.32),
+    var(--shimmer-color) calc(var(--spread) * 0.5),
+    color-mix(in srgb, var(--shimmer-color) 65%, transparent) calc(var(--spread) * 0.68),
+    color-mix(in srgb, var(--shimmer-color) 22%, transparent) calc(var(--spread) * 0.86),
     transparent var(--spread)
   );
-}
-
-.leverage-rainbow-wrapper .slide {
-  position: absolute;
-  inset: 0;
-  width: auto;
-  aspect-ratio: 1;
-  height: 100%;
-  animation: shimmer-slide var(--speed) ease-in-out infinite alternate;
 }
 
 .leverage-rainbow-wrapper .layer-blur {
@@ -196,7 +192,6 @@ body {
   inset: 0;
   z-index: -30;
   overflow: visible;
-  container-type: size;
   filter: blur(2px);
 }
 
@@ -205,7 +200,6 @@ body {
   inset: 0;
   z-index: -20;
   overflow: hidden;
-  container-type: size;
 }
 
 .leverage-rainbow-wrapper .highlight {
@@ -227,31 +221,6 @@ body {
 .leverage-rainbow-wrapper .content {
   /* keep existing `.content` rules (color/size) while ensuring shimmer layers are behind */
   z-index: 1;
-}
-
-/* Uneven spin: pauses at top and bottom — creates crawling feel */
-@keyframes spin-around {
-  0% {
-    transform: translateZ(0) rotate(0deg);
-  }
-  15%,
-  35% {
-    transform: translateZ(0) rotate(90deg);
-  }
-  65%,
-  85% {
-    transform: translateZ(0) rotate(270deg);
-  }
-  100% {
-    transform: translateZ(0) rotate(360deg);
-  }
-}
-
-/* Sliding window using container query units */
-@keyframes shimmer-slide {
-  100% {
-    transform: translate(calc(-100% + 100cqw));
-  }
 }
 
 .leverage-rainbow-wrapper .mask {

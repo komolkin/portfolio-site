@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 import SelectionColor from "@/components/SelectionColor";
+import { AgentationToolbar } from "@/components/AgentationToolbar";
 import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
@@ -22,6 +23,7 @@ export default function RootLayout({
           {children}
           <SelectionColor />
         </Providers>
+        <AgentationToolbar />
         <Analytics />
       </body>
     </html>
