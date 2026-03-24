@@ -179,7 +179,7 @@ export default function ResolvedCard() {
             <GrainGradient
               width={360}
               height={468}
-              colors={["#31d100"]}
+              colors={["#00b849"]}
               colorBack="#008a19"
               softness={1}
               intensity={0}
