@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Image from "next/image";
+import { GrainGradient } from "@paper-design/shaders-react";
 import { AnimatePresence, motion } from "framer-motion";
+
+// Paper Shaders — https://github.com/paper-design/shaders
 
 const SLIDE_MS = 4000;
 
@@ -13,13 +15,14 @@ const transitionContent = {
   ease: EASE_SLIDE,
 } as const;
 
-const transitionImage = {
-  duration: 0.5,
+const transitionDot = {
+  duration: 0.32,
   ease: EASE_SLIDE,
 } as const;
 
-const transitionDot = {
-  duration: 0.32,
+/** Background layers overlap while exiting (1→0) and entering (0→1) — default AnimatePresence `sync` */
+const transitionShaderCrossfade = {
+  duration: 0.7,
   ease: EASE_SLIDE,
 } as const;
 
@@ -27,31 +30,67 @@ const transitionDot = {
 const DOT_INACTIVE_BG = "hsla(0, 0%, 63.9%, 0.45)";
 const DOT_TRACK_BG = "rgba(255, 255, 255, 0.2)";
 
-const SLIDES: ReadonlyArray<{
+type GrainSlideParams = {
+  colors: readonly string[];
+  colorBack: string;
+  softness: number;
+  intensity: number;
+  noise: number;
+  shape: "ripple" | "dots" | "wave" | "corners" | "blob" | "truchet";
+  speed: number;
+  scale: number;
+};
+
+type SpotlightSlide = {
   title: string;
   subtitle?: string;
   cta?: string;
-  image: string;
-  /** Card fill behind text + image */
   background: string;
-}> = [
+  grain: GrainSlideParams;
+};
+
+const SLIDES: ReadonlyArray<SpotlightSlide> = [
   {
     title: "Create markets to earn 2.5% on each trade",
-    image:
-      "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=560&h=440&fit=crop&q=80",
-    background: "#000000",
+    background: "#140a00",
+    grain: {
+      colors: ["#702d00", "#88ddae", "#2d0b1e"],
+      colorBack: "#140a00",
+      softness: 0.5,
+      intensity: 0.5,
+      noise: 0.5,
+      shape: "ripple",
+      speed: 1,
+      scale: 0.5,
+    },
   },
   {
     title: "Trade with up to\n5x leverage",
-    image:
-      "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=560&h=440&fit=crop&q=80",
-    background: "#000000",
+    background: "#0a0000",
+    grain: {
+      colors: ["#700000", "#0080ff", "#f2ebca", "#33cc33"],
+      colorBack: "#0a0000",
+      softness: 1,
+      intensity: 1,
+      noise: 0.7,
+      shape: "dots",
+      speed: 1,
+      scale: 0.6,
+    },
   },
   {
     title: "Explore Sports markets",
-    image:
-      "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=560&h=440&fit=crop&q=80",
     background: "#000000",
+    grain: {
+      colors: ["#7300ff", "#eba8ff", "#00bfff", "#2b00ff"],
+      colorBack: "#000000",
+      softness: 0.5,
+      intensity: 0.5,
+      noise: 0.25,
+      shape: "corners",
+      speed: 1,
+      scale: 0.5,
+    },
   },
 ];
 
@@ -69,21 +108,56 @@ export default function Spotlight() {
     setIndex(i);
   }, []);
 
+  const handleSpotlightPress = useCallback(() => {
+    // Per-slide links can be wired here later (e.g. router.push(slide.href)).
+  }, []);
+
   const slide = SLIDES[index];
 
   return (
     <section
-      className="relative flex h-[220px] w-[630px] overflow-hidden rounded-2xl border border-white/[0.08] shadow-[0_8px_40px_rgba(0,0,0,0.45)]"
-      style={{ backgroundColor: slide.background }}
+      className="relative h-[220px] w-[630px]"
       aria-roledescription="carousel"
       aria-label="Spotlight"
     >
-      <div className="flex h-full min-h-0 min-w-0 w-full flex-1 flex-row">
-        <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col justify-center overflow-hidden px-7 pr-4">
+      <button
+        type="button"
+        onClick={handleSpotlightPress}
+        className="relative z-[2] flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/[0.08] text-left shadow-[0_8px_40px_rgba(0,0,0,0.45)] transition-[transform,box-shadow] selection:bg-white/20 active:scale-[0.992] active:shadow-[0_4px_24px_rgba(0,0,0,0.35)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/35"
+        style={{ backgroundColor: slide.background }}
+        aria-label={`Spotlight: ${slide.title}`}
+      >
+      <AnimatePresence>
+        <motion.div
+          key={index}
+          className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={transitionShaderCrossfade}
+        >
+          <GrainGradient
+            width={630}
+            height={220}
+            colors={[...slide.grain.colors]}
+            colorBack={slide.grain.colorBack}
+            softness={slide.grain.softness}
+            intensity={slide.grain.intensity}
+            noise={slide.grain.noise}
+            shape={slide.grain.shape}
+            speed={slide.grain.speed}
+            scale={slide.grain.scale}
+            style={{ width: "100%", height: "100%", display: "block" }}
+          />
+        </motion.div>
+      </AnimatePresence>
+
+      <div className="relative z-[2] flex h-full min-h-0 min-w-0 w-full flex-1 flex-col">
+        <div className="relative flex h-full min-h-0 min-w-0 w-full flex-col justify-center overflow-hidden px-8 pr-8">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={index}
-              className="flex w-full flex-col gap-2"
+              className="flex w-full max-w-[315px] flex-col gap-2"
               initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 14 }}
@@ -98,46 +172,20 @@ export default function Spotlight() {
                 </p>
               ) : null}
               {slide.cta ? (
-                <div className="pt-1">
-                  <button
-                    type="button"
-                    className="inline-flex h-9 items-center justify-center rounded-full border-0 bg-white px-4 text-sm font-medium text-black transition-colors hover:bg-white/90 active:scale-[0.98]"
+                <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                  <span
+                    role="presentation"
+                    className="inline-flex h-9 cursor-pointer items-center justify-center rounded-full border-0 bg-white px-4 text-sm font-medium text-black transition-colors hover:bg-white/90 active:scale-[0.98]"
                   >
                     {slide.cta}
-                  </button>
+                  </span>
                 </div>
               ) : null}
             </motion.div>
           </AnimatePresence>
         </div>
-        <div className="relative h-full min-h-0 w-[268px] shrink-0 overflow-hidden">
-          <AnimatePresence initial={false}>
-            <motion.div
-              key={index}
-              className="absolute inset-0"
-              initial={{ opacity: 0, scale: 1.035 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={transitionImage}
-            >
-              <Image
-                src={slide.image}
-                alt={slide.title}
-                fill
-                sizes="268px"
-                className="object-cover"
-              />
-            </motion.div>
-          </AnimatePresence>
-          <div
-            className="pointer-events-none absolute inset-0 z-10"
-            style={{
-              backgroundImage: `linear-gradient(to right, ${slide.background}, transparent)`,
-            }}
-            aria-hidden
-          />
-        </div>
       </div>
+      </button>
 
       <div
         className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center"
