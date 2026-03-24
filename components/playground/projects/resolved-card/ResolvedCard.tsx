@@ -8,8 +8,6 @@ const IMG_AVATAR =
   "https://www.figma.com/api/mcp/asset/33dac028-278c-4c0a-9049-8dc0f9da980a";
 const IMG_YES =
   "https://www.figma.com/api/mcp/asset/1fde7823-fb1e-4f18-ad45-4655ac86ec4d";
-const IMG_LINE =
-  "https://www.figma.com/api/mcp/asset/f2e92dab-dcd5-4f23-baa3-cff80caaf101";
 const IMG_SHARE =
   "https://www.figma.com/api/mcp/asset/4328aae4-8484-42fa-b0ff-7d4151a93e8a";
 
@@ -20,7 +18,7 @@ export default function ResolvedCard() {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const lastMoveRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const rafRef = useRef<number | null>(null);
-  const PRELOAD_ASSETS = [IMG_AVATAR, IMG_YES, IMG_LINE, IMG_SHARE];
+  const PRELOAD_ASSETS = [IMG_AVATAR, IMG_YES, IMG_SHARE];
 
   useEffect(() => {
     let cancelled = false;
@@ -143,23 +141,25 @@ export default function ResolvedCard() {
 
   return (
     <div className="relative flex items-center justify-center p-4">
-      <svg width="0" height="0" aria-hidden="true" focusable="false">
-        <defs>
-          <mask id="resolvedCardRoundMask" maskUnits="userSpaceOnUse">
-            <rect x="0" y="0" width="1000" height="1000" rx="32" ry="32" fill="white" />
-          </mask>
-        </defs>
-      </svg>
-      <hover-tilt
-        tilt-factor="0.8"
-        scale-factor="1.02"
-        glare-intensity="0.4"
-        glare-hue="142"
-        glare-mask="url(#resolvedCardRoundMask)"
-        glare-mask-mode="alpha"
-        shadow
-        className="resolvedCardTilt block w-[320px] shrink-0"
-      >
+      {/* Padding lives on the outer shell so the card can be a full 360px wide (not 360px minus padding). */}
+      <div className="relative w-[360px] min-w-[360px] max-w-[360px] shrink-0">
+        <svg width="0" height="0" aria-hidden="true" focusable="false">
+          <defs>
+            <mask id="resolvedCardRoundMask" maskUnits="userSpaceOnUse">
+              <rect x="0" y="0" width="1000" height="1000" rx="32" ry="32" fill="white" />
+            </mask>
+          </defs>
+        </svg>
+        <hover-tilt
+          tilt-factor="0.8"
+          scale-factor="1.02"
+          glare-intensity="0.4"
+          glare-hue="142"
+          glare-mask="url(#resolvedCardRoundMask)"
+          glare-mask-mode="alpha"
+          shadow
+          className="resolvedCardTilt resolvedCardTiltHost block h-auto w-full min-w-[360px]"
+        >
         <div className="relative w-full" style={{ height: 468 }}>
           {/* Reserve final size and fade in smoothly once ready */}
           <div
@@ -215,14 +215,10 @@ export default function ResolvedCard() {
             </div>
             <div className="mt-auto flex w-full flex-col gap-4">
               {/* Divider */}
-              <div className="relative h-px w-full shrink-0">
-                <img
-                  src={IMG_LINE}
-                  alt=""
-                  className="block size-full max-w-none"
-                  aria-hidden
-                />
-              </div>
+              <div
+                className="h-px w-full shrink-0 bg-white/10"
+                aria-hidden
+              />
               {/* Cost / Won */}
               <div className="flex w-full flex-col gap-1.5">
                 <div className="flex w-full items-center justify-between text-sm">
@@ -327,7 +323,15 @@ export default function ResolvedCard() {
 
         </div>
       </hover-tilt>
+      </div>
       <style jsx>{`
+        :global(hover-tilt.resolvedCardTiltHost) {
+          width: 360px;
+          min-width: 360px;
+          max-width: 360px;
+          display: block;
+        }
+
         .resolvedCardTilt {
           overflow: hidden;
           border-radius: 32px;

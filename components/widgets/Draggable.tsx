@@ -107,13 +107,24 @@ export default function Draggable({
     // Bring widget to top immediately on click
     onWidgetFocus?.(id);
 
-    // Don't start dragging if clicking on a link, image, or button
+    // Don't start dragging when interacting with native controls/content.
     const target = e.target as HTMLElement;
     if (
       target.tagName === 'A' ||
       target.tagName === 'IMG' ||
+      target.tagName === 'BUTTON' ||
+      target.tagName === 'INPUT' ||
+      target.tagName === 'SELECT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.tagName === 'LABEL' ||
       target.closest('a') ||
-      target.closest('img')
+      target.closest('img') ||
+      target.closest('button') ||
+      target.closest('input') ||
+      target.closest('select') ||
+      target.closest('textarea') ||
+      target.closest('label') ||
+      target.closest('[role="button"]')
     ) {
       return;
     }
@@ -144,7 +155,7 @@ export default function Draggable({
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
-        cursor: isDragging ? 'grabbing' : 'grab',
+        cursor: isDragging ? 'grabbing' : undefined,
         touchAction: 'none',
         zIndex: zIndex,
       }}

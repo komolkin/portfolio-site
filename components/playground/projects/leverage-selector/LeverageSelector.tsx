@@ -894,7 +894,7 @@ export default function LeverageSelector() {
             <label
               id="leverage-limit-price-label"
               htmlFor="leverage-limit-price"
-              className="block cursor-text text-base leading-[1.25] text-white/60"
+              className="block cursor-pointer text-base leading-[1.25] text-white/60"
               style={{ fontVariantNumeric: "tabular-nums" }}
             >
               Limit Price
@@ -956,7 +956,7 @@ export default function LeverageSelector() {
             <label
               id="leverage-shares-label"
               htmlFor="leverage-shares"
-              className="block cursor-text text-base leading-[1.25] text-white/60"
+              className="block cursor-pointer text-base leading-[1.25] text-white/60"
               style={{ fontVariantNumeric: "tabular-nums" }}
             >
               Shares

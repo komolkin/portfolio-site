@@ -55,6 +55,23 @@ body {
   * {
     @apply border-border;
   }
+
+  button,
+  [role="button"],
+  a[href],
+  summary,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    cursor: pointer !important;
+  }
+
+  button:disabled,
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    cursor: not-allowed !important;
+  }
 }
 
 /* Random selection colors */

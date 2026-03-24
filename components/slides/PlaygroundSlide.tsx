@@ -9,6 +9,7 @@ import {
 } from "@/components/playground/playground-route";
 import ResolvedCard from "@/components/playground/projects/resolved-card/ResolvedCard";
 import LeverageSelector from "@/components/playground/projects/leverage-selector/LeverageSelector";
+import Spotlight from "@/components/playground/projects/spotlight/Spotlight";
 
 export default function PlaygroundSlide() {
   const pathname = usePathname();
@@ -28,6 +29,7 @@ export default function PlaygroundSlide() {
         <div className="w-full h-full flex items-center justify-center">
           {activeProject === "resolved-card" && <ResolvedCard />}
           {activeProject === "leverage-selector" && <LeverageSelector />}
+          {activeProject === "spotlight" && <Spotlight />}
         </div>
       </main>
     </div>
