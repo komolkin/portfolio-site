@@ -69,16 +69,16 @@ export default function Spotlight() {
 
   return (
     <section
-      className="relative flex h-[220px] w-[630px] overflow-hidden rounded-2xl border border-white/[0.08] bg-[hsl(var(--card))] shadow-[0_8px_40px_rgba(0,0,0,0.45)]"
+      className="relative flex h-[220px] w-[630px] overflow-hidden rounded-2xl bg-[hsl(var(--card))] shadow-[0_8px_40px_rgba(0,0,0,0.45)]"
       aria-roledescription="carousel"
       aria-label="Spotlight"
     >
       <div className="flex h-full min-h-0 min-w-0 w-full flex-1 flex-row">
-        <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col justify-center overflow-hidden px-7 pb-10 pt-6 pr-4">
+        <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col justify-center overflow-hidden px-7 pr-4">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={index}
-              className="flex flex-col gap-2"
+              className="flex w-full flex-col gap-2"
               initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 14 }}
@@ -150,7 +150,7 @@ export default function Spotlight() {
                   initial={false}
                   animate={{
                     width: active ? 32 : 6,
-                    height: active ? 3 : 6,
+                    height: 6,
                     backgroundColor: active ? DOT_TRACK_BG : DOT_INACTIVE_BG,
                   }}
                   transition={transitionDot}
