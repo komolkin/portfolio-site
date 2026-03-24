@@ -32,25 +32,26 @@ const SLIDES: ReadonlyArray<{
   subtitle?: string;
   cta?: string;
   image: string;
+  /** Card fill behind text + image */
+  background: string;
 }> = [
   {
-    title: "Market creator earns 2.5% on each trade",
+    title: "Create markets to earn 2.5% on each trade",
     image:
       "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=560&h=440&fit=crop&q=80",
+    background: "#000000",
   },
   {
-    title: "Design systems",
-    subtitle: "Tokens, components, and motion that feel cohesive at any scale.",
-    cta: "Explore system",
+    title: "Trade with up to\n5x leverage",
     image:
       "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=560&h=440&fit=crop&q=80",
+    background: "#000000",
   },
   {
-    title: "Polish in the details",
-    subtitle: "Micro-interactions and feedback loops that make products feel alive.",
-    cta: "See details",
+    title: "Explore Sports markets",
     image:
       "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=560&h=440&fit=crop&q=80",
+    background: "#000000",
   },
 ];
 
@@ -72,7 +73,8 @@ export default function Spotlight() {
 
   return (
     <section
-      className="relative flex h-[220px] w-[630px] overflow-hidden rounded-2xl bg-[hsl(var(--card))] shadow-[0_8px_40px_rgba(0,0,0,0.45)]"
+      className="relative flex h-[220px] w-[630px] overflow-hidden rounded-2xl border border-white/[0.08] shadow-[0_8px_40px_rgba(0,0,0,0.45)]"
+      style={{ backgroundColor: slide.background }}
       aria-roledescription="carousel"
       aria-label="Spotlight"
     >
@@ -87,7 +89,7 @@ export default function Spotlight() {
               exit={{ opacity: 0, x: 14 }}
               transition={transitionContent}
             >
-              <h2 className="text-balance text-2xl font-semibold leading-tight tracking-tight text-foreground">
+              <h2 className="text-balance whitespace-pre-line text-2xl font-semibold leading-tight tracking-tight text-foreground">
                 {slide.title}
               </h2>
               {slide.subtitle ? (
@@ -128,7 +130,10 @@ export default function Spotlight() {
             </motion.div>
           </AnimatePresence>
           <div
-            className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-r from-[hsl(var(--card))] via-transparent to-transparent"
+            className="pointer-events-none absolute inset-0 z-10"
+            style={{
+              backgroundImage: `linear-gradient(to right, ${slide.background}, transparent)`,
+            }}
             aria-hidden
           />
         </div>
@@ -150,7 +155,7 @@ export default function Spotlight() {
                 aria-selected={active}
                 aria-label={`Slide ${i + 1}`}
                 onClick={() => goTo(i)}
-                className="inline-flex h-5 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 outline-none ring-offset-2 ring-offset-[hsl(var(--card))] focus-visible:ring-2 focus-visible:ring-white/40"
+                className="inline-flex h-5 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 outline-none ring-offset-2 ring-offset-[#000000] focus-visible:ring-2 focus-visible:ring-white/40"
               >
                 <motion.span
                   className="relative block overflow-hidden rounded-full"
@@ -162,7 +167,7 @@ export default function Spotlight() {
                   }}
                   transition={transitionDot}
                 >
-                  <AnimatePresence initial={false}>
+                  <AnimatePresence>
                     {active && (
                       <motion.span
                         key={index}
