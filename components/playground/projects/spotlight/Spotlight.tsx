@@ -27,11 +27,14 @@ const transitionDot = {
 const DOT_INACTIVE_BG = "hsla(0, 0%, 63.9%, 0.45)";
 const DOT_TRACK_BG = "rgba(255, 255, 255, 0.2)";
 
-const SLIDES = [
+const SLIDES: ReadonlyArray<{
+  title: string;
+  subtitle?: string;
+  cta?: string;
+  image: string;
+}> = [
   {
-    title: "Ship faster",
-    subtitle: "Composable patterns that stay out of your way when you iterate.",
-    cta: "View patterns",
+    title: "Market creator earns 2.5% on each trade",
     image:
       "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=560&h=440&fit=crop&q=80",
   },
@@ -49,7 +52,7 @@ const SLIDES = [
     image:
       "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=560&h=440&fit=crop&q=80",
   },
-] as const;
+];
 
 export default function Spotlight() {
   const [index, setIndex] = useState(0);
@@ -84,20 +87,24 @@ export default function Spotlight() {
               exit={{ opacity: 0, x: 14 }}
               transition={transitionContent}
             >
-              <h2 className="text-balance text-lg font-semibold leading-tight tracking-tight text-foreground">
+              <h2 className="text-balance text-2xl font-semibold leading-tight tracking-tight text-foreground">
                 {slide.title}
               </h2>
-              <p className="text-pretty text-sm leading-snug text-muted-foreground">
-                {slide.subtitle}
-              </p>
-              <div className="pt-1">
-                <button
-                  type="button"
-                  className="inline-flex h-9 items-center justify-center rounded-full border border-white/20 bg-white/[0.06] px-4 text-sm font-medium text-foreground transition-colors hover:bg-white/10 active:scale-[0.98]"
-                >
-                  {slide.cta}
-                </button>
-              </div>
+              {slide.subtitle ? (
+                <p className="text-pretty text-sm leading-snug text-muted-foreground">
+                  {slide.subtitle}
+                </p>
+              ) : null}
+              {slide.cta ? (
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    className="inline-flex h-9 items-center justify-center rounded-full border-0 bg-white px-4 text-sm font-medium text-black transition-colors hover:bg-white/90 active:scale-[0.98]"
+                  >
+                    {slide.cta}
+                  </button>
+                </div>
+              ) : null}
             </motion.div>
           </AnimatePresence>
         </div>
