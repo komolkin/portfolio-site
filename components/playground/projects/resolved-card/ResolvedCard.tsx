@@ -1,5 +1,6 @@
 "use client";
 
+import { GrainGradient } from "@paper-design/shaders-react";
 import { useEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 
@@ -171,15 +172,24 @@ export default function ResolvedCard() {
             }`}
             style={{ height: 468 }}
           >
-          {/* Green gradient background (Figma) */}
           <div
-            className="absolute inset-0 rounded-[32px]"
-            style={{
-              background:
-                "linear-gradient(to bottom, rgba(0,255,132,0.4), rgba(0,157,89,0.4))",
-            }}
+            className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-[32px]"
             aria-hidden
-          />
+          >
+            <GrainGradient
+              width={360}
+              height={468}
+              colors={["#31d100"]}
+              colorBack="#008a19"
+              softness={1}
+              intensity={0}
+              noise={0}
+              shape="wave"
+              speed={1}
+              scale={1.2}
+              style={{ width: "100%", height: "100%", display: "block" }}
+            />
+          </div>
           {/* Content overlay */}
           <div className="relative z-30 flex h-full flex-col gap-4 p-4">
             <div className="flex flex-1 flex-col items-center justify-center pt-10 pb-4">
