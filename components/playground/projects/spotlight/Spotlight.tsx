@@ -26,6 +26,10 @@ const DOT_TRACK_BG = "rgba(255, 255, 255, 0.16)";
 
 const SPOTLIGHT_BG = "#000000";
 
+/** Desktop Spotlight: 630×240; image column 378px; title absolute ~320px (overlaps image edge) */
+const SPOTLIGHT_DESKTOP_W = 630;
+const SPOTLIGHT_DESKTOP_H = 240;
+
 /** Figma 1486:26533 — https://www.figma.com/design/XSjBMcMS96jS8ntZIpMukQ/Ilya?node-id=1486-26533 */
 const IMG_5X_LEVERAGE =
   "https://www.figma.com/api/mcp/asset/919d7c83-7d5f-4743-8457-be3376de720b";
@@ -48,15 +52,15 @@ type SpotlightSlide = {
 
 const SLIDES: ReadonlyArray<SpotlightSlide> = [
   {
-    title: "Trade with up to\n5x leverage",
+    title: "Trade with up\nto 5x leverage",
     imageSrc: IMG_5X_LEVERAGE,
   },
   {
-    title: "Create markets to earn 2.5% fees",
+    title: "Create markets\nto earn 2.5% fees",
     imageSrc: IMG_WORM_AI,
   },
   {
-    title: "Trade your sports beliefs",
+    title: "Trade your\nsports beliefs",
     imageSrc: IMG_SPORTS,
   },
 ];
@@ -68,7 +72,7 @@ const SLIDE_IMAGE_URLS = SLIDES.map((s) => s.imageSrc).filter(
 export default function Spotlight() {
   const [index, setIndex] = useState(0);
   const shellRef = useRef<HTMLButtonElement>(null);
-  const [dims, setDims] = useState({ w: 630, h: 220 });
+  const [dims, setDims] = useState({ w: SPOTLIGHT_DESKTOP_W, h: SPOTLIGHT_DESKTOP_H });
 
   useEffect(() => {
     const el = shellRef.current;
@@ -117,7 +121,7 @@ export default function Spotlight() {
 
   return (
     <section
-      className="relative mx-auto w-[320px] md:h-[220px] md:w-[630px]"
+      className="relative mx-auto w-[320px] min-w-0 md:h-[240px] md:w-[630px]"
       aria-roledescription="carousel"
       aria-label="Spotlight"
     >
@@ -125,7 +129,7 @@ export default function Spotlight() {
         ref={shellRef}
         type="button"
         onClick={handleSpotlightPress}
-        className="relative z-[2] flex min-h-[360px] w-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/[0.08] text-left shadow-[0_8px_40px_rgba(0,0,0,0.45] transition-[transform,box-shadow] selection:bg-white/20 active:scale-[0.992] active:shadow-[0_4px_24px_rgba(0,0,0,0.35)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/35 md:h-[220px] md:min-h-0"
+        className="relative z-[2] flex min-h-[360px] w-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/[0.08] text-left shadow-[0_8px_40px_rgba(0,0,0,0.45] transition-[transform,box-shadow] selection:bg-white/20 active:scale-[0.992] active:shadow-[0_4px_24px_rgba(0,0,0,0.35)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/35 md:h-[240px] md:min-h-0"
         style={{ backgroundColor: SPOTLIGHT_BG }}
         aria-label={`Spotlight: ${slide.title}`}
       >
@@ -154,12 +158,12 @@ export default function Spotlight() {
         />
 
         <div className="relative z-[2] flex min-h-0 min-w-0 w-full flex-1 flex-col pb-10 md:h-full md:pb-0">
-          <div className="relative flex min-h-0 min-w-0 w-full flex-1 flex-col md:h-full md:flex-row">
+          <div className="relative flex min-h-0 min-w-0 w-full flex-1 flex-col md:h-full">
             <div
               className={
                 slide.imageSrc
-                  ? "flex min-h-0 min-w-0 shrink-0 flex-col justify-start overflow-hidden p-6 md:flex-1 md:justify-center md:px-8 md:pr-4 md:py-0"
-                  : "flex h-full w-full max-w-[315px] flex-col justify-center overflow-hidden p-6 md:px-8 md:pr-8"
+                  ? "relative z-[3] flex min-h-0 w-full flex-col justify-start overflow-hidden p-6 md:absolute md:left-8 md:top-1/2 md:z-[3] md:w-[320px] md:max-w-[320px] md:-translate-y-1/2 md:justify-center md:overflow-visible md:p-0"
+                  : "flex h-full w-full max-w-[315px] flex-col justify-center overflow-hidden p-6 md:pl-8 md:pr-12 md:py-0 lg:pr-14"
               }
             >
               <AnimatePresence mode="wait" initial={false}>
@@ -171,16 +175,8 @@ export default function Spotlight() {
                   exit={{ opacity: 0, x: 14 }}
                   transition={transitionContent}
                 >
-                  <h2 className="text-balance whitespace-pre-line text-2xl font-semibold leading-tight tracking-tight text-foreground">
-                    {index === 2 ? (
-                      <>
-                        <span className="block md:inline">Trade your</span>
-                        <span className="hidden md:inline"> </span>
-                        <span className="block md:inline">sports beliefs</span>
-                      </>
-                    ) : (
-                      slide.title
-                    )}
+                  <h2 className="text-balance text-pretty whitespace-pre-line text-2xl font-semibold leading-tight tracking-tight text-foreground md:text-[1.75rem] lg:text-3xl">
+                    {slide.title}
                   </h2>
                   {slide.subtitle ? (
                     <p className="text-pretty text-sm leading-snug text-muted-foreground">
@@ -205,7 +201,7 @@ export default function Spotlight() {
             <div
               className={
                 slide.imageSrc
-                  ? "relative flex min-h-[200px] w-full flex-1 items-center justify-center overflow-hidden md:h-full md:min-h-0 md:w-[60%] md:shrink-0 md:flex-none"
+                  ? "relative z-[2] flex min-h-[200px] w-full min-w-0 flex-1 items-center justify-center overflow-hidden md:absolute md:inset-y-0 md:right-0 md:z-[2] md:h-full md:min-h-0 md:w-[378px] md:min-w-[378px] md:max-w-[378px] md:flex-none"
                   : "pointer-events-none h-0 w-0 shrink-0 overflow-hidden md:h-full"
               }
               aria-hidden={!slide.imageSrc}
