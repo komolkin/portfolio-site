@@ -127,30 +127,35 @@ export default function Spotlight() {
         style={{ backgroundColor: slide.background }}
         aria-label={`Spotlight: ${slide.title}`}
       >
-      <AnimatePresence>
-        <motion.div
-          key={index}
-          className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={transitionShaderCrossfade}
-        >
-          <GrainGradient
-            width={630}
-            height={220}
-            colors={[...slide.grain.colors]}
-            colorBack={slide.grain.colorBack}
-            softness={slide.grain.softness}
-            intensity={slide.grain.intensity}
-            noise={slide.grain.noise}
-            shape={slide.grain.shape}
-            speed={slide.grain.speed}
-            scale={slide.grain.scale}
-            style={{ width: "100%", height: "100%", display: "block" }}
-          />
-        </motion.div>
-      </AnimatePresence>
+      {/* Render all shader layers once; cross-fade via opacity to avoid heavy remount work on click. */}
+      <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl">
+        {SLIDES.map((layer, i) => {
+          const isActive = i === index;
+          return (
+            <motion.div
+              key={i}
+              className="absolute inset-0 overflow-hidden rounded-2xl"
+              initial={false}
+              animate={{ opacity: isActive ? 1 : 0 }}
+              transition={transitionShaderCrossfade}
+            >
+              <GrainGradient
+                width={630}
+                height={220}
+                colors={[...layer.grain.colors]}
+                colorBack={layer.grain.colorBack}
+                softness={layer.grain.softness}
+                intensity={layer.grain.intensity}
+                noise={layer.grain.noise}
+                shape={layer.grain.shape}
+                speed={layer.grain.speed}
+                scale={layer.grain.scale}
+                style={{ width: "100%", height: "100%", display: "block" }}
+              />
+            </motion.div>
+          );
+        })}
+      </div>
 
       {/* Subtle dark overlay to improve text readability over shaders */}
       <div
