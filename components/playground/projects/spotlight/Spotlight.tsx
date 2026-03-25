@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { GrainGradient } from "@paper-design/shaders-react";
+import { DotGrid } from "@paper-design/shaders-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 // Paper Shaders — https://github.com/paper-design/shaders
@@ -20,82 +20,67 @@ const transitionDot = {
   ease: EASE_SLIDE,
 } as const;
 
-/** Background layers overlap while exiting (1→0) and entering (0→1) — default AnimatePresence `sync` */
-const transitionShaderCrossfade = {
-  duration: 0.7,
-  ease: EASE_SLIDE,
-} as const;
-
 /** Dots + progress line in pure white shades */
 const DOT_INACTIVE_BG = "rgba(255, 255, 255, 0.35)";
 const DOT_TRACK_BG = "rgba(255, 255, 255, 0.16)";
 
-type GrainSlideParams = {
-  colors: readonly string[];
-  colorBack: string;
-  softness: number;
-  intensity: number;
-  noise: number;
-  shape: "ripple" | "dots" | "wave" | "corners" | "blob" | "truchet";
-  speed: number;
-  scale: number;
-};
+const SPOTLIGHT_BG = "#000000";
+
+/** Figma 1486:26533 — https://www.figma.com/design/XSjBMcMS96jS8ntZIpMukQ/Ilya?node-id=1486-26533 */
+const IMG_5X_LEVERAGE =
+  "https://www.figma.com/api/mcp/asset/919d7c83-7d5f-4743-8457-be3376de720b";
+
+/** Figma 1486:26534 — Worm AI / EARN art */
+const IMG_WORM_AI =
+  "https://www.figma.com/api/mcp/asset/7216855e-0e74-4700-988d-5e3611dc13f9";
+
+/** Figma 1486:26532 — Sports art */
+const IMG_SPORTS =
+  "https://www.figma.com/api/mcp/asset/f709bbc5-bba0-42a7-88b7-0eb6610dee9c";
 
 type SpotlightSlide = {
   title: string;
   subtitle?: string;
   cta?: string;
-  background: string;
-  grain: GrainSlideParams;
+  /** Optional right-side image; column is 60% width × full height, image inset inside (see markup) */
+  imageSrc?: string;
 };
 
 const SLIDES: ReadonlyArray<SpotlightSlide> = [
   {
-    title: "Create markets to earn 2.5% on each trade",
-    background: "#140a00",
-    grain: {
-      colors: ["#702d00", "#88ddae", "#2d0b1e"],
-      colorBack: "#140a00",
-      softness: 0.5,
-      intensity: 0,
-      noise: 0,
-      shape: "ripple",
-      speed: 1,
-      scale: 0.5,
-    },
-  },
-  {
     title: "Trade with up to\n5x leverage",
-    background: "#0a0000",
-    grain: {
-      colors: ["#700000", "#0080ff", "#f2ebca", "#33cc33"],
-      colorBack: "#0a0000",
-      softness: 1,
-      intensity: 0,
-      noise: 0,
-      shape: "dots",
-      speed: 1,
-      scale: 0.6,
-    },
+    imageSrc: IMG_5X_LEVERAGE,
   },
   {
-    title: "Explore trending\nSports markets",
-    background: "#000000",
-    grain: {
-      colors: ["#7300ff", "#eba8ff", "#00bfff", "#2b00ff"],
-      colorBack: "#000000",
-      softness: 0.5,
-      intensity: 0,
-      noise: 0,
-      shape: "corners",
-      speed: 1,
-      scale: 0.5,
-    },
+    title: "Create markets to earn 2.5% fees",
+    imageSrc: IMG_WORM_AI,
+  },
+  {
+    title: "Trade your sports beliefs",
+    imageSrc: IMG_SPORTS,
   },
 ];
 
+const SLIDE_IMAGE_URLS = SLIDES.map((s) => s.imageSrc).filter(
+  (src): src is string => Boolean(src),
+);
+
 export default function Spotlight() {
   const [index, setIndex] = useState(0);
+
+  /** Warm HTTP cache once; images stay mounted below (no remount per slide). */
+  useEffect(() => {
+    const loaders = SLIDE_IMAGE_URLS.map(
+      (src) =>
+        new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+          img.src = src;
+        }),
+    );
+    void Promise.allSettled(loaders);
+  }, []);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -124,78 +109,98 @@ export default function Spotlight() {
         type="button"
         onClick={handleSpotlightPress}
         className="relative z-[2] flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/[0.08] text-left shadow-[0_8px_40px_rgba(0,0,0,0.45)] transition-[transform,box-shadow] selection:bg-white/20 active:scale-[0.992] active:shadow-[0_4px_24px_rgba(0,0,0,0.35)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/35"
-        style={{ backgroundColor: slide.background }}
+        style={{ backgroundColor: SPOTLIGHT_BG }}
         aria-label={`Spotlight: ${slide.title}`}
       >
-      {/* Render all shader layers once; cross-fade via opacity to avoid heavy remount work on click. */}
-      <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl">
-        {SLIDES.map((layer, i) => {
-          const isActive = i === index;
-          return (
-            <motion.div
-              key={i}
-              className="absolute inset-0 overflow-hidden rounded-2xl"
-              initial={false}
-              animate={{ opacity: isActive ? 1 : 0 }}
-              transition={transitionShaderCrossfade}
-            >
-              <GrainGradient
-                width={630}
-                height={220}
-                colors={[...layer.grain.colors]}
-                colorBack={layer.grain.colorBack}
-                softness={layer.grain.softness}
-                intensity={layer.grain.intensity}
-                noise={layer.grain.noise}
-                shape={layer.grain.shape}
-                speed={layer.grain.speed}
-                scale={layer.grain.scale}
-                style={{ width: "100%", height: "100%", display: "block" }}
-              />
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Subtle dark overlay to improve text readability over shaders */}
-      <div
-        className="pointer-events-none absolute inset-0 z-[1] rounded-2xl bg-black/40"
-        aria-hidden
-      />
-
-      <div className="relative z-[2] flex h-full min-h-0 min-w-0 w-full flex-1 flex-col">
-        <div className="relative flex h-full min-h-0 min-w-0 w-full flex-col justify-center overflow-hidden px-8 pr-8">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={index}
-              className="flex w-full max-w-[315px] flex-col gap-2"
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 14 }}
-              transition={transitionContent}
-            >
-              <h2 className="text-balance whitespace-pre-line text-2xl font-semibold leading-tight tracking-tight text-foreground">
-                {slide.title}
-              </h2>
-              {slide.subtitle ? (
-                <p className="text-pretty text-sm leading-snug text-muted-foreground">
-                  {slide.subtitle}
-                </p>
-              ) : null}
-              {slide.cta ? (
-                <div className="pt-1" onClick={(e) => e.stopPropagation()}>
-                  <span
-                    role="presentation"
-                    className="inline-flex h-9 cursor-pointer items-center justify-center rounded-full border-0 bg-white px-4 text-sm font-medium text-black transition-colors hover:bg-white/90 active:scale-[0.98]"
-                  >
-                    {slide.cta}
-                  </span>
-                </div>
-              ) : null}
-            </motion.div>
-          </AnimatePresence>
+        <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl">
+          <DotGrid
+            width={630}
+            height={220}
+            colorBack="#000000"
+            colorFill="#ffffff2e"
+            colorStroke="#ffffff"
+            size={1}
+            gapX={20}
+            gapY={20}
+            strokeWidth={0}
+            sizeRange={0}
+            opacityRange={0}
+            shape="circle"
+            style={{ width: "100%", height: "100%", display: "block" }}
+          />
         </div>
-      </div>
+
+        {/* Subtle dark overlay to improve text readability over shaders */}
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] rounded-2xl bg-black/40"
+          aria-hidden
+        />
+
+        <div className="relative z-[2] flex h-full min-h-0 min-w-0 w-full flex-1 flex-col">
+          <div className="relative flex h-full min-h-0 min-w-0 w-full flex-row">
+            <div
+              className={
+                slide.imageSrc
+                  ? "flex min-h-0 min-w-0 flex-1 flex-col justify-center overflow-hidden px-8 pr-4"
+                  : "flex h-full w-full max-w-[315px] flex-col justify-center overflow-hidden px-8 pr-8"
+              }
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={index}
+                  className="flex flex-col gap-2"
+                  initial={{ opacity: 0, x: -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 14 }}
+                  transition={transitionContent}
+                >
+                  <h2 className="text-balance whitespace-pre-line text-2xl font-semibold leading-tight tracking-tight text-foreground">
+                    {slide.title}
+                  </h2>
+                  {slide.subtitle ? (
+                    <p className="text-pretty text-sm leading-snug text-muted-foreground">
+                      {slide.subtitle}
+                    </p>
+                  ) : null}
+                  {slide.cta ? (
+                    <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                      <span
+                        role="presentation"
+                        className="inline-flex h-9 cursor-pointer items-center justify-center rounded-full border-0 bg-white px-4 text-sm font-medium text-black transition-colors hover:bg-white/90 active:scale-[0.98]"
+                      >
+                        {slide.cta}
+                      </span>
+                    </div>
+                  ) : null}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Images stay mounted; only opacity changes — avoids reload/flicker when looping slides */}
+            <div
+              className={
+                slide.imageSrc
+                  ? "relative flex h-full w-[60%] shrink-0 items-center justify-center overflow-hidden"
+                  : "pointer-events-none h-full w-0 shrink-0 overflow-hidden"
+              }
+              aria-hidden={!slide.imageSrc}
+            >
+              {SLIDES.map((s, i) =>
+                s.imageSrc ? (
+                  <img
+                    key={i}
+                    src={s.imageSrc}
+                    alt=""
+                    className={`pointer-events-none absolute left-1/2 top-1/2 h-auto max-h-[78%] w-auto max-w-[82%] -translate-x-1/2 -translate-y-1/2 select-none object-contain transition-opacity duration-300 ease-out ${
+                      index === i ? "z-[1] opacity-100" : "z-0 opacity-0"
+                    }`}
+                    draggable={false}
+                  />
+                ) : null,
+              )}
+            </div>
+          </div>
+        </div>
       </button>
 
       <div
