@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DotGrid } from "@paper-design/shaders-react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -67,6 +67,22 @@ const SLIDE_IMAGE_URLS = SLIDES.map((s) => s.imageSrc).filter(
 
 export default function Spotlight() {
   const [index, setIndex] = useState(0);
+  const shellRef = useRef<HTMLButtonElement>(null);
+  const [dims, setDims] = useState({ w: 630, h: 220 });
+
+  useEffect(() => {
+    const el = shellRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const cr = entries[0]?.contentRect;
+      if (!cr) return;
+      const w = Math.max(1, Math.floor(cr.width));
+      const h = Math.max(1, Math.floor(cr.height));
+      setDims((prev) => (prev.w === w && prev.h === h ? prev : { w, h }));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   /** Warm HTTP cache once; images stay mounted below (no remount per slide). */
   useEffect(() => {
@@ -101,21 +117,22 @@ export default function Spotlight() {
 
   return (
     <section
-      className="relative h-[220px] w-[630px]"
+      className="relative mx-auto w-[320px] md:h-[220px] md:w-[630px]"
       aria-roledescription="carousel"
       aria-label="Spotlight"
     >
       <button
+        ref={shellRef}
         type="button"
         onClick={handleSpotlightPress}
-        className="relative z-[2] flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/[0.08] text-left shadow-[0_8px_40px_rgba(0,0,0,0.45)] transition-[transform,box-shadow] selection:bg-white/20 active:scale-[0.992] active:shadow-[0_4px_24px_rgba(0,0,0,0.35)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/35"
+        className="relative z-[2] flex min-h-[360px] w-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/[0.08] text-left shadow-[0_8px_40px_rgba(0,0,0,0.45] transition-[transform,box-shadow] selection:bg-white/20 active:scale-[0.992] active:shadow-[0_4px_24px_rgba(0,0,0,0.35)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/35 md:h-[220px] md:min-h-0"
         style={{ backgroundColor: SPOTLIGHT_BG }}
         aria-label={`Spotlight: ${slide.title}`}
       >
         <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl">
           <DotGrid
-            width={630}
-            height={220}
+            width={dims.w}
+            height={dims.h}
             colorBack="#000000"
             colorFill="#ffffff2e"
             colorStroke="#ffffff"
@@ -136,13 +153,13 @@ export default function Spotlight() {
           aria-hidden
         />
 
-        <div className="relative z-[2] flex h-full min-h-0 min-w-0 w-full flex-1 flex-col">
-          <div className="relative flex h-full min-h-0 min-w-0 w-full flex-row">
+        <div className="relative z-[2] flex min-h-0 min-w-0 w-full flex-1 flex-col pb-10 md:h-full md:pb-0">
+          <div className="relative flex min-h-0 min-w-0 w-full flex-1 flex-col md:h-full md:flex-row">
             <div
               className={
                 slide.imageSrc
-                  ? "flex min-h-0 min-w-0 flex-1 flex-col justify-center overflow-hidden px-8 pr-4"
-                  : "flex h-full w-full max-w-[315px] flex-col justify-center overflow-hidden px-8 pr-8"
+                  ? "flex min-h-0 min-w-0 shrink-0 flex-col justify-start overflow-hidden p-6 md:flex-1 md:justify-center md:px-8 md:pr-4 md:py-0"
+                  : "flex h-full w-full max-w-[315px] flex-col justify-center overflow-hidden p-6 md:px-8 md:pr-8"
               }
             >
               <AnimatePresence mode="wait" initial={false}>
@@ -155,7 +172,15 @@ export default function Spotlight() {
                   transition={transitionContent}
                 >
                   <h2 className="text-balance whitespace-pre-line text-2xl font-semibold leading-tight tracking-tight text-foreground">
-                    {slide.title}
+                    {index === 2 ? (
+                      <>
+                        <span className="block md:inline">Trade your</span>
+                        <span className="hidden md:inline"> </span>
+                        <span className="block md:inline">sports beliefs</span>
+                      </>
+                    ) : (
+                      slide.title
+                    )}
                   </h2>
                   {slide.subtitle ? (
                     <p className="text-pretty text-sm leading-snug text-muted-foreground">
@@ -180,8 +205,8 @@ export default function Spotlight() {
             <div
               className={
                 slide.imageSrc
-                  ? "relative flex h-full w-[60%] shrink-0 items-center justify-center overflow-hidden"
-                  : "pointer-events-none h-full w-0 shrink-0 overflow-hidden"
+                  ? "relative flex min-h-[200px] w-full flex-1 items-center justify-center overflow-hidden md:h-full md:min-h-0 md:w-[60%] md:shrink-0 md:flex-none"
+                  : "pointer-events-none h-0 w-0 shrink-0 overflow-hidden md:h-full"
               }
               aria-hidden={!slide.imageSrc}
             >
@@ -191,7 +216,7 @@ export default function Spotlight() {
                     key={i}
                     src={s.imageSrc}
                     alt=""
-                    className={`pointer-events-none absolute left-1/2 top-1/2 h-auto max-h-[78%] w-auto max-w-[82%] -translate-x-1/2 -translate-y-1/2 select-none object-contain transition-opacity duration-300 ease-out ${
+                    className={`pointer-events-none absolute left-1/2 top-1/2 h-auto max-h-[min(72%,220px)] w-auto max-w-[min(88%,360px)] -translate-x-1/2 -translate-y-1/2 select-none object-contain transition-opacity duration-300 ease-out md:max-h-[78%] md:max-w-[82%] ${
                       index === i ? "z-[1] opacity-100" : "z-0 opacity-0"
                     }`}
                     draggable={false}
