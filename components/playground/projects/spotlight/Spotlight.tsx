@@ -26,9 +26,9 @@ const transitionShaderCrossfade = {
   ease: EASE_SLIDE,
 } as const;
 
-/** Inactive dot — matches `text-muted-foreground` at ~45% opacity */
-const DOT_INACTIVE_BG = "hsla(0, 0%, 63.9%, 0.45)";
-const DOT_TRACK_BG = "rgba(255, 255, 255, 0.2)";
+/** Dots + progress line in pure white shades */
+const DOT_INACTIVE_BG = "rgba(255, 255, 255, 0.35)";
+const DOT_TRACK_BG = "rgba(255, 255, 255, 0.16)";
 
 type GrainSlideParams = {
   colors: readonly string[];
@@ -79,7 +79,7 @@ const SLIDES: ReadonlyArray<SpotlightSlide> = [
     },
   },
   {
-    title: "Explore Sports markets",
+    title: "Explore trending\nSports markets",
     background: "#000000",
     grain: {
       colors: ["#7300ff", "#eba8ff", "#00bfff", "#2b00ff"],
@@ -152,6 +152,12 @@ export default function Spotlight() {
         </motion.div>
       </AnimatePresence>
 
+      {/* Subtle dark overlay to improve text readability over shaders */}
+      <div
+        className="pointer-events-none absolute inset-0 z-[1] rounded-2xl bg-black/40"
+        aria-hidden
+      />
+
       <div className="relative z-[2] flex h-full min-h-0 min-w-0 w-full flex-1 flex-col">
         <div className="relative flex h-full min-h-0 min-w-0 w-full flex-col justify-center overflow-hidden px-8 pr-8">
           <AnimatePresence mode="wait" initial={false}>
@@ -219,7 +225,7 @@ export default function Spotlight() {
                     {active && (
                       <motion.span
                         key={index}
-                        className="absolute inset-y-0 left-0 block w-full origin-left rounded-full bg-foreground"
+                        className="absolute inset-y-0 left-0 block w-full origin-left rounded-full bg-white/85"
                         initial={{ scaleX: 0 }}
                         animate={{ scaleX: 1 }}
                         exit={{ opacity: 0 }}
