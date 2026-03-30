@@ -6,15 +6,17 @@ import NumberFlow from "@number-flow/react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 
-const IMG_SAOIRSE_RONAN =
-  "https://www.figma.com/api/mcp/asset/ec9b83a9-2570-4f9a-baad-c9a30b43db87";
-const IMG_FLORENCE_PUGH =
-  "https://www.figma.com/api/mcp/asset/926aa346-dcc4-4714-bcde-fba09b1aa931";
-const IMG_ZENDAYA = "https://www.figma.com/api/mcp/asset/e55fefb0-d52a-46c0-b24d-f97855abf7db";
+/** Face crops from Unsplash (demo placeholders; names are fictional market labels). */
 const IMG_TIMOTHEE_CHALAMET =
-  "https://www.figma.com/api/mcp/asset/eeb8bcdc-4c8c-48a6-af4f-2c0a2000fc1c";
+  "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop&crop=faces&auto=format&q=80";
+const IMG_ZENDAYA =
+  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=faces&auto=format&q=80";
+const IMG_FLORENCE_PUGH =
+  "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=400&fit=crop&crop=faces&auto=format&q=80";
 const IMG_PAUL_MESCAL =
-  "https://www.figma.com/api/mcp/asset/3c1cea27-7216-47cf-b669-9c38dfc57c6d";
+  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop&crop=faces&auto=format&q=80";
+const IMG_SAOIRSE_RONAN =
+  "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop&crop=faces&auto=format&q=80";
 const IMG_PNL_VECTOR_0 =
   "https://www.figma.com/api/mcp/asset/1dc54a4f-d104-4ce0-b429-8feb9261a180";
 const IMG_PNL_VECTOR_1 =

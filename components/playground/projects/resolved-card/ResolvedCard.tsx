@@ -4,13 +4,15 @@ import { GrainGradient } from "@paper-design/shaders-react";
 import { useEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 
-// Figma MCP asset URLs (use within ~7 days or re-fetch from Figma)
-const IMG_AVATAR =
-  "https://www.figma.com/api/mcp/asset/33dac028-278c-4c0a-9049-8dc0f9da980a";
-const IMG_YES =
-  "https://www.figma.com/api/mcp/asset/1fde7823-fb1e-4f18-ad45-4655ac86ec4d";
-const IMG_SHARE =
-  "https://www.figma.com/api/mcp/asset/4328aae4-8484-42fa-b0ff-7d4151a93e8a";
+/**
+ * Raster assets from Figma frame "Resolved / Yes" (node 1152:22332):
+ * https://www.figma.com/design/XSjBMcMS96jS8ntZIpMukQ/Ilya?node-id=1152-22332
+ * Files live under public/playground/resolved-card/ (re-export from Figma if you refresh art).
+ */
+const IMG_AVATAR = "/playground/resolved-card/avatar.png";
+const IMG_YES = "/playground/resolved-card/yes.png";
+/** Share control — Figma Frame (node 1154:23130) */
+const IMG_SHARE_ICON = "/playground/resolved-card/share-icon.svg";
 
 export default function ResolvedCard() {
   const [claimState, setClaimState] = useState<"idle" | "claiming" | "claimed">("idle");
@@ -19,7 +21,7 @@ export default function ResolvedCard() {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const lastMoveRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const rafRef = useRef<number | null>(null);
-  const PRELOAD_ASSETS = [IMG_AVATAR, IMG_YES, IMG_SHARE];
+  const PRELOAD_ASSETS = [IMG_AVATAR, IMG_YES];
 
   useEffect(() => {
     let cancelled = false;
@@ -314,17 +316,18 @@ export default function ResolvedCard() {
                 <button
                   type="button"
                   onClick={handleShare}
-                  aria-label="Sharing"
-                  className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white/20 bg-transparent hover:bg-white/10 transition-transform transition-colors duration-200 ease-out active:scale-[0.98]"
+                  aria-label="Share"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-white/20 bg-transparent hover:bg-white/10 transition-transform transition-colors duration-200 ease-out active:scale-[0.98]"
                 >
-                  <div className="relative h-[20px] w-[20px]">
-                    <img
-                      src={IMG_SHARE}
-                      alt=""
-                      aria-hidden
-                      className="absolute inset-0 block h-full w-full object-contain"
-                    />
-                  </div>
+                  <img
+                    src={IMG_SHARE_ICON}
+                    alt=""
+                    width={20}
+                    height={20}
+                    className="block h-5 w-5 shrink-0"
+                    draggable={false}
+                    aria-hidden
+                  />
                 </button>
               </div>
             </div>
