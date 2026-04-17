@@ -1,4 +1,5 @@
 export const PROJECTS = [
+  { id: "position", label: "Position" },
   { id: "leverage-selector", label: "Leverage Selector" },
   { id: "resolved-card", label: "Resolved Card" },
   { id: "spotlight", label: "Spotlight" },
