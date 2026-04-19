@@ -1,6 +1,5 @@
 "use client";
 
-import { GrainGradient } from "@paper-design/shaders-react";
 import { useEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 
@@ -157,7 +156,7 @@ export default function ResolvedCard() {
           tilt-factor="0.8"
           scale-factor="1.02"
           glare-intensity="0.4"
-          glare-hue="142"
+          glare-hue="270"
           glare-mask="url(#resolvedCardRoundMask)"
           glare-mask-mode="alpha"
           shadow
@@ -172,26 +171,8 @@ export default function ResolvedCard() {
             className={`resolvedCardRainbow relative w-full overflow-hidden rounded-[32px] transition-opacity duration-300 ease-out ${
               isVisible ? "opacity-100" : "opacity-0"
             }`}
-            style={{ height: 468 }}
+            style={{ height: 468, background: "#1d1d1d" }}
           >
-          <div
-            className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-[32px]"
-            aria-hidden
-          >
-            <GrainGradient
-              width={360}
-              height={468}
-              colors={["#00b849"]}
-              colorBack="#008a19"
-              softness={1}
-              intensity={0}
-              noise={0}
-              shape="wave"
-              speed={1}
-              scale={1.2}
-              style={{ width: "100%", height: "100%", display: "block" }}
-            />
-          </div>
           {/* Content overlay */}
           <div className="relative z-30 flex h-full flex-col gap-4 p-4">
             <div className="flex flex-1 flex-col items-center justify-center pt-10 pb-4">
@@ -381,9 +362,9 @@ export default function ResolvedCard() {
             repeating-linear-gradient(
               135deg,
               rgba(255, 255, 255, 0) 0%,
-              rgba(255, 255, 255, 0.38) 26%,
-              rgba(0, 255, 132, 0.12) 44%,
-              rgba(255, 255, 255, 0.16) 58%,
+              rgba(255, 255, 255, 0.34) 26%,
+              rgba(200, 202, 208, 0.2) 44%,
+              rgba(255, 255, 255, 0.14) 58%,
               rgba(255, 255, 255, 0) 100%
             );
           background-size: 12px 12px, 200% 200%;

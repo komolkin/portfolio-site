@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 /**
  * Position / "Resolution Outcome" — Figma node 2072:7697
  * https://www.figma.com/design/XSjBMcMS96jS8ntZIpMukQ/Ilya?node-id=2072-7697
+ * PHX chip — https://www.figma.com/design/XSjBMcMS96jS8ntZIpMukQ/Ilya?node-id=2072-7743
  * Assets under public/playground/position/ (thumbnail, share icon)
  */
 const IMG_THUMB = "/playground/position/thumbnail.png";
@@ -111,6 +112,9 @@ export default function Position() {
             Will the Phoenix Suns beat the Golden State Warriors
           </p>
           <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-[#2d107f] px-2 py-0.5 text-xs font-semibold leading-tight text-white">
+              PHX
+            </span>
             <span className="rounded-full bg-[rgba(0,157,89,0.2)] px-2 py-0.5 text-xs font-semibold leading-tight text-[#5dd978]">
               YES
             </span>
