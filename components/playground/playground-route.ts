@@ -1,4 +1,5 @@
 export const PROJECTS = [
+  { id: "binary-market", label: "Binary Market" },
   { id: "position", label: "Position" },
   { id: "leverage-selector", label: "Leverage Selector" },
   { id: "resolved-card", label: "Resolved Card" },

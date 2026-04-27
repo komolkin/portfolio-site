@@ -9,6 +9,7 @@ import {
 } from "@/components/playground/playground-route";
 import ResolvedCard from "@/components/playground/projects/resolved-card/ResolvedCard";
 import LeverageSelector from "@/components/playground/projects/leverage-selector/LeverageSelector";
+import BinaryMarket from "@/components/playground/projects/binary-market/BinaryMarket";
 import Position from "@/components/playground/projects/position/Position";
 
 export default function PlaygroundSlide() {
@@ -29,6 +30,7 @@ export default function PlaygroundSlide() {
         <div className="w-full h-full flex items-center justify-center">
           {activeProject === "resolved-card" && <ResolvedCard />}
           {activeProject === "leverage-selector" && <LeverageSelector />}
+          {activeProject === "binary-market" && <BinaryMarket />}
           {activeProject === "position" && <Position />}
         </div>
       </main>
