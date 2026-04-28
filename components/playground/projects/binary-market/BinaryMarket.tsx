@@ -74,6 +74,11 @@ const PNL_ICON_SRCS = [IMG_PNL_VECTOR_0, IMG_PNL_VECTOR_1, IMG_PNL_VECTOR_2] as 
 const FLOW_ICON_SRCS = [IMG_CLOSE_ICON] as const;
 type BinaryMarketScreen = "order" | "review" | "placing" | "placed" | "success";
 const FLOW_EASE = [0.22, 1, 0.36, 1] as const;
+const PLACING_APPEAR_DELAY_MS = 800;
+const PLACING_FADE_IN_DURATION_S = 1.4;
+const PLACING_ENTER_DELAY_S = 0.14;
+const PLACING_STEP_DURATION_MS = 3000;
+const PLACED_STEP_DURATION_MS = 3000;
 
 async function getPnlIconObjectUrl(src: string): Promise<string> {
   const cached = pnlIconObjectUrlCache.get(src);
@@ -393,7 +398,7 @@ export default function BinaryMarket() {
         if (prev === "placed") return "success";
         return prev;
       });
-    }, 3000);
+    }, screen === "placing" ? PLACING_STEP_DURATION_MS : PLACED_STEP_DURATION_MS);
     return () => {
       window.clearTimeout(timeoutId);
     };
@@ -1323,7 +1328,7 @@ export default function BinaryMarket() {
               initial={{ x: 28, opacity: 0 }}
               animate={screen === "closing" ? { x: 0, opacity: 0 } : { x: 0, opacity: 1 }}
               exit={{ x: 28, opacity: 0 }}
-              transition={{ duration: 0.2, ease: FLOW_EASE }}
+              transition={{ duration: 0.28, ease: FLOW_EASE }}
               className="absolute inset-0 z-30 flex h-full flex-col gap-3 rounded-3xl bg-[#1d1d1d] p-3"
             >
               <AnimatePresence initial={false} mode="wait">
@@ -1335,20 +1340,32 @@ export default function BinaryMarket() {
                     <AnimatePresence initial={false} mode="wait">
                       <motion.div
                         key={screen}
-                        initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                        initial={
+                          screen === "placing"
+                            ? { opacity: 0, y: 10, scale: 0.94 }
+                            : { opacity: 0, y: 6, scale: 0.98 }
+                        }
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                        transition={{ duration: 0.18, ease: FLOW_EASE }}
+                        exit={
+                          screen === "placing"
+                            ? { opacity: 1, y: 0, scale: 1 }
+                            : { opacity: 0, y: -6, scale: 0.98 }
+                        }
+                        transition={{
+                          duration: screen === "placing" ? 0.36 : 0.24,
+                          ease: FLOW_EASE,
+                          delay: screen === "placing" ? PLACING_ENTER_DELAY_S : 0,
+                        }}
                         className="flex flex-col items-center justify-center gap-6"
                       >
                         <motion.div
                           key={`${screen}-icon`}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
+                          initial={{ opacity: 0, y: screen === "placing" ? 10 : 6 }}
+                          animate={{ opacity: 1, y: 0 }}
                           transition={{
-                            duration: 0.45,
+                            duration: screen === "placing" ? PLACING_FADE_IN_DURATION_S : 0.24,
                             ease: FLOW_EASE,
-                            delay: screen === "placing" ? 2 : 0,
+                            delay: screen === "placing" ? PLACING_APPEAR_DELAY_MS / 1000 : 0,
                           }}
                           className="relative size-20"
                         >
@@ -1359,12 +1376,12 @@ export default function BinaryMarket() {
                           )}
                         </motion.div>
                         <motion.p
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
+                          initial={{ opacity: 0, y: screen === "placing" ? 10 : 6 }}
+                          animate={{ opacity: 1, y: 0 }}
                           transition={{
-                            duration: 0.45,
+                            duration: screen === "placing" ? PLACING_FADE_IN_DURATION_S : 0.24,
                             ease: FLOW_EASE,
-                            delay: screen === "placing" ? 2 : 0,
+                            delay: screen === "placing" ? PLACING_APPEAR_DELAY_MS / 1000 : 0,
                           }}
                           className="text-2xl font-semibold leading-none text-white"
                         >
@@ -1381,7 +1398,7 @@ export default function BinaryMarket() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.18, ease: FLOW_EASE }}
+                    transition={{ duration: 0.24, ease: FLOW_EASE }}
                     className="absolute inset-0 flex h-full flex-col gap-3 p-3"
                   >
                     <div className="flex flex-1 flex-col gap-3">
@@ -1463,10 +1480,10 @@ export default function BinaryMarket() {
                 {(screen === "success" || screen === "closing") && (
                   <motion.div
                     key="success"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    initial={{ opacity: 0, scale: 0.96 }}
+                    animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.18, ease: FLOW_EASE }}
+                    transition={{ duration: 0.24, ease: FLOW_EASE }}
                     className="flex h-full flex-col gap-3"
                   >
                     <button

@@ -1,7 +1,7 @@
 export const PROJECTS = [
   { id: "binary-market", label: "Binary Market" },
   { id: "position", label: "Position" },
-  { id: "leverage-selector", label: "Leverage Selector" },
+  { id: "leverage-selector", label: "Outcome Selector" },
   { id: "resolved-card", label: "Resolved Card" },
 ] as const;
 
