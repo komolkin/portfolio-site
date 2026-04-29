@@ -1125,7 +1125,7 @@ export default function BinaryMarket() {
                   softness={0.55}
                   intensity={0.35}
                   noise={0.08}
-                  shape="linear"
+                  shape="corners"
                   speed={0.12}
                 />
               </motion.div>
