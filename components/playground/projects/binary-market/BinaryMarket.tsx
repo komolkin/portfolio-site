@@ -265,28 +265,33 @@ function PlacingLoaderIcon({ className }: { className?: string }) {
 }
 
 function CircularProgressIcon({ className }: { className?: string }) {
+  const radius = 5.5;
+  const circumference = 2 * Math.PI * radius;
+  const segmentLength = circumference * 0.28;
+
   return (
-    <svg viewBox="0 0 16 16" className={className || "size-2.5"} aria-hidden>
+    <svg viewBox="0 0 16 16" className={className || "size-3"} aria-hidden>
       <circle cx="8" cy="8" r="5.5" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
-      <motion.circle
+      <circle
         cx="8"
         cy="8"
         r="5.5"
         fill="none"
-        stroke="rgba(255,255,255,0.85)"
+        stroke="rgba(255,255,255,0.9)"
         strokeWidth="2"
         strokeLinecap="round"
-        pathLength={1}
-        style={{ pathLength: 0 }}
+        strokeDasharray={circumference}
+        strokeDashoffset={circumference}
         transform="rotate(-90 8 8)"
-        animate={{ pathLength: [0, 1] }}
-        transition={{
-          duration: AVG_PRICE_TICK_INTERVAL_MS / 1000,
-          ease: "linear",
-          repeat: Infinity,
-          repeatType: "loop",
-        }}
-      />
+      >
+        <animate
+          attributeName="stroke-dashoffset"
+          from={String(circumference)}
+          to="0"
+          dur={`${AVG_PRICE_TICK_INTERVAL_MS / 1000}s`}
+          repeatCount="indefinite"
+        />
+      </circle>
     </svg>
   );
 }
@@ -864,7 +869,7 @@ export default function BinaryMarket() {
                             value={combinedToWinDollars}
                             trend={0}
                             format={{
-                              useGrouping: false,
+                              useGrouping: true,
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
                             }}
@@ -1197,7 +1202,7 @@ export default function BinaryMarket() {
                                   ["--number-flow-mask-height" as any]: "0em",
                                 }}
                               />
-                              <CircularProgressIcon className="size-2.5" />
+                              <CircularProgressIcon className="size-3" />
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
@@ -1222,7 +1227,7 @@ export default function BinaryMarket() {
                               value={combinedToWinDollars}
                               trend={0}
                               format={{
-                                useGrouping: false,
+                                useGrouping: true,
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,
                               }}
@@ -1312,7 +1317,7 @@ export default function BinaryMarket() {
                             value={combinedToWinDollars}
                             trend={0}
                             format={{
-                              useGrouping: false,
+                              useGrouping: true,
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
                             }}
