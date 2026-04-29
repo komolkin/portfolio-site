@@ -4,7 +4,13 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import type { KeyboardEvent } from "react";
 import NumberFlow from "@number-flow/react";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+
+const GrainGradient = dynamic(
+  () => import("@paper-design/shaders-react").then((mod) => mod.GrainGradient),
+  { ssr: false },
+);
 
 /** Team logos pulled from the linked Figma node. */
 const IMG_PHOENIX_SUNS =
@@ -65,7 +71,7 @@ if (typeof window !== "undefined") {
 const FLOW_ICON_SRCS = [IMG_CLOSE_ICON] as const;
 type BinaryMarketScreen = "order" | "review" | "placing" | "placed" | "success";
 const FLOW_EASE = [0.22, 1, 0.36, 1] as const;
-const PLACING_APPEAR_DELAY_MS = 800;
+const PLACING_APPEAR_DELAY_MS = 520;
 const PLACING_FADE_IN_DURATION_S = 1.4;
 const PLACING_ENTER_DELAY_S = 0.14;
 const PLACING_STEP_DURATION_MS = 3000;
@@ -565,6 +571,11 @@ export default function BinaryMarket() {
   const pnlEntryPriceCents =
     orderType === "limit" && limitPriceCents > 0 ? limitPriceCents : MARKET_DEFAULT_ENTRY_PRICE_CENTS;
   const avgPriceCents = outcome === "yes" ? selectedPerson.yesPercent : 100 - selectedPerson.yesPercent;
+  const isPhoenixSelected = selectedPerson.name === PHOENIX_SUNS_OPTION.name;
+  const successScreenBackgroundColor = isPhoenixSelected ? "#2D107F" : "#028544";
+  const selectedOptionColor = isPhoenixSelected ? "#2D107F" : "#028544";
+  const selectedTicker = isPhoenixSelected ? "PHX" : "BOS";
+  const marketQuestion = `Phoenix Suns vs Boston Celtics: Will ${selectedPerson.name} win?`;
   const totalDollars =
     orderType === "market"
       ? side === "buy"
@@ -607,17 +618,18 @@ export default function BinaryMarket() {
           <div className="relative size-12 shrink-0 overflow-hidden rounded-lg">
             {/* Render all avatars up-front (hidden) so switching feels instantaneous. */}
             {PERSON_OPTIONS.map((person) => (
-              <img
+              <Image
                 key={person.image}
                 src={person.image}
                 alt={person.name}
+                fill
+                sizes="48px"
+                unoptimized
                 aria-hidden={person.name !== selectedPerson.name}
                 className={`absolute inset-0 size-full object-cover ${
                   person.name === selectedPerson.name ? "opacity-100" : "opacity-0"
                 }`}
                 style={{ transition: "none" }}
-                loading="eager"
-                decoding="async"
                 draggable={false}
               />
             ))}
@@ -1092,20 +1104,44 @@ export default function BinaryMarket() {
               animate={screen === "closing" ? { x: 0, opacity: 0 } : { x: 0, opacity: 1 }}
               exit={{ x: 28, opacity: 0 }}
               transition={{ duration: 0.28, ease: FLOW_EASE }}
-              className="absolute inset-0 z-30 flex h-full flex-col gap-3 rounded-3xl bg-[#1d1d1d] p-4"
+              className="absolute inset-0 z-30 flex h-full flex-col gap-3 rounded-3xl bg-[#1d1d1d] p-4 overflow-hidden"
             >
+              <motion.div
+                className="pointer-events-none absolute inset-0 z-0"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: screen === "success" || screen === "closing" ? 0.45 : 0 }}
+                transition={{ duration: 1.2, ease: "easeInOut" }}
+              >
+                <GrainGradient
+                  width={1280}
+                  height={720}
+                  colors={[
+                    successScreenBackgroundColor,
+                    "#1d1d1d",
+                    successScreenBackgroundColor,
+                    "#1d1d1d",
+                  ]}
+                  colorBack="#1d1d1d"
+                  softness={0.55}
+                  intensity={0.35}
+                  noise={0.08}
+                  shape="linear"
+                  speed={0.12}
+                />
+              </motion.div>
+
               <AnimatePresence initial={false} mode="wait">
                 {(screen === "placing" || screen === "placed") && (
                   <motion.div
                     key="status-shell"
-                    className="flex flex-1 items-center justify-center"
+                    className="relative z-10 flex flex-1 items-center justify-center"
                   >
                     <AnimatePresence initial={false} mode="wait">
                       <motion.div
                         key={screen}
                         initial={
                           screen === "placing"
-                            ? { opacity: 0, y: 10, scale: 0.94 }
+                            ? { opacity: 0, y: 10, scale: 0.97 }
                             : { opacity: 0, y: 6, scale: 0.98 }
                         }
                         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1115,7 +1151,7 @@ export default function BinaryMarket() {
                             : { opacity: 0, y: -6, scale: 0.98 }
                         }
                         transition={{
-                          duration: screen === "placing" ? 0.36 : PLACED_ENTER_DURATION_S,
+                          duration: screen === "placing" ? 0.68 : PLACED_ENTER_DURATION_S,
                           ease: FLOW_EASE,
                           delay: screen === "placing" ? PLACING_ENTER_DELAY_S : PLACED_ENTER_DELAY_S,
                         }}
@@ -1125,12 +1161,12 @@ export default function BinaryMarket() {
                           key={`${screen}-icon`}
                           initial={
                             screen === "placing"
-                              ? { opacity: 0, x: 118, y: -128, scale: 0.66 }
+                              ? { opacity: 0, y: 12, scale: 0.94 }
                               : { opacity: 0, y: 6, scale: 0.96 }
                           }
                           animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
                           transition={{
-                            duration: screen === "placing" ? PLACING_FADE_IN_DURATION_S : PLACED_ENTER_DURATION_S,
+                            duration: screen === "placing" ? 1.9 : PLACED_ENTER_DURATION_S,
                             ease: FLOW_EASE,
                             delay: screen === "placing" ? PLACING_APPEAR_DELAY_MS / 1000 : PLACED_ENTER_DELAY_S,
                           }}
@@ -1146,9 +1182,9 @@ export default function BinaryMarket() {
                           initial={{ opacity: 0, y: screen === "placing" ? 10 : 6 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{
-                            duration: screen === "placing" ? PLACING_FADE_IN_DURATION_S : PLACED_ENTER_DURATION_S,
+                            duration: screen === "placing" ? 1.9 : PLACED_ENTER_DURATION_S,
                             ease: FLOW_EASE,
-                            delay: screen === "placing" ? PLACING_APPEAR_DELAY_MS / 1000 : PLACED_ENTER_DELAY_S,
+                            delay: screen === "placing" ? PLACING_APPEAR_DELAY_MS / 1000 + 0.2 : PLACED_ENTER_DELAY_S,
                           }}
                           className="text-2xl font-semibold leading-none text-white"
                         >
@@ -1166,7 +1202,7 @@ export default function BinaryMarket() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.24, ease: FLOW_EASE }}
-                    className="absolute inset-0 flex h-full flex-col gap-3 p-4"
+                    className="absolute inset-0 z-10 flex h-full flex-col gap-3 p-4"
                   >
                     <div className="flex flex-1 flex-col gap-3">
                       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-3 py-4">
@@ -1174,12 +1210,15 @@ export default function BinaryMarket() {
                           <Image src={selectedPerson.image} alt={selectedPerson.name} fill sizes="48px" unoptimized className="object-cover" />
                         </div>
                         <p className="max-w-[230px] truncate text-center text-sm leading-[1.25] text-white/60">
-                          Phoenix Suns vs Boston Celtics: Will Phoenix Suns win?
+                          {marketQuestion}
                         </p>
                         <h3 className="mb-1 text-center text-3xl font-semibold leading-none text-white">{selectedPerson.name}</h3>
                         <div className="flex items-center gap-2">
-                          <span className="rounded-full bg-[#2d107f] px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white">
-                            PHX
+                          <span
+                            className="rounded-full px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white"
+                            style={{ backgroundColor: selectedOptionColor }}
+                          >
+                            {selectedTicker}
                           </span>
                           <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white">
                             {formatLeverage(leverage)}
@@ -1269,29 +1308,32 @@ export default function BinaryMarket() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.34, ease: FLOW_EASE }}
-                    className="flex h-full flex-col gap-3"
+                    className="relative z-10 flex h-full flex-col gap-3"
                   >
                     <button
                       type="button"
                       onClick={() => {
                         setScreen("closing");
                       }}
-                      className="absolute right-4 top-4 z-10 flex size-8 items-center justify-center rounded-full bg-white/[0.06] transition-[transform,background-color] hover:bg-white/[0.1] active:scale-[0.98]"
+                      className="absolute right-0 top-0 z-10 flex size-8 items-center justify-center rounded-full bg-white/[0.06] transition-[transform,background-color] hover:bg-white/[0.1] active:scale-[0.98]"
                       aria-label="Close success screen"
                     >
-                      <img src={IMG_CLOSE_ICON} alt="" className="size-4" />
+                      <Image src={IMG_CLOSE_ICON} alt="" width={16} height={16} unoptimized className="size-4" />
                     </button>
                     <div className="flex flex-1 flex-col items-center justify-center gap-2 px-3 py-4">
                       <div className="relative size-12 overflow-hidden rounded-lg">
                         <Image src={selectedPerson.image} alt={selectedPerson.name} fill sizes="48px" unoptimized className="object-cover" />
                       </div>
                       <p className="max-w-[230px] truncate text-center text-sm leading-[1.25] text-white/60">
-                        Phoenix Suns vs Boston Celtics: Will Phoenix Suns win?
+                        {marketQuestion}
                       </p>
                       <h3 className="mb-1 text-center text-3xl font-semibold leading-none text-white">{selectedPerson.name}</h3>
                       <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-[#2d107f] px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white">
-                          PHX
+                        <span
+                          className="rounded-full px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white"
+                          style={{ backgroundColor: selectedOptionColor }}
+                        >
+                          {selectedTicker}
                         </span>
                         <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white">
                           {formatLeverage(leverage)}
