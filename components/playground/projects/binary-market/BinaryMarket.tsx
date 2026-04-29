@@ -4,21 +4,13 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import type { KeyboardEvent } from "react";
 import NumberFlow from "@number-flow/react";
 import Image from "next/image";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 /** Team logos pulled from the linked Figma node. */
 const IMG_PHOENIX_SUNS =
   "https://www.figma.com/api/mcp/asset/2c481a3b-907e-49b4-9bea-8cc29409e0da";
 const IMG_BOSTON_CELTICS =
   "https://www.figma.com/api/mcp/asset/0adb7443-14cd-4147-b0a4-519ecc55fac6";
-const IMG_PNL_VECTOR_0 =
-  "https://www.figma.com/api/mcp/asset/1dc54a4f-d104-4ce0-b429-8feb9261a180";
-const IMG_PNL_VECTOR_1 =
-  "https://www.figma.com/api/mcp/asset/a1ad4f7a-95ec-4ac6-b9bd-e05b14094bc0";
-const IMG_PNL_VECTOR_2 =
-  "https://www.figma.com/api/mcp/asset/ff2b7417-646d-4337-b863-9fee6cda7ad1";
-const IMG_REVIEW_PRICE_ICON =
-  "https://www.figma.com/api/mcp/asset/764e3502-60a9-4ee9-ac8f-57c54908b306";
 const IMG_CLOSE_ICON =
   "https://www.figma.com/api/mcp/asset/5bbac23d-2996-4556-87da-fb5a38467b7d";
 
@@ -45,8 +37,11 @@ const SELL_SHARE_PRESETS = [
 ] as const;
 const MAX_LIMIT_CENTS = 1_000_000;
 const PERSON_OPTIONS = [
-  { name: "Phoenix Suns", image: IMG_PHOENIX_SUNS, yesPercent: 61 },
-  { name: "Boston Celtics", image: IMG_BOSTON_CELTICS, yesPercent: 67 },
+  // Match the linked Figma "Default" state: PHX 62% / BOS 38%.
+  { name: "Phoenix Suns", image: IMG_PHOENIX_SUNS, yesPercent: 62 },
+  // `yesPercent` is used as the "PHX" side probability; when BOS is selected (outcome "no"),
+  // the UI/computations display 100 - yesPercent to get BOS's complementary percentage.
+  { name: "Boston Celtics", image: IMG_BOSTON_CELTICS, yesPercent: 62 },
 ] as const;
 const PHOENIX_SUNS_OPTION = PERSON_OPTIONS[0];
 const BOSTON_CELTICS_OPTION = PERSON_OPTIONS[1];
@@ -67,10 +62,6 @@ if (typeof window !== "undefined") {
   });
 }
 
-// Preload the PNL "trash" icon vectors once so open/close doesn't repeatedly fetch/decode them.
-const pnlIconObjectUrlCache = new Map<string, string>();
-const pnlIconObjectUrlPromises = new Map<string, Promise<string>>();
-const PNL_ICON_SRCS = [IMG_PNL_VECTOR_0, IMG_PNL_VECTOR_1, IMG_PNL_VECTOR_2] as const;
 const FLOW_ICON_SRCS = [IMG_CLOSE_ICON] as const;
 type BinaryMarketScreen = "order" | "review" | "placing" | "placed" | "success";
 const FLOW_EASE = [0.22, 1, 0.36, 1] as const;
@@ -78,64 +69,12 @@ const PLACING_APPEAR_DELAY_MS = 800;
 const PLACING_FADE_IN_DURATION_S = 1.4;
 const PLACING_ENTER_DELAY_S = 0.14;
 const PLACING_STEP_DURATION_MS = 3000;
-const PLACED_STEP_DURATION_MS = 3000;
-
-async function getPnlIconObjectUrl(src: string): Promise<string> {
-  const cached = pnlIconObjectUrlCache.get(src);
-  if (cached) return cached;
-
-  const existingPromise = pnlIconObjectUrlPromises.get(src);
-  if (existingPromise) return existingPromise;
-
-  const promise = fetch(src)
-    .then(async (res) => {
-      // If the server doesn't allow CORS for blob reads, fall back to the original src.
-      // (In that case, browser caching may still help depending on headers.)
-      const blob = await res.blob();
-      const objectUrl = window.URL.createObjectURL(blob);
-      pnlIconObjectUrlCache.set(src, objectUrl);
-      return objectUrl;
-    })
-    .catch(() => src);
-
-  pnlIconObjectUrlPromises.set(src, promise);
-  return promise;
-}
-
-if (typeof window !== "undefined") {
-  // Kick off prefetch immediately on module load (best-effort).
-  for (const src of PNL_ICON_SRCS) {
-    // Also warm up the browser's image cache (in case blob reads are blocked by CORS).
-    const img = new window.Image();
-    img.src = src;
-    img.decode?.().catch(() => {
-      // Ignore decode errors.
-    });
-  }
-
-  void Promise.all(PNL_ICON_SRCS.map((src) => getPnlIconObjectUrl(src))).catch(() => {
-    // Ignore failures; UI will fall back to using the original remote URLs.
-  });
-}
-
-function ChevronDown({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      className={className}
-      aria-hidden
-    >
-      <path
-        d="M4.5 6.5L8 10L11.5 6.5"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+// Keep the placed screen visible for ~2s after checkmark draw completes.
+const PLACED_STEP_DURATION_MS = 2600;
+const PLACED_CHECKMARK_DRAW_DURATION_S = 0.5;
+const PLACED_ENTER_DURATION_S = 0.42;
+const PLACED_ENTER_DELAY_S = 0.08;
+const AVG_PRICE_TICK_INTERVAL_MS = 10_000;
 
 function SwapVertical({ className }: { className?: string }) {
   return (
@@ -160,59 +99,116 @@ function formatMoney(n: number) {
   return `$${n}`;
 }
 
-function PnLIcon({
-  className,
-  iconSrcs,
-}: {
-  className?: string;
-  iconSrcs?: readonly [string, string, string];
-}) {
-  const [src0, src1, src2] = iconSrcs ?? [
-    IMG_PNL_VECTOR_0,
-    IMG_PNL_VECTOR_1,
-    IMG_PNL_VECTOR_2,
-  ];
+function playSparkleChime() {
+  if (typeof window === "undefined") return;
+  const AudioCtx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioCtx) return;
 
-  return (
-    <div
-      className={className || "overflow-clip relative shrink-0 size-[16px]"}
-      aria-hidden
-    >
-      <div className="absolute bottom-3/4 left-[12.5%] right-[12.5%] top-1/4">
-        <div className="absolute inset-[-0.67px_-5.56%]">
-          <img
-            alt=""
-            className="block max-w-none size-full"
-            src={src0}
-          />
-        </div>
-      </div>
-      <div className="absolute bottom-[8.33%] left-[20.83%] right-[20.83%] top-1/4">
-        <div className="absolute inset-[-6.25%_-7.14%]">
-          <img
-            alt=""
-            className="block max-w-none size-full"
-            src={src1}
-          />
-        </div>
-      </div>
-      <div className="absolute bottom-3/4 left-[33.33%] right-[33.33%] top-[8.33%]">
-        <div className="absolute inset-[-25%_-12.5%]">
-          <img
-            alt=""
-            className="block max-w-none size-full"
-            src={src2}
-          />
-        </div>
-      </div>
-    </div>
-  );
+  try {
+    const context = new AudioCtx();
+    const now = context.currentTime;
+
+    const master = context.createGain();
+    // Keep it subtle and non-intrusive.
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.65);
+    master.connect(context.destination);
+
+    const sparkleNotes = [
+      { freq: 1046.5, start: 0.0, duration: 0.18 }, // C6
+      { freq: 1318.5, start: 0.08, duration: 0.16 }, // E6
+      { freq: 1568.0, start: 0.16, duration: 0.2 }, // G6
+    ] as const;
+
+    sparkleNotes.forEach((note) => {
+      const osc = context.createOscillator();
+      const noteGain = context.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(note.freq, now + note.start);
+
+      noteGain.gain.setValueAtTime(0.0001, now + note.start);
+      noteGain.gain.exponentialRampToValueAtTime(0.24, now + note.start + 0.015);
+      noteGain.gain.exponentialRampToValueAtTime(0.0001, now + note.start + note.duration);
+
+      osc.connect(noteGain);
+      noteGain.connect(master);
+
+      osc.start(now + note.start);
+      osc.stop(now + note.start + note.duration + 0.02);
+    });
+
+    // Cleanup the context after playback.
+    window.setTimeout(() => {
+      void context.close().catch(() => {
+        // Ignore close failures.
+      });
+    }, 900);
+  } catch {
+    // Audio may fail due to autoplay/browser policies; fail silently.
+  }
 }
 
 function PlacedCheckIcon({ className }: { className?: string }) {
+  const prefersReducedMotion = useReducedMotion();
+
+  const sparkleSpecs = [
+    { left: "16%", top: "22%", dx: -16, dy: -18, delay: 0.26, size: 2, peak: 0.9, blur: 8 },
+    { left: "82%", top: "24%", dx: 16, dy: -20, delay: 0.32, size: 3, peak: 0.94, blur: 10 },
+    { left: "14%", top: "68%", dx: -18, dy: 12, delay: 0.38, size: 2, peak: 0.84, blur: 8 },
+    { left: "86%", top: "66%", dx: 18, dy: 14, delay: 0.44, size: 2, peak: 0.9, blur: 9 },
+    { left: "28%", top: "14%", dx: -10, dy: -18, delay: 0.3, size: 1, peak: 0.78, blur: 7 },
+    { left: "72%", top: "12%", dx: 10, dy: -18, delay: 0.36, size: 2, peak: 0.84, blur: 8 },
+    { left: "24%", top: "82%", dx: -12, dy: 14, delay: 0.42, size: 3, peak: 0.96, blur: 11 },
+    { left: "76%", top: "84%", dx: 12, dy: 14, delay: 0.5, size: 2, peak: 0.88, blur: 9 },
+    { left: "8%", top: "46%", dx: -22, dy: -2, delay: 0.34, size: 2, peak: 0.84, blur: 8 },
+    { left: "92%", top: "48%", dx: 22, dy: 2, delay: 0.41, size: 1, peak: 0.8, blur: 7 },
+    { left: "34%", top: "6%", dx: -6, dy: -20, delay: 0.29, size: 2, peak: 0.88, blur: 8 },
+    { left: "64%", top: "7%", dx: 6, dy: -20, delay: 0.33, size: 2, peak: 0.82, blur: 8 },
+    { left: "36%", top: "92%", dx: -6, dy: 18, delay: 0.47, size: 3, peak: 0.95, blur: 10 },
+    { left: "66%", top: "93%", dx: 6, dy: 18, delay: 0.53, size: 2, peak: 0.88, blur: 9 },
+    { left: "20%", top: "35%", dx: -14, dy: -6, delay: 0.31, size: 1, peak: 0.8, blur: 7 },
+    { left: "80%", top: "36%", dx: 14, dy: -6, delay: 0.35, size: 1, peak: 0.8, blur: 7 },
+    { left: "30%", top: "26%", dx: -8, dy: -14, delay: 0.27, size: 2, peak: 0.86, blur: 8 },
+    { left: "70%", top: "27%", dx: 8, dy: -14, delay: 0.37, size: 2, peak: 0.86, blur: 8 },
+    { left: "30%", top: "72%", dx: -8, dy: 10, delay: 0.43, size: 1, peak: 0.78, blur: 7 },
+    { left: "70%", top: "73%", dx: 8, dy: 10, delay: 0.49, size: 1, peak: 0.78, blur: 7 },
+    { left: "46%", top: "10%", dx: -2, dy: -18, delay: 0.28, size: 2, peak: 0.84, blur: 8 },
+    { left: "54%", top: "90%", dx: 2, dy: 16, delay: 0.52, size: 2, peak: 0.84, blur: 8 },
+    { left: "12%", top: "30%", dx: -18, dy: -10, delay: 0.3, size: 1, peak: 0.76, blur: 7 },
+    { left: "88%", top: "30%", dx: 18, dy: -10, delay: 0.34, size: 1, peak: 0.76, blur: 7 },
+    { left: "12%", top: "58%", dx: -18, dy: 8, delay: 0.4, size: 1, peak: 0.76, blur: 7 },
+    { left: "88%", top: "58%", dx: 18, dy: 8, delay: 0.46, size: 1, peak: 0.76, blur: 7 },
+    { left: "40%", top: "4%", dx: -4, dy: -16, delay: 0.27, size: 1, peak: 0.74, blur: 7 },
+    { left: "60%", top: "4%", dx: 4, dy: -16, delay: 0.31, size: 1, peak: 0.74, blur: 7 },
+    { left: "40%", top: "96%", dx: -4, dy: 14, delay: 0.5, size: 1, peak: 0.74, blur: 7 },
+    { left: "60%", top: "96%", dx: 4, dy: 14, delay: 0.54, size: 1, peak: 0.74, blur: 7 },
+  ] as const;
+
   return (
     <div className={className || "relative size-20"} aria-hidden>
       <div className="absolute inset-0 rounded-full bg-white/10" />
+      {/* Soft ambient bloom to make the success feel magical without confetti. */}
+      <motion.div
+        className="pointer-events-none absolute inset-[-12px] rounded-full"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(255,255,255,0.28) 0%, rgba(93,217,120,0.12) 38%, rgba(45,16,127,0.08) 58%, rgba(255,255,255,0) 76%)",
+          filter: "blur(8px)",
+        }}
+        initial={{ opacity: 0, scale: 0.88 }}
+        animate={{ opacity: prefersReducedMotion ? 0.2 : 0.34, scale: 1 }}
+        transition={{ duration: prefersReducedMotion ? 0.2 : 0.55, ease: FLOW_EASE, delay: 0.08 }}
+      />
+      {/* One premium pulse ring; no looping. */}
+      {!prefersReducedMotion && (
+        <motion.div
+          className="pointer-events-none absolute inset-0 rounded-full border border-white/40"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: [0, 0.28, 0], scale: [0.8, 1, 1.38] }}
+          transition={{ duration: 0.74, ease: FLOW_EASE, delay: 0.2 }}
+        />
+      )}
       <svg viewBox="0 0 80 80" className="absolute inset-0 size-full fill-none">
         <motion.path
           d="M28 40.5L36.5 49L52 33.5"
@@ -222,9 +218,27 @@ function PlacedCheckIcon({ className }: { className?: string }) {
           strokeLinejoin="round"
           initial={{ pathLength: 0, opacity: 0 }}
           animate={{ pathLength: 1, opacity: 1 }}
-          transition={{ duration: 0.28, ease: FLOW_EASE, delay: 0.02 }}
+          transition={{ duration: PLACED_CHECKMARK_DRAW_DURATION_S, ease: FLOW_EASE, delay: 0.04 }}
         />
       </svg>
+      {/* Tiny sparkles: low count, short-lived, non-looping. */}
+      {!prefersReducedMotion &&
+        sparkleSpecs.map((sparkle, index) => (
+          <motion.span
+            key={`placed-sparkle-${index}`}
+            className="pointer-events-none absolute block rounded-full bg-white"
+            style={{
+              left: sparkle.left,
+              top: sparkle.top,
+              width: `${sparkle.size}px`,
+              height: `${sparkle.size}px`,
+              boxShadow: `0 0 ${sparkle.blur}px rgba(255,255,255,0.9), 0 0 ${sparkle.blur + 10}px rgba(93,217,120,0.35)`,
+            }}
+            initial={{ opacity: 0, scale: 0.7, x: 0, y: 0 }}
+            animate={{ opacity: [0, sparkle.peak, 0], scale: [0.7, 1.15, 0.78], x: [0, sparkle.dx], y: [0, sparkle.dy] }}
+            transition={{ duration: 0.72 + index * 0.01, ease: FLOW_EASE, delay: sparkle.delay }}
+          />
+        ))}
     </div>
   );
 }
@@ -250,6 +264,33 @@ function PlacingLoaderIcon({ className }: { className?: string }) {
   );
 }
 
+function CircularProgressIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" className={className || "size-2.5"} aria-hidden>
+      <circle cx="8" cy="8" r="5.5" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+      <motion.circle
+        cx="8"
+        cy="8"
+        r="5.5"
+        fill="none"
+        stroke="rgba(255,255,255,0.85)"
+        strokeWidth="2"
+        strokeLinecap="round"
+        pathLength={1}
+        style={{ pathLength: 0 }}
+        transform="rotate(-90 8 8)"
+        animate={{ pathLength: [0, 1] }}
+        transition={{
+          duration: AVG_PRICE_TICK_INTERVAL_MS / 1000,
+          ease: "linear",
+          repeat: Infinity,
+          repeatType: "loop",
+        }}
+      />
+    </svg>
+  );
+}
+
 export default function BinaryMarket() {
   const [selectedPerson, setSelectedPerson] = useState<(typeof PERSON_OPTIONS)[number]>(PERSON_OPTIONS[0]);
   const [side, setSide] = useState<"buy" | "sell">("buy");
@@ -260,13 +301,7 @@ export default function BinaryMarket() {
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPriceCents, setLimitPriceCents] = useState(0);
   const [shares, setShares] = useState(0);
-  const [isTpSlOpen, setIsTpSlOpen] = useState(false);
-  const [takeProfitUnit, setTakeProfitUnit] = useState<"$" | "%">("$");
-  const [stopLossUnit, setStopLossUnit] = useState<"$" | "%">("$");
-  const [takeProfitValue, setTakeProfitValue] = useState(0);
-  const [stopLossValue, setStopLossValue] = useState(0);
-  const [pnlIconObjectUrls, setPnlIconObjectUrls] =
-    useState<readonly [string, string, string] | null>(null);
+  const [reviewAvgPriceCents, setReviewAvgPriceCents] = useState(PHOENIX_SUNS_OPTION.yesPercent);
   const [screen, setScreen] = useState<BinaryMarketScreen | "closing">("order");
   const trackRef = useRef<HTMLDivElement | null>(null);
   const tabsRef = useRef<HTMLDivElement | null>(null);
@@ -275,8 +310,6 @@ export default function BinaryMarket() {
   const amountInputRef = useRef<HTMLInputElement | null>(null);
   const limitPriceInputRef = useRef<HTMLInputElement | null>(null);
   const sharesInputRef = useRef<HTMLInputElement | null>(null);
-  const takeProfitInputRef = useRef<HTMLInputElement | null>(null);
-  const stopLossInputRef = useRef<HTMLInputElement | null>(null);
   const [tabIndicator, setTabIndicator] = useState({ left: 0, width: 0 });
 
   const leverage = LEVERAGE_STEPS[leverageIdx];
@@ -323,26 +356,6 @@ export default function BinaryMarket() {
   }, [preloadPersonImage]);
 
   useEffect(() => {
-    // Load object URLs for the PNL icon so open/close doesn't refetch.
-    // (Best-effort; if it fails, the component will keep using the remote URLs.)
-    let cancelled = false;
-    Promise.all(
-      PNL_ICON_SRCS.map((src) => getPnlIconObjectUrl(src)) as unknown as Promise<string>[],
-    )
-      .then((urls) => {
-        if (cancelled) return;
-        // `Promise.all()` is typed as `string[]` here, so cast via `unknown` to the fixed 3-item tuple.
-        setPnlIconObjectUrls(urls as unknown as readonly [string, string, string]);
-      })
-      .catch(() => {
-        // Ignore.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
     // Preload flow icons so loading/check states swap without visual delay.
     FLOW_ICON_SRCS.forEach((src) => {
       const img = new window.Image();
@@ -368,14 +381,6 @@ export default function BinaryMarket() {
     });
   }, [orderType, side]);
 
-  useEffect(() => {
-    // When opening TP/SL, focus the first field so user can type immediately.
-    if (!isTpSlOpen) return;
-    requestAnimationFrame(() => {
-      takeProfitInputRef.current?.focus({ preventScroll: true });
-    });
-  }, [isTpSlOpen]);
-
   useLayoutEffect(() => {
     const root = tabsRef.current;
     const buy = buyTextRef.current;
@@ -389,6 +394,18 @@ export default function BinaryMarket() {
       width: activeRect.width,
     });
   }, [side]);
+
+  const resetTradeForm = useCallback(() => {
+    setSelectedPerson(PHOENIX_SUNS_OPTION);
+    setSide("buy");
+    setOutcome("yes");
+    setLeverageIdx(0);
+    setIsLeverageDragging(false);
+    setAmount(0);
+    setOrderType("market");
+    setLimitPriceCents(0);
+    setShares(0);
+  }, []);
 
   useEffect(() => {
     if (screen !== "placing" && screen !== "placed") return;
@@ -405,14 +422,20 @@ export default function BinaryMarket() {
   }, [screen]);
 
   useEffect(() => {
+    if (screen !== "placed") return;
+    playSparkleChime();
+  }, [screen]);
+
+  useEffect(() => {
     if (screen !== "closing") return;
     const timeoutId = window.setTimeout(() => {
+      resetTradeForm();
       setScreen("order");
     }, 220);
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [screen]);
+  }, [screen, resetTradeForm]);
 
   const updateLeverageFromClientX = useCallback(
     (clientX: number) => {
@@ -527,37 +550,6 @@ export default function BinaryMarket() {
     setShares(Math.min(MAX_SHARES, parsed));
   };
 
-  const handleTakeProfitInputChange = (value: string) => {
-    const digitsOnly = value.replace(/\D/g, "");
-    if (digitsOnly.length === 0) {
-      setTakeProfitValue(0);
-      return;
-    }
-    const parsed = Number.parseInt(digitsOnly, 10);
-    if (Number.isNaN(parsed)) {
-      setTakeProfitValue(0);
-      return;
-    }
-    // Value is stored as an integer in the selected unit.
-    const next = Math.min(MAX_LIMIT_CENTS, parsed);
-    setTakeProfitValue(next);
-  };
-
-  const handleStopLossInputChange = (value: string) => {
-    const digitsOnly = value.replace(/\D/g, "");
-    if (digitsOnly.length === 0) {
-      setStopLossValue(0);
-      return;
-    }
-    const parsed = Number.parseInt(digitsOnly, 10);
-    if (Number.isNaN(parsed)) {
-      setStopLossValue(0);
-      return;
-    }
-    const next = Math.min(MAX_LIMIT_CENTS, parsed);
-    setStopLossValue(next);
-  };
-
   const canPlaceOrder =
     orderType === "market"
       ? side === "buy"
@@ -567,25 +559,6 @@ export default function BinaryMarket() {
 
   const pnlEntryPriceCents =
     orderType === "limit" && limitPriceCents > 0 ? limitPriceCents : MARKET_DEFAULT_ENTRY_PRICE_CENTS;
-  const positionNotionalDollars =
-    orderType === "limit" ? (shares * pnlEntryPriceCents) / 100 : amount;
-  const takeProfitPercent =
-    takeProfitUnit === "$" ? takeProfitValue / Math.max(1, pnlEntryPriceCents) : takeProfitValue / 100;
-  const takeProfitPnLDollars = takeProfitValue > 0 ? positionNotionalDollars * leverage * takeProfitPercent : 0;
-
-  const stopLossPercent =
-    stopLossUnit === "$"
-      ? stopLossValue / Math.max(1, pnlEntryPriceCents)
-      : stopLossValue / 100;
-  const stopLossPnLDollars =
-    stopLossValue > 0 ? -positionNotionalDollars * leverage * stopLossPercent : 0;
-  const formatTpSlSummaryValue = (value: number, unit: "$" | "%") =>
-    value > 0 ? `${value}${unit === "$" ? "¢" : "%"}` : "–";
-  const hasTpSlValues = takeProfitValue > 0 || stopLossValue > 0;
-  const tpSlSummary = `TP: ${formatTpSlSummaryValue(takeProfitValue, takeProfitUnit)} / SL: ${formatTpSlSummaryValue(
-    stopLossValue,
-    stopLossUnit,
-  )}`;
   const avgPriceCents = outcome === "yes" ? selectedPerson.yesPercent : 100 - selectedPerson.yesPercent;
   const totalDollars =
     orderType === "market"
@@ -596,6 +569,27 @@ export default function BinaryMarket() {
   const estimatedToWinDollars = totalDollars * leverage * (avgPriceCents / 100);
   const combinedToWinDollars = totalDollars + estimatedToWinDollars;
   const liquidationPriceCents = Math.max(1, Math.round(avgPriceCents / Math.max(1, leverage)));
+
+  useEffect(() => {
+    if (screen !== "review") {
+      setReviewAvgPriceCents(avgPriceCents);
+      return;
+    }
+
+    const getRandomDelta = () => {
+      // Random movement in a tight range to feel alive but plausible.
+      const delta = Math.floor(Math.random() * 7) - 3; // -3..3
+      return delta === 0 ? 1 : delta;
+    };
+
+    const intervalId = window.setInterval(() => {
+      setReviewAvgPriceCents((prev) => Math.max(1, Math.min(99, prev + getRandomDelta())));
+    }, AVG_PRICE_TICK_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [screen, avgPriceCents]);
 
   return (
     <div className="relative w-[380px] max-w-[calc(100vw-2rem)] p-0">
@@ -723,89 +717,76 @@ export default function BinaryMarket() {
 
         {/* Leverage (buy only) */}
         {side === "buy" && (
-          <div className="leverage-rainbow-outer">
-            <div className="wrapper leverage-rainbow-wrapper">
-              {/* Single slow linear shimmer (rotating highlight on the border). */}
-              <div className="layer-blur" aria-hidden>
-                <div className="spin" />
+          <div className="flex w-full flex-col items-start justify-center gap-2.5 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
+            <div className="flex w-full items-start justify-between gap-2">
+              <span
+                className="text-base leading-[1.25] text-white/60"
+                style={{ fontVariantNumeric: "tabular-nums" }}
+              >
+                Leverage
+              </span>
+              <span className="text-4xl font-semibold leading-none text-white">
+                <NumberFlow
+                  value={leverage}
+                  suffix="×"
+                  format={{
+                    minimumFractionDigits: leverageIntegerDigits,
+                    maximumFractionDigits: 1,
+                  }}
+                  className="leading-none"
+                  // Match the glyph line box height by removing number-flow's default mask padding.
+                  style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                />
+              </span>
+            </div>
+            <div className="relative h-[23px] w-full">
+              <div
+                className={`absolute top-[-3px] z-10 flex h-7 w-14 cursor-grab items-center justify-center rounded-full bg-[#141414] px-2 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.2)] active:cursor-grabbing active:scale-[0.95] ${
+                  isLeverageDragging
+                    ? "transition-none"
+                    : "transition-transform duration-150 ease-out"
+                }`}
+                style={{ left: thumbLeft }}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  startLeverageDrag(event.clientX);
+                }}
+              >
+                <span className="w-full text-center text-xs font-semibold leading-[1.25] text-white">
+                  {formatLeverage(leverage)}
+                </span>
               </div>
-              <div className="layer-sharp" aria-hidden>
-                <div className="spin" />
-              </div>
-              <div className="highlight" aria-hidden />
-              <div className="bg-mask" aria-hidden />
-              <div className="content leverage-rainbow-content">
-                <div className="flex w-full items-start justify-between gap-2">
-                  <span
-                    className="text-base leading-[1.25] text-white/60"
-                    style={{ fontVariantNumeric: "tabular-nums" }}
-                  >
-                    Leverage
-                  </span>
-                  <span className="text-4xl font-semibold leading-none text-white">
-                    <NumberFlow
-                      value={leverage}
-                      suffix="×"
-                      format={{
-                        minimumFractionDigits: leverageIntegerDigits,
-                        maximumFractionDigits: 1,
-                      }}
-                      className="leading-none"
-                      // Match the glyph line box height by removing number-flow's default mask padding.
-                      style={{ ["--number-flow-mask-height" as any]: "0em" }}
-                    />
-                  </span>
-                </div>
-                <div className="relative h-[23px] w-full">
-                  <div
-                    className={`absolute top-[-3px] z-10 flex h-7 w-14 cursor-grab items-center justify-center rounded-full bg-[#141414] px-2 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.2)] active:cursor-grabbing active:scale-[0.95] ${
-                      isLeverageDragging
-                        ? "transition-none"
-                        : "transition-transform duration-150 ease-out"
-                    }`}
-                    style={{ left: thumbLeft }}
-                    onPointerDown={(event) => {
-                      event.preventDefault();
-                      startLeverageDrag(event.clientX);
+              <div
+                ref={trackRef}
+                tabIndex={0}
+                className="absolute left-0 right-0 top-[7px] h-2 cursor-pointer rounded-full bg-white/10 outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                role="slider"
+                aria-valuemin={0}
+                aria-valuemax={dotCount - 1}
+                aria-valuenow={leverageIdx}
+                aria-valuetext={formatLeverage(leverage)}
+                aria-label="Leverage"
+                onKeyDown={handleLeverageKeyDown}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  startLeverageDrag(event.clientX);
+                }}
+              >
+                {Array.from({ length: dotCount }, (_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setLeverageIdx(i)}
+                    className="absolute top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20 transition-transform hover:scale-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                    style={{
+                      // Dot centers match the thumb center at each step.
+                      left: `calc(${stepCenterInsetPx}px + ${(i / Math.max(1, dotCount - 1))} * (100% - ${
+                        stepCenterInsetPx * 2
+                      }px))`,
                     }}
-                  >
-                    <span className="w-full text-center text-xs font-semibold leading-[1.25] text-white">
-                      {formatLeverage(leverage)}
-                    </span>
-                  </div>
-                  <div
-                    ref={trackRef}
-                    tabIndex={0}
-                    className="absolute left-0 right-0 top-[7px] h-2 cursor-pointer rounded-full bg-white/10 outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                    role="slider"
-                    aria-valuemin={0}
-                    aria-valuemax={dotCount - 1}
-                    aria-valuenow={leverageIdx}
-                    aria-valuetext={formatLeverage(leverage)}
-                    aria-label="Leverage"
-                    onKeyDown={handleLeverageKeyDown}
-                    onPointerDown={(event) => {
-                      event.preventDefault();
-                      startLeverageDrag(event.clientX);
-                    }}
-                  >
-                    {Array.from({ length: dotCount }, (_, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setLeverageIdx(i)}
-                        className="absolute top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20 transition-transform hover:scale-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                        style={{
-                          // Dot centers match the thumb center at each step.
-                          left: `calc(${stepCenterInsetPx}px + ${(i / Math.max(1, dotCount - 1))} * (100% - ${
-                            stepCenterInsetPx * 2
-                          }px))`,
-                        }}
-                        aria-label={`Leverage ${LEVERAGE_STEPS[i]}×`}
-                      />
-                    ))}
-                  </div>
-                </div>
+                    aria-label={`Leverage ${LEVERAGE_STEPS[i]}×`}
+                  />
+                ))}
               </div>
             </div>
           </div>
@@ -814,7 +795,7 @@ export default function BinaryMarket() {
         {/* Amount (market buy) / Shares (market sell) or Limit Price / Shares (limit) */}
         {orderType === "market" ? (
           side === "buy" ? (
-            <div className="flex w-full flex-col gap-3 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
+            <div className="flex w-full flex-col gap-4 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
               <div className="flex w-full items-start justify-between gap-2">
                 <span
                   className="text-base leading-[1.25] text-white/60"
@@ -863,6 +844,41 @@ export default function BinaryMarket() {
                   </button>
                 ))}
               </div>
+
+              <AnimatePresence initial={false}>
+                {amount > 0 && (
+                  <motion.div
+                    className="w-full overflow-hidden"
+                    initial={{ height: 0, opacity: 0, y: 8 }}
+                    animate={{ height: "auto", opacity: 1, y: 0 }}
+                    exit={{ height: 0, opacity: 0, y: 6 }}
+                    transition={{ duration: 0.28, ease: FLOW_EASE, delay: 0.08 }}
+                  >
+                    <div className="flex w-full flex-col gap-4">
+                      <div className="h-px w-full bg-white/10" />
+                      <div className="flex items-center justify-between">
+                        <span className="text-2xl font-semibold leading-none text-white/60">To win</span>
+                        <span className="text-4xl font-semibold leading-none text-[#5dd978] flex items-baseline gap-[2px]">
+                          <span aria-hidden>$</span>
+                          <NumberFlow
+                            value={combinedToWinDollars}
+                            trend={0}
+                            format={{
+                              useGrouping: false,
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            }}
+                            className="leading-none"
+                            style={{
+                              ["--number-flow-mask-height" as any]: "0em",
+                            }}
+                          />
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ) : (
             <div className="flex w-full flex-col gap-3 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
@@ -1035,264 +1051,6 @@ export default function BinaryMarket() {
           </div>
         )}
 
-        {/* TP / SL (buy only) */}
-        {side === "buy" && (
-          <div className="flex w-full flex-col gap-2 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
-            <button
-              type="button"
-              onClick={() => setIsTpSlOpen((prev) => !prev)}
-              className="flex w-full items-center justify-between text-left"
-              aria-expanded={isTpSlOpen}
-              aria-controls="tp-sl-content"
-            >
-              <span
-                className="text-base leading-[1.25] text-white/60"
-                style={{ fontVariantNumeric: "tabular-nums" }}
-              >
-                {isTpSlOpen
-                  ? "Take Profit"
-                  : hasTpSlValues
-                    ? tpSlSummary
-                    : "Take Profit / Stop Loss"}
-              </span>
-              <ChevronDown
-                className={`size-4 shrink-0 text-white/70 transition-transform ${
-                  isTpSlOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-
-            <AnimatePresence initial={false}>
-              {isTpSlOpen && (
-                <motion.div
-                  id="tp-sl-content"
-                  className="overflow-hidden"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2, ease: "easeInOut" }}
-                >
-                  <div className="flex w-full flex-col gap-2">
-                    <div className="flex w-full items-center justify-between">
-                      <div
-                        className={`relative flex items-baseline text-4xl font-semibold leading-none tabular-nums ${
-                          takeProfitValue > 0 ? "text-white" : "text-white/40"
-                        }`}
-                      >
-                        <NumberFlow
-                          value={takeProfitValue}
-                          suffix={takeProfitUnit === "$" ? "¢" : "%"}
-                          format={{ useGrouping: false }}
-                          trend={0}
-                          className="leading-none"
-                          style={{ ["--number-flow-mask-height" as any]: "0em" }}
-                        />
-                        <input
-                          ref={takeProfitInputRef}
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          value={takeProfitValue === 0 ? "" : String(takeProfitValue)}
-                          onChange={(event) => handleTakeProfitInputChange(event.target.value)}
-                          className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
-                          aria-label="Take profit value"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {takeProfitValue > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setTakeProfitValue(0);
-                              takeProfitInputRef.current?.focus({
-                                preventScroll: true,
-                              });
-                            }}
-                            className="group flex h-8 items-center gap-[8px] rounded-full bg-white/[0.06] px-[12px] transition-colors hover:bg-white/[0.08] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                            aria-label="Clear take profit"
-                          >
-                            <div className="transition-opacity group-hover:opacity-90">
-                              <PnLIcon
-                                iconSrcs={pnlIconObjectUrls ?? undefined}
-                              />
-                            </div>
-                            <span className="text-xs font-semibold leading-[1.25] text-white/60">
-                              PNL{" "}
-                            </span>
-                            <span className="text-xs font-semibold leading-[1.25] text-[#5dd978] flex items-baseline gap-[2px]">
-                              <span aria-hidden>$</span>
-                              <NumberFlow
-                                value={takeProfitPnLDollars}
-                                trend={0}
-                                format={{
-                                  useGrouping: false,
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                }}
-                                className="leading-none"
-                                style={{
-                                  ["--number-flow-mask-height" as any]: "0em",
-                                }}
-                              />
-                            </span>
-                          </button>
-                        )}
-                        <div className="relative flex h-8 shrink-0 items-center gap-1 rounded-full bg-white/[0.06] p-1">
-                          <div
-                            className={`pointer-events-none absolute bottom-1 top-1 w-[calc(50%-4px)] rounded-full bg-[#141414] transition-transform duration-200 ease-out ${
-                              takeProfitUnit === "$" ? "translate-x-0" : "translate-x-full"
-                            }`}
-                            aria-hidden
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setTakeProfitUnit("$")}
-                            className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
-                              takeProfitUnit === "$"
-                                ? "text-white"
-                                : "text-white/80 hover:text-white"
-                            }`}
-                            aria-pressed={takeProfitUnit === "$"}
-                          >
-                            $
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setTakeProfitUnit("%")}
-                            className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
-                              takeProfitUnit === "%"
-                                ? "text-white"
-                                : "text-white/80 hover:text-white"
-                            }`}
-                            aria-pressed={takeProfitUnit === "%"}
-                          >
-                            %
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="h-px w-full bg-white/10" />
-
-                    <div
-                      className="text-base leading-[1.25] text-white/60"
-                      style={{ fontVariantNumeric: "tabular-nums" }}
-                    >
-                      Stop Loss
-                    </div>
-
-                    <div className="flex w-full items-center justify-between">
-                      <div
-                        className={`relative flex items-baseline text-4xl font-semibold leading-none tabular-nums ${
-                          stopLossValue > 0 ? "text-white" : "text-white/40"
-                        }`}
-                      >
-                        <NumberFlow
-                          value={stopLossValue}
-                          suffix={stopLossUnit === "$" ? "¢" : "%"}
-                          format={{ useGrouping: false }}
-                          trend={0}
-                          className="leading-none"
-                          style={{ ["--number-flow-mask-height" as any]: "0em" }}
-                        />
-                        <input
-                          ref={stopLossInputRef}
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          value={stopLossValue === 0 ? "" : String(stopLossValue)}
-                          onChange={(event) =>
-                            handleStopLossInputChange(event.target.value)
-                          }
-                          className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
-                          aria-label="Stop loss value"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {stopLossValue > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setStopLossValue(0);
-                              stopLossInputRef.current?.focus({
-                                preventScroll: true,
-                              });
-                            }}
-                            className="group flex h-8 items-center gap-[8px] rounded-full bg-white/[0.06] px-[12px] transition-colors hover:bg-white/[0.08] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                            aria-label="Clear stop loss"
-                          >
-                            <div className="transition-opacity group-hover:opacity-90">
-                              <PnLIcon
-                                iconSrcs={pnlIconObjectUrls ?? undefined}
-                              />
-                            </div>
-                            <span className="text-xs font-semibold leading-[1.25] text-white/60">
-                              PNL{" "}
-                            </span>
-                            <span className="text-xs font-semibold leading-[1.25] text-[#ff4d5e] flex items-baseline gap-[2px]">
-                              {stopLossPnLDollars < 0 && (
-                                <span aria-hidden>-</span>
-                              )}
-                              <span aria-hidden>$</span>
-                              <NumberFlow
-                                value={Math.abs(stopLossPnLDollars)}
-                                trend={0}
-                                format={{
-                                  useGrouping: false,
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                }}
-                                className="leading-none"
-                                style={{
-                                  ["--number-flow-mask-height" as any]: "0em",
-                                }}
-                              />
-                            </span>
-                          </button>
-                        )}
-                        <div className="relative flex h-8 shrink-0 items-center gap-1 rounded-full bg-white/[0.06] p-1">
-                          <div
-                            className={`pointer-events-none absolute bottom-1 top-1 w-[calc(50%-4px)] rounded-full bg-[#141414] transition-transform duration-200 ease-out ${
-                              stopLossUnit === "$"
-                                ? "translate-x-0"
-                                : "translate-x-full"
-                            }`}
-                            aria-hidden
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setStopLossUnit("$")}
-                            className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
-                              stopLossUnit === "$"
-                                ? "text-white"
-                                : "text-white/80 hover:text-white"
-                            }`}
-                            aria-pressed={stopLossUnit === "$"}
-                          >
-                            $
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setStopLossUnit("%")}
-                            className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
-                              stopLossUnit === "%"
-                                ? "text-white"
-                                : "text-white/80 hover:text-white"
-                            }`}
-                            aria-pressed={stopLossUnit === "%"}
-                          >
-                            %
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
-
         {/* CTA */}
         <button
           type="button"
@@ -1312,7 +1070,7 @@ export default function BinaryMarket() {
             }`}
           >
             {canPlaceOrder
-              ? "Review Order"
+              ? "Review"
               : orderType === "market"
                 ? side === "buy"
                   ? "Enter Amount"
@@ -1329,7 +1087,7 @@ export default function BinaryMarket() {
               animate={screen === "closing" ? { x: 0, opacity: 0 } : { x: 0, opacity: 1 }}
               exit={{ x: 28, opacity: 0 }}
               transition={{ duration: 0.28, ease: FLOW_EASE }}
-              className="absolute inset-0 z-30 flex h-full flex-col gap-3 rounded-3xl bg-[#1d1d1d] p-3"
+              className="absolute inset-0 z-30 flex h-full flex-col gap-3 rounded-3xl bg-[#1d1d1d] p-4"
             >
               <AnimatePresence initial={false} mode="wait">
                 {(screen === "placing" || screen === "placed") && (
@@ -1352,20 +1110,24 @@ export default function BinaryMarket() {
                             : { opacity: 0, y: -6, scale: 0.98 }
                         }
                         transition={{
-                          duration: screen === "placing" ? 0.36 : 0.24,
+                          duration: screen === "placing" ? 0.36 : PLACED_ENTER_DURATION_S,
                           ease: FLOW_EASE,
-                          delay: screen === "placing" ? PLACING_ENTER_DELAY_S : 0,
+                          delay: screen === "placing" ? PLACING_ENTER_DELAY_S : PLACED_ENTER_DELAY_S,
                         }}
                         className="flex flex-col items-center justify-center gap-6"
                       >
                         <motion.div
                           key={`${screen}-icon`}
-                          initial={{ opacity: 0, y: screen === "placing" ? 10 : 6 }}
-                          animate={{ opacity: 1, y: 0 }}
+                          initial={
+                            screen === "placing"
+                              ? { opacity: 0, x: 118, y: -128, scale: 0.66 }
+                              : { opacity: 0, y: 6, scale: 0.96 }
+                          }
+                          animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
                           transition={{
-                            duration: screen === "placing" ? PLACING_FADE_IN_DURATION_S : 0.24,
+                            duration: screen === "placing" ? PLACING_FADE_IN_DURATION_S : PLACED_ENTER_DURATION_S,
                             ease: FLOW_EASE,
-                            delay: screen === "placing" ? PLACING_APPEAR_DELAY_MS / 1000 : 0,
+                            delay: screen === "placing" ? PLACING_APPEAR_DELAY_MS / 1000 : PLACED_ENTER_DELAY_S,
                           }}
                           className="relative size-20"
                         >
@@ -1379,9 +1141,9 @@ export default function BinaryMarket() {
                           initial={{ opacity: 0, y: screen === "placing" ? 10 : 6 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{
-                            duration: screen === "placing" ? PLACING_FADE_IN_DURATION_S : 0.24,
+                            duration: screen === "placing" ? PLACING_FADE_IN_DURATION_S : PLACED_ENTER_DURATION_S,
                             ease: FLOW_EASE,
-                            delay: screen === "placing" ? PLACING_APPEAR_DELAY_MS / 1000 : 0,
+                            delay: screen === "placing" ? PLACING_APPEAR_DELAY_MS / 1000 : PLACED_ENTER_DELAY_S,
                           }}
                           className="text-2xl font-semibold leading-none text-white"
                         >
@@ -1399,7 +1161,7 @@ export default function BinaryMarket() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.24, ease: FLOW_EASE }}
-                    className="absolute inset-0 flex h-full flex-col gap-3 p-3"
+                    className="absolute inset-0 flex h-full flex-col gap-3 p-4"
                   >
                     <div className="flex flex-1 flex-col gap-3">
                       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-3 py-4">
@@ -1425,13 +1187,18 @@ export default function BinaryMarket() {
                           <div className="flex items-center justify-between">
                             <span className="text-white/60">Avg. Price</span>
                             <span className="inline-flex items-center gap-1 text-white">
-                              {avgPriceCents}¢
-                              <img src={IMG_REVIEW_PRICE_ICON} alt="" className="size-2.5" />
+                              <NumberFlow
+                                value={reviewAvgPriceCents}
+                                trend={0}
+                                format={{ useGrouping: false }}
+                                suffix="¢"
+                                className="leading-none"
+                                style={{
+                                  ["--number-flow-mask-height" as any]: "0em",
+                                }}
+                              />
+                              <CircularProgressIcon className="size-2.5" />
                             </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-white/60">Take Profit / Stop Loss</span>
-                            <span className="text-white">{hasTpSlValues ? tpSlSummary : "-- / --"}</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-white/60">Liquidation Price</span>
@@ -1442,15 +1209,28 @@ export default function BinaryMarket() {
                             <span className="text-white">5%</span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-white/60">Total</span>
+                            <span className="text-white/60">Cost</span>
                             <span className="text-white">{formatMoney(Math.round(totalDollars))}</span>
                           </div>
                         </div>
                         <div className="h-px w-full bg-white/10" />
                         <div className="flex items-center justify-between">
                           <span className="text-2xl font-semibold leading-none text-white/60">To win</span>
-                          <span className="text-3xl font-semibold leading-none text-[#5dd978]">
-                            ${combinedToWinDollars.toFixed(2)}
+                          <span className="text-4xl font-semibold leading-none text-[#5dd978] flex items-baseline gap-[2px]">
+                            <span aria-hidden>$</span>
+                            <NumberFlow
+                              value={combinedToWinDollars}
+                              trend={0}
+                              format={{
+                                useGrouping: false,
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              }}
+                              className="leading-none"
+                              style={{
+                                ["--number-flow-mask-height" as any]: "0em",
+                              }}
+                            />
                           </span>
                         </div>
                       </div>
@@ -1480,10 +1260,10 @@ export default function BinaryMarket() {
                 {(screen === "success" || screen === "closing") && (
                   <motion.div
                     key="success"
-                    initial={{ opacity: 0, scale: 0.96 }}
-                    animate={{ opacity: 1, scale: 1 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.24, ease: FLOW_EASE }}
+                    transition={{ duration: 0.34, ease: FLOW_EASE }}
                     className="flex h-full flex-col gap-3"
                   >
                     <button
@@ -1491,7 +1271,7 @@ export default function BinaryMarket() {
                       onClick={() => {
                         setScreen("closing");
                       }}
-                      className="absolute right-3 top-3 z-10 flex size-8 items-center justify-center rounded-full bg-white/[0.06] transition-[transform,background-color] hover:bg-white/[0.1] active:scale-[0.98]"
+                      className="absolute right-4 top-4 z-10 flex size-8 items-center justify-center rounded-full bg-white/[0.06] transition-[transform,background-color] hover:bg-white/[0.1] active:scale-[0.98]"
                       aria-label="Close success screen"
                     >
                       <img src={IMG_CLOSE_ICON} alt="" className="size-4" />
@@ -1526,15 +1306,28 @@ export default function BinaryMarket() {
                       <div className="h-px w-full bg-white/10" />
                       <div className="flex items-center justify-between">
                         <span className="text-2xl font-semibold leading-none text-white/60">To win</span>
-                        <span className="text-3xl font-semibold leading-none text-[#5dd978]">
-                          ${combinedToWinDollars.toFixed(2)}
+                        <span className="text-4xl font-semibold leading-none text-[#5dd978] flex items-baseline gap-[2px]">
+                          <span aria-hidden>$</span>
+                          <NumberFlow
+                            value={combinedToWinDollars}
+                            trend={0}
+                            format={{
+                              useGrouping: false,
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            }}
+                            className="leading-none"
+                            style={{
+                              ["--number-flow-mask-height" as any]: "0em",
+                            }}
+                          />
                         </span>
                       </div>
                     </div>
 
                     <button
                       type="button"
-                      className="h-12 w-full rounded-full border-2 border-white/10 text-base font-semibold leading-[1.25] text-white transition-colors hover:border-white/20"
+                      className="h-12 w-full rounded-full border-2 border-white/10 text-base font-semibold leading-[1.25] text-white transition-[transform,border-color] hover:border-white/20 active:scale-[0.98]"
                     >
                       Share on X
                     </button>
