@@ -1,8 +1,8 @@
 export const PROJECTS = [
-  { id: "binary-market", label: "Binary Market" },
+  { id: "binary-market", label: "Binary" },
+  { id: "leverage-selector", label: "Categorical" },
   { id: "position", label: "Position" },
-  { id: "leverage-selector", label: "Outcome Selector" },
-  { id: "resolved-card", label: "Resolved Card" },
+  { id: "resolved-card", label: "Resolved" },
 ] as const;
 
 export type ProjectId = (typeof PROJECTS)[number]["id"];

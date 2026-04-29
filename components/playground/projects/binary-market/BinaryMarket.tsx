@@ -117,7 +117,7 @@ function playSparkleChime() {
     const master = context.createGain();
     // Keep it subtle and non-intrusive.
     master.gain.setValueAtTime(0.0001, now);
-    master.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
+    master.gain.exponentialRampToValueAtTime(0.16, now + 0.02);
     master.gain.exponentialRampToValueAtTime(0.0001, now + 0.65);
     master.connect(context.destination);
 
@@ -134,7 +134,7 @@ function playSparkleChime() {
       osc.frequency.setValueAtTime(note.freq, now + note.start);
 
       noteGain.gain.setValueAtTime(0.0001, now + note.start);
-      noteGain.gain.exponentialRampToValueAtTime(0.24, now + note.start + 0.015);
+      noteGain.gain.exponentialRampToValueAtTime(0.34, now + note.start + 0.015);
       noteGain.gain.exponentialRampToValueAtTime(0.0001, now + note.start + note.duration);
 
       osc.connect(noteGain);
