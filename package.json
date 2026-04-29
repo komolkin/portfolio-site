@@ -15,6 +15,7 @@
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",
     "@number-flow/react": "^0.4.0",
+    "@paper-design/shaders-react": "^0.0.76",
     "@supabase/supabase-js": "^2.89.0",
     "@upstash/realtime": "^1.0.0",
     "@upstash/redis": "^1.35.8",

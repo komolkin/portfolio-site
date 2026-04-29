@@ -306,7 +306,7 @@ export default function BinaryMarket() {
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPriceCents, setLimitPriceCents] = useState(0);
   const [shares, setShares] = useState(0);
-  const [reviewAvgPriceCents, setReviewAvgPriceCents] = useState(PHOENIX_SUNS_OPTION.yesPercent);
+  const [reviewAvgPriceCents, setReviewAvgPriceCents] = useState<number>(PHOENIX_SUNS_OPTION.yesPercent);
   const [screen, setScreen] = useState<BinaryMarketScreen | "closing">("order");
   const trackRef = useRef<HTMLDivElement | null>(null);
   const tabsRef = useRef<HTMLDivElement | null>(null);

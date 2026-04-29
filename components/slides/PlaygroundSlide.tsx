@@ -15,7 +15,7 @@ import Position from "@/components/playground/projects/position/Position";
 export default function PlaygroundSlide() {
   const pathname = usePathname();
   const activeProject = useMemo(
-    () => projectIdFromIndex1(playgroundIndexFromPathname(pathname)),
+    () => projectIdFromIndex1(playgroundIndexFromPathname(pathname ?? "/")),
     [pathname]
   );
 
