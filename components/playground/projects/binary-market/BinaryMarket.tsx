@@ -322,6 +322,7 @@ export default function BinaryMarket() {
   const limitPriceInputRef = useRef<HTMLInputElement | null>(null);
   const sharesInputRef = useRef<HTMLInputElement | null>(null);
   const [tabIndicator, setTabIndicator] = useState({ left: 0, width: 0 });
+  const prefersReducedMotion = useReducedMotion();
 
   const leverage = LEVERAGE_STEPS[leverageIdx];
   const dotCount = LEVERAGE_STEPS.length;
@@ -810,9 +811,17 @@ export default function BinaryMarket() {
         )}
 
         {/* Amount (market buy) / Shares (market sell) or Limit Price / Shares (limit) */}
+        <AnimatePresence mode="popLayout" initial={false}>
         {orderType === "market" ? (
           side === "buy" ? (
-            <div className="flex w-full flex-col gap-4 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
+            <motion.div
+              key="market-buy"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: FLOW_EASE }}
+              className="flex w-full flex-col gap-4 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4"
+            >
               <div className="flex w-full items-start justify-between gap-2">
                 <span
                   className="text-base leading-[1.25] text-white/60"
@@ -896,9 +905,16 @@ export default function BinaryMarket() {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </motion.div>
           ) : (
-            <div className="flex w-full flex-col gap-3 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
+            <motion.div
+              key="market-sell"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: FLOW_EASE }}
+              className="flex w-full flex-col gap-3 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4"
+            >
               <div className="flex w-full items-start justify-between gap-2">
                 <span
                   className="text-base leading-[1.25] text-white/60"
@@ -943,10 +959,17 @@ export default function BinaryMarket() {
                   </button>
                 ))}
               </div>
-            </div>
+            </motion.div>
           )
         ) : (
-          <div className="flex w-full flex-col gap-2 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
+          <motion.div
+            key="limit"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: FLOW_EASE }}
+            className="flex w-full flex-col gap-2 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4"
+          >
             <label
               id="leverage-limit-price-label"
               htmlFor="leverage-limit-price"
@@ -1065,8 +1088,9 @@ export default function BinaryMarket() {
                 </button>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
 
         {/* CTA */}
         <button
