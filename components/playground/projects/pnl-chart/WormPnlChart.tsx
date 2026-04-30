@@ -269,6 +269,18 @@ export default function WormPnlChart({
       0,
     );
     const buyPoints = visiblePoints.filter((point) => point.delta < -0.001);
+    const trailingOpenBuyPoints: PnlPoint[] = [];
+    for (let i = visiblePoints.length - 1; i >= 0; i -= 1) {
+      const point = visiblePoints[i];
+      if (point.delta < -0.001) {
+        trailingOpenBuyPoints.push(point);
+        continue;
+      }
+      break;
+    }
+    const inPositions = Math.abs(
+      trailingOpenBuyPoints.reduce((sum, point) => sum + point.delta, 0),
+    );
     const predictions = new Set<string>();
     let attributedBuyPoints = 0;
     buyPoints.forEach((point) => {
@@ -288,6 +300,7 @@ export default function WormPnlChart({
       totalPnl,
       predictionsCount,
       biggestWin,
+      inPositions,
     };
   }, [signatureToMarketIds, visiblePoints]);
 
@@ -531,14 +544,15 @@ export default function WormPnlChart({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 font-mono">
+      <div className="grid grid-cols-3 gap-4 font-mono">
         <div>
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Predictions made</p>
-          <p className="mt-1 text-[32px] leading-[1.1] text-foreground tabular-nums">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">In positions</p>
+          <p className="mt-1 text-[24px] leading-[1.1] text-foreground tabular-nums">
+            <span>$</span>
             <NumberFlow
-              value={stats.predictionsCount}
+              value={stats.inPositions}
               trend={0}
-              format={{ useGrouping: false, maximumFractionDigits: 0 }}
+              format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
               className="text-inherit"
               style={{ ["--number-flow-mask-height" as any]: "0em" }}
             />
@@ -546,12 +560,24 @@ export default function WormPnlChart({
         </div>
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Biggest win</p>
-          <p className="mt-1 text-[32px] leading-[1.1] text-foreground tabular-nums">
-            <span>{biggestWinParts.sign}$</span>
+          <p className="mt-1 text-[24px] leading-[1.1] text-foreground tabular-nums">
+            <span>$</span>
             <NumberFlow
               value={biggestWinParts.abs}
               trend={0}
               format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+              className="text-inherit"
+              style={{ ["--number-flow-mask-height" as any]: "0em" }}
+            />
+          </p>
+        </div>
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">Predictions</p>
+          <p className="mt-1 text-[24px] leading-[1.1] text-foreground tabular-nums">
+            <NumberFlow
+              value={stats.predictionsCount}
+              trend={0}
+              format={{ useGrouping: false, maximumFractionDigits: 0 }}
               className="text-inherit"
               style={{ ["--number-flow-mask-height" as any]: "0em" }}
             />
