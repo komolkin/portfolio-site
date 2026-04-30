@@ -436,28 +436,29 @@ export default function WormPnlChart({
     return () => window.cancelAnimationFrame(raf);
   }, [loading]);
 
-  if (loading) {
-    return (
-      <div
-        className="flex w-full items-center justify-center rounded-[20px] p-5 text-xs text-muted-foreground"
-        style={{ background: "#1d1d1d", minHeight: height + 220 }}
-      >
-        Loading chart data...
-      </div>
-    );
-  }
-
   const recentFlows = [...visiblePoints]
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, 30);
 
   return (
     <div
-      className={`flex w-full flex-col gap-5 rounded-[20px] bg-white/[0.04] p-5 transition-all duration-500 ease-out ${
-        isRevealed ? "translate-y-0 opacity-100" : "translate-y-1.5 opacity-0"
-      }`}
-      style={{ background: "#1d1d1d" }}
+      className="relative flex w-full flex-col gap-5 rounded-[20px] bg-white/[0.04] p-5"
+      style={{ background: "#1d1d1d", minHeight: height + 220 }}
     >
+      <div
+        className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-[20px] bg-[#1d1d1d] transition-opacity duration-400 ease-out ${
+          loading ? "opacity-100" : "opacity-0"
+        }`}
+        aria-hidden={!loading}
+      >
+        <span className="text-xs text-muted-foreground">Loading chart data...</span>
+      </div>
+      <div
+        className={`transition-[opacity,transform] duration-500 ease-out ${
+          isRevealed ? "translate-y-0 opacity-100" : "translate-y-1.5 opacity-0"
+        } ${loading ? "pointer-events-none" : ""}`}
+      >
+      <div className="flex flex-col gap-5">
       <div className="flex items-start justify-between">
         <div className="font-mono">
           <p className="text-sm uppercase tracking-wide text-muted-foreground">{headerLabel}</p>
@@ -617,6 +618,8 @@ export default function WormPnlChart({
             </div>
           </div>
         </div>
+      </div>
+      </div>
       </div>
     </div>
   );
