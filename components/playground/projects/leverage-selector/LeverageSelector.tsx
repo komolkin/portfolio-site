@@ -12,17 +12,17 @@ const GrainGradient = dynamic(
   { ssr: false },
 );
 
-/** Face crops from Unsplash (demo placeholders; names are fictional market labels). */
+/** Public portrait thumbnails for the named personas in the Categorical picker. */
 const IMG_TIMOTHEE_CHALAMET =
-  "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop&crop=faces&auto=format&q=80";
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Timoth%C3%A9e_Chalamet-63482_%28cropped%29.jpg/330px-Timoth%C3%A9e_Chalamet-63482_%28cropped%29.jpg";
 const IMG_ZENDAYA =
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=faces&auto=format&q=80";
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Zendaya_-_2019_by_Glenn_Francis.jpg/330px-Zendaya_-_2019_by_Glenn_Francis.jpg";
 const IMG_FLORENCE_PUGH =
-  "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=400&fit=crop&crop=faces&auto=format&q=80";
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Florence_Pugh_at_the_2024_Toronto_International_Film_Festival_13_%28cropped_2_%E2%80%93_color_adjusted%29.jpg/330px-Florence_Pugh_at_the_2024_Toronto_International_Film_Festival_13_%28cropped_2_%E2%80%93_color_adjusted%29.jpg";
 const IMG_PAUL_MESCAL =
-  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop&crop=faces&auto=format&q=80";
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Paul_Mescal_at_the_Toronto_International_Film_Festival_in_2025_2_%28cropped_2%29.jpg/330px-Paul_Mescal_at_the_Toronto_International_Film_Festival_in_2025_2_%28cropped_2%29.jpg";
 const IMG_SAOIRSE_RONAN =
-  "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop&crop=faces&auto=format&q=80";
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/MKr349648_Saoirse_Ronan_%28The_Outrun%2C_Berlinale_2024%29.jpg/330px-MKr349648_Saoirse_Ronan_%28The_Outrun%2C_Berlinale_2024%29.jpg";
 const IMG_PNL_VECTOR_0 =
   "https://www.figma.com/api/mcp/asset/1dc54a4f-d104-4ce0-b429-8feb9261a180";
 const IMG_PNL_VECTOR_1 =
