@@ -323,6 +323,18 @@ export default function BinaryMarket() {
   const sharesInputRef = useRef<HTMLInputElement | null>(null);
   const [tabIndicator, setTabIndicator] = useState({ left: 0, width: 0 });
   const prefersReducedMotion = useReducedMotion();
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [cardHeight, setCardHeight] = useState<number | undefined>();
+
+  useLayoutEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const measure = () => setCardHeight(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const leverage = LEVERAGE_STEPS[leverageIdx];
   const dotCount = LEVERAGE_STEPS.length;
@@ -610,10 +622,13 @@ export default function BinaryMarket() {
 
   return (
     <div className="relative w-[380px] max-w-[calc(100vw-2rem)] p-0">
-      <div
-        className="relative flex w-full flex-col gap-2.5 overflow-hidden rounded-3xl p-4"
+      <motion.div
+        animate={{ height: cardHeight ?? "auto" }}
+        transition={{ duration: prefersReducedMotion ? 0 : 0.35, ease: FLOW_EASE }}
+        className="relative overflow-hidden rounded-3xl"
         style={{ background: "#1d1d1d" }}
       >
+        <div ref={contentRef} className="relative flex w-full flex-col gap-2.5 p-4">
         {/* Profile row */}
         <div className="flex w-full items-center gap-3.5">
           <div className="relative size-12 shrink-0 overflow-hidden rounded-lg">
@@ -1119,6 +1134,7 @@ export default function BinaryMarket() {
                 : "Enter price & shares"}
           </span>
         </button>
+        </div>
 
         <AnimatePresence initial={false}>
           {screen !== "order" && (
@@ -1408,7 +1424,7 @@ export default function BinaryMarket() {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </motion.div>
     </div>
   );
 }
