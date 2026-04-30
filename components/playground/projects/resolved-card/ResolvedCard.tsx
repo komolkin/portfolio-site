@@ -148,7 +148,7 @@ export default function ResolvedCard() {
         <svg width="0" height="0" aria-hidden="true" focusable="false">
           <defs>
             <mask id="resolvedCardRoundMask" maskUnits="userSpaceOnUse">
-              <rect x="0" y="0" width="1000" height="1000" rx="32" ry="32" fill="white" />
+              <rect x="0" y="0" width="1000" height="1000" rx="24" ry="24" fill="white" />
             </mask>
           </defs>
         </svg>
@@ -168,7 +168,7 @@ export default function ResolvedCard() {
             ref={cardRef}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
-            className={`resolvedCardRainbow relative w-full overflow-hidden rounded-[32px] transition-opacity duration-300 ease-out ${
+            className={`resolvedCardRainbow relative w-full overflow-hidden rounded-[24px] transition-opacity duration-300 ease-out ${
               isVisible ? "opacity-100" : "opacity-0"
             }`}
             style={{ height: 468, background: "#1d1d1d" }}
@@ -178,7 +178,7 @@ export default function ResolvedCard() {
             <div className="flex flex-1 flex-col items-center justify-center pt-10 pb-4">
               <div className="flex flex-col items-center gap-6">
                 <div className="relative h-[120px] w-[120px] shrink-0">
-                  <div className="absolute inset-0 rounded-xl border border-white/20">
+                  <div className="absolute inset-0 rounded-xl">
                     <img
                       src={IMG_AVATAR}
                       alt=""
@@ -328,15 +328,15 @@ export default function ResolvedCard() {
 
         .resolvedCardTilt {
           overflow: hidden;
-          border-radius: 32px;
-          clip-path: inset(0 round 32px);
+          border-radius: 24px;
+          clip-path: inset(0 round 24px);
         }
 
         .resolvedCardRainbow {
           isolation: isolate;
           transform-style: preserve-3d;
           overflow: hidden;
-          clip-path: inset(0 round 32px);
+          clip-path: inset(0 round 24px);
           transition: transform 0.4s ease;
         }
 

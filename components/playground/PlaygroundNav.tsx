@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { PROJECTS, type ProjectId } from "@/components/playground/playground-route";
 
@@ -30,6 +31,8 @@ function ChevronIcon({ open }: { open: boolean }) {
 export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const pathname = usePathname();
 
   const activeLabel =
     PROJECTS.find((p) => p.id === activeProject)?.label ?? "Component";
@@ -60,6 +63,23 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
   const listClass =
     "flex flex-col rounded-lg border border-white/[0.08] bg-black/40 py-1 shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-md";
 
+  const navigateWithTransition = (href: string) => {
+    if (pathname === href) return;
+
+    const docWithTransition = document as Document & {
+      startViewTransition?: (update: () => void) => { finished: Promise<void> };
+    };
+
+    if (!docWithTransition.startViewTransition) {
+      router.push(href, { scroll: false });
+      return;
+    }
+
+    docWithTransition.startViewTransition(() => {
+      router.push(href, { scroll: false });
+    });
+  };
+
   return (
     <>
       <nav
@@ -75,6 +95,20 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
                 <Link
                   href={`/${index1}`}
                   scroll={false}
+                  onClick={(event) => {
+                    if (
+                      event.defaultPrevented ||
+                      event.metaKey ||
+                      event.ctrlKey ||
+                      event.shiftKey ||
+                      event.altKey ||
+                      event.button !== 0
+                    ) {
+                      return;
+                    }
+                    event.preventDefault();
+                    navigateWithTransition(`/${index1}`);
+                  }}
                   className={`relative block w-full text-left text-sm transition-colors duration-150 py-1.5 pl-4 pr-5 ${
                     isActive
                       ? "text-foreground font-medium"
@@ -109,7 +143,21 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
                       <Link
                         href={`/${index1}`}
                         scroll={false}
-                        onClick={() => setOpen(false)}
+                        onClick={(event) => {
+                          setOpen(false);
+                          if (
+                            event.defaultPrevented ||
+                            event.metaKey ||
+                            event.ctrlKey ||
+                            event.shiftKey ||
+                            event.altKey ||
+                            event.button !== 0
+                          ) {
+                            return;
+                          }
+                          event.preventDefault();
+                          navigateWithTransition(`/${index1}`);
+                        }}
                         className={`relative block w-full text-left text-sm transition-colors duration-150 py-1.5 pl-4 pr-5 ${
                           isActive
                             ? "text-foreground font-medium"
