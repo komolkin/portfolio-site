@@ -3,7 +3,7 @@
 import { useState } from "react";
 import WormPnlChart from "@/components/playground/projects/pnl-chart/WormPnlChart";
 
-const DEFAULT_WALLET = "";
+const DEFAULT_WALLET = "5SuFWtyUXRKNoyEMFC2mmVtuzEgFn1ezpG3SGirfJ3Lp";
 const DEFAULT_WORKER_URL = "https://worm-pnl-worker.pnl-checker.workers.dev/";
 
 export default function PnlChart() {
