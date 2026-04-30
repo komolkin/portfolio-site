@@ -22,7 +22,7 @@ export default function PnlChart() {
               <input
                 value={wallet}
                 onChange={(e) => setWallet(e.target.value)}
-                className="mt-1 w-full bg-transparent font-mono text-[16px] leading-[1.25] text-foreground outline-none"
+                className="mt-1 w-full bg-transparent font-mono text-[14px] leading-[1.25] text-foreground outline-none"
               />
             </>
           ) : (
