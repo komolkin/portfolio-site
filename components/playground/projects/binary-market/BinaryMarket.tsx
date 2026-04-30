@@ -325,16 +325,17 @@ export default function BinaryMarket() {
   const prefersReducedMotion = useReducedMotion();
   const contentRef = useRef<HTMLDivElement>(null);
   const [cardHeight, setCardHeight] = useState<number | undefined>();
+  const hasInitializedHeight = useRef(false);
 
   useLayoutEffect(() => {
+    if (!hasInitializedHeight.current) {
+      hasInitializedHeight.current = true;
+      return;
+    }
     const el = contentRef.current;
     if (!el) return;
-    const measure = () => setCardHeight(el.offsetHeight);
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+    setCardHeight(el.offsetHeight);
+  }, [orderType, side]);
 
   const leverage = LEVERAGE_STEPS[leverageIdx];
   const dotCount = LEVERAGE_STEPS.length;
@@ -625,6 +626,7 @@ export default function BinaryMarket() {
       <motion.div
         animate={{ height: cardHeight ?? "auto" }}
         transition={{ duration: prefersReducedMotion ? 0 : 0.35, ease: FLOW_EASE }}
+        onAnimationComplete={() => setCardHeight(undefined)}
         className="relative overflow-hidden rounded-3xl"
         style={{ background: "#1d1d1d" }}
       >
