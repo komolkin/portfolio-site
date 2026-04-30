@@ -232,7 +232,7 @@ export default function ResolvedCard() {
                   onClick={handleClaim}
                   disabled={claimState !== "idle"}
                   aria-busy={claimState === "claiming"}
-                  className="h-12 flex-1 shrink-0 overflow-hidden rounded-full border-2 border-white/20 bg-transparent text-center text-base font-semibold leading-[1.25] text-white hover:bg-white/10 disabled:opacity-80 disabled:cursor-not-allowed transition-transform transition-colors duration-200 ease-out active:scale-[0.98]"
+                  className="h-10 flex-1 shrink-0 overflow-hidden rounded-full border border-white/10 bg-transparent text-center text-sm font-semibold leading-[1.25] text-white transition-[transform,border-color,background-color,opacity] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95] disabled:cursor-not-allowed disabled:opacity-80"
                 >
                   <span className="relative inline-flex h-full w-full items-center justify-center">
                     <span
@@ -298,14 +298,14 @@ export default function ResolvedCard() {
                   type="button"
                   onClick={handleShare}
                   aria-label="Share"
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-white/20 bg-transparent hover:bg-white/10 transition-transform transition-colors duration-200 ease-out active:scale-[0.98]"
+                  className="flex size-10 shrink-0 items-center justify-center rounded-full border border-white/10 text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
                 >
                   <img
                     src={IMG_SHARE_ICON}
                     alt=""
-                    width={20}
-                    height={20}
-                    className="block h-5 w-5 shrink-0"
+                    width={16}
+                    height={16}
+                    className="size-4"
                     draggable={false}
                     aria-hidden
                   />
