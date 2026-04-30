@@ -121,7 +121,7 @@ if (typeof window !== "undefined") {
   });
 }
 
-type LeverageSelectorScreen = "order" | "review" | "placing" | "placed" | "success" | "closing";
+type LeverageSelectorScreen = "order" | "review" | "placing" | "placed" | "success" | "closing" | "tp-sl";
 const FLOW_EASE = [0.22, 1, 0.36, 1] as const;
 const PLACING_APPEAR_DELAY_MS = 520;
 const PLACING_ENTER_DELAY_S = 0.14;
@@ -340,6 +340,20 @@ function ChevronDown({ className }: { className?: string }) {
   );
 }
 
+function ChevronRight({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" className={className} aria-hidden>
+      <path
+        d="M6.5 4.5L10 8L6.5 11.5"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function SwapVertical({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 16 16" fill="none" className={className} aria-hidden>
@@ -423,11 +437,14 @@ export default function LeverageSelector() {
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPriceCents, setLimitPriceCents] = useState(0);
   const [shares, setShares] = useState(0);
-  const [isTpSlOpen, setIsTpSlOpen] = useState(false);
   const [takeProfitUnit, setTakeProfitUnit] = useState<"$" | "%">("$");
   const [stopLossUnit, setStopLossUnit] = useState<"$" | "%">("$");
   const [takeProfitValue, setTakeProfitValue] = useState(0);
   const [stopLossValue, setStopLossValue] = useState(0);
+  const [pendingTakeProfitValue, setPendingTakeProfitValue] = useState(0);
+  const [pendingTakeProfitUnit, setPendingTakeProfitUnit] = useState<"$" | "%">("$");
+  const [pendingStopLossValue, setPendingStopLossValue] = useState(0);
+  const [pendingStopLossUnit, setPendingStopLossUnit] = useState<"$" | "%">("$");
   const [pnlIconObjectUrls, setPnlIconObjectUrls] =
     useState<readonly [string, string, string] | null>(null);
   const [screen, setScreen] = useState<LeverageSelectorScreen>("order");
@@ -533,12 +550,11 @@ export default function LeverageSelector() {
   }, [orderType, side]);
 
   useEffect(() => {
-    // When opening TP/SL, focus the first field so user can type immediately.
-    if (!isTpSlOpen) return;
+    if (screen !== "tp-sl") return;
     requestAnimationFrame(() => {
       takeProfitInputRef.current?.focus({ preventScroll: true });
     });
-  }, [isTpSlOpen]);
+  }, [screen]);
 
   useLayoutEffect(() => {
     const root = tabsRef.current;
@@ -590,7 +606,6 @@ export default function LeverageSelector() {
     setOrderType("market");
     setLimitPriceCents(0);
     setShares(0);
-    setIsTpSlOpen(false);
     setTakeProfitUnit("$");
     setStopLossUnit("$");
     setTakeProfitValue(0);
@@ -791,6 +806,38 @@ export default function LeverageSelector() {
     setStopLossValue(next);
   };
 
+  const handlePendingTakeProfitInputChange = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, "");
+    if (digitsOnly.length === 0) { setPendingTakeProfitValue(0); return; }
+    const parsed = Number.parseInt(digitsOnly, 10);
+    if (Number.isNaN(parsed)) { setPendingTakeProfitValue(0); return; }
+    setPendingTakeProfitValue(Math.min(MAX_LIMIT_CENTS, parsed));
+  };
+
+  const handlePendingStopLossInputChange = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, "");
+    if (digitsOnly.length === 0) { setPendingStopLossValue(0); return; }
+    const parsed = Number.parseInt(digitsOnly, 10);
+    if (Number.isNaN(parsed)) { setPendingStopLossValue(0); return; }
+    setPendingStopLossValue(Math.min(MAX_LIMIT_CENTS, parsed));
+  };
+
+  const openTpSlScreen = () => {
+    setPendingTakeProfitValue(takeProfitValue);
+    setPendingTakeProfitUnit(takeProfitUnit);
+    setPendingStopLossValue(stopLossValue);
+    setPendingStopLossUnit(stopLossUnit);
+    setScreen("tp-sl");
+  };
+
+  const commitTpSl = () => {
+    setTakeProfitValue(pendingTakeProfitValue);
+    setTakeProfitUnit(pendingTakeProfitUnit);
+    setStopLossValue(pendingStopLossValue);
+    setStopLossUnit(pendingStopLossUnit);
+    setScreen("order");
+  };
+
   const canPlaceOrder =
     orderType === "market"
       ? side === "buy"
@@ -812,13 +859,25 @@ export default function LeverageSelector() {
       : stopLossValue / 100;
   const stopLossPnLDollars =
     stopLossValue > 0 ? -positionNotionalDollars * leverage * stopLossPercent : 0;
+
+  const pendingTakeProfitPercent =
+    pendingTakeProfitUnit === "$"
+      ? pendingTakeProfitValue / Math.max(1, pnlEntryPriceCents)
+      : pendingTakeProfitValue / 100;
+  const pendingTakeProfitPnLDollars =
+    pendingTakeProfitValue > 0 ? positionNotionalDollars * leverage * pendingTakeProfitPercent : 0;
+
+  const pendingStopLossPercent =
+    pendingStopLossUnit === "$"
+      ? pendingStopLossValue / Math.max(1, pnlEntryPriceCents)
+      : pendingStopLossValue / 100;
+  const pendingStopLossPnLDollars =
+    pendingStopLossValue > 0 ? -positionNotionalDollars * leverage * pendingStopLossPercent : 0;
+
   const formatTpSlSummaryValue = (value: number, unit: "$" | "%") =>
     value > 0 ? `${value}${unit === "$" ? "¢" : "%"}` : "–";
   const hasTpSlValues = takeProfitValue > 0 || stopLossValue > 0;
-  const tpSlSummary = `TP: ${formatTpSlSummaryValue(takeProfitValue, takeProfitUnit)} / SL: ${formatTpSlSummaryValue(
-    stopLossValue,
-    stopLossUnit,
-  )}`;
+  const tpSlSummary = `TP / SL: ${formatTpSlSummaryValue(takeProfitValue, takeProfitUnit)} / ${formatTpSlSummaryValue(stopLossValue, stopLossUnit)}`;
 
   const totalDollars =
     orderType === "market"
@@ -1360,260 +1419,19 @@ export default function LeverageSelector() {
 
           {/* TP / SL (buy only) */}
           {side === "buy" && (
-            <div className="flex w-full flex-col gap-2 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
-              <button
-                type="button"
-                onClick={() => setIsTpSlOpen((prev) => !prev)}
-                className="flex w-full items-center justify-between text-left"
-                aria-expanded={isTpSlOpen}
-                aria-controls="tp-sl-content"
+            <button
+              type="button"
+              onClick={openTpSlScreen}
+              className="flex w-full items-center justify-between rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4 text-left transition-colors hover:bg-[linear-gradient(90deg,#2f2f2f_0%,#2b2b2b_100%)]"
+            >
+              <span
+                className="text-base leading-[1.25] text-white/60"
+                style={{ fontVariantNumeric: "tabular-nums" }}
               >
-                <span
-                  className="text-base leading-[1.25] text-white/60"
-                  style={{ fontVariantNumeric: "tabular-nums" }}
-                >
-                  {isTpSlOpen
-                    ? "Take Profit"
-                    : hasTpSlValues
-                      ? tpSlSummary
-                      : "Take Profit / Stop Loss"}
-                </span>
-                <ChevronDown
-                  className={`size-4 shrink-0 text-white/70 transition-transform ${
-                    isTpSlOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-
-              <AnimatePresence initial={false}>
-                {isTpSlOpen && (
-                  <motion.div
-                    id="tp-sl-content"
-                    className="overflow-hidden"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: "easeInOut" }}
-                  >
-                    <div className="flex w-full flex-col gap-2">
-                      <div className="flex w-full items-center justify-between">
-                        <div
-                          className={`relative flex items-baseline text-4xl font-semibold leading-none tabular-nums ${
-                            takeProfitValue > 0 ? "text-white" : "text-white/40"
-                          }`}
-                        >
-                          <NumberFlow
-                            value={takeProfitValue}
-                            suffix={takeProfitUnit === "$" ? "¢" : "%"}
-                            format={{ useGrouping: false }}
-                            trend={0}
-                            className="leading-none"
-                            style={{ ["--number-flow-mask-height" as any]: "0em" }}
-                          />
-                          <input
-                            ref={takeProfitInputRef}
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            value={takeProfitValue === 0 ? "" : String(takeProfitValue)}
-                            onChange={(event) => handleTakeProfitInputChange(event.target.value)}
-                            className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
-                            aria-label="Take profit value"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {takeProfitValue > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setTakeProfitValue(0);
-                                takeProfitInputRef.current?.focus({
-                                  preventScroll: true,
-                                });
-                              }}
-                              className="group flex h-8 items-center gap-[8px] rounded-full bg-white/[0.06] px-[12px] transition-colors hover:bg-white/[0.08] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                              aria-label="Clear take profit"
-                            >
-                              <div className="transition-opacity group-hover:opacity-90">
-                                <PnLIcon
-                                  iconSrcs={pnlIconObjectUrls ?? undefined}
-                                />
-                              </div>
-                              <span className="text-xs font-semibold leading-[1.25] text-white/60">
-                                PNL{" "}
-                              </span>
-                              <span className="text-xs font-semibold leading-[1.25] text-[#5dd978] flex items-baseline gap-[2px]">
-                                <span aria-hidden>$</span>
-                                <NumberFlow
-                                  value={takeProfitPnLDollars}
-                                  trend={0}
-                                  format={{
-                                    useGrouping: false,
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  }}
-                                  className="leading-none"
-                                  style={{
-                                    ["--number-flow-mask-height" as any]: "0em",
-                                  }}
-                                />
-                              </span>
-                            </button>
-                          )}
-                          <div className="relative flex h-8 shrink-0 items-center gap-1 rounded-full bg-white/[0.06] p-1">
-                            <div
-                              className={`pointer-events-none absolute bottom-1 top-1 w-[calc(50%-4px)] rounded-full bg-[#141414] transition-transform duration-200 ease-out ${
-                                takeProfitUnit === "$" ? "translate-x-0" : "translate-x-full"
-                              }`}
-                              aria-hidden
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setTakeProfitUnit("$")}
-                              className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
-                                takeProfitUnit === "$"
-                                  ? "text-white"
-                                  : "text-white/80 hover:text-white"
-                              }`}
-                              aria-pressed={takeProfitUnit === "$"}
-                            >
-                              $
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setTakeProfitUnit("%")}
-                              className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
-                                takeProfitUnit === "%"
-                                  ? "text-white"
-                                  : "text-white/80 hover:text-white"
-                              }`}
-                              aria-pressed={takeProfitUnit === "%"}
-                            >
-                              %
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="h-px w-full bg-white/10" />
-
-                      <div
-                        className="text-base leading-[1.25] text-white/60"
-                        style={{ fontVariantNumeric: "tabular-nums" }}
-                      >
-                        Stop Loss
-                      </div>
-
-                      <div className="flex w-full items-center justify-between">
-                        <div
-                          className={`relative flex items-baseline text-4xl font-semibold leading-none tabular-nums ${
-                            stopLossValue > 0 ? "text-white" : "text-white/40"
-                          }`}
-                        >
-                          <NumberFlow
-                            value={stopLossValue}
-                            suffix={stopLossUnit === "$" ? "¢" : "%"}
-                            format={{ useGrouping: false }}
-                            trend={0}
-                            className="leading-none"
-                            style={{ ["--number-flow-mask-height" as any]: "0em" }}
-                          />
-                          <input
-                            ref={stopLossInputRef}
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            value={stopLossValue === 0 ? "" : String(stopLossValue)}
-                            onChange={(event) =>
-                              handleStopLossInputChange(event.target.value)
-                            }
-                            className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
-                            aria-label="Stop loss value"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {stopLossValue > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setStopLossValue(0);
-                                stopLossInputRef.current?.focus({
-                                  preventScroll: true,
-                                });
-                              }}
-                              className="group flex h-8 items-center gap-[8px] rounded-full bg-white/[0.06] px-[12px] transition-colors hover:bg-white/[0.08] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                              aria-label="Clear stop loss"
-                            >
-                              <div className="transition-opacity group-hover:opacity-90">
-                                <PnLIcon
-                                  iconSrcs={pnlIconObjectUrls ?? undefined}
-                                />
-                              </div>
-                              <span className="text-xs font-semibold leading-[1.25] text-white/60">
-                                PNL{" "}
-                              </span>
-                              <span className="text-xs font-semibold leading-[1.25] text-[#ff4d5e] flex items-baseline gap-[2px]">
-                                {stopLossPnLDollars < 0 && (
-                                  <span aria-hidden>-</span>
-                                )}
-                                <span aria-hidden>$</span>
-                                <NumberFlow
-                                  value={Math.abs(stopLossPnLDollars)}
-                                  trend={0}
-                                  format={{
-                                    useGrouping: false,
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  }}
-                                  className="leading-none"
-                                  style={{
-                                    ["--number-flow-mask-height" as any]: "0em",
-                                  }}
-                                />
-                              </span>
-                            </button>
-                          )}
-                          <div className="relative flex h-8 shrink-0 items-center gap-1 rounded-full bg-white/[0.06] p-1">
-                            <div
-                              className={`pointer-events-none absolute bottom-1 top-1 w-[calc(50%-4px)] rounded-full bg-[#141414] transition-transform duration-200 ease-out ${
-                                stopLossUnit === "$"
-                                  ? "translate-x-0"
-                                  : "translate-x-full"
-                              }`}
-                              aria-hidden
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setStopLossUnit("$")}
-                              className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
-                                stopLossUnit === "$"
-                                  ? "text-white"
-                                  : "text-white/80 hover:text-white"
-                              }`}
-                              aria-pressed={stopLossUnit === "$"}
-                            >
-                              $
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setStopLossUnit("%")}
-                              className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
-                                stopLossUnit === "%"
-                                  ? "text-white"
-                                  : "text-white/80 hover:text-white"
-                              }`}
-                              aria-pressed={stopLossUnit === "%"}
-                            >
-                              %
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                {hasTpSlValues ? tpSlSummary : "Take Profit / Stop Loss"}
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-white/40" />
+            </button>
           )}
 
           {/* CTA */}
@@ -1741,6 +1559,225 @@ export default function LeverageSelector() {
                         </motion.p>
                       </motion.div>
                     </AnimatePresence>
+                  </motion.div>
+                )}
+
+                {screen === "tp-sl" && (
+                  <motion.div
+                    key="tp-sl-content"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.24, ease: FLOW_EASE }}
+                    className="absolute inset-0 z-10 flex h-full flex-col gap-3 p-4"
+                  >
+                    <div className="flex flex-1 flex-col gap-4">
+                      <p className="text-base font-semibold leading-[1.25] text-white">
+                        Take Profit / Stop Loss
+                      </p>
+
+                      {/* Take Profit */}
+                      <div className="flex w-full flex-col gap-2 rounded-3xl bg-white/[0.04] p-4">
+                        <div
+                          className="text-base leading-[1.25] text-white/60"
+                          style={{ fontVariantNumeric: "tabular-nums" }}
+                        >
+                          Take Profit
+                        </div>
+                        <div className="flex w-full items-center justify-between">
+                          <div
+                            className={`relative flex items-baseline text-4xl font-semibold leading-none tabular-nums ${
+                              pendingTakeProfitValue > 0 ? "text-white" : "text-white/40"
+                            }`}
+                          >
+                            <NumberFlow
+                              value={pendingTakeProfitValue}
+                              suffix={pendingTakeProfitUnit === "$" ? "¢" : "%"}
+                              format={{ useGrouping: false }}
+                              trend={0}
+                              className="leading-none"
+                              style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                            />
+                            <input
+                              ref={takeProfitInputRef}
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={pendingTakeProfitValue === 0 ? "" : String(pendingTakeProfitValue)}
+                              onChange={(event) => handlePendingTakeProfitInputChange(event.target.value)}
+                              className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
+                              aria-label="Take profit value"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {pendingTakeProfitValue > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPendingTakeProfitValue(0);
+                                  takeProfitInputRef.current?.focus({ preventScroll: true });
+                                }}
+                                className="group flex h-8 items-center gap-[8px] rounded-full bg-white/[0.06] px-[12px] transition-colors hover:bg-white/[0.08] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                                aria-label="Clear take profit"
+                              >
+                                <div className="transition-opacity group-hover:opacity-90">
+                                  <PnLIcon iconSrcs={pnlIconObjectUrls ?? undefined} />
+                                </div>
+                                <span className="text-xs font-semibold leading-[1.25] text-white/60">PNL </span>
+                                <span className="text-xs font-semibold leading-[1.25] text-[#5dd978] flex items-baseline gap-[2px]">
+                                  <span aria-hidden>$</span>
+                                  <NumberFlow
+                                    value={pendingTakeProfitPnLDollars}
+                                    trend={0}
+                                    format={{ useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                    className="leading-none"
+                                    style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                                  />
+                                </span>
+                              </button>
+                            )}
+                            <div className="relative flex h-8 shrink-0 items-center gap-1 rounded-full bg-white/[0.06] p-1">
+                              <div
+                                className={`pointer-events-none absolute bottom-1 top-1 w-[calc(50%-4px)] rounded-full bg-[#141414] transition-transform duration-200 ease-out ${
+                                  pendingTakeProfitUnit === "$" ? "translate-x-0" : "translate-x-full"
+                                }`}
+                                aria-hidden
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setPendingTakeProfitUnit("$")}
+                                className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
+                                  pendingTakeProfitUnit === "$" ? "text-white" : "text-white/80 hover:text-white"
+                                }`}
+                                aria-pressed={pendingTakeProfitUnit === "$"}
+                              >
+                                $
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setPendingTakeProfitUnit("%")}
+                                className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
+                                  pendingTakeProfitUnit === "%" ? "text-white" : "text-white/80 hover:text-white"
+                                }`}
+                                aria-pressed={pendingTakeProfitUnit === "%"}
+                              >
+                                %
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Stop Loss */}
+                      <div className="flex w-full flex-col gap-2 rounded-3xl bg-white/[0.04] p-4">
+                        <div
+                          className="text-base leading-[1.25] text-white/60"
+                          style={{ fontVariantNumeric: "tabular-nums" }}
+                        >
+                          Stop Loss
+                        </div>
+                        <div className="flex w-full items-center justify-between">
+                          <div
+                            className={`relative flex items-baseline text-4xl font-semibold leading-none tabular-nums ${
+                              pendingStopLossValue > 0 ? "text-white" : "text-white/40"
+                            }`}
+                          >
+                            <NumberFlow
+                              value={pendingStopLossValue}
+                              suffix={pendingStopLossUnit === "$" ? "¢" : "%"}
+                              format={{ useGrouping: false }}
+                              trend={0}
+                              className="leading-none"
+                              style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                            />
+                            <input
+                              ref={stopLossInputRef}
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={pendingStopLossValue === 0 ? "" : String(pendingStopLossValue)}
+                              onChange={(event) => handlePendingStopLossInputChange(event.target.value)}
+                              className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
+                              aria-label="Stop loss value"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {pendingStopLossValue > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPendingStopLossValue(0);
+                                  stopLossInputRef.current?.focus({ preventScroll: true });
+                                }}
+                                className="group flex h-8 items-center gap-[8px] rounded-full bg-white/[0.06] px-[12px] transition-colors hover:bg-white/[0.08] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                                aria-label="Clear stop loss"
+                              >
+                                <div className="transition-opacity group-hover:opacity-90">
+                                  <PnLIcon iconSrcs={pnlIconObjectUrls ?? undefined} />
+                                </div>
+                                <span className="text-xs font-semibold leading-[1.25] text-white/60">PNL </span>
+                                <span className="text-xs font-semibold leading-[1.25] text-[#ff4d5e] flex items-baseline gap-[2px]">
+                                  {pendingStopLossPnLDollars < 0 && <span aria-hidden>-</span>}
+                                  <span aria-hidden>$</span>
+                                  <NumberFlow
+                                    value={Math.abs(pendingStopLossPnLDollars)}
+                                    trend={0}
+                                    format={{ useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                                    className="leading-none"
+                                    style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                                  />
+                                </span>
+                              </button>
+                            )}
+                            <div className="relative flex h-8 shrink-0 items-center gap-1 rounded-full bg-white/[0.06] p-1">
+                              <div
+                                className={`pointer-events-none absolute bottom-1 top-1 w-[calc(50%-4px)] rounded-full bg-[#141414] transition-transform duration-200 ease-out ${
+                                  pendingStopLossUnit === "$" ? "translate-x-0" : "translate-x-full"
+                                }`}
+                                aria-hidden
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setPendingStopLossUnit("$")}
+                                className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
+                                  pendingStopLossUnit === "$" ? "text-white" : "text-white/80 hover:text-white"
+                                }`}
+                                aria-pressed={pendingStopLossUnit === "$"}
+                              >
+                                $
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setPendingStopLossUnit("%")}
+                                className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
+                                  pendingStopLossUnit === "%" ? "text-white" : "text-white/80 hover:text-white"
+                                }`}
+                                aria-pressed={pendingStopLossUnit === "%"}
+                              >
+                                %
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex w-full gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setScreen("order")}
+                        className="h-12 flex-1 rounded-full border-2 border-white/10 text-base font-semibold leading-[1.25] text-white transition-[transform,border-color] hover:border-white/20 active:scale-[0.98]"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={commitTpSl}
+                        className="h-12 flex-1 rounded-full bg-white text-base font-semibold leading-[1.25] text-[#141414] transition-[transform] active:scale-[0.98]"
+                      >
+                        Set
+                      </button>
+                    </div>
                   </motion.div>
                 )}
 
