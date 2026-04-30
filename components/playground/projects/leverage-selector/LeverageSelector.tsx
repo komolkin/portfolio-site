@@ -1076,89 +1076,76 @@ export default function LeverageSelector() {
 
           {/* Leverage (buy only) */}
           {side === "buy" && (
-            <div className="leverage-rainbow-outer">
-              <div className="wrapper leverage-rainbow-wrapper">
-                {/* Single slow linear shimmer (rotating highlight on the border). */}
-                <div className="layer-blur" aria-hidden>
-                  <div className="spin" />
+            <div className="flex w-full flex-col items-start justify-center gap-2.5 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
+              <div className="flex w-full items-start justify-between gap-2">
+                <span
+                  className="text-base leading-[1.25] text-white/60"
+                  style={{ fontVariantNumeric: "tabular-nums" }}
+                >
+                  Leverage
+                </span>
+                <span className="text-4xl font-normal leading-none text-white font-mono">
+                  <NumberFlow
+                    value={leverage}
+                    suffix="×"
+                    format={{
+                      minimumFractionDigits: leverageIntegerDigits,
+                      maximumFractionDigits: 1,
+                    }}
+                    className="leading-none"
+                    // Match the glyph line box height by removing number-flow's default mask padding.
+                    style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                  />
+                </span>
+              </div>
+              <div className="relative h-[23px] w-full">
+                <div
+                  className={`absolute top-[-3px] z-10 flex h-7 w-14 cursor-grab items-center justify-center rounded-full bg-[#141414] px-2 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.2)] active:cursor-grabbing active:scale-[0.95] ${
+                    isLeverageDragging
+                      ? "transition-none"
+                      : "transition-transform duration-150 ease-out"
+                  }`}
+                  style={{ left: thumbLeft }}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    startLeverageDrag(event.clientX);
+                  }}
+                >
+                  <span className="w-full text-center text-xs font-semibold leading-[1.25] text-white">
+                    {formatLeverage(leverage)}
+                  </span>
                 </div>
-                <div className="layer-sharp" aria-hidden>
-                  <div className="spin" />
-                </div>
-                <div className="highlight" aria-hidden />
-                <div className="bg-mask" aria-hidden />
-                <div className="content leverage-rainbow-content">
-                  <div className="flex w-full items-start justify-between gap-2">
-                    <span
-                      className="text-base leading-[1.25] text-white/60"
-                      style={{ fontVariantNumeric: "tabular-nums" }}
-                    >
-                      Leverage
-                    </span>
-                    <span className="text-4xl font-semibold leading-none text-white">
-                      <NumberFlow
-                        value={leverage}
-                        suffix="×"
-                        format={{
-                          minimumFractionDigits: leverageIntegerDigits,
-                          maximumFractionDigits: 1,
-                        }}
-                        className="leading-none"
-                        // Match the glyph line box height by removing number-flow's default mask padding.
-                        style={{ ["--number-flow-mask-height" as any]: "0em" }}
-                      />
-                    </span>
-                  </div>
-                  <div className="relative h-[23px] w-full">
-                    <div
-                      className={`absolute top-[-3px] z-10 flex h-7 w-14 cursor-grab items-center justify-center rounded-full bg-[#141414] px-2 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.2)] active:cursor-grabbing active:scale-[0.95] ${
-                        isLeverageDragging
-                          ? "transition-none"
-                          : "transition-transform duration-150 ease-out"
-                      }`}
-                      style={{ left: thumbLeft }}
-                      onPointerDown={(event) => {
-                        event.preventDefault();
-                        startLeverageDrag(event.clientX);
+                <div
+                  ref={trackRef}
+                  tabIndex={0}
+                  className="absolute left-0 right-0 top-[7px] h-2 cursor-pointer rounded-full bg-white/10 outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  role="slider"
+                  aria-valuemin={0}
+                  aria-valuemax={dotCount - 1}
+                  aria-valuenow={leverageIdx}
+                  aria-valuetext={formatLeverage(leverage)}
+                  aria-label="Leverage"
+                  onKeyDown={handleLeverageKeyDown}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    startLeverageDrag(event.clientX);
+                  }}
+                >
+                  {Array.from({ length: dotCount }, (_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setLeverageIdx(i)}
+                      className="absolute top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20 transition-transform hover:scale-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                      style={{
+                        // Dot centers match the thumb center at each step.
+                        left: `calc(${stepCenterInsetPx}px + ${(i / Math.max(1, dotCount - 1))} * (100% - ${
+                          stepCenterInsetPx * 2
+                        }px))`,
                       }}
-                    >
-                      <span className="w-full text-center text-xs font-semibold leading-[1.25] text-white">
-                        {formatLeverage(leverage)}
-                      </span>
-                    </div>
-                    <div
-                      ref={trackRef}
-                      tabIndex={0}
-                      className="absolute left-0 right-0 top-[7px] h-2 cursor-pointer rounded-full bg-white/10 outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                      role="slider"
-                      aria-valuemin={0}
-                      aria-valuemax={dotCount - 1}
-                      aria-valuenow={leverageIdx}
-                      aria-valuetext={formatLeverage(leverage)}
-                      aria-label="Leverage"
-                      onKeyDown={handleLeverageKeyDown}
-                      onPointerDown={(event) => {
-                        event.preventDefault();
-                        startLeverageDrag(event.clientX);
-                      }}
-                    >
-                      {Array.from({ length: dotCount }, (_, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => setLeverageIdx(i)}
-                          className="absolute top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20 transition-transform hover:scale-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                          style={{
-                            // Dot centers match the thumb center at each step.
-                            left: `calc(${stepCenterInsetPx}px + ${(i / Math.max(1, dotCount - 1))} * (100% - ${
-                              stepCenterInsetPx * 2
-                            }px))`,
-                          }}
-                          aria-label={`Leverage ${LEVERAGE_STEPS[i]}×`}
-                        />
-                      ))}
-                    </div>
-                  </div>
+                      aria-label={`Leverage ${LEVERAGE_STEPS[i]}×`}
+                    />
+                  ))}
                 </div>
               </div>
             </div>
@@ -1176,7 +1163,7 @@ export default function LeverageSelector() {
                     Amount
                   </span>
                   <label
-                    className={`relative inline-flex items-baseline gap-0.5 text-4xl font-semibold leading-none ${
+                    className={`relative inline-flex items-baseline gap-0.5 text-4xl font-normal leading-none font-mono ${
                       amount > 0 ? "text-white" : "text-white/40"
                     }`}
                     style={{ fontVariantNumeric: "tabular-nums" }}
@@ -1230,7 +1217,7 @@ export default function LeverageSelector() {
                         <div className="h-px w-full bg-white/10" />
                         <div className="flex items-center justify-between">
                           <span className="text-2xl font-semibold leading-none text-white/60">To win</span>
-                          <span className="text-4xl font-semibold leading-none text-[#5dd978] flex items-baseline gap-[2px]">
+                          <span className="text-4xl font-normal leading-none text-[#5dd978] flex items-baseline gap-[2px] font-mono">
                             <span aria-hidden>$</span>
                             <NumberFlow
                               value={combinedToWinDollars}
@@ -1260,7 +1247,7 @@ export default function LeverageSelector() {
                     Shares
                   </span>
                   <label
-                    className={`relative inline-flex items-baseline text-4xl font-semibold leading-none ${
+                    className={`relative inline-flex items-baseline text-4xl font-normal leading-none font-mono ${
                       shares > 0 ? "text-white" : "text-white/40"
                     }`}
                     style={{ fontVariantNumeric: "tabular-nums" }}
@@ -1310,7 +1297,7 @@ export default function LeverageSelector() {
               </label>
               <div className="flex w-full min-w-0 items-center justify-between gap-2">
                 <div
-                  className={`relative flex min-w-0 flex-1 items-baseline text-4xl font-semibold leading-none tabular-nums ${
+                  className={`relative flex min-w-0 flex-1 items-baseline text-4xl font-normal leading-none tabular-nums font-mono ${
                     limitPriceCents > 0 ? "text-white" : "text-white/40"
                   }`}
                 >
@@ -1372,7 +1359,7 @@ export default function LeverageSelector() {
               </label>
               <div className="flex w-full min-w-0 items-center justify-between gap-2">
                 <div
-                  className={`relative flex min-w-0 flex-1 items-baseline text-4xl font-semibold leading-none tabular-nums ${
+                  className={`relative flex min-w-0 flex-1 items-baseline text-4xl font-normal leading-none tabular-nums font-mono ${
                     shares > 0 ? "text-white" : "text-white/40"
                   }`}
                 >
@@ -1590,7 +1577,7 @@ export default function LeverageSelector() {
                         </div>
                         <div className="flex w-full items-center justify-between">
                           <div
-                            className={`relative flex items-baseline text-4xl font-semibold leading-none tabular-nums ${
+                            className={`relative flex items-baseline text-4xl font-normal leading-none tabular-nums font-mono ${
                               pendingTakeProfitValue > 0 ? "text-white" : "text-white/40"
                             }`}
                           >
@@ -1682,7 +1669,7 @@ export default function LeverageSelector() {
                         </div>
                         <div className="flex w-full items-center justify-between">
                           <div
-                            className={`relative flex items-baseline text-4xl font-semibold leading-none tabular-nums ${
+                            className={`relative flex items-baseline text-4xl font-normal leading-none tabular-nums font-mono ${
                               pendingStopLossValue > 0 ? "text-white" : "text-white/40"
                             }`}
                           >
@@ -1854,7 +1841,7 @@ export default function LeverageSelector() {
                         <div className="h-px w-full bg-white/10" />
                         <div className="flex items-center justify-between">
                           <span className="text-2xl font-semibold leading-none text-white/60">To win</span>
-                          <span className="text-4xl font-semibold leading-none text-[#5dd978] flex items-baseline gap-[2px]">
+                          <span className="text-4xl font-normal leading-none text-[#5dd978] flex items-baseline gap-[2px] font-mono">
                             <span aria-hidden>$</span>
                             <NumberFlow
                               value={combinedToWinDollars}
@@ -1947,7 +1934,7 @@ export default function LeverageSelector() {
                       <div className="h-px w-full bg-white/10" />
                       <div className="flex items-center justify-between">
                         <span className="text-2xl font-semibold leading-none text-white/60">To win</span>
-                        <span className="text-4xl font-semibold leading-none text-[#5dd978] flex items-baseline gap-[2px]">
+                        <span className="text-4xl font-normal leading-none text-[#5dd978] flex items-baseline gap-[2px] font-mono">
                           <span aria-hidden>$</span>
                           <NumberFlow
                             value={combinedToWinDollars}

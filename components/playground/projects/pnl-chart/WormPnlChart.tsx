@@ -461,7 +461,7 @@ export default function WormPnlChart({
       <div className="flex items-start justify-between">
         <div className="font-mono">
           <p className="text-sm uppercase tracking-wide text-muted-foreground">{headerLabel}</p>
-          <p className={`mt-1 text-[40px] leading-[1.1] tabular-nums ${headerValueClassName}`}>
+          <p className={`mt-1 text-[40px] leading-[1.1] tabular-nums font-mono ${headerValueClassName}`}>
             <span>{headerValueParts.sign}$</span>
             <NumberFlow
               value={headerValueParts.abs}
@@ -547,7 +547,7 @@ export default function WormPnlChart({
       <div className="grid grid-cols-3 gap-4 font-mono">
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground">In positions</p>
-          <p className="mt-1 text-[24px] leading-[1.1] text-foreground tabular-nums">
+          <p className="mt-1 text-[24px] leading-[1.1] text-foreground tabular-nums font-mono">
             <span>$</span>
             <NumberFlow
               value={stats.inPositions}
@@ -560,7 +560,7 @@ export default function WormPnlChart({
         </div>
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Biggest win</p>
-          <p className="mt-1 text-[24px] leading-[1.1] text-foreground tabular-nums">
+          <p className="mt-1 text-[24px] leading-[1.1] text-foreground tabular-nums font-mono">
             <span>$</span>
             <NumberFlow
               value={biggestWinParts.abs}
@@ -573,7 +573,7 @@ export default function WormPnlChart({
         </div>
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Predictions</p>
-          <p className="mt-1 text-[24px] leading-[1.1] text-foreground tabular-nums">
+          <p className="mt-1 text-[24px] leading-[1.1] text-foreground tabular-nums font-mono">
             <NumberFlow
               value={stats.predictionsCount}
               trend={0}

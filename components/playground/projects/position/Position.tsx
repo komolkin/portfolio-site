@@ -139,7 +139,7 @@ export default function Position() {
 
         {/* Left stack: fill % + delta from entry */}
         <div className="pointer-events-none absolute left-3 top-1 z-[2] flex flex-col gap-0.5">
-          <div className="flex items-baseline gap-0 text-xl font-semibold leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+          <div className="flex items-baseline gap-0 text-xl font-normal leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)] font-mono">
             <NumberFlow
               value={fillPercent}
               trend={0}
@@ -156,7 +156,7 @@ export default function Position() {
 
         {/* Right stack: initial + delta (top) and signed delta (bottom) */}
         <div className="pointer-events-none absolute right-3 top-1 z-[2] flex flex-col items-end gap-0.5 text-right">
-          <p className="text-xl font-semibold leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+          <p className="text-xl font-normal leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)] font-mono">
             <span className="inline-flex items-baseline">
               <span className="tabular-nums">{topPrefix}</span>
               <NumberFlow

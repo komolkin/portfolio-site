@@ -12,13 +12,10 @@ const GrainGradient = dynamic(
   { ssr: false },
 );
 
-/** Team logos pulled from the linked Figma node. */
-const IMG_PHOENIX_SUNS =
-  "https://www.figma.com/api/mcp/asset/2c481a3b-907e-49b4-9bea-8cc29409e0da";
-const IMG_BOSTON_CELTICS =
-  "https://www.figma.com/api/mcp/asset/0adb7443-14cd-4147-b0a4-519ecc55fac6";
-const IMG_CLOSE_ICON =
-  "https://www.figma.com/api/mcp/asset/5bbac23d-2996-4556-87da-fb5a38467b7d";
+/** Team logos stored locally for stable browser caching across refreshes. */
+const IMG_PHOENIX_SUNS = "/playground/binary-market/phoenix-suns.png";
+const IMG_BOSTON_CELTICS = "/playground/binary-market/boston-celtics.png";
+const IMG_CLOSE_ICON = "/playground/binary-market/close-icon.svg";
 
 const LEVERAGE_STEPS = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5] as const;
 
@@ -760,7 +757,7 @@ export default function BinaryMarket() {
               >
                 Leverage
               </span>
-              <span className="text-4xl font-semibold leading-none text-white">
+              <span className="text-4xl font-normal leading-none text-white font-mono">
                 <NumberFlow
                   value={leverage}
                   suffix="×"
@@ -847,7 +844,7 @@ export default function BinaryMarket() {
                   Amount
                 </span>
                 <label
-                  className={`relative inline-flex items-baseline gap-0.5 text-4xl font-semibold leading-none ${
+                  className={`relative inline-flex items-baseline gap-0.5 text-4xl font-normal leading-none font-mono ${
                     amount > 0 ? "text-white" : "text-white/40"
                   }`}
                   style={{ fontVariantNumeric: "tabular-nums" }}
@@ -901,7 +898,7 @@ export default function BinaryMarket() {
                       <div className="h-px w-full bg-white/10" />
                       <div className="flex items-center justify-between">
                         <span className="text-2xl font-semibold leading-none text-white/60">To win</span>
-                        <span className="text-4xl font-semibold leading-none text-[#5dd978] flex items-baseline gap-[2px]">
+                        <span className="text-4xl font-normal leading-none text-[#5dd978] flex items-baseline gap-[2px] font-mono">
                           <span aria-hidden>$</span>
                           <NumberFlow
                             value={combinedToWinDollars}
@@ -940,7 +937,7 @@ export default function BinaryMarket() {
                   Shares
                 </span>
                 <label
-                  className={`relative inline-flex items-baseline text-4xl font-semibold leading-none ${
+                  className={`relative inline-flex items-baseline text-4xl font-normal leading-none font-mono ${
                     shares > 0 ? "text-white" : "text-white/40"
                   }`}
                   style={{ fontVariantNumeric: "tabular-nums" }}
@@ -997,7 +994,7 @@ export default function BinaryMarket() {
             </label>
             <div className="flex w-full min-w-0 items-center justify-between gap-2">
               <div
-                className={`relative flex min-w-0 flex-1 items-baseline text-4xl font-semibold leading-none tabular-nums ${
+                className={`relative flex min-w-0 flex-1 items-baseline text-4xl font-normal leading-none tabular-nums font-mono ${
                   limitPriceCents > 0 ? "text-white" : "text-white/40"
                 }`}
               >
@@ -1059,7 +1056,7 @@ export default function BinaryMarket() {
             </label>
             <div className="flex w-full min-w-0 items-center justify-between gap-2">
               <div
-                className={`relative flex min-w-0 flex-1 items-baseline text-4xl font-semibold leading-none tabular-nums ${
+                className={`relative flex min-w-0 flex-1 items-baseline text-4xl font-normal leading-none tabular-nums font-mono ${
                   shares > 0 ? "text-white" : "text-white/40"
                 }`}
               >
@@ -1302,7 +1299,7 @@ export default function BinaryMarket() {
                         <div className="h-px w-full bg-white/10" />
                         <div className="flex items-center justify-between">
                           <span className="text-2xl font-semibold leading-none text-white/60">To win</span>
-                          <span className="text-4xl font-semibold leading-none text-[#5dd978] flex items-baseline gap-[2px]">
+                          <span className="text-4xl font-normal leading-none text-[#5dd978] flex items-baseline gap-[2px] font-mono">
                             <span aria-hidden>$</span>
                             <NumberFlow
                               value={combinedToWinDollars}
@@ -1395,7 +1392,7 @@ export default function BinaryMarket() {
                       <div className="h-px w-full bg-white/10" />
                       <div className="flex items-center justify-between">
                         <span className="text-2xl font-semibold leading-none text-white/60">To win</span>
-                        <span className="text-4xl font-semibold leading-none text-[#5dd978] flex items-baseline gap-[2px]">
+                        <span className="text-4xl font-normal leading-none text-[#5dd978] flex items-baseline gap-[2px] font-mono">
                           <span aria-hidden>$</span>
                           <NumberFlow
                             value={combinedToWinDollars}

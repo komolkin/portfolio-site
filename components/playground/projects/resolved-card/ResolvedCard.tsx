@@ -220,7 +220,7 @@ export default function ResolvedCard() {
                 </div>
                 <div className="flex w-full items-center justify-between">
                   <p className="text-sm text-white/60">Won</p>
-                  <p className="text-[30px] font-semibold leading-[1.25] text-white">
+                  <p className="text-[30px] font-normal leading-[1.25] text-white font-mono">
                     $1,534.00
                   </p>
                 </div>
