@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import NumberFlow from "@number-flow/react";
 import Image from "next/image";
@@ -823,19 +823,23 @@ export default function LeverageSelector() {
   };
 
   const openTpSlScreen = () => {
-    setPendingTakeProfitValue(takeProfitValue);
-    setPendingTakeProfitUnit(takeProfitUnit);
-    setPendingStopLossValue(stopLossValue);
-    setPendingStopLossUnit(stopLossUnit);
-    setScreen("tp-sl");
+    startTransition(() => {
+      setPendingTakeProfitValue(takeProfitValue);
+      setPendingTakeProfitUnit(takeProfitUnit);
+      setPendingStopLossValue(stopLossValue);
+      setPendingStopLossUnit(stopLossUnit);
+      setScreen("tp-sl");
+    });
   };
 
   const commitTpSl = () => {
-    setTakeProfitValue(pendingTakeProfitValue);
-    setTakeProfitUnit(pendingTakeProfitUnit);
-    setStopLossValue(pendingStopLossValue);
-    setStopLossUnit(pendingStopLossUnit);
-    setScreen("order");
+    startTransition(() => {
+      setTakeProfitValue(pendingTakeProfitValue);
+      setTakeProfitUnit(pendingTakeProfitUnit);
+      setStopLossValue(pendingStopLossValue);
+      setStopLossUnit(pendingStopLossUnit);
+      setScreen("order");
+    });
   };
 
   const canPlaceOrder =
@@ -1439,7 +1443,7 @@ export default function LeverageSelector() {
             type="button"
             onClick={() => {
               if (!canPlaceOrder) return;
-              setScreen("review");
+              startTransition(() => setScreen("review"));
             }}
             className={`flex h-12 w-full items-center justify-center overflow-hidden rounded-full ${
               canPlaceOrder
@@ -1765,7 +1769,7 @@ export default function LeverageSelector() {
                     <div className="flex w-full gap-3">
                       <button
                         type="button"
-                        onClick={() => setScreen("order")}
+                        onClick={() => startTransition(() => setScreen("order"))}
                         className="h-12 flex-1 rounded-full border-2 border-white/10 text-base font-semibold leading-[1.25] text-white transition-[transform,border-color] hover:border-white/20 active:scale-[0.98]"
                       >
                         Cancel
@@ -1871,14 +1875,14 @@ export default function LeverageSelector() {
                     <div className="flex w-full gap-3">
                       <button
                         type="button"
-                        onClick={() => setScreen("order")}
+                        onClick={() => startTransition(() => setScreen("order"))}
                         className="h-12 flex-1 rounded-full border-2 border-white/10 text-base font-semibold leading-[1.25] text-white transition-[transform,border-color] hover:border-white/20 active:scale-[0.98]"
                       >
                         Back
                       </button>
                       <button
                         type="button"
-                        onClick={() => setScreen("placing")}
+                        onClick={() => startTransition(() => setScreen("placing"))}
                         className="h-12 flex-1 rounded-full bg-white text-base font-semibold leading-[1.25] text-[#141414] transition-[transform] active:scale-[0.98]"
                       >
                         Confirm
@@ -1898,7 +1902,7 @@ export default function LeverageSelector() {
                   >
                     <button
                       type="button"
-                      onClick={() => setScreen("closing")}
+                      onClick={() => startTransition(() => setScreen("closing"))}
                       className="absolute right-0 top-0 z-10 flex size-8 items-center justify-center rounded-full bg-white/[0.06] transition-[transform,background-color] hover:bg-white/[0.1] active:scale-[0.98]"
                       aria-label="Close success screen"
                     >
