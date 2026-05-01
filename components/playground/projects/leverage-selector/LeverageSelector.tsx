@@ -1464,29 +1464,31 @@ export default function LeverageSelector() {
               transition={{ duration: 0.28, ease: FLOW_EASE }}
               className="absolute inset-0 z-30 flex h-full flex-col gap-3 rounded-3xl bg-[#1d1d1d] p-4 overflow-hidden"
             >
-              <motion.div
-                className="pointer-events-none absolute inset-0 z-0"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: screen === "success" || screen === "closing" ? 0.45 : 0 }}
-                transition={{ duration: 1.2, ease: "easeInOut" }}
-              >
-                <GrainGradient
-                  width={1280}
-                  height={720}
-                  colors={[
-                    successScreenBackgroundColor,
-                    "#1d1d1d",
-                    successScreenBackgroundColor,
-                    "#1d1d1d",
-                  ]}
-                  colorBack="#1d1d1d"
-                  softness={0.55}
-                  intensity={0.35}
-                  noise={0.08}
-                  shape="corners"
-                  speed={0.12}
-                />
-              </motion.div>
+              {(screen === "success" || screen === "closing") && (
+                <motion.div
+                  className="pointer-events-none absolute inset-0 z-0"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.45 }}
+                  transition={{ duration: 1.2, ease: "easeInOut" }}
+                >
+                  <GrainGradient
+                    width={1280}
+                    height={720}
+                    colors={[
+                      successScreenBackgroundColor,
+                      "#1d1d1d",
+                      successScreenBackgroundColor,
+                      "#1d1d1d",
+                    ]}
+                    colorBack="#1d1d1d"
+                    softness={0.55}
+                    intensity={0.35}
+                    noise={0.08}
+                    shape="corners"
+                    speed={0.12}
+                  />
+                </motion.div>
+              )}
 
               <AnimatePresence initial={false} mode="wait">
                 {(screen === "placing" || screen === "placed") && (
@@ -1562,10 +1564,33 @@ export default function LeverageSelector() {
                     transition={{ duration: 0.24, ease: FLOW_EASE }}
                     className="absolute inset-0 z-10 flex h-full flex-col gap-3 p-4"
                   >
-                    <div className="flex flex-1 flex-col gap-4">
-                      <p className="text-base font-semibold leading-[1.25] text-white">
-                        Take Profit / Stop Loss
-                      </p>
+                    <div className="flex flex-1 flex-col gap-3">
+                      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-3 py-4">
+                        <div className="relative size-12 overflow-hidden rounded-lg">
+                          <img
+                            src={selectedPerson.image}
+                            alt={selectedPerson.name}
+                            className="absolute inset-0 size-full object-cover"
+                          />
+                        </div>
+                        <p className="max-w-[230px] truncate text-center text-sm leading-[1.25] text-white/60">
+                          {marketQuestion}
+                        </p>
+                        <h3 className="mb-1 text-center text-3xl font-semibold leading-none text-white">
+                          {selectedPerson.name}
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="rounded-full px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white"
+                            style={{ backgroundColor: outcomeColor }}
+                          >
+                            {outcomeLabel} {outcomePercent}%
+                          </span>
+                          <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white">
+                            {formatLeverage(leverage)}
+                          </span>
+                        </div>
+                      </div>
 
                       {/* Take Profit */}
                       <div className="flex w-full flex-col gap-2 rounded-3xl bg-white/[0.04] p-4">
@@ -1825,6 +1850,12 @@ export default function LeverageSelector() {
                               <CircularProgressIcon className="size-3" />
                             </span>
                           </div>
+                          {hasTpSlValues && (
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-white/60">TP / SL</span>
+                              <span className="truncate text-right text-white">{tpSlSummary.replace("TP / SL: ", "")}</span>
+                            </div>
+                          )}
                           <div className="flex items-center justify-between">
                             <span className="text-white/60">Liquidation Price</span>
                             <span className="text-white">{liquidationPriceCents}¢</span>
