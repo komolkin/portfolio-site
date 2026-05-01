@@ -826,12 +826,20 @@ export default function LeverageSelector() {
   };
 
   const handleTakeProfitShortcut = (percent: number) => {
-    setPendingTakeProfitValue((prev) => Math.min(MAX_TP_SL_CENTS, prev + percent));
+    if (pendingTakeProfitUnit === "$") {
+      setPendingTakeProfitValue(Math.min(MAX_TP_SL_CENTS, outcomePercent + percent));
+    } else {
+      setPendingTakeProfitValue(Math.min(MAX_TP_SL_CENTS, percent));
+    }
     takeProfitInputRef.current?.focus({ preventScroll: true });
   };
 
   const handleStopLossShortcut = (percent: number) => {
-    setPendingStopLossValue((prev) => Math.max(0, prev - percent));
+    if (pendingStopLossUnit === "$") {
+      setPendingStopLossValue(Math.max(0, outcomePercent - percent));
+    } else {
+      setPendingStopLossValue(Math.min(MAX_TP_SL_CENTS, percent));
+    }
     stopLossInputRef.current?.focus({ preventScroll: true });
   };
 

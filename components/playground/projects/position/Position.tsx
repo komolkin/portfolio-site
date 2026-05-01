@@ -109,14 +109,11 @@ export default function Position() {
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <p className="truncate text-base font-semibold leading-tight text-white [font-feature-settings:'lnum'_1,'tnum'_1]">
-            Will the Phoenix Suns beat the Golden State Warriors
+            Phoenix Suns
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-[#2d107f] px-2 py-0.5 text-xs font-semibold leading-tight text-white">
-              PHX
-            </span>
-            <span className="rounded-full bg-[rgba(0,157,89,0.2)] px-2 py-0.5 text-xs font-semibold leading-tight text-[#5dd978]">
-              YES
+              PHX 62¢
             </span>
             <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold leading-tight text-white">
               3x
