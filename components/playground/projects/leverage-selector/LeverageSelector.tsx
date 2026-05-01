@@ -41,6 +41,9 @@ const AMOUNT_PRESETS = [
   { label: "+100", increment: 100 },
   { label: "Max", increment: null },
 ] as const;
+const TAKE_PROFIT_PRESETS = [10, 20, 50, 80] as const;
+const STOP_LOSS_PRESETS = [10, 20, 50] as const;
+const MAX_TP_SL_CENTS = 100;
 const MAX_AMOUNT = 10_000;
 // Used as the fallback "entry price" for PNL when the order is a market order.
 // This is only for the playground UI (so PNL can update live while typing).
@@ -811,7 +814,7 @@ export default function LeverageSelector() {
     if (digitsOnly.length === 0) { setPendingTakeProfitValue(0); return; }
     const parsed = Number.parseInt(digitsOnly, 10);
     if (Number.isNaN(parsed)) { setPendingTakeProfitValue(0); return; }
-    setPendingTakeProfitValue(Math.min(MAX_LIMIT_CENTS, parsed));
+    setPendingTakeProfitValue(Math.min(MAX_TP_SL_CENTS, parsed));
   };
 
   const handlePendingStopLossInputChange = (value: string) => {
@@ -819,27 +822,33 @@ export default function LeverageSelector() {
     if (digitsOnly.length === 0) { setPendingStopLossValue(0); return; }
     const parsed = Number.parseInt(digitsOnly, 10);
     if (Number.isNaN(parsed)) { setPendingStopLossValue(0); return; }
-    setPendingStopLossValue(Math.min(MAX_LIMIT_CENTS, parsed));
+    setPendingStopLossValue(Math.min(MAX_TP_SL_CENTS, parsed));
+  };
+
+  const handleTakeProfitShortcut = (percent: number) => {
+    setPendingTakeProfitValue((prev) => Math.min(MAX_TP_SL_CENTS, prev + percent));
+    takeProfitInputRef.current?.focus({ preventScroll: true });
+  };
+
+  const handleStopLossShortcut = (percent: number) => {
+    setPendingStopLossValue((prev) => Math.max(0, prev - percent));
+    stopLossInputRef.current?.focus({ preventScroll: true });
   };
 
   const openTpSlScreen = () => {
-    startTransition(() => {
-      setPendingTakeProfitValue(takeProfitValue);
-      setPendingTakeProfitUnit(takeProfitUnit);
-      setPendingStopLossValue(stopLossValue);
-      setPendingStopLossUnit(stopLossUnit);
-      setScreen("tp-sl");
-    });
+    setPendingTakeProfitValue(takeProfitValue > 0 ? takeProfitValue : outcomePercent);
+    setPendingTakeProfitUnit(takeProfitUnit);
+    setPendingStopLossValue(stopLossValue > 0 ? stopLossValue : outcomePercent);
+    setPendingStopLossUnit(stopLossUnit);
+    setScreen("tp-sl");
   };
 
   const commitTpSl = () => {
-    startTransition(() => {
-      setTakeProfitValue(pendingTakeProfitValue);
-      setTakeProfitUnit(pendingTakeProfitUnit);
-      setStopLossValue(pendingStopLossValue);
-      setStopLossUnit(pendingStopLossUnit);
-      setScreen("order");
-    });
+    setTakeProfitValue(pendingTakeProfitValue);
+    setTakeProfitUnit(pendingTakeProfitUnit);
+    setStopLossValue(pendingStopLossValue);
+    setStopLossUnit(pendingStopLossUnit);
+    setScreen("order");
   };
 
   const canPlaceOrder =
@@ -1057,7 +1066,7 @@ export default function LeverageSelector() {
               <span className="text-white/60">Yes</span>{" "}
               <span className="text-white">
                 <NumberFlow value={selectedPerson.yesPercent} trend={0} />
-                %
+                ¢
               </span>
             </button>
             <button
@@ -1069,7 +1078,7 @@ export default function LeverageSelector() {
               <span className="text-white/60">No</span>{" "}
               <span className="text-white">
                 <NumberFlow value={100 - selectedPerson.yesPercent} trend={0} />
-                %
+                ¢
               </span>
             </button>
           </div>
@@ -1171,7 +1180,7 @@ export default function LeverageSelector() {
                     <span aria-hidden>$</span>
                     <NumberFlow
                       value={amount}
-                      format={{ useGrouping: false }}
+                      format={{ useGrouping: true }}
                       trend={0}
                       className="leading-none"
                       // `number-flow` adds vertical padding based on `--number-flow-mask-height` (default 0.25em),
@@ -1413,15 +1422,22 @@ export default function LeverageSelector() {
             <button
               type="button"
               onClick={openTpSlScreen}
-              className="flex w-full items-center justify-between rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4 text-left transition-colors hover:bg-[linear-gradient(90deg,#2f2f2f_0%,#2b2b2b_100%)]"
+              className="flex w-full items-center justify-between rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4 text-left transition-[transform,background-image] duration-200 ease-out hover:bg-[linear-gradient(90deg,#2f2f2f_0%,#2b2b2b_100%)] active:scale-[0.98]"
             >
               <span
                 className="text-base leading-[1.25] text-white/60"
                 style={{ fontVariantNumeric: "tabular-nums" }}
               >
-                {hasTpSlValues ? tpSlSummary : "Take Profit / Stop Loss"}
+                Take Profit / Stop Loss
               </span>
-              <ChevronRight className="size-4 shrink-0 text-white/40" />
+              <span className="flex items-center gap-2">
+                {hasTpSlValues && (
+                  <span className="text-base leading-[1.25] text-white" style={{ fontVariantNumeric: "tabular-nums" }}>
+                    {tpSlSummary.replace("TP / SL: ", "")}
+                  </span>
+                )}
+                <ChevronRight className="size-4 shrink-0 text-white/40" />
+              </span>
             </button>
           )}
 
@@ -1584,7 +1600,7 @@ export default function LeverageSelector() {
                             className="rounded-full px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white"
                             style={{ backgroundColor: outcomeColor }}
                           >
-                            {outcomeLabel} {outcomePercent}%
+                            {outcomeLabel} {outcomePercent}¢
                           </span>
                           <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white">
                             {formatLeverage(leverage)}
@@ -1682,6 +1698,18 @@ export default function LeverageSelector() {
                             </div>
                           </div>
                         </div>
+                        <div className="flex w-full gap-1.5">
+                          {TAKE_PROFIT_PRESETS.map((percent) => (
+                            <button
+                              key={percent}
+                              type="button"
+                              onClick={() => handleTakeProfitShortcut(percent)}
+                              className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full border-[1px] border-white/20 px-2 text-xs leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/30"
+                            >
+                              +{percent}%
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
                       {/* Stop Loss */}
@@ -1775,6 +1803,18 @@ export default function LeverageSelector() {
                             </div>
                           </div>
                         </div>
+                        <div className="flex w-full gap-1.5">
+                          {STOP_LOSS_PRESETS.map((percent) => (
+                            <button
+                              key={percent}
+                              type="button"
+                              onClick={() => handleStopLossShortcut(percent)}
+                              className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full border-[1px] border-white/20 px-2 text-xs leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/30"
+                            >
+                              -{percent}%
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
@@ -1826,7 +1866,7 @@ export default function LeverageSelector() {
                             className="rounded-full px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white"
                             style={{ backgroundColor: outcomeColor }}
                           >
-                            {outcomeLabel} {outcomePercent}%
+                            {outcomeLabel} {outcomePercent}¢
                           </span>
                           <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white">
                             {formatLeverage(leverage)}
@@ -1945,7 +1985,7 @@ export default function LeverageSelector() {
                           className="rounded-full px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white"
                           style={{ backgroundColor: outcomeColor }}
                         >
-                          {outcomeLabel} {outcomePercent}%
+                          {outcomeLabel} {outcomePercent}¢
                         </span>
                         <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white">
                           {formatLeverage(leverage)}
