@@ -118,6 +118,9 @@ export default function Position() {
             <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold leading-tight text-white">
               3x
             </span>
+            <span className="whitespace-nowrap text-sm leading-[1.25] text-white">
+              $100 <span aria-hidden>→</span> <span className="text-[#5dd978]">$1,500</span>
+            </span>
           </div>
         </div>
       </div>
