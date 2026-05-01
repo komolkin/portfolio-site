@@ -119,7 +119,7 @@ export default function Position() {
               3x
             </span>
             <span className="whitespace-nowrap text-sm leading-[1.25] text-white">
-              $100 <span aria-hidden>→</span> <span className="text-[#5dd978]">$1,500</span>
+              $100 <span aria-hidden>→</span> <span className="text-[#5dd978]">$286</span>
             </span>
           </div>
         </div>

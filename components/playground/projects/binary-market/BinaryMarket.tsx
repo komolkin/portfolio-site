@@ -26,8 +26,8 @@ const AMOUNT_PRESETS = [
   { label: "+100", increment: 100 },
   { label: "Max", increment: null },
 ] as const;
-const TAKE_PROFIT_PRESETS = [10, 20, 50, 80] as const;
-const STOP_LOSS_PRESETS = [10, 20, 50] as const;
+const TAKE_PROFIT_PRESETS = [10, 20, 50] as const;
+const STOP_LOSS_PRESETS = [5, 10, 20] as const;
 const MAX_TP_SL_CENTS = 100;
 const MAX_AMOUNT = 10_000;
 // Used as the fallback "entry price" for PNL when the order is a market order.
@@ -69,7 +69,7 @@ if (typeof window !== "undefined") {
 }
 
 const FLOW_ICON_SRCS = [IMG_CLOSE_ICON] as const;
-type BinaryMarketScreen = "order" | "review" | "placing" | "placed" | "success" | "tp-sl";
+type BinaryMarketScreen = "order" | "placing" | "placed" | "success" | "tp-sl";
 const FLOW_EASE = [0.22, 1, 0.36, 1] as const;
 const PLACING_APPEAR_DELAY_MS = 520;
 const PLACING_FADE_IN_DURATION_S = 1.4;
@@ -80,8 +80,6 @@ const PLACED_STEP_DURATION_MS = 2600;
 const PLACED_CHECKMARK_DRAW_DURATION_S = 0.5;
 const PLACED_ENTER_DURATION_S = 0.42;
 const PLACED_ENTER_DELAY_S = 0.08;
-const AVG_PRICE_TICK_INTERVAL_MS = 10_000;
-
 function SwapVertical({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 16 16" fill="none" className={className} aria-hidden>
@@ -284,38 +282,6 @@ function PlacingLoaderIcon({ className }: { className?: string }) {
   );
 }
 
-function CircularProgressIcon({ className }: { className?: string }) {
-  const radius = 5.5;
-  const circumference = 2 * Math.PI * radius;
-  const segmentLength = circumference * 0.28;
-
-  return (
-    <svg viewBox="0 0 16 16" className={className || "size-3"} aria-hidden>
-      <circle cx="8" cy="8" r="5.5" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
-      <circle
-        cx="8"
-        cy="8"
-        r="5.5"
-        fill="none"
-        stroke="rgba(255,255,255,0.9)"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        strokeDashoffset={circumference}
-        transform="rotate(-90 8 8)"
-      >
-        <animate
-          attributeName="stroke-dashoffset"
-          from={String(circumference)}
-          to="0"
-          dur={`${AVG_PRICE_TICK_INTERVAL_MS / 1000}s`}
-          repeatCount="indefinite"
-        />
-      </circle>
-    </svg>
-  );
-}
-
 export default function BinaryMarket() {
   const [selectedPerson, setSelectedPerson] = useState<(typeof PERSON_OPTIONS)[number]>(PERSON_OPTIONS[0]);
   const [side, setSide] = useState<"buy" | "sell">("buy");
@@ -334,7 +300,6 @@ export default function BinaryMarket() {
   const [pendingTakeProfitUnit, setPendingTakeProfitUnit] = useState<"$" | "%">("$");
   const [pendingStopLossValue, setPendingStopLossValue] = useState(0);
   const [pendingStopLossUnit, setPendingStopLossUnit] = useState<"$" | "%">("$");
-  const [reviewAvgPriceCents, setReviewAvgPriceCents] = useState<number>(PHOENIX_SUNS_OPTION.yesPercent);
   const [screen, setScreen] = useState<BinaryMarketScreen | "closing">("order");
   const trackRef = useRef<HTMLDivElement | null>(null);
   const tabsRef = useRef<HTMLDivElement | null>(null);
@@ -349,17 +314,29 @@ export default function BinaryMarket() {
   const prefersReducedMotion = useReducedMotion();
   const contentRef = useRef<HTMLDivElement>(null);
   const [cardHeight, setCardHeight] = useState<number | undefined>();
-  const hasInitializedHeight = useRef(false);
 
   useLayoutEffect(() => {
-    if (!hasInitializedHeight.current) {
-      hasInitializedHeight.current = true;
-      return;
-    }
     const el = contentRef.current;
     if (!el) return;
-    setCardHeight(el.offsetHeight);
-  }, [orderType, side]);
+
+    const updateCardHeight = () => {
+      setCardHeight(el.offsetHeight);
+    };
+
+    updateCardHeight();
+
+    if (typeof ResizeObserver === "undefined") return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateCardHeight();
+    });
+
+    resizeObserver.observe(el);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   const leverage = LEVERAGE_STEPS[leverageIdx];
   const dotCount = LEVERAGE_STEPS.length;
@@ -582,6 +559,18 @@ export default function BinaryMarket() {
     setAmount(Math.min(MAX_AMOUNT, parsed));
   };
 
+  const handleAmountInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setAmount((prev) => Math.min(MAX_AMOUNT, prev + 1));
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setAmount((prev) => Math.max(0, prev - 1));
+    }
+  };
+
   const handleLimitPriceInputChange = (value: string) => {
     const digitsOnly = value.replace(/\D/g, "");
     if (digitsOnly.length === 0) {
@@ -638,37 +627,55 @@ export default function BinaryMarket() {
     setPendingStopLossValue(Math.min(MAX_TP_SL_CENTS, parsed));
   };
 
-  const handleTakeProfitShortcut = (percent: number) => {
-    if (pendingTakeProfitUnit === "$") {
-      setPendingTakeProfitValue(Math.min(MAX_TP_SL_CENTS, avgPriceCents + percent));
-    } else {
-      setPendingTakeProfitValue(Math.min(MAX_TP_SL_CENTS, percent));
+  const handleTakeProfitInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setPendingTakeProfitValue((prev) => Math.min(MAX_TP_SL_CENTS, prev + 1));
+      return;
     }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setPendingTakeProfitValue((prev) => Math.max(0, prev - 1));
+    }
+  };
+
+  const handleStopLossInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setPendingStopLossValue((prev) => Math.min(MAX_TP_SL_CENTS, prev + 1));
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setPendingStopLossValue((prev) => Math.max(0, prev - 1));
+    }
+  };
+
+  const handleTakeProfitShortcut = (percent: number) => {
+    const next = Math.round(avgPriceCents * (1 + percent / 100));
+    setPendingTakeProfitValue(Math.min(MAX_TP_SL_CENTS, next));
     takeProfitInputRef.current?.focus({ preventScroll: true });
   };
 
   const handleStopLossShortcut = (percent: number) => {
-    if (pendingStopLossUnit === "$") {
-      setPendingStopLossValue(Math.max(0, avgPriceCents - percent));
-    } else {
-      setPendingStopLossValue(Math.min(MAX_TP_SL_CENTS, percent));
-    }
+    const next = Math.round(avgPriceCents * (1 - percent / 100));
+    setPendingStopLossValue(Math.max(0, next));
     stopLossInputRef.current?.focus({ preventScroll: true });
   };
 
   const openTpSlScreen = () => {
-    setPendingTakeProfitValue(takeProfitValue > 0 ? takeProfitValue : avgPriceCents);
-    setPendingTakeProfitUnit(takeProfitUnit);
-    setPendingStopLossValue(stopLossValue > 0 ? stopLossValue : avgPriceCents);
-    setPendingStopLossUnit(stopLossUnit);
+    setPendingTakeProfitValue(takeProfitValue);
+    setPendingTakeProfitUnit("$");
+    setPendingStopLossValue(stopLossValue);
+    setPendingStopLossUnit("$");
     setScreen("tp-sl");
   };
 
   const commitTpSl = () => {
     setTakeProfitValue(pendingTakeProfitValue);
-    setTakeProfitUnit(pendingTakeProfitUnit);
+    setTakeProfitUnit("$");
     setStopLossValue(pendingStopLossValue);
-    setStopLossUnit(pendingStopLossUnit);
+    setStopLossUnit("$");
     setScreen("order");
   };
 
@@ -694,55 +701,34 @@ export default function BinaryMarket() {
         ? amount
         : (shares * pnlEntryPriceCents) / 100
       : (shares * pnlEntryPriceCents) / 100;
-  const estimatedToWinDollars = totalDollars * leverage * (avgPriceCents / 100);
-  const combinedToWinDollars = totalDollars + estimatedToWinDollars;
+  const showOrderSummary = orderType === "market" && side === "buy" && amount > 0;
   const liquidationPriceCents = Math.max(1, Math.round(avgPriceCents / Math.max(1, leverage)));
+  const estimatedToWinDollars = totalDollars * leverage * (avgPriceCents / 100);
+  const takeProfitPercent = Math.max(0, (takeProfitValue - avgPriceCents) / Math.max(1, avgPriceCents));
+  const takeProfitPnLDollars = takeProfitValue > 0 ? totalDollars * leverage * takeProfitPercent : 0;
+  const combinedToWinDollars =
+    totalDollars + (takeProfitValue > 0 ? takeProfitPnLDollars : estimatedToWinDollars);
   const positionNotionalDollars =
     orderType === "limit" ? (shares * pnlEntryPriceCents) / 100 : amount;
-  const pendingTakeProfitPercent =
-    pendingTakeProfitUnit === "$"
-      ? pendingTakeProfitValue / Math.max(1, pnlEntryPriceCents)
-      : pendingTakeProfitValue / 100;
+  const pendingTakeProfitPercent = Math.max(0, (pendingTakeProfitValue - avgPriceCents) / Math.max(1, avgPriceCents));
   const pendingTakeProfitPnLDollars =
     pendingTakeProfitValue > 0 ? positionNotionalDollars * leverage * pendingTakeProfitPercent : 0;
-  const pendingStopLossPercent =
-    pendingStopLossUnit === "$"
-      ? pendingStopLossValue / Math.max(1, pnlEntryPriceCents)
-      : pendingStopLossValue / 100;
+  const pendingStopLossPercent = Math.max(0, (avgPriceCents - pendingStopLossValue) / Math.max(1, avgPriceCents));
   const pendingStopLossPnLDollars =
     pendingStopLossValue > 0 ? -positionNotionalDollars * leverage * pendingStopLossPercent : 0;
+  const tpSlHeaderToWinDollars =
+    totalDollars + (pendingTakeProfitValue > 0 ? pendingTakeProfitPnLDollars : estimatedToWinDollars);
+  const showTpSlHeaderSummary = totalDollars > 0 && tpSlHeaderToWinDollars > 0;
   const formatTpSlSummaryValue = (value: number, unit: "$" | "%") =>
     value > 0 ? `${value}${unit === "$" ? "¢" : "%"}` : "–";
   const hasTpSlValues = takeProfitValue > 0 || stopLossValue > 0;
   const tpSlSummary = `TP / SL: ${formatTpSlSummaryValue(takeProfitValue, takeProfitUnit)} / ${formatTpSlSummaryValue(stopLossValue, stopLossUnit)}`;
-
-  useEffect(() => {
-    if (screen !== "review") {
-      setReviewAvgPriceCents(avgPriceCents);
-      return;
-    }
-
-    const getRandomDelta = () => {
-      // Random movement in a tight range to feel alive but plausible.
-      const delta = Math.floor(Math.random() * 7) - 3; // -3..3
-      return delta === 0 ? 1 : delta;
-    };
-
-    const intervalId = window.setInterval(() => {
-      setReviewAvgPriceCents((prev) => Math.max(1, Math.min(99, prev + getRandomDelta())));
-    }, AVG_PRICE_TICK_INTERVAL_MS);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [screen, avgPriceCents]);
 
   return (
     <div className="relative w-[380px] max-w-[calc(100vw-2rem)] p-0">
       <motion.div
         animate={{ height: cardHeight ?? "auto" }}
         transition={{ duration: prefersReducedMotion ? 0 : 0.35, ease: FLOW_EASE }}
-        onAnimationComplete={() => setCardHeight(undefined)}
         className="relative overflow-hidden rounded-3xl"
         style={{ background: "#1d1d1d" }}
       >
@@ -986,6 +972,7 @@ export default function BinaryMarket() {
                     value={amount === 0 ? "" : String(amount)}
                     ref={amountInputRef}
                     onChange={(event) => handleAmountInputChange(event.target.value)}
+                    onKeyDown={handleAmountInputKeyDown}
                     className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-right text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                     aria-label="Amount input"
                   />
@@ -1004,40 +991,6 @@ export default function BinaryMarket() {
                 ))}
               </div>
 
-              <AnimatePresence initial={false}>
-                {amount > 0 && (
-                  <motion.div
-                    className="w-full overflow-hidden"
-                    initial={{ height: 0, opacity: 0, y: 8 }}
-                    animate={{ height: "auto", opacity: 1, y: 0 }}
-                    exit={{ height: 0, opacity: 0, y: 6 }}
-                    transition={{ duration: 0.28, ease: FLOW_EASE, delay: 0.08 }}
-                  >
-                    <div className="flex w-full flex-col gap-4">
-                      <div className="h-px w-full bg-white/10" />
-                      <div className="flex items-center justify-between">
-                        <span className="text-2xl font-semibold leading-none text-white/60">To win</span>
-                        <span className="text-4xl font-normal leading-none text-[#5dd978] flex items-baseline gap-[2px] font-mono">
-                          <span aria-hidden>$</span>
-                          <NumberFlow
-                            value={combinedToWinDollars}
-                            trend={0}
-                            format={{
-                              useGrouping: true,
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            }}
-                            className="leading-none"
-                            style={{
-                              ["--number-flow-mask-height" as any]: "0em",
-                            }}
-                          />
-                        </span>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </motion.div>
           ) : (
             <motion.div
@@ -1249,12 +1202,70 @@ export default function BinaryMarket() {
           </button>
         )}
 
+        <AnimatePresence initial={false}>
+          {showOrderSummary && (
+            <motion.div
+              className="w-full overflow-hidden"
+              initial={{ height: 0, opacity: 0, y: 8 }}
+              animate={{ height: "auto", opacity: 1, y: 0 }}
+              exit={{ height: 0, opacity: 0, y: 6 }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.28, ease: FLOW_EASE }}
+            >
+              <div className="flex flex-col gap-3 rounded-3xl bg-white/[0.04] p-4">
+            <div className="flex flex-col gap-2 text-sm leading-[1.25]">
+              <div className="flex items-center justify-between">
+                <span className="text-white/60">Avg. Price</span>
+                <span className="text-white">{avgPriceCents}¢</span>
+              </div>
+              {leverage > 1 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-white/60">Liquidation Price</span>
+                  <span className="text-white inline-flex items-baseline">
+                    <NumberFlow
+                      value={liquidationPriceCents}
+                      trend={0}
+                      suffix="¢"
+                      format={{ useGrouping: false }}
+                      className="leading-none"
+                      style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                    />
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-white/60">Closing Fee</span>
+                <span className="text-white">5%</span>
+              </div>
+            </div>
+            <div className="h-px w-full bg-white/10" />
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-semibold leading-none text-white/60">To win</span>
+              <span className="text-4xl font-normal leading-none text-[#5dd978] flex items-baseline gap-[2px] font-mono">
+                <span aria-hidden>$</span>
+                <NumberFlow
+                  value={combinedToWinDollars}
+                  trend={0}
+                  format={{
+                    useGrouping: true,
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }}
+                  className="leading-none"
+                  style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                />
+              </span>
+            </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* CTA */}
         <button
           type="button"
           onClick={() => {
             if (!canPlaceOrder) return;
-            startTransition(() => setScreen("review"));
+            startTransition(() => setScreen("placing"));
           }}
           className={`flex h-12 w-full items-center justify-center overflow-hidden rounded-full ${
             canPlaceOrder
@@ -1268,7 +1279,7 @@ export default function BinaryMarket() {
             }`}
           >
             {canPlaceOrder
-              ? "Review"
+              ? "Buy"
               : orderType === "market"
                 ? side === "buy"
                   ? "Enter Amount"
@@ -1396,10 +1407,10 @@ export default function BinaryMarket() {
                         <p className="max-w-[230px] truncate text-center text-sm leading-[1.25] text-white/60">
                           {marketQuestion}
                         </p>
-                        <h3 className="mb-1 text-center text-3xl font-semibold leading-none text-white">
+                        <h3 className="mb-1 text-center text-[28px] font-semibold leading-none text-white">
                           {selectedPerson.name}
                         </h3>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 whitespace-nowrap">
                           <span
                             className="rounded-full px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white"
                             style={{ backgroundColor: selectedOptionColor }}
@@ -1409,6 +1420,22 @@ export default function BinaryMarket() {
                           <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white">
                             {formatLeverage(leverage)}
                           </span>
+                          {showTpSlHeaderSummary && (
+                            <span className="text-sm leading-[1.25] text-white">
+                              <span>{formatMoney(Math.round(totalDollars))}</span>{" "}
+                              <span aria-hidden>→</span>{" "}
+                              <span className="text-[#5dd978] inline-flex items-baseline gap-[1px]">
+                                <span aria-hidden>$</span>
+                                <NumberFlow
+                                  value={Math.round(tpSlHeaderToWinDollars)}
+                                  trend={0}
+                                  format={{ useGrouping: true, minimumFractionDigits: 0, maximumFractionDigits: 0 }}
+                                  className="leading-none"
+                                  style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                                />
+                              </span>
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -1427,7 +1454,7 @@ export default function BinaryMarket() {
                           >
                             <NumberFlow
                               value={pendingTakeProfitValue}
-                              suffix={pendingTakeProfitUnit === "$" ? "¢" : "%"}
+                              suffix="¢"
                               format={{ useGrouping: false }}
                               trend={0}
                               className="leading-none"
@@ -1440,51 +1467,43 @@ export default function BinaryMarket() {
                               pattern="[0-9]*"
                               value={pendingTakeProfitValue === 0 ? "" : String(pendingTakeProfitValue)}
                               onChange={(event) => handlePendingTakeProfitInputChange(event.target.value)}
+                              onKeyDown={handleTakeProfitInputKeyDown}
                               className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                               aria-label="Take profit value"
                             />
                           </div>
                           <div className="flex items-center gap-2">
                             {pendingTakeProfitValue > 0 && (
-                              <span className="rounded-full bg-white/[0.06] px-3 py-1.5 text-xs font-semibold leading-[1.25] text-[#5dd978]">
-                                +$
-                                <NumberFlow
-                                  value={pendingTakeProfitPnLDollars}
-                                  trend={0}
-                                  format={{ useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 }}
-                                  className="leading-none"
-                                  style={{ ["--number-flow-mask-height" as any]: "0em" }}
-                                />
-                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPendingTakeProfitValue(0);
+                                  takeProfitInputRef.current?.focus({ preventScroll: true });
+                                }}
+                                className="group flex h-8 items-center gap-[8px] rounded-full bg-white/[0.06] px-[12px] transition-colors hover:bg-white/[0.08] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                                aria-label="Clear take profit"
+                              >
+                                <span
+                                  aria-hidden
+                                  className="inline-flex size-4 items-center justify-center rounded-full bg-white/10 text-white/80 transition-opacity group-hover:opacity-90"
+                                >
+                                  <svg viewBox="0 0 16 16" className="size-3" fill="none">
+                                    <path d="M5 5L11 11M11 5L5 11" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+                                  </svg>
+                                </span>
+                                <span className="text-xs font-semibold leading-[1.25] text-white/60">Profit: </span>
+                                <span className="text-xs font-semibold leading-[1.25] text-[#5dd978] flex items-baseline gap-[2px]">
+                                  <span aria-hidden>$</span>
+                                  <NumberFlow
+                                    value={Math.round(pendingTakeProfitPnLDollars)}
+                                    trend={0}
+                                    format={{ useGrouping: true, minimumFractionDigits: 0, maximumFractionDigits: 0 }}
+                                    className="leading-none"
+                                    style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                                  />
+                                </span>
+                              </button>
                             )}
-                            <div className="relative flex h-8 shrink-0 items-center gap-1 rounded-full bg-white/[0.06] p-1">
-                              <div
-                                className={`pointer-events-none absolute bottom-1 top-1 w-[calc(50%-4px)] rounded-full bg-[#141414] transition-transform duration-200 ease-out ${
-                                  pendingTakeProfitUnit === "$" ? "translate-x-0" : "translate-x-full"
-                                }`}
-                                aria-hidden
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setPendingTakeProfitUnit("$")}
-                                className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
-                                  pendingTakeProfitUnit === "$" ? "text-white" : "text-white/80 hover:text-white"
-                                }`}
-                                aria-pressed={pendingTakeProfitUnit === "$"}
-                              >
-                                $
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setPendingTakeProfitUnit("%")}
-                                className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
-                                  pendingTakeProfitUnit === "%" ? "text-white" : "text-white/80 hover:text-white"
-                                }`}
-                                aria-pressed={pendingTakeProfitUnit === "%"}
-                              >
-                                %
-                              </button>
-                            </div>
                           </div>
                         </div>
                         <div className="flex w-full gap-1.5">
@@ -1516,7 +1535,7 @@ export default function BinaryMarket() {
                           >
                             <NumberFlow
                               value={pendingStopLossValue}
-                              suffix={pendingStopLossUnit === "$" ? "¢" : "%"}
+                              suffix="¢"
                               format={{ useGrouping: false }}
                               trend={0}
                               className="leading-none"
@@ -1529,51 +1548,44 @@ export default function BinaryMarket() {
                               pattern="[0-9]*"
                               value={pendingStopLossValue === 0 ? "" : String(pendingStopLossValue)}
                               onChange={(event) => handlePendingStopLossInputChange(event.target.value)}
+                              onKeyDown={handleStopLossInputKeyDown}
                               className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                               aria-label="Stop loss value"
                             />
                           </div>
                           <div className="flex items-center gap-2">
                             {pendingStopLossValue > 0 && (
-                              <span className="rounded-full bg-white/[0.06] px-3 py-1.5 text-xs font-semibold leading-[1.25] text-[#ff4d5e]">
-                                -$
-                                <NumberFlow
-                                  value={Math.abs(pendingStopLossPnLDollars)}
-                                  trend={0}
-                                  format={{ useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 }}
-                                  className="leading-none"
-                                  style={{ ["--number-flow-mask-height" as any]: "0em" }}
-                                />
-                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPendingStopLossValue(0);
+                                  stopLossInputRef.current?.focus({ preventScroll: true });
+                                }}
+                                className="group flex h-8 items-center gap-[8px] rounded-full bg-white/[0.06] px-[12px] transition-colors hover:bg-white/[0.08] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                                aria-label="Clear stop loss"
+                              >
+                                <span
+                                  aria-hidden
+                                  className="inline-flex size-4 items-center justify-center rounded-full bg-white/10 text-white/80 transition-opacity group-hover:opacity-90"
+                                >
+                                  <svg viewBox="0 0 16 16" className="size-3" fill="none">
+                                    <path d="M5 5L11 11M11 5L5 11" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+                                  </svg>
+                                </span>
+                                <span className="text-xs font-semibold leading-[1.25] text-white/60">Loss: </span>
+                                <span className="text-xs font-semibold leading-[1.25] text-[#ff4d5e] flex items-baseline gap-[2px]">
+                                  {pendingStopLossPnLDollars < 0 && <span aria-hidden>-</span>}
+                                  <span aria-hidden>$</span>
+                                  <NumberFlow
+                                    value={Math.round(Math.abs(pendingStopLossPnLDollars))}
+                                    trend={0}
+                                    format={{ useGrouping: true, minimumFractionDigits: 0, maximumFractionDigits: 0 }}
+                                    className="leading-none"
+                                    style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                                  />
+                                </span>
+                              </button>
                             )}
-                            <div className="relative flex h-8 shrink-0 items-center gap-1 rounded-full bg-white/[0.06] p-1">
-                              <div
-                                className={`pointer-events-none absolute bottom-1 top-1 w-[calc(50%-4px)] rounded-full bg-[#141414] transition-transform duration-200 ease-out ${
-                                  pendingStopLossUnit === "$" ? "translate-x-0" : "translate-x-full"
-                                }`}
-                                aria-hidden
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setPendingStopLossUnit("$")}
-                                className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
-                                  pendingStopLossUnit === "$" ? "text-white" : "text-white/80 hover:text-white"
-                                }`}
-                                aria-pressed={pendingStopLossUnit === "$"}
-                              >
-                                $
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setPendingStopLossUnit("%")}
-                                className={`relative z-10 h-6 rounded-full px-3 text-base leading-[1.25] transition-colors ${
-                                  pendingStopLossUnit === "%" ? "text-white" : "text-white/80 hover:text-white"
-                                }`}
-                                aria-pressed={pendingStopLossUnit === "%"}
-                              >
-                                %
-                              </button>
-                            </div>
                           </div>
                         </div>
                         <div className="flex w-full gap-1.5">
@@ -1605,118 +1617,6 @@ export default function BinaryMarket() {
                         className="h-12 flex-1 rounded-full bg-white text-base font-semibold leading-[1.25] text-[#141414] transition-[transform] active:scale-[0.98]"
                       >
                         Set
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-
-                {screen === "review" && (
-                  <motion.div
-                    key="review-content"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.24, ease: FLOW_EASE }}
-                    className="absolute inset-0 z-10 flex h-full flex-col gap-3 p-4"
-                  >
-                    <div className="flex flex-1 flex-col gap-3">
-                      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-3 py-4">
-                        <div className="relative size-12 overflow-hidden rounded-lg">
-                          <Image src={selectedPerson.image} alt={selectedPerson.name} fill sizes="48px" unoptimized className="object-cover" />
-                        </div>
-                        <p className="max-w-[230px] truncate text-center text-sm leading-[1.25] text-white/60">
-                          {marketQuestion}
-                        </p>
-                        <h3 className="mb-1 text-center text-3xl font-semibold leading-none text-white">{selectedPerson.name}</h3>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="rounded-full px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white"
-                            style={{ backgroundColor: selectedOptionColor }}
-                          >
-                            {selectedTickerSummary}
-                          </span>
-                          <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold leading-[1.25] text-white">
-                            {formatLeverage(leverage)}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col gap-3 rounded-3xl bg-white/[0.04] p-4">
-                        <div className="flex flex-col gap-2 text-sm leading-[1.25]">
-                          <div className="flex items-center justify-between">
-                            <span className="text-white/60">Avg. Price</span>
-                            <span className="inline-flex items-center gap-1 text-white">
-                              <NumberFlow
-                                value={reviewAvgPriceCents}
-                                trend={0}
-                                format={{ useGrouping: false }}
-                                suffix="¢"
-                                className="leading-none"
-                                style={{
-                                  ["--number-flow-mask-height" as any]: "0em",
-                                }}
-                              />
-                              <CircularProgressIcon className="size-3" />
-                            </span>
-                          </div>
-                          {hasTpSlValues && (
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="text-white/60">TP / SL</span>
-                              <span className="truncate text-right text-white">{tpSlSummary.replace("TP / SL: ", "")}</span>
-                            </div>
-                          )}
-                          <div className="flex items-center justify-between">
-                            <span className="text-white/60">Liquidation Price</span>
-                            <span className="text-white">{liquidationPriceCents}¢</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-white/60">Closing Fee</span>
-                            <span className="text-white">5%</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-white/60">Cost</span>
-                            <span className="text-white">{formatMoney(Math.round(totalDollars))}</span>
-                          </div>
-                        </div>
-                        <div className="h-px w-full bg-white/10" />
-                        <div className="flex items-center justify-between">
-                          <span className="text-2xl font-semibold leading-none text-white/60">To win</span>
-                          <span className="text-4xl font-normal leading-none text-[#5dd978] flex items-baseline gap-[2px] font-mono">
-                            <span aria-hidden>$</span>
-                            <NumberFlow
-                              value={combinedToWinDollars}
-                              trend={0}
-                              format={{
-                                useGrouping: true,
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              }}
-                              className="leading-none"
-                              style={{
-                                ["--number-flow-mask-height" as any]: "0em",
-                              }}
-                            />
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex w-full gap-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          startTransition(() => setScreen("order"));
-                        }}
-                        className="h-12 flex-1 rounded-full border-2 border-white/10 text-base font-semibold leading-[1.25] text-white transition-[transform,border-color] hover:border-white/20 active:scale-[0.98]"
-                      >
-                        Back
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => startTransition(() => setScreen("placing"))}
-                        className="h-12 flex-1 rounded-full bg-white text-base font-semibold leading-[1.25] text-[#141414] transition-[transform] active:scale-[0.98]"
-                      >
-                        Confirm
                       </button>
                     </div>
                   </motion.div>
