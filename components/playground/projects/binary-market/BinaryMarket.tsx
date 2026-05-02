@@ -289,9 +289,6 @@ export default function BinaryMarket() {
   const [leverageIdx, setLeverageIdx] = useState(0);
   const [isLeverageDragging, setIsLeverageDragging] = useState(false);
   const [amount, setAmount] = useState(0);
-  const [amountInputFocused, setAmountInputFocused] = useState(false);
-  const [takeProfitInputFocused, setTakeProfitInputFocused] = useState(false);
-  const [stopLossInputFocused, setStopLossInputFocused] = useState(false);
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPriceCents, setLimitPriceCents] = useState(0);
   const [shares, setShares] = useState(0);
@@ -600,6 +597,30 @@ export default function BinaryMarket() {
       return;
     }
     setShares(Math.min(MAX_SHARES, parsed));
+  };
+
+  const handleLimitPriceInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setLimitPriceCents((c) => Math.min(MAX_LIMIT_CENTS, c + 1));
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setLimitPriceCents((c) => Math.max(0, c - 1));
+    }
+  };
+
+  const handleSharesInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setShares((s) => Math.min(MAX_SHARES, s + 1));
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setShares((s) => Math.max(0, s - 1));
+    }
   };
 
   const handlePendingTakeProfitInputChange = (value: string) => {
@@ -942,11 +963,7 @@ export default function BinaryMarket() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: FLOW_EASE }}
-              className={`flex w-full flex-col gap-4 rounded-3xl border p-4 transition-[border-color,background-color,background-image] duration-150 ease-out ${
-                amountInputFocused
-                  ? "border-white/20 bg-transparent [background-image:none]"
-                  : "border-transparent bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)]"
-              }`}
+              className="flex w-full flex-col gap-4 rounded-3xl border border-transparent bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4 transition-[border-color,background-color,background-image] duration-150 ease-out focus-within:border-white/20 focus-within:bg-transparent focus-within:[background-image:none]"
             >
               <div className="flex w-full items-start justify-between gap-2">
                 <span
@@ -980,8 +997,6 @@ export default function BinaryMarket() {
                     ref={amountInputRef}
                     onChange={(event) => handleAmountInputChange(event.target.value)}
                     onKeyDown={handleAmountInputKeyDown}
-                    onFocus={() => setAmountInputFocused(true)}
-                    onBlur={() => setAmountInputFocused(false)}
                     className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-right text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                     aria-label="Amount input"
                   />
@@ -1008,7 +1023,7 @@ export default function BinaryMarket() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: FLOW_EASE }}
-              className="flex w-full flex-col gap-3 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4"
+              className="flex w-full flex-col gap-3 rounded-3xl border border-transparent bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4 transition-[border-color,background-color,background-image] duration-150 ease-out focus-within:border-white/20 focus-within:bg-transparent focus-within:[background-image:none]"
             >
               <div className="flex w-full items-start justify-between gap-2">
                 <span
@@ -1037,6 +1052,7 @@ export default function BinaryMarket() {
                     value={shares === 0 ? "" : String(shares)}
                     ref={sharesInputRef}
                     onChange={(event) => handleSharesInputChange(event.target.value)}
+                    onKeyDown={handleSharesInputKeyDown}
                     className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-right text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                     aria-label="Shares input"
                   />
@@ -1063,7 +1079,7 @@ export default function BinaryMarket() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: FLOW_EASE }}
-            className="flex w-full flex-col gap-2 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4"
+            className="flex w-full flex-col gap-2 rounded-3xl border border-transparent bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4 transition-[border-color,background-color,background-image] duration-150 ease-out focus-within:border-white/20 focus-within:bg-transparent focus-within:[background-image:none]"
           >
             <label
               id="leverage-limit-price-label"
@@ -1097,6 +1113,7 @@ export default function BinaryMarket() {
                   onChange={(event) =>
                     handleLimitPriceInputChange(event.target.value)
                   }
+                  onKeyDown={handleLimitPriceInputKeyDown}
                   className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                   aria-labelledby="leverage-limit-price-label"
                 />
@@ -1107,7 +1124,7 @@ export default function BinaryMarket() {
                   onClick={() =>
                     setLimitPriceCents((c) => Math.max(0, c - 1))
                   }
-                  className="flex h-8 w-10 items-center justify-center rounded-full border-[1.5px] border-white/10 pb-0.5 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/20"
+                  className="flex h-[32px] w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-sm leading-[1.25] text-white transition-[transform,background-color] duration-150 ease-out active:scale-[0.95] hover:bg-white/[0.08]"
                   aria-label="Decrease limit price"
                 >
                   −
@@ -1119,7 +1136,7 @@ export default function BinaryMarket() {
                       Math.min(MAX_LIMIT_CENTS, c + 1),
                     )
                   }
-                  className="flex h-8 w-10 items-center justify-center rounded-full border-[1.5px] border-white/10 pb-0.5 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/20"
+                  className="flex h-[32px] w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-sm leading-[1.25] text-white transition-[transform,background-color] duration-150 ease-out active:scale-[0.95] hover:bg-white/[0.08]"
                   aria-label="Increase limit price"
                 >
                   +
@@ -1158,6 +1175,7 @@ export default function BinaryMarket() {
                   onChange={(event) =>
                     handleSharesInputChange(event.target.value)
                   }
+                  onKeyDown={handleSharesInputKeyDown}
                   className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                   aria-labelledby="leverage-shares-label"
                 />
@@ -1166,7 +1184,7 @@ export default function BinaryMarket() {
                 <button
                   type="button"
                   onClick={() => setShares((s) => Math.max(0, s - 1))}
-                  className="flex h-8 w-10 items-center justify-center rounded-full border-[1.5px] border-white/10 pb-0.5 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/20"
+                  className="flex h-[32px] w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-sm leading-[1.25] text-white transition-[transform,background-color] duration-150 ease-out active:scale-[0.95] hover:bg-white/[0.08]"
                   aria-label="Decrease shares"
                 >
                   −
@@ -1176,7 +1194,7 @@ export default function BinaryMarket() {
                   onClick={() =>
                     setShares((s) => Math.min(MAX_SHARES, s + 1))
                   }
-                  className="flex h-8 w-10 items-center justify-center rounded-full border-[1.5px] border-white/10 pb-0.5 text-sm leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/20"
+                  className="flex h-[32px] w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-sm leading-[1.25] text-white transition-[transform,background-color] duration-150 ease-out active:scale-[0.95] hover:bg-white/[0.08]"
                   aria-label="Increase shares"
                 >
                   +
@@ -1187,8 +1205,8 @@ export default function BinaryMarket() {
         )}
         </AnimatePresence>
 
-        {/* TP / SL (buy only) */}
-        {side === "buy" && (
+        {/* TP / SL (market buy only) */}
+        {side === "buy" && orderType === "market" && (
           <button
             type="button"
             onClick={openTpSlScreen}
@@ -1288,7 +1306,9 @@ export default function BinaryMarket() {
             }`}
           >
             {canPlaceOrder
-              ? "Buy"
+              ? side === "buy"
+                ? "Buy"
+                : "Sell"
               : orderType === "market"
                 ? side === "buy"
                   ? "Enter Amount"
@@ -1448,13 +1468,7 @@ export default function BinaryMarket() {
                         </div>
                       </div>
 
-                      <div
-                        className={`flex w-full flex-col gap-2 rounded-3xl border p-4 transition-[border-color,background-color] duration-150 ease-out ${
-                          takeProfitInputFocused
-                            ? "border-white/20 bg-transparent"
-                            : "border-transparent bg-white/[0.04]"
-                        }`}
-                      >
+                      <div className="flex w-full flex-col gap-2 rounded-3xl border border-transparent bg-white/[0.04] p-4 transition-[border-color,background-color] duration-150 ease-out focus-within:border-white/20 focus-within:bg-transparent">
                         <div
                           className="text-base leading-[1.25] text-white/60"
                           style={{ fontVariantNumeric: "tabular-nums" }}
@@ -1483,8 +1497,6 @@ export default function BinaryMarket() {
                               value={pendingTakeProfitValue === 0 ? "" : String(pendingTakeProfitValue)}
                               onChange={(event) => handlePendingTakeProfitInputChange(event.target.value)}
                               onKeyDown={handleTakeProfitInputKeyDown}
-                              onFocus={() => setTakeProfitInputFocused(true)}
-                              onBlur={() => setTakeProfitInputFocused(false)}
                               className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                               aria-label="Take profit value"
                             />
@@ -1537,13 +1549,7 @@ export default function BinaryMarket() {
                         </div>
                       </div>
 
-                      <div
-                        className={`flex w-full flex-col gap-2 rounded-3xl border p-4 transition-[border-color,background-color] duration-150 ease-out ${
-                          stopLossInputFocused
-                            ? "border-white/20 bg-transparent"
-                            : "border-transparent bg-white/[0.04]"
-                        }`}
-                      >
+                      <div className="flex w-full flex-col gap-2 rounded-3xl border border-transparent bg-white/[0.04] p-4 transition-[border-color,background-color] duration-150 ease-out focus-within:border-white/20 focus-within:bg-transparent">
                         <div
                           className="text-base leading-[1.25] text-white/60"
                           style={{ fontVariantNumeric: "tabular-nums" }}
@@ -1572,8 +1578,6 @@ export default function BinaryMarket() {
                               value={pendingStopLossValue === 0 ? "" : String(pendingStopLossValue)}
                               onChange={(event) => handlePendingStopLossInputChange(event.target.value)}
                               onKeyDown={handleStopLossInputKeyDown}
-                              onFocus={() => setStopLossInputFocused(true)}
-                              onBlur={() => setStopLossInputFocused(false)}
                               className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                               aria-label="Stop loss value"
                             />
