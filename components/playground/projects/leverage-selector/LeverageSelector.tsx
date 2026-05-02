@@ -1201,7 +1201,7 @@ export default function LeverageSelector() {
                       key={label}
                       type="button"
                       onClick={() => handleAmountShortcut(increment)}
-                      className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full border-[1px] border-white/20 px-2 text-xs leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/30"
+                      className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full bg-white/[0.06] px-2 text-xs leading-[1.25] text-white transition-[transform,background-color] duration-150 ease-out active:scale-[0.95] hover:bg-white/[0.08]"
                     >
                       {label}
                     </button>
@@ -1249,7 +1249,7 @@ export default function LeverageSelector() {
                       key={label}
                       type="button"
                       onClick={() => handleSellSharesShortcut(label, fraction)}
-                      className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full border-[1px] border-white/20 px-2 text-xs leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/30"
+                      className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full bg-white/[0.06] px-2 text-xs leading-[1.25] text-white transition-[transform,background-color] duration-150 ease-out active:scale-[0.95] hover:bg-white/[0.08]"
                     >
                       {label}
                     </button>
@@ -1719,7 +1719,7 @@ export default function LeverageSelector() {
                               key={percent}
                               type="button"
                               onClick={() => handleTakeProfitShortcut(percent)}
-                              className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full border-[1px] border-white/20 px-2 text-xs leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/30"
+                              className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full bg-white/[0.06] px-2 text-xs leading-[1.25] text-white transition-[transform,background-color] duration-150 ease-out active:scale-[0.95] hover:bg-white/[0.08]"
                             >
                               +{percent}%
                             </button>
@@ -1802,7 +1802,7 @@ export default function LeverageSelector() {
                               key={percent}
                               type="button"
                               onClick={() => handleStopLossShortcut(percent)}
-                              className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full border-[1px] border-white/20 px-2 text-xs leading-[1.25] text-white transition-[transform,border-color] active:scale-[0.95] hover:border-white/30"
+                              className="min-w-0 flex h-[32px] flex-1 items-center justify-center rounded-full bg-white/[0.06] px-2 text-xs leading-[1.25] text-white transition-[transform,background-color] duration-150 ease-out active:scale-[0.95] hover:bg-white/[0.08]"
                             >
                               -{percent}%
                             </button>
