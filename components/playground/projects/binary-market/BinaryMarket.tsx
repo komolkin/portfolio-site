@@ -289,6 +289,9 @@ export default function BinaryMarket() {
   const [leverageIdx, setLeverageIdx] = useState(0);
   const [isLeverageDragging, setIsLeverageDragging] = useState(false);
   const [amount, setAmount] = useState(0);
+  const [amountInputFocused, setAmountInputFocused] = useState(false);
+  const [takeProfitInputFocused, setTakeProfitInputFocused] = useState(false);
+  const [stopLossInputFocused, setStopLossInputFocused] = useState(false);
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPriceCents, setLimitPriceCents] = useState(0);
   const [shares, setShares] = useState(0);
@@ -939,7 +942,11 @@ export default function BinaryMarket() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: FLOW_EASE }}
-              className="flex w-full flex-col gap-4 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4"
+              className={`flex w-full flex-col gap-4 rounded-3xl border p-4 transition-[border-color,background-color,background-image] duration-150 ease-out ${
+                amountInputFocused
+                  ? "border-white/20 bg-transparent [background-image:none]"
+                  : "border-transparent bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)]"
+              }`}
             >
               <div className="flex w-full items-start justify-between gap-2">
                 <span
@@ -973,6 +980,8 @@ export default function BinaryMarket() {
                     ref={amountInputRef}
                     onChange={(event) => handleAmountInputChange(event.target.value)}
                     onKeyDown={handleAmountInputKeyDown}
+                    onFocus={() => setAmountInputFocused(true)}
+                    onBlur={() => setAmountInputFocused(false)}
                     className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-right text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                     aria-label="Amount input"
                   />
@@ -1439,7 +1448,13 @@ export default function BinaryMarket() {
                         </div>
                       </div>
 
-                      <div className="flex w-full flex-col gap-2 rounded-3xl bg-white/[0.04] p-4">
+                      <div
+                        className={`flex w-full flex-col gap-2 rounded-3xl border p-4 transition-[border-color,background-color] duration-150 ease-out ${
+                          takeProfitInputFocused
+                            ? "border-white/20 bg-transparent"
+                            : "border-transparent bg-white/[0.04]"
+                        }`}
+                      >
                         <div
                           className="text-base leading-[1.25] text-white/60"
                           style={{ fontVariantNumeric: "tabular-nums" }}
@@ -1468,6 +1483,8 @@ export default function BinaryMarket() {
                               value={pendingTakeProfitValue === 0 ? "" : String(pendingTakeProfitValue)}
                               onChange={(event) => handlePendingTakeProfitInputChange(event.target.value)}
                               onKeyDown={handleTakeProfitInputKeyDown}
+                              onFocus={() => setTakeProfitInputFocused(true)}
+                              onBlur={() => setTakeProfitInputFocused(false)}
                               className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                               aria-label="Take profit value"
                             />
@@ -1520,7 +1537,13 @@ export default function BinaryMarket() {
                         </div>
                       </div>
 
-                      <div className="flex w-full flex-col gap-2 rounded-3xl bg-white/[0.04] p-4">
+                      <div
+                        className={`flex w-full flex-col gap-2 rounded-3xl border p-4 transition-[border-color,background-color] duration-150 ease-out ${
+                          stopLossInputFocused
+                            ? "border-white/20 bg-transparent"
+                            : "border-transparent bg-white/[0.04]"
+                        }`}
+                      >
                         <div
                           className="text-base leading-[1.25] text-white/60"
                           style={{ fontVariantNumeric: "tabular-nums" }}
@@ -1549,6 +1572,8 @@ export default function BinaryMarket() {
                               value={pendingStopLossValue === 0 ? "" : String(pendingStopLossValue)}
                               onChange={(event) => handlePendingStopLossInputChange(event.target.value)}
                               onKeyDown={handleStopLossInputKeyDown}
+                              onFocus={() => setStopLossInputFocused(true)}
+                              onBlur={() => setStopLossInputFocused(false)}
                               className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                               aria-label="Stop loss value"
                             />
