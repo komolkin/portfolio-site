@@ -206,23 +206,19 @@ export default function ResolvedCard() {
                 </div>
               </div>
             </div>
-            <div className="mt-auto flex w-full flex-col gap-4">
-              {/* Divider */}
-              <div
-                className="h-px w-full shrink-0 bg-white/10"
-                aria-hidden
-              />
-              {/* Cost / Won */}
-              <div className="flex w-full flex-col gap-1.5">
-                <div className="flex w-full items-center justify-between text-sm">
-                  <p className="text-white/60">Cost</p>
-                  <p className="text-white">$32.00</p>
+            <div className="mt-auto flex w-full flex-col gap-[10px]">
+              {/* Cost / Won — same shell as Binary Market / Leverage success summary */}
+              <div className="flex w-full flex-col gap-3 rounded-3xl bg-white/[0.04] p-4">
+                <div className="flex items-center justify-between text-sm leading-[1.25]">
+                  <span className="text-white/60">Cost</span>
+                  <span className="text-white">$32.00</span>
                 </div>
-                <div className="flex w-full items-center justify-between">
-                  <p className="text-sm text-white/60">Won</p>
-                  <p className="text-[30px] font-normal leading-[1.25] text-white font-mono">
+                <div className="h-px w-full bg-white/10" aria-hidden />
+                <div className="flex items-center justify-between gap-3">
+                  <span className="shrink-0 text-2xl font-semibold leading-none text-white/60">Won</span>
+                  <span className="min-w-0 text-right text-2xl font-normal leading-[1.25] text-[#5dd978] font-mono tabular-nums">
                     $1,534.00
-                  </p>
+                  </span>
                 </div>
               </div>
               {/* Claim button */}
