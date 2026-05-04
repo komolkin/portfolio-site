@@ -42,6 +42,8 @@ const SELL_SHARE_PRESETS = [
   { label: "Max" as const, fraction: null },
 ] as const;
 const MAX_LIMIT_CENTS = 1_000_000;
+/** Shown in UI as "Closing Fee"; "To win" is gross × (1 − this). */
+const CLOSING_FEE_FRACTION = 0.05;
 const PERSON_OPTIONS = [
   // Match the linked Figma "Default" state: PHX 62% / BOS 38%.
   { name: "Phoenix Suns", image: IMG_PHOENIX_SUNS, yesPercent: 62 },
@@ -742,6 +744,9 @@ export default function BinaryMarket() {
     pendingStopLossValue > 0 ? -positionNotionalDollars * leverage * pendingStopLossPercent : 0;
   const tpSlHeaderToWinDollars =
     totalDollars + (pendingTakeProfitValue > 0 ? pendingTakeProfitPnLDollars : estimatedToWinDollars);
+  const closingFeeNetMultiplier = 1 - CLOSING_FEE_FRACTION;
+  const combinedToWinNetDollars = combinedToWinDollars * closingFeeNetMultiplier;
+  const tpSlHeaderToWinNetDollars = tpSlHeaderToWinDollars * closingFeeNetMultiplier;
   const showTpSlHeaderSummary = totalDollars > 0 && tpSlHeaderToWinDollars > 0;
   const formatTpSlSummaryValue = (value: number, unit: "$" | "%") =>
     value > 0 ? `${value}${unit === "$" ? "¢" : "%"}` : "–";
@@ -1270,7 +1275,7 @@ export default function BinaryMarket() {
               <span className="text-4xl font-normal leading-none text-[#5dd978] flex items-baseline gap-[2px] font-mono">
                 <span aria-hidden>$</span>
                 <NumberFlow
-                  value={combinedToWinDollars}
+                  value={combinedToWinNetDollars}
                   trend={0}
                   format={{
                     useGrouping: true,
@@ -1456,7 +1461,7 @@ export default function BinaryMarket() {
                               <span className="text-[#5dd978] inline-flex items-baseline gap-[1px]">
                                 <span aria-hidden>$</span>
                                 <NumberFlow
-                                  value={Math.round(tpSlHeaderToWinDollars)}
+                                  value={Math.round(tpSlHeaderToWinNetDollars)}
                                   trend={0}
                                   format={{ useGrouping: true, minimumFractionDigits: 0, maximumFractionDigits: 0 }}
                                   className="leading-none"
@@ -1706,7 +1711,7 @@ export default function BinaryMarket() {
                         <span className="text-4xl font-normal leading-none text-[#5dd978] flex items-baseline gap-[2px] font-mono">
                           <span aria-hidden>$</span>
                           <NumberFlow
-                            value={combinedToWinDollars}
+                            value={combinedToWinNetDollars}
                             trend={0}
                             format={{
                               useGrouping: true,

@@ -57,6 +57,8 @@ const SELL_SHARE_PRESETS = [
   { label: "Max" as const, fraction: null },
 ] as const;
 const MAX_LIMIT_CENTS = 1_000_000;
+/** Shown in UI as "Closing Fee"; "To win" is gross × (1 − this). */
+const CLOSING_FEE_FRACTION = 0.05;
 const PERSON_OPTIONS = [
   { name: "Timothée Chalamet", image: IMG_TIMOTHEE_CHALAMET, yesPercent: 61 },
   { name: "Zendaya", image: IMG_ZENDAYA, yesPercent: 67 },
@@ -919,6 +921,9 @@ export default function LeverageSelector() {
     totalDollars + (takeProfitValue > 0 ? takeProfitPnLDollars : estimatedToWinDollars);
   const tpSlHeaderToWinDollars =
     totalDollars + (pendingTakeProfitValue > 0 ? pendingTakeProfitPnLDollars : estimatedToWinDollars);
+  const closingFeeNetMultiplier = 1 - CLOSING_FEE_FRACTION;
+  const combinedToWinNetDollars = combinedToWinDollars * closingFeeNetMultiplier;
+  const tpSlHeaderToWinNetDollars = tpSlHeaderToWinDollars * closingFeeNetMultiplier;
   const showTpSlHeaderSummary = totalDollars > 0 && tpSlHeaderToWinDollars > 0;
 
   return (
@@ -1472,7 +1477,7 @@ export default function LeverageSelector() {
                 <span className="text-4xl font-normal leading-none text-[#5dd978] flex items-baseline gap-[2px] font-mono">
                   <span aria-hidden>$</span>
                   <NumberFlow
-                    value={combinedToWinDollars}
+                    value={combinedToWinNetDollars}
                     trend={0}
                     format={{
                       useGrouping: true,
@@ -1662,7 +1667,7 @@ export default function LeverageSelector() {
                               <span className="text-[#5dd978] inline-flex items-baseline gap-[1px]">
                                 <span aria-hidden>$</span>
                                 <NumberFlow
-                                  value={Math.round(tpSlHeaderToWinDollars)}
+                                  value={Math.round(tpSlHeaderToWinNetDollars)}
                                   trend={0}
                                   format={{ useGrouping: true, minimumFractionDigits: 0, maximumFractionDigits: 0 }}
                                   className="leading-none"
@@ -1918,7 +1923,7 @@ export default function LeverageSelector() {
                         <span className="text-4xl font-normal leading-none text-[#5dd978] flex items-baseline gap-[2px] font-mono">
                           <span aria-hidden>$</span>
                           <NumberFlow
-                            value={combinedToWinDollars}
+                            value={combinedToWinNetDollars}
                             trend={0}
                             format={{
                               useGrouping: true,
