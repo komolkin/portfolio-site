@@ -969,16 +969,21 @@ export default function BinaryMarket() {
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: FLOW_EASE }}
               className="flex w-full flex-col gap-4 rounded-3xl border border-transparent bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4 transition-[border-color,background-color,background-image] duration-150 ease-out focus-within:border-white/20 focus-within:bg-transparent focus-within:[background-image:none]"
+              onPointerDown={(event) => {
+                const t = event.target;
+                if (t instanceof Element && t.closest("button")) return;
+                amountInputRef.current?.focus({ preventScroll: true });
+              }}
             >
-              <div className="flex w-full items-start justify-between gap-2">
+              <div className="flex w-full cursor-text items-start gap-2">
                 <span
-                  className="text-base leading-[1.25] text-white/60"
+                  className="shrink-0 text-base leading-[1.25] text-white/60"
                   style={{ fontVariantNumeric: "tabular-nums" }}
                 >
                   Amount
                 </span>
                 <label
-                  className={`relative inline-flex items-baseline gap-0.5 text-4xl font-normal leading-none font-mono ${
+                  className={`relative flex min-h-0 min-w-0 flex-1 justify-end gap-0.5 text-4xl font-normal leading-none font-mono items-baseline ${
                     amount > 0 ? "text-white" : "text-white/40"
                   }`}
                   style={{ fontVariantNumeric: "tabular-nums" }}
@@ -1002,7 +1007,7 @@ export default function BinaryMarket() {
                     ref={amountInputRef}
                     onChange={(event) => handleAmountInputChange(event.target.value)}
                     onKeyDown={handleAmountInputKeyDown}
-                    className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-right text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
+                    className="absolute inset-0 z-[1] w-full bg-transparent p-0 m-0 font-inherit text-right text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                     aria-label="Amount input"
                   />
                 </label>
