@@ -1034,8 +1034,13 @@ export default function BinaryMarket() {
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: FLOW_EASE }}
               className="flex w-full flex-col gap-3 rounded-3xl border border-transparent bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4 transition-[border-color,background-color,background-image] duration-150 ease-out focus-within:border-white/20 focus-within:bg-transparent focus-within:[background-image:none]"
+              onPointerDown={(event) => {
+                const t = event.target;
+                if (t instanceof Element && t.closest("button")) return;
+                sharesInputRef.current?.focus({ preventScroll: true });
+              }}
             >
-              <div className="flex w-full items-start justify-between gap-2">
+              <div className="flex w-full cursor-text items-start gap-2">
                 <span
                   className="text-base leading-[1.25] text-white/60"
                   style={{ fontVariantNumeric: "tabular-nums" }}
@@ -1043,7 +1048,7 @@ export default function BinaryMarket() {
                   Shares
                 </span>
                 <label
-                  className={`relative inline-flex items-baseline text-4xl font-normal leading-none font-mono ${
+                  className={`relative flex min-h-0 min-w-0 flex-1 justify-end text-4xl font-normal leading-none font-mono items-baseline ${
                     shares > 0 ? "text-white" : "text-white/40"
                   }`}
                   style={{ fontVariantNumeric: "tabular-nums" }}
@@ -1063,7 +1068,7 @@ export default function BinaryMarket() {
                     ref={sharesInputRef}
                     onChange={(event) => handleSharesInputChange(event.target.value)}
                     onKeyDown={handleSharesInputKeyDown}
-                    className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-right text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
+                    className="absolute inset-0 z-[1] w-full bg-transparent p-0 m-0 font-inherit text-right text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                     aria-label="Shares input"
                   />
                 </label>
@@ -1099,7 +1104,14 @@ export default function BinaryMarket() {
             >
               Limit Price
             </label>
-            <div className="flex w-full min-w-0 items-center justify-between gap-2">
+            <div
+              className="flex w-full min-w-0 items-center justify-between gap-2"
+              onPointerDown={(event) => {
+                const t = event.target;
+                if (t instanceof Element && t.closest("button")) return;
+                limitPriceInputRef.current?.focus({ preventScroll: true });
+              }}
+            >
               <div
                 className={`relative flex min-w-0 flex-1 items-baseline text-4xl font-normal leading-none tabular-nums font-mono ${
                   limitPriceCents > 0 ? "text-white" : "text-white/40"
@@ -1124,7 +1136,7 @@ export default function BinaryMarket() {
                     handleLimitPriceInputChange(event.target.value)
                   }
                   onKeyDown={handleLimitPriceInputKeyDown}
-                  className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
+                  className="absolute inset-0 z-[1] w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                   aria-labelledby="leverage-limit-price-label"
                 />
               </div>
@@ -1162,7 +1174,14 @@ export default function BinaryMarket() {
             >
               Shares
             </label>
-            <div className="flex w-full min-w-0 items-center justify-between gap-2">
+            <div
+              className="flex w-full min-w-0 items-center justify-between gap-2"
+              onPointerDown={(event) => {
+                const t = event.target;
+                if (t instanceof Element && t.closest("button")) return;
+                sharesInputRef.current?.focus({ preventScroll: true });
+              }}
+            >
               <div
                 className={`relative flex min-w-0 flex-1 items-baseline text-4xl font-normal leading-none tabular-nums font-mono ${
                   shares > 0 ? "text-white" : "text-white/40"
@@ -1186,7 +1205,7 @@ export default function BinaryMarket() {
                     handleSharesInputChange(event.target.value)
                   }
                   onKeyDown={handleSharesInputKeyDown}
-                  className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
+                  className="absolute inset-0 z-[1] w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                   aria-labelledby="leverage-shares-label"
                 />
               </div>
@@ -1478,7 +1497,19 @@ export default function BinaryMarket() {
                         </div>
                       </div>
 
-                      <div className="flex w-full flex-col gap-2 rounded-3xl border border-transparent bg-white/[0.04] p-4 transition-[border-color,background-color] duration-150 ease-out focus-within:border-white/20 focus-within:bg-transparent">
+                      <div
+                        className="flex w-full cursor-text flex-col gap-2 rounded-3xl border border-transparent bg-white/[0.04] p-4 transition-[border-color,background-color] duration-150 ease-out focus-within:border-white/20 focus-within:bg-transparent"
+                        onPointerDown={(event) => {
+                          const t = event.target;
+                          if (t instanceof Element && t.closest("button")) return;
+                          takeProfitInputRef.current?.focus({ preventScroll: true });
+                        }}
+                        onClick={(event) => {
+                          const t = event.target;
+                          if (t instanceof Element && t.closest("button")) return;
+                          takeProfitInputRef.current?.focus({ preventScroll: true });
+                        }}
+                      >
                         <div
                           className="text-base leading-[1.25] text-white/60"
                           style={{ fontVariantNumeric: "tabular-nums" }}
@@ -1507,7 +1538,7 @@ export default function BinaryMarket() {
                               value={pendingTakeProfitValue === 0 ? "" : String(pendingTakeProfitValue)}
                               onChange={(event) => handlePendingTakeProfitInputChange(event.target.value)}
                               onKeyDown={handleTakeProfitInputKeyDown}
-                              className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
+                              className="absolute inset-0 z-[1] w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                               aria-label="Take profit value"
                             />
                           </div>
@@ -1559,7 +1590,19 @@ export default function BinaryMarket() {
                         </div>
                       </div>
 
-                      <div className="flex w-full flex-col gap-2 rounded-3xl border border-transparent bg-white/[0.04] p-4 transition-[border-color,background-color] duration-150 ease-out focus-within:border-white/20 focus-within:bg-transparent">
+                      <div
+                        className="flex w-full cursor-text flex-col gap-2 rounded-3xl border border-transparent bg-white/[0.04] p-4 transition-[border-color,background-color] duration-150 ease-out focus-within:border-white/20 focus-within:bg-transparent"
+                        onPointerDown={(event) => {
+                          const t = event.target;
+                          if (t instanceof Element && t.closest("button")) return;
+                          stopLossInputRef.current?.focus({ preventScroll: true });
+                        }}
+                        onClick={(event) => {
+                          const t = event.target;
+                          if (t instanceof Element && t.closest("button")) return;
+                          stopLossInputRef.current?.focus({ preventScroll: true });
+                        }}
+                      >
                         <div
                           className="text-base leading-[1.25] text-white/60"
                           style={{ fontVariantNumeric: "tabular-nums" }}
@@ -1588,7 +1631,7 @@ export default function BinaryMarket() {
                               value={pendingStopLossValue === 0 ? "" : String(pendingStopLossValue)}
                               onChange={(event) => handlePendingStopLossInputChange(event.target.value)}
                               onKeyDown={handleStopLossInputKeyDown}
-                              className="absolute inset-0 w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
+                              className="absolute inset-0 z-[1] w-full bg-transparent p-0 m-0 font-inherit text-left text-transparent caret-white outline-none leading-none focus:outline-none focus-visible:outline-none"
                               aria-label="Stop loss value"
                             />
                           </div>
