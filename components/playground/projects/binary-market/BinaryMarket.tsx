@@ -284,7 +284,11 @@ function PlacingLoaderIcon({ className }: { className?: string }) {
   );
 }
 
-export default function BinaryMarket() {
+interface BinaryMarketProps {
+  compactToWin?: boolean;
+}
+
+export default function BinaryMarket({ compactToWin = false }: BinaryMarketProps) {
   const [selectedPerson, setSelectedPerson] = useState<(typeof PERSON_OPTIONS)[number]>(PERSON_OPTIONS[0]);
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [outcome, setOutcome] = useState<"yes" | "no">("yes");
@@ -729,6 +733,7 @@ export default function BinaryMarket() {
       : (shares * pnlEntryPriceCents) / 100;
   const showOrderSummary = orderType === "market" && side === "buy" && amount > 0;
   const liquidationPriceCents = Math.max(1, Math.round(avgPriceCents / Math.max(1, leverage)));
+  const compactSharesValue = Math.floor((amount * 100) / Math.max(1, avgPriceCents));
   const estimatedToWinDollars = totalDollars * leverage * (avgPriceCents / 100);
   const takeProfitPercent = Math.max(0, (takeProfitValue - avgPriceCents) / Math.max(1, avgPriceCents));
   const takeProfitPnLDollars = takeProfitValue > 0 ? totalDollars * leverage * takeProfitPercent : 0;
@@ -885,12 +890,40 @@ export default function BinaryMarket() {
         {side === "buy" && (
           <div className="flex w-full flex-col items-start justify-center gap-2.5 rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4">
             <div className="flex w-full items-start justify-between gap-2">
-              <span
-                className="text-base leading-[1.25] text-white/60"
+              <div
+                className="flex flex-col gap-0.5 text-base leading-[1.25]"
                 style={{ fontVariantNumeric: "tabular-nums" }}
               >
-                Leverage
-              </span>
+                <span className={compactToWin ? "text-white" : "text-white/60"}>Leverage</span>
+                {compactToWin && (
+                  <span className="block h-[15px] text-xs leading-[1.25] text-white/60">
+                    <AnimatePresence initial={false} mode="wait">
+                      {leverage > 1 ? (
+                        <motion.span
+                          key="compact-liquidation-price"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: FLOW_EASE }}
+                          className="inline"
+                        >
+                          Liquidation Price:{" "}
+                          <NumberFlow
+                            value={liquidationPriceCents}
+                            trend={0}
+                            format={{ useGrouping: false }}
+                            className="leading-none"
+                            style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                          />
+                          ¢
+                        </motion.span>
+                      ) : (
+                        <span aria-hidden>&nbsp;</span>
+                      )}
+                    </AnimatePresence>
+                  </span>
+                )}
+              </div>
               <span className="text-4xl font-normal leading-none text-white font-mono">
                 <NumberFlow
                   value={leverage}
@@ -976,12 +1009,35 @@ export default function BinaryMarket() {
               }}
             >
               <div className="flex w-full cursor-text items-start gap-2">
-                <span
-                  className="shrink-0 text-base leading-[1.25] text-white/60"
+                <div
+                  className="shrink-0 text-base leading-[1.25]"
                   style={{ fontVariantNumeric: "tabular-nums" }}
                 >
-                  Amount
-                </span>
+                  <span className={`block ${compactToWin ? "text-white" : "text-white/60"}`}>Amount</span>
+                  {compactToWin && (
+                    <AnimatePresence initial={false}>
+                      {amount > 0 && (
+                        <motion.span
+                          key="compact-shares"
+                          initial={{ opacity: 0, y: 3 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 2 }}
+                          transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: FLOW_EASE }}
+                          className="block text-xs leading-[1.25] text-white/60"
+                        >
+                          Shares:{" "}
+                          <NumberFlow
+                            value={compactSharesValue}
+                            trend={0}
+                            format={{ useGrouping: true }}
+                            className="leading-none"
+                            style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                          />
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  )}
+                </div>
                 <label
                   className={`relative flex min-h-0 min-w-0 flex-1 justify-end gap-0.5 text-4xl font-normal leading-none font-mono items-baseline ${
                     amount > 0 ? "text-white" : "text-white/40"
@@ -1242,7 +1298,7 @@ export default function BinaryMarket() {
             className="flex w-full items-center justify-between rounded-3xl bg-[linear-gradient(90deg,#2a2a2a_0%,#262626_100%)] p-4 text-left transition-[transform,background-image] duration-200 ease-out hover:bg-[linear-gradient(90deg,#2f2f2f_0%,#2b2b2b_100%)] active:scale-[0.98]"
           >
             <span
-              className="text-base leading-[1.25] text-white/60"
+              className={`text-base leading-[1.25] ${compactToWin ? "text-white" : "text-white/60"}`}
               style={{ fontVariantNumeric: "tabular-nums" }}
             >
               Take Profit / Stop Loss
@@ -1268,49 +1324,74 @@ export default function BinaryMarket() {
               transition={{ duration: prefersReducedMotion ? 0 : 0.28, ease: FLOW_EASE }}
             >
               <div className="flex flex-col gap-3 rounded-3xl bg-white/[0.04] p-4">
-            <div className="flex flex-col gap-2 text-sm leading-[1.25]">
-              <div className="flex items-center justify-between">
-                <span className="text-white/60">Avg. Price</span>
-                <span className="text-white">{avgPriceCents}¢</span>
-              </div>
-              {leverage > 1 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-white/60">Liquidation Price</span>
-                  <span className="text-white inline-flex items-baseline">
-                    <NumberFlow
-                      value={liquidationPriceCents}
-                      trend={0}
-                      suffix="¢"
-                      format={{ useGrouping: false }}
-                      className="leading-none"
-                      style={{ ["--number-flow-mask-height" as any]: "0em" }}
-                    />
-                  </span>
-                </div>
-              )}
-              <div className="flex items-center justify-between">
-                <span className="text-white/60">Closing Fee</span>
-                <span className="text-white">5%</span>
-              </div>
-            </div>
-            <div className="h-px w-full bg-white/10" />
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-semibold leading-none text-white/60">To win</span>
-              <span className="text-4xl font-normal leading-none text-[#5dd978] flex items-baseline gap-[2px] font-mono">
-                <span aria-hidden>$</span>
-                <NumberFlow
-                  value={combinedToWinNetDollars}
-                  trend={0}
-                  format={{
-                    useGrouping: true,
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  }}
-                  className="leading-none"
-                  style={{ ["--number-flow-mask-height" as any]: "0em" }}
-                />
-              </span>
-            </div>
+                {compactToWin ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-2xl font-semibold leading-none text-white/90">To win</span>
+                      <span className="text-sm leading-[1.25] text-white/60">Closing Fee: 5%</span>
+                    </div>
+                    <span className="text-4xl font-normal leading-none text-[#5dd978] flex items-baseline gap-[2px] font-mono">
+                      <span aria-hidden>$</span>
+                      <NumberFlow
+                        value={combinedToWinNetDollars}
+                        trend={0}
+                        format={{
+                          useGrouping: true,
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }}
+                        className="leading-none"
+                        style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                      />
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex flex-col gap-2 text-sm leading-[1.25]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-white/60">Avg. Price</span>
+                        <span className="text-white">{avgPriceCents}¢</span>
+                      </div>
+                      {leverage > 1 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-white/60">Liquidation Price</span>
+                          <span className="text-white inline-flex items-baseline">
+                            <NumberFlow
+                              value={liquidationPriceCents}
+                              trend={0}
+                              suffix="¢"
+                              format={{ useGrouping: false }}
+                              className="leading-none"
+                              style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                            />
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <span className="text-white/60">Closing Fee</span>
+                        <span className="text-white">5%</span>
+                      </div>
+                    </div>
+                    <div className="h-px w-full bg-white/10" />
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-semibold leading-none text-white/60">To win</span>
+                      <span className="text-4xl font-normal leading-none text-[#5dd978] flex items-baseline gap-[2px] font-mono">
+                        <span aria-hidden>$</span>
+                        <NumberFlow
+                          value={combinedToWinNetDollars}
+                          trend={0}
+                          format={{
+                            useGrouping: true,
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }}
+                          className="leading-none"
+                          style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                        />
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </motion.div>
           )}

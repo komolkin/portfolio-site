@@ -1,6 +1,7 @@
 export const PROJECTS = [
   { id: "pnl-chart", label: "PnL Card" },
   { id: "binary-market", label: "Binary" },
+  { id: "binary-compact", label: "Binary Compact" },
   { id: "leverage-selector", label: "Categorical" },
   { id: "position", label: "Position" },
   { id: "resolved-card", label: "Resolved" },
