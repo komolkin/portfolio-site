@@ -20,18 +20,20 @@ function randomFillPercent(): number {
 }
 
 /** Vertical entry line — % from left of the bar (PnL vs this threshold) */
-const ENTRY_LINE_PERCENT = 20;
+const ENTRY_LINE_PERCENT = 40;
 
 /** Ruler tick positions (% of bar width), aligned with Figma 2072:7697 */
-const RULER_LIQ_PCT = 5.25;
+const RULER_LIQ_PCT = 10;
 const RULER_SL_PCT = 12.25;
 const RULER_TP_PCT = 68;
-const PRICE_ENTRY = "62¢";
-const PRICE_LIQ = "39¢";
+const PRICE_ENTRY = "40¢";
+const PRICE_LIQ = "10¢";
 
 const SIM_TICK_MS = 2200;
 
 const INITIAL_VALUE_USD = 1000;
+const EDGE_PADDING_PX = 8;
+const DOT_RADIUS_PX = 5;
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -43,35 +45,63 @@ function priceFromPercent(percent: number): string {
 
 /** Short tick + label to the right (LIQ / SL / TP) + animated tooltip */
 function RulerMark({
+  markerKey,
   leftPct,
   label,
   price,
-  labelClassName,
+  dotClassName,
   onPointerDown,
   isDragging = false,
   isPinnedOpen = false,
   showLoader = false,
+  onTooltipWidthChange,
+  dotOffsetY = 0,
+  tooltipOffsetY = 0,
+  tooltipLayer = 0,
+  expandHitArea = false,
 }: {
+  markerKey: "LIQ" | "SL" | "TP";
   leftPct: number;
   label: string;
   price: string;
-  labelClassName?: string;
+  dotClassName?: string;
   onPointerDown?: (event: React.PointerEvent<HTMLButtonElement>) => void;
   isDragging?: boolean;
   isPinnedOpen?: boolean;
   showLoader?: boolean;
+  onTooltipWidthChange?: (key: "LIQ" | "SL" | "TP", width: number) => void;
+  dotOffsetY?: number;
+  tooltipOffsetY?: number;
+  tooltipLayer?: number;
+  expandHitArea?: boolean;
 }) {
+  const tooltipRef = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    const tooltipElement = tooltipRef.current;
+    if (!tooltipElement || !onTooltipWidthChange) return;
+
+    const updateWidth = () => {
+      onTooltipWidthChange(markerKey, tooltipElement.offsetWidth);
+    };
+
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(tooltipElement);
+    return () => observer.disconnect();
+  }, [markerKey, onTooltipWidthChange, price, showLoader]);
+
   return (
     <button
       type="button"
       aria-label={`${label} price ${price}`}
-      className={`group absolute inset-y-0 z-[3] flex flex-row items-end gap-1 pb-1 outline-none ${
+      className={`group absolute inset-y-0 z-[3] flex items-end pb-2 outline-none ${
         onPointerDown
           ? `-mx-2 touch-none px-2 cursor-grab active:cursor-grabbing ${
               isDragging ? "cursor-grabbing" : ""
             }`
           : ""
-      }`}
+      } ${expandHitArea ? "before:absolute before:-inset-2 before:content-['']" : ""}`}
       style={{
         left: `${leftPct}%`,
         cursor: onPointerDown ? (isDragging ? "grabbing" : "grab") : undefined,
@@ -79,11 +109,16 @@ function RulerMark({
       onPointerDown={onPointerDown}
     >
       <span
+        ref={tooltipRef}
         className={`pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#101010] px-2 py-1 text-xs font-semibold leading-none text-white/85 shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition-all duration-300 ease-out ${
           isDragging || isPinnedOpen
             ? "translate-y-0 opacity-100"
             : "translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100"
         }`}
+        style={{
+          bottom: `${24 + tooltipOffsetY}px`,
+          zIndex: 20 + tooltipLayer,
+        }}
       >
         <span className="inline-flex items-center">
           <span
@@ -93,43 +128,66 @@ function RulerMark({
           >
             <span className={`size-2 rounded-full border border-white/30 border-t-white ${showLoader ? "animate-spin" : ""}`} />
           </span>
-          <span>{price}</span>
+          <span>
+            {label}: {price}
+          </span>
         </span>
       </span>
-      <div
-        className="h-8 w-px shrink-0 bg-gradient-to-b from-transparent to-white/20"
-        aria-hidden
-      />
       <span
-        className={`whitespace-nowrap text-[8px] font-semibold uppercase leading-none tracking-wide ${
-          labelClassName ?? "text-white/60"
-        }`}
+        className="transition-transform duration-300 ease-out"
+        style={{ transform: dotOffsetY ? `translateY(${dotOffsetY}px)` : undefined }}
+        aria-hidden
       >
-        {label}
+        <span
+          className={`block size-2.5 rounded-full transition-transform duration-150 ease-out group-hover:scale-125 group-active:scale-90 ${
+            isDragging ? "scale-90" : ""
+          } ${
+            dotClassName ?? "bg-white/60"
+          }`}
+        />
       </span>
     </button>
   );
 }
 
-function EntryMark({ leftPct, price, isNegative }: { leftPct: number; price: string; isNegative: boolean }) {
+function EntryMark({
+  leftPct,
+  price,
+  tooltipRef,
+  dotOffsetY = 0,
+  tooltipOffsetY = 0,
+  tooltipLayer = 0,
+}: {
+  leftPct: number;
+  price: string;
+  tooltipRef?: React.RefObject<HTMLSpanElement | null>;
+  dotOffsetY?: number;
+  tooltipOffsetY?: number;
+  tooltipLayer?: number;
+}) {
   return (
     <button
       type="button"
       aria-label={`Entry price ${price}`}
-      className="group absolute inset-y-0 z-[3] flex flex-row items-end gap-1 outline-none"
+      className="group absolute inset-y-0 z-[3] flex items-end pb-2 outline-none"
       style={{ left: `${leftPct}%` }}
     >
-      <span className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 translate-y-2 whitespace-nowrap rounded-md border border-white/10 bg-[#101010] px-2 py-1 text-xs font-semibold leading-none text-white/85 opacity-0 shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
-        {price}
+      <span
+        ref={tooltipRef}
+        className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 translate-y-2 whitespace-nowrap rounded-md border border-white/10 bg-[#101010] px-2 py-1 text-xs font-semibold leading-none text-white/85 opacity-0 shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100"
+        style={{
+          bottom: `${24 + tooltipOffsetY}px`,
+          zIndex: 20 + tooltipLayer,
+        }}
+      >
+        Entry: {price}
       </span>
-      <div
-        className={`w-0 shrink-0 self-stretch border-l border-dashed transition-colors duration-300 ${
-          isNegative ? "border-[#f87171]" : "border-[#35a64e]"
-        }`}
+      <span
+        className="transition-transform duration-300 ease-out"
+        style={{ transform: dotOffsetY ? `translateY(${dotOffsetY}px)` : undefined }}
         aria-hidden
-      />
-      <span className="mb-1 whitespace-nowrap text-[8px] font-semibold uppercase leading-none tracking-wide text-white/60">
-        Entry
+      >
+        <span className="block size-2.5 rounded-full bg-white/45 transition-transform duration-150 ease-out group-hover:scale-125" />
       </span>
     </button>
   );
@@ -141,8 +199,16 @@ export default function Position() {
   const [tpPct, setTpPct] = useState(RULER_TP_PCT);
   const [activeDrag, setActiveDrag] = useState<"SL" | "TP" | null>(null);
   const [pendingMark, setPendingMark] = useState<"SL" | "TP" | null>(null);
+  const [tooltipWidths, setTooltipWidths] = useState<Record<"LIQ" | "SL" | "TP" | "Entry", number>>({
+    LIQ: 0,
+    SL: 0,
+    TP: 0,
+    Entry: 0,
+  });
   const chartRef = useRef<HTMLDivElement | null>(null);
+  const entryTooltipRef = useRef<HTMLSpanElement | null>(null);
   const pendingTimerRef = useRef<number | null>(null);
+  const [chartWidth, setChartWidth] = useState(0);
 
   useEffect(() => {
     setFillPercent(randomFillPercent());
@@ -150,6 +216,20 @@ export default function Position() {
       setFillPercent(randomFillPercent());
     }, SIM_TICK_MS);
     return () => window.clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const chartElement = chartRef.current;
+    if (!chartElement) return;
+
+    const updateChartWidth = () => {
+      setChartWidth(chartElement.clientWidth);
+    };
+
+    updateChartWidth();
+    const observer = new ResizeObserver(updateChartWidth);
+    observer.observe(chartElement);
+    return () => observer.disconnect();
   }, []);
 
   const deltaPct = fillPercent - ENTRY_LINE_PERCENT;
@@ -172,6 +252,56 @@ export default function Position() {
   const topAbs = Math.abs(currentTotalUsd);
   const slPrice = useMemo(() => priceFromPercent(slPct), [slPct]);
   const tpPrice = useMemo(() => priceFromPercent(tpPct), [tpPct]);
+  const edgePaddingPct = useMemo(() => {
+    if (!chartWidth) return 0;
+    return (EDGE_PADDING_PX / chartWidth) * 100;
+  }, [chartWidth]);
+
+  const getSafeBoundsPct = useCallback(
+    (tooltipWidthPx: number) => {
+      if (!chartWidth) return { min: 0, max: 100 };
+      const halfTooltipPx = tooltipWidthPx > 0 ? tooltipWidthPx / 2 : 0;
+      const requiredInsetPx = Math.max(halfTooltipPx, DOT_RADIUS_PX) + EDGE_PADDING_PX;
+      const insetPct = (requiredInsetPx / chartWidth) * 100;
+      return {
+        min: insetPct,
+        max: 100 - insetPct,
+      };
+    },
+    [chartWidth],
+  );
+
+  const liqBounds = getSafeBoundsPct(tooltipWidths.LIQ);
+  const slBounds = getSafeBoundsPct(tooltipWidths.SL);
+  const tpBounds = getSafeBoundsPct(tooltipWidths.TP);
+  const entryBounds = getSafeBoundsPct(tooltipWidths.Entry);
+
+  const safeLiqPct = clamp(RULER_LIQ_PCT, liqBounds.min, liqBounds.max);
+  const safeEntryPct = clamp(ENTRY_LINE_PERCENT, entryBounds.min, entryBounds.max);
+  const safeSlPct = clamp(slPct, slBounds.min, slBounds.max);
+  const safeTpPct = clamp(tpPct, tpBounds.min, tpBounds.max);
+  const isSlNearLiq = Math.abs(safeSlPct - safeLiqPct) <= 1.6;
+  const isSlNearEntry = Math.abs(safeSlPct - safeEntryPct) <= 1.6;
+  const isTpNearEntry = Math.abs(safeTpPct - safeEntryPct) <= 1.6;
+  const liqTooltipOffsetY = isSlNearLiq ? 22 : 0;
+  const isEntryNearAnotherMark = isTpNearEntry || isSlNearEntry;
+  const entryTooltipOffsetY = isEntryNearAnotherMark ? 22 : 0;
+
+  useEffect(() => {
+    const entryTooltipElement = entryTooltipRef.current;
+    if (!entryTooltipElement) return;
+    const updateWidth = () => {
+      setTooltipWidths((prev) => ({ ...prev, Entry: entryTooltipElement.offsetWidth }));
+    };
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(entryTooltipElement);
+    return () => observer.disconnect();
+  }, []);
+
+  const handleTooltipWidthChange = useCallback((key: "LIQ" | "SL" | "TP", width: number) => {
+    setTooltipWidths((prev) => (prev[key] === width ? prev : { ...prev, [key]: width }));
+  }, []);
 
   const updateDraggedMark = useCallback(
     (clientX: number) => {
@@ -183,13 +313,13 @@ export default function Position() {
       const nextPct = clamp(rawPct, 0, 100);
 
       if (activeDrag === "SL") {
-        setSlPct(clamp(nextPct, RULER_LIQ_PCT, ENTRY_LINE_PERCENT));
+        setSlPct(clamp(nextPct, Math.max(safeLiqPct, slBounds.min), Math.min(safeEntryPct, slBounds.max)));
         return;
       }
 
-      setTpPct(clamp(nextPct, ENTRY_LINE_PERCENT, 100));
+      setTpPct(clamp(nextPct, Math.max(safeEntryPct, tpBounds.min), tpBounds.max));
     },
-    [activeDrag],
+    [activeDrag, safeEntryPct, safeLiqPct, slBounds.max, slBounds.min, tpBounds.max, tpBounds.min],
   );
 
   useEffect(() => {
@@ -271,7 +401,7 @@ export default function Position() {
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-[#2d107f] px-2 py-0.5 text-xs font-semibold leading-tight text-white">
-              PHX 62¢
+              PHX 40¢
             </span>
             <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold leading-tight text-white">
               3x
@@ -284,7 +414,7 @@ export default function Position() {
       </div>
 
       {/* Progress + metrics — Figma 2072:7710 */}
-      <div ref={chartRef} className="relative h-[95px] w-full overflow-hidden rounded-lg">
+      <div ref={chartRef} className="relative h-[100px] w-full overflow-hidden rounded-lg">
         <div className="absolute inset-0 rounded-lg bg-white/[0.04]" aria-hidden />
         <div className="relative flex h-full w-full min-w-0">
           <div
@@ -343,32 +473,52 @@ export default function Position() {
         </div>
 
         <RulerMark
-          leftPct={RULER_LIQ_PCT}
+          markerKey="LIQ"
+          leftPct={safeLiqPct}
           label="LIQ"
           price={PRICE_LIQ}
-          labelClassName="text-[#ff4d5e]"
+          dotClassName="bg-[#ff4d5e]"
+          onTooltipWidthChange={handleTooltipWidthChange}
+          dotOffsetY={isSlNearLiq ? -18 : 0}
+          tooltipOffsetY={liqTooltipOffsetY}
+          tooltipLayer={isSlNearLiq ? 2 : 0}
         />
         <RulerMark
-          leftPct={slPct}
+          markerKey="SL"
+          leftPct={safeSlPct}
           label="SL"
           price={slPrice}
-          labelClassName="text-[#f2ff00]"
+          dotClassName="bg-[#f2ff00]"
           onPointerDown={startDrag("SL")}
           isDragging={activeDrag === "SL"}
           isPinnedOpen={pendingMark === "SL"}
           showLoader={pendingMark === "SL"}
+          onTooltipWidthChange={handleTooltipWidthChange}
+          tooltipLayer={isSlNearLiq ? 1 : 0}
+          expandHitArea={isSlNearLiq || isSlNearEntry}
         />
         <RulerMark
-          leftPct={tpPct}
+          markerKey="TP"
+          leftPct={safeTpPct}
           label="TP"
           price={tpPrice}
-          labelClassName="text-[#5dd978]"
+          dotClassName="bg-[#5dd978]"
           onPointerDown={startDrag("TP")}
           isDragging={activeDrag === "TP"}
           isPinnedOpen={pendingMark === "TP"}
           showLoader={pendingMark === "TP"}
+          onTooltipWidthChange={handleTooltipWidthChange}
+          tooltipLayer={isTpNearEntry ? 1 : 0}
+          expandHitArea={isTpNearEntry}
         />
-        <EntryMark leftPct={ENTRY_LINE_PERCENT} price={PRICE_ENTRY} isNegative={pnlSigned < 0} />
+        <EntryMark
+          leftPct={safeEntryPct}
+          price={PRICE_ENTRY}
+          tooltipRef={entryTooltipRef}
+          dotOffsetY={isEntryNearAnotherMark ? -18 : 0}
+          tooltipOffsetY={entryTooltipOffsetY}
+          tooltipLayer={isEntryNearAnotherMark ? 2 : 0}
+        />
       </div>
 
       <div className="flex w-full items-start justify-center gap-2.5">
