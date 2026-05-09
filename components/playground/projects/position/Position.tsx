@@ -162,7 +162,7 @@ function EntryMark({
 }: {
   leftPct: number;
   price: string;
-  tooltipRef?: React.RefObject<HTMLSpanElement | null>;
+  tooltipRef?: React.RefObject<HTMLSpanElement>;
   dotOffsetY?: number;
   tooltipOffsetY?: number;
   tooltipLayer?: number;
