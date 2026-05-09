@@ -30,6 +30,8 @@ const PRICE_ENTRY = "40¢";
 const PRICE_LIQ = "10¢";
 
 const SIM_TICK_MS = 2200;
+const FAST_FORWARD_DELTA_THRESHOLD = 12;
+const FAST_FORWARD_FX_MS = 550;
 
 const INITIAL_VALUE_USD = 1000;
 const EDGE_PADDING_PX = 8;
@@ -199,6 +201,7 @@ export default function Position() {
   const [tpPct, setTpPct] = useState(RULER_TP_PCT);
   const [activeDrag, setActiveDrag] = useState<"SL" | "TP" | null>(null);
   const [pendingMark, setPendingMark] = useState<"SL" | "TP" | null>(null);
+  const [isFastForwardFx, setIsFastForwardFx] = useState(false);
   const [tooltipWidths, setTooltipWidths] = useState<Record<"LIQ" | "SL" | "TP" | "Entry", number>>({
     LIQ: 0,
     SL: 0,
@@ -208,14 +211,34 @@ export default function Position() {
   const chartRef = useRef<HTMLDivElement | null>(null);
   const entryTooltipRef = useRef<HTMLSpanElement | null>(null);
   const pendingTimerRef = useRef<number | null>(null);
+  const fastForwardTimerRef = useRef<number | null>(null);
   const [chartWidth, setChartWidth] = useState(0);
 
   useEffect(() => {
     setFillPercent(randomFillPercent());
     const id = window.setInterval(() => {
-      setFillPercent(randomFillPercent());
+      setFillPercent((prev) => {
+        const next = randomFillPercent();
+        if (next - prev >= FAST_FORWARD_DELTA_THRESHOLD) {
+          setIsFastForwardFx(true);
+          if (fastForwardTimerRef.current !== null) {
+            window.clearTimeout(fastForwardTimerRef.current);
+          }
+          fastForwardTimerRef.current = window.setTimeout(() => {
+            setIsFastForwardFx(false);
+            fastForwardTimerRef.current = null;
+          }, FAST_FORWARD_FX_MS);
+        }
+        return next;
+      });
     }, SIM_TICK_MS);
-    return () => window.clearInterval(id);
+    return () => {
+      window.clearInterval(id);
+      if (fastForwardTimerRef.current !== null) {
+        window.clearTimeout(fastForwardTimerRef.current);
+        fastForwardTimerRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -381,7 +404,9 @@ export default function Position() {
 
   return (
     <div
-      className="flex w-full max-w-[400px] flex-col gap-4 rounded-[24px] p-4"
+      className={`flex w-full max-w-[400px] flex-col gap-4 rounded-[24px] p-4 ${
+        isFastForwardFx ? "animate-[position-shake_360ms_ease-in-out_1]" : ""
+      }`}
       style={{ background: "#1d1d1d" }}
       data-name="Position"
     >
@@ -520,6 +545,16 @@ export default function Position() {
           tooltipLayer={isEntryNearAnotherMark ? 2 : 0}
         />
       </div>
+      <style>{`
+        @keyframes position-shake {
+          0% { transform: translate3d(0, 0, 0); }
+          20% { transform: translate3d(-1px, 0, 0); }
+          40% { transform: translate3d(1px, 0, 0); }
+          60% { transform: translate3d(-1px, 0, 0); }
+          80% { transform: translate3d(1px, 0, 0); }
+          100% { transform: translate3d(0, 0, 0); }
+        }
+      `}</style>
 
       <div className="flex w-full items-start justify-center gap-2.5">
         <button
