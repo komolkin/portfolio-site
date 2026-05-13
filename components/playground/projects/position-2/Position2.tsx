@@ -91,9 +91,9 @@ export default function Position2() {
 
   return (
     <div
-      className={`relative flex w-full max-w-[450px] flex-col overflow-hidden rounded-[24px] p-4 ${
+      className={`relative flex w-full max-w-[450px] flex-col overflow-hidden rounded-[24px] p-4 transition-transform duration-150 ease-out ${
         isFastForwardFx ? "animate-[position2-shake_360ms_ease-in-out_1]" : ""
-      } ${expanded ? "" : "cursor-pointer"}`}
+      } ${expanded ? "active:scale-[0.98]" : "cursor-pointer active:scale-[0.98]"}`}
       data-name="Position #2"
       role={expanded ? undefined : "button"}
       tabIndex={expanded ? undefined : 0}
@@ -129,7 +129,7 @@ export default function Position2() {
       />
 
       <div
-        className={`relative z-[2] flex w-full items-center justify-between gap-4 ${
+        className={`relative z-[2] flex w-full items-center justify-between gap-4 transition-transform duration-150 ease-out ${
           expanded ? "cursor-pointer border-b border-white/10 pb-4" : ""
         }`}
         role={expanded ? "button" : undefined}
