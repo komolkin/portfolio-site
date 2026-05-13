@@ -93,8 +93,23 @@ export default function Position2() {
     <div
       className={`relative flex w-full max-w-[450px] flex-col overflow-hidden rounded-[24px] p-4 ${
         isFastForwardFx ? "animate-[position2-shake_360ms_ease-in-out_1]" : ""
-      }`}
+      } ${expanded ? "" : "cursor-pointer"}`}
       data-name="Position #2"
+      role={expanded ? undefined : "button"}
+      tabIndex={expanded ? undefined : 0}
+      aria-expanded={expanded}
+      aria-controls="position-2-expanded"
+      onClick={expanded ? undefined : () => setExpanded(true)}
+      onKeyDown={
+        expanded
+          ? undefined
+          : (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setExpanded(true);
+              }
+            }
+      }
     >
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-[24px]">
         <MeshGradient
@@ -115,8 +130,23 @@ export default function Position2() {
 
       <div
         className={`relative z-[2] flex w-full items-center justify-between gap-4 ${
-          expanded ? "border-b border-white/10 pb-4" : ""
+          expanded ? "cursor-pointer border-b border-white/10 pb-4" : ""
         }`}
+        role={expanded ? "button" : undefined}
+        tabIndex={expanded ? 0 : undefined}
+        aria-expanded={expanded ? true : undefined}
+        aria-controls={expanded ? "position-2-expanded" : undefined}
+        onClick={expanded ? () => setExpanded(false) : undefined}
+        onKeyDown={
+          expanded
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setExpanded(false);
+                }
+              }
+            : undefined
+        }
       >
         <div className="flex min-w-0 flex-1 items-center gap-3 pr-2">
           <div className="relative size-12 shrink-0 overflow-hidden rounded-lg">
