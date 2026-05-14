@@ -1,10 +1,10 @@
 export const PROJECTS = [
+  { id: "position-2", label: "Position #2" },
+  { id: "position", label: "Position" },
   { id: "pnl-chart", label: "PnL Card" },
   { id: "binary-market", label: "Binary" },
   { id: "binary-compact", label: "Binary Compact" },
   { id: "leverage-selector", label: "Categorical" },
-  { id: "position", label: "Position" },
-  { id: "position-2", label: "Position #2" },
   { id: "resolved-card", label: "Resolved" },
 ] as const;
 
