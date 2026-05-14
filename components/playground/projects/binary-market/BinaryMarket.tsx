@@ -999,7 +999,7 @@ export default function BinaryMarket({ compactToWin = false }: BinaryMarketProps
                     transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: FLOW_EASE }}
                     className="w-full overflow-hidden"
                   >
-                    <div className="mt-1 flex w-full items-center gap-2 rounded-2xl bg-black/30 px-3 py-2.5 text-xs leading-[1.25] text-white">
+                    <div className="mt-1 flex w-full items-center gap-1.5 rounded-2xl bg-black/30 px-3 py-2.5 text-xs leading-[1.25] text-white">
                       <svg
                         viewBox="0 0 16 16"
                         className="size-4 shrink-0 text-[#facc15]"
