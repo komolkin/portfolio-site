@@ -1,4 +1,5 @@
 export const PROJECTS = [
+  { id: "position-3", label: "Position #3" },
   { id: "position-2", label: "Position #2" },
   { id: "position", label: "Position" },
   { id: "pnl-chart", label: "PnL Card" },

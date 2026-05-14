@@ -13,6 +13,7 @@ import BinaryMarket from "@/components/playground/projects/binary-market/BinaryM
 import BinaryCompact from "@/components/playground/projects/binary-compact/BinaryCompact";
 import Position from "@/components/playground/projects/position/Position";
 import Position2 from "@/components/playground/projects/position-2/Position2";
+import Position3 from "@/components/playground/projects/position-3/Position3";
 import PnlChart from "@/components/playground/projects/pnl-chart/PnlChart";
 
 export default function PlaygroundSlide() {
@@ -38,6 +39,7 @@ export default function PlaygroundSlide() {
           {activeProject === "pnl-chart" && <PnlChart />}
           {activeProject === "position" && <Position />}
           {activeProject === "position-2" && <Position2 />}
+          {activeProject === "position-3" && <Position3 />}
         </div>
       </main>
     </div>
