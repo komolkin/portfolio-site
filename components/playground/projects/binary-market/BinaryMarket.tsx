@@ -988,6 +988,38 @@ export default function BinaryMarket({ compactToWin = false }: BinaryMarketProps
                 ))}
               </div>
             </div>
+            {compactToWin && (
+              <AnimatePresence initial={false}>
+                {leverage > 2 && (
+                  <motion.div
+                    key="high-leverage-warning"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: FLOW_EASE }}
+                    className="w-full overflow-hidden"
+                  >
+                    <div className="mt-1 flex w-full items-center gap-2 rounded-2xl bg-black/30 px-3 py-2.5 text-xs leading-[1.25] text-white">
+                      <svg
+                        viewBox="0 0 16 16"
+                        className="size-4 shrink-0 text-[#facc15]"
+                        fill="currentColor"
+                        aria-hidden
+                      >
+                        <path d="M9.5 1.5 3 9h4l-.5 5.5L13 7H9z" />
+                      </svg>
+                      <span>
+                        High volatility and liquidation risk. Use{" "}
+                        <span className="underline decoration-dotted underline-offset-2">
+                          TP/SL
+                        </span>
+                        .
+                      </span>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
           </div>
         )}
 
