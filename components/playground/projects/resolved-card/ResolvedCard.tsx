@@ -116,17 +116,7 @@ export default function ResolvedCard() {
     el.style.setProperty("--cx", `${x}px`);
     el.style.setProperty("--cy", `${y}px`);
 
-    const now = performance.now();
-    const last = lastMoveRef.current;
-    if (last) {
-      const dt = Math.max(16, now - last.t);
-      const dist = Math.hypot(x - last.x, y - last.y);
-      const speed = dist / dt; // px per ms
-      const reflect = Math.max(0, Math.min(1, speed * 1.15));
-      const dotA = 0.12 + reflect * 0.35;
-      el.style.setProperty("--da", `${dotA}`);
-    }
-    lastMoveRef.current = { x, y, t: now };
+    lastMoveRef.current = { x, y, t: performance.now() };
   };
 
   const handleMouseLeave = () => {
@@ -137,7 +127,6 @@ export default function ResolvedCard() {
     el.style.setProperty("--rby", "0px");
     el.style.setProperty("--cx", "0px");
     el.style.setProperty("--cy", "0px");
-    el.style.setProperty("--da", "0.12");
     lastMoveRef.current = null;
   };
 
@@ -349,24 +338,17 @@ export default function ResolvedCard() {
           mix-blend-mode: color-dodge;
           opacity: calc(var(--ov, 0) * 0.28);
           transition: opacity 220ms ease;
-          background-image:
-            radial-gradient(
-              circle,
-              rgba(255, 255, 255, 0.16) 1px,
-              rgba(255, 255, 255, 0) 1.6px
-            ),
-            repeating-linear-gradient(
-              135deg,
-              rgba(255, 255, 255, 0) 0%,
-              rgba(255, 255, 255, 0.34) 26%,
-              rgba(200, 202, 208, 0.2) 44%,
-              rgba(255, 255, 255, 0.14) 58%,
-              rgba(255, 255, 255, 0) 100%
-            );
-          background-size: 12px 12px, 200% 200%;
-          background-position: 0px 0px,
-            calc(50% + var(--rbx, 0px)) calc(50% + var(--rby, 0px));
-          background-blend-mode: lighten;
+          background-image: repeating-linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.34) 26%,
+            rgba(200, 202, 208, 0.2) 44%,
+            rgba(255, 255, 255, 0.14) 58%,
+            rgba(255, 255, 255, 0) 100%
+          );
+          background-size: 200% 200%;
+          background-position: calc(50% + var(--rbx, 0px))
+            calc(50% + var(--rby, 0px));
           z-index: 20;
         }
 
@@ -375,22 +357,13 @@ export default function ResolvedCard() {
           mix-blend-mode: overlay;
           opacity: calc(var(--ov, 0) * 0.7);
           transition: opacity 220ms ease;
-          background-image:
-            radial-gradient(
-              circle at var(--cx, 0px) var(--cy, 0px),
-              rgba(255, 255, 255, 0.18) 0%,
-              rgba(255, 255, 255, 0.08) 22%,
-              rgba(255, 255, 255, 0) 56%
-            ),
-            radial-gradient(
-              circle,
-              rgba(255, 255, 255, calc(var(--da, 0.12) * 0.8)) 1px,
-              rgba(255, 255, 255, 0) 1.65px
-            );
-          background-repeat: no-repeat, repeat;
-          background-size: auto, 12px 12px;
-          background-position: 0px 0px, 0px 0px;
-          background-blend-mode: normal, lighten;
+          background-image: radial-gradient(
+            circle at var(--cx, 0px) var(--cy, 0px),
+            rgba(255, 255, 255, 0.18) 0%,
+            rgba(255, 255, 255, 0.08) 22%,
+            rgba(255, 255, 255, 0) 56%
+          );
+          background-repeat: no-repeat;
           -webkit-mask-image: radial-gradient(
             circle at var(--cx, 0px) var(--cy, 0px),
             rgba(0, 0, 0, 1) 0%,
