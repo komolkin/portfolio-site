@@ -39,6 +39,46 @@ body {
   background: #000;
 }
 
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle 0.5px at 1px 1px, #757575 0.5px, transparent 1px);
+  background-size: 16px 16px;
+  background-repeat: repeat;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Dim base grid covering the whole viewport */
+body::before {
+  background-color: #000;
+  opacity: 0.3;
+}
+
+/* Bright grid revealed only inside cluster regions via mask */
+body::after {
+  opacity: 0.7;
+  -webkit-mask-image:
+    radial-gradient(ellipse 22% 22% at 4% 88%, #000, transparent 75%),
+    radial-gradient(ellipse 18% 18% at 32% 92%, #000, transparent 75%),
+    radial-gradient(ellipse 16% 14% at 62% 7%, #000, transparent 75%),
+    radial-gradient(ellipse 12% 12% at 99% 88%, #000, transparent 75%);
+  mask-image:
+    radial-gradient(ellipse 22% 22% at 4% 88%, #000, transparent 75%),
+    radial-gradient(ellipse 18% 18% at 32% 92%, #000, transparent 75%),
+    radial-gradient(ellipse 16% 14% at 62% 7%, #000, transparent 75%),
+    radial-gradient(ellipse 12% 12% at 99% 88%, #000, transparent 75%);
+  -webkit-mask-composite: source-over;
+  mask-composite: add;
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
 /* Scroll snapping for slides */
 .slides-scroll {
   scroll-snap-type: y mandatory;
