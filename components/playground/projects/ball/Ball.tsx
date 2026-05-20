@@ -22,7 +22,7 @@ const BallCanvas3D = dynamic(
 
 const BALL_RADIUS = 40;
 const GRAVITY = 2650;
-const FLAP_VELOCITY = -430;
+const FLAP_VELOCITY = -860;
 const MAX_FALL_SPEED = 980;
 const INITIAL_Y_RATIO = 0.38;
 const MAX_DELTA_S = 1 / 30;
