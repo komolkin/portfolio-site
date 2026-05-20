@@ -3,7 +3,7 @@ export const PROJECTS = [
   { id: "position-2", label: "Position #2" },
   { id: "position-3", label: "Position #3" },
   { id: "position", label: "Position" },
-  { id: "pnl-chart", label: "PnL Card" },
+  { id: "pnl-chart", label: "PnL" },
   { id: "binary-market", label: "Binary" },
   { id: "binary-compact", label: "Binary Compact" },
   { id: "leverage-selector", label: "Categorical" },

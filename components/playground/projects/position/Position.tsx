@@ -2,6 +2,7 @@
 
 import NumberFlow from "@number-flow/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PNL_GLASS_PANEL } from "@/components/playground/projects/pnl-chart/pnlGlass";
 
 /**
  * Position / "Resolution Outcome" — Figma node 2072:7697
@@ -404,10 +405,9 @@ export default function Position() {
 
   return (
     <div
-      className={`flex w-full max-w-[400px] flex-col gap-4 rounded-[24px] p-4 ${
+      className={`flex w-full max-w-[400px] flex-col gap-4 rounded-[24px] p-4 ${PNL_GLASS_PANEL} ${
         isFastForwardFx ? "animate-[position-shake_360ms_ease-in-out_1]" : ""
       }`}
-      style={{ background: "#1d1d1d" }}
       data-name="Position"
     >
       {/* Header — Figma 2072:7699 */}
