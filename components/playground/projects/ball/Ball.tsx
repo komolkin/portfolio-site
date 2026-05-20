@@ -1,90 +1,138 @@
 "use client";
 
 import NumberFlow from "@number-flow/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  angSpeed,
+  type BallPhysicsRefs,
+  type Vec3,
+} from "@/components/playground/projects/ball/ball-physics";
+import {
+  addFlapSpin,
+  addImpactSpin,
+  dampAngularVelocity,
+  integrateRotation,
+} from "@/components/playground/projects/ball/ball-spin";
 
-const BALL_RADIUS = 30;
+const BallCanvas3D = dynamic(
+  () => import("@/components/playground/projects/ball/BallCanvas3D"),
+  { ssr: false }
+);
+
+const BALL_RADIUS = 40;
 const GRAVITY = 2650;
 const FLAP_VELOCITY = -430;
 const MAX_FALL_SPEED = 980;
 const INITIAL_Y_RATIO = 0.38;
 const MAX_DELTA_S = 1 / 30;
 
-/** Soccer-ball-style bounce off the floor */
 const RESTITUTION = 0.74;
 const MIN_BOUNCE_SPEED = 95;
-const SPIN_PER_IMPACT = 0.14;
-const SPIN_DAMPING = 4.2;
+const ANG_DAMP_AIR = 0.2;
+const ANG_DAMP_SETTLE = 3.8;
+const REST_ANG_SPEED = 0.65;
 
 type GamePhase = "playing" | "settling" | "over";
 
+const zeroVec = (): Vec3 => ({ x: 0, y: 0, z: 0 });
+
 export default function Ball() {
   const areaRef = useRef<HTMLDivElement>(null);
-  const ballRef = useRef<HTMLDivElement>(null);
   const [score, setScore] = useState(0);
   const [phase, setPhase] = useState<GamePhase>("playing");
   const [showGameOver, setShowGameOver] = useState(false);
+  const [areaSize, setAreaSize] = useState({ width: 0, height: 0 });
 
   const yRef = useRef(0);
   const vyRef = useRef(0);
-  const spinRef = useRef(0);
-  const boundsRef = useRef({ height: 0 });
+  const angVelRef = useRef<Vec3>(zeroVec());
+  const rotationRef = useRef<Vec3>(zeroVec());
+  const boundsRef = useRef({ height: 0, width: 0 });
   const phaseRef = useRef<GamePhase>("playing");
   const rafRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number | null>(null);
 
-  const syncBallTransform = useCallback(() => {
-    const ball = ballRef.current;
-    if (!ball) return;
-    const vy = vyRef.current;
-    const flightTilt = Math.max(-28, Math.min(62, vy * 0.045));
-    const rotation = spinRef.current + flightTilt;
-    ball.style.transform = `translate(-50%, ${yRef.current}px) rotate(${rotation}deg)`;
-  }, []);
+  const physics = useMemo<BallPhysicsRefs>(
+    () => ({
+      y: yRef,
+      vy: vyRef,
+      angVel: angVelRef,
+      rotation: rotationRef,
+      bounds: boundsRef,
+      radius: BALL_RADIUS,
+    }),
+    []
+  );
 
   const measure = useCallback(() => {
     const el = areaRef.current;
     if (!el) return;
-    const { height } = el.getBoundingClientRect();
-    boundsRef.current = { height };
+    const { width, height } = el.getBoundingClientRect();
+    boundsRef.current = { width, height };
+    setAreaSize({ width, height });
     const floor = height - BALL_RADIUS * 2;
     if (yRef.current === 0 && height > 0) {
       yRef.current = height * INITIAL_Y_RATIO - BALL_RADIUS;
       yRef.current = Math.min(yRef.current, floor);
-      syncBallTransform();
     }
-  }, [syncBallTransform]);
+  }, []);
 
   const resetGame = useCallback(() => {
     const { height } = boundsRef.current;
     const floor = height - BALL_RADIUS * 2;
     yRef.current = Math.min(height * INITIAL_Y_RATIO - BALL_RADIUS, floor);
     vyRef.current = 0;
-    spinRef.current = 0;
+    angVelRef.current = zeroVec();
+    rotationRef.current = zeroVec();
     phaseRef.current = "playing";
     setPhase("playing");
     setShowGameOver(false);
     setScore(0);
     lastTimeRef.current = null;
-    syncBallTransform();
-  }, [syncBallTransform]);
+  }, []);
 
   const flap = useCallback(() => {
     if (phaseRef.current !== "playing") return;
     vyRef.current = FLAP_VELOCITY;
-    setScore((s) => s + 1);
-    syncBallTransform();
-  }, [syncBallTransform]);
+    setScore((s) => {
+      addFlapSpin(angVelRef.current, s + 1);
+      return s + 1;
+    });
+  }, []);
+
+  const startSettling = useCallback(() => {
+    if (phaseRef.current !== "playing") return;
+    phaseRef.current = "settling";
+    setPhase("settling");
+    setShowGameOver(true);
+  }, []);
 
   const bounceOffFloor = useCallback((floor: number, impactSpeed: number) => {
     yRef.current = floor;
-    spinRef.current += impactSpeed * SPIN_PER_IMPACT;
+    addImpactSpin(angVelRef.current, impactSpeed, "floor");
 
     if (impactSpeed >= MIN_BOUNCE_SPEED) {
       vyRef.current = -impactSpeed * RESTITUTION;
     } else {
       vyRef.current = 0;
-      spinRef.current *= 0.6;
+      angVelRef.current.x *= 0.55;
+      angVelRef.current.y *= 0.55;
+      angVelRef.current.z *= 0.55;
+    }
+  }, []);
+
+  const bounceOffCeiling = useCallback((ceiling: number, impactSpeed: number) => {
+    yRef.current = ceiling;
+    addImpactSpin(angVelRef.current, impactSpeed, "ceiling");
+
+    if (impactSpeed >= MIN_BOUNCE_SPEED) {
+      vyRef.current = impactSpeed * RESTITUTION;
+    } else {
+      vyRef.current = 0;
+      angVelRef.current.x *= 0.55;
+      angVelRef.current.y *= 0.55;
+      angVelRef.current.z *= 0.55;
     }
   }, []);
 
@@ -131,49 +179,52 @@ export default function Ball() {
 
         yRef.current += vyRef.current * dt;
 
-        if (yRef.current <= ceiling) {
-          yRef.current = ceiling;
-          if (vyRef.current < 0) vyRef.current = 0;
+        integrateRotation(rotationRef.current, angVelRef.current, dt);
+        dampAngularVelocity(
+          angVelRef.current,
+          dt,
+          phaseRef.current === "settling" ? ANG_DAMP_SETTLE : ANG_DAMP_AIR
+        );
+
+        if (yRef.current <= ceiling && vyRef.current < 0) {
+          const impact = -vyRef.current;
+          if (phaseRef.current === "playing") startSettling();
+          bounceOffCeiling(ceiling, impact);
         }
 
         if (yRef.current >= floor && vyRef.current >= 0) {
           const impact = vyRef.current;
-
-          if (phaseRef.current === "playing") {
-            phaseRef.current = "settling";
-            setPhase("settling");
-            setShowGameOver(true);
-          }
-
+          if (phaseRef.current === "playing") startSettling();
           bounceOffFloor(floor, impact);
 
           if (
             phaseRef.current === "settling" &&
             Math.abs(vyRef.current) < MIN_BOUNCE_SPEED &&
-            Math.abs(spinRef.current) < 8
+            angSpeed(angVelRef.current) < REST_ANG_SPEED
           ) {
             vyRef.current = 0;
-            spinRef.current *= 0.5;
+            angVelRef.current = zeroVec();
             phaseRef.current = "over";
             setPhase("over");
           }
         }
 
         if (phaseRef.current === "settling") {
-          spinRef.current *= Math.exp(-SPIN_DAMPING * dt);
-
           const onFloor = yRef.current >= floor - 0.5;
-          if (onFloor && Math.abs(vyRef.current) < 1 && Math.abs(spinRef.current) < 8) {
+          if (
+            onFloor &&
+            Math.abs(vyRef.current) < 1 &&
+            angSpeed(angVelRef.current) < REST_ANG_SPEED
+          ) {
             vyRef.current = 0;
             yRef.current = floor;
-            spinRef.current = 0;
+            angVelRef.current = zeroVec();
             phaseRef.current = "over";
             setPhase("over");
           }
         }
       }
 
-      syncBallTransform();
       rafRef.current = requestAnimationFrame(tick);
     };
 
@@ -181,7 +232,7 @@ export default function Ball() {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [syncBallTransform, bounceOffFloor]);
+  }, [bounceOffFloor, bounceOffCeiling, startSettling]);
 
   return (
     <div
@@ -199,6 +250,8 @@ export default function Ball() {
         }
       }}
     >
+      <BallCanvas3D physics={physics} width={areaSize.width} height={areaSize.height} />
+
       <div
         className="pointer-events-none absolute left-1/2 top-8 z-10 -translate-x-1/2 text-4xl font-light tabular-nums tracking-tight text-foreground"
         aria-live="polite"
@@ -211,17 +264,6 @@ export default function Ball() {
           {phase === "over" ? "Tap to try" : "Game over"}
         </p>
       )}
-
-      <div
-        ref={ballRef}
-        className="pointer-events-none absolute left-1/2 top-0 z-20 origin-center rounded-full border border-white/25 bg-white/[0.06] shadow-[0_0_32px_rgba(255,255,255,0.08)] will-change-transform"
-        style={{
-          width: BALL_RADIUS * 2,
-          height: BALL_RADIUS * 2,
-          transform: "translate(-50%, 0px)",
-        }}
-        aria-hidden
-      />
     </div>
   );
 }
