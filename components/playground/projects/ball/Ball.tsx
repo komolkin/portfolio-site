@@ -14,6 +14,7 @@ import {
   dampAngularVelocity,
   integrateRotation,
 } from "@/components/playground/projects/ball/ball-spin";
+import { playTapBounceSound, resumeBallAudio } from "@/components/playground/projects/ball/ball-sound";
 
 const BallCanvas3D = dynamic(
   () => import("@/components/playground/projects/ball/BallCanvas3D"),
@@ -94,6 +95,7 @@ export default function Ball() {
 
   const flap = useCallback(() => {
     if (phaseRef.current !== "playing") return;
+    playTapBounceSound();
     vyRef.current = FLAP_VELOCITY;
     setScore((s) => {
       addFlapSpin(angVelRef.current, s + 1);
@@ -139,6 +141,7 @@ export default function Ball() {
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
       e.preventDefault();
+      void resumeBallAudio();
       if (phaseRef.current === "over") {
         resetGame();
         return;
@@ -245,6 +248,7 @@ export default function Ball() {
       onKeyDown={(e) => {
         if (e.key === " " || e.key === "Enter") {
           e.preventDefault();
+          void resumeBallAudio();
           if (phaseRef.current === "over") resetGame();
           else flap();
         }
