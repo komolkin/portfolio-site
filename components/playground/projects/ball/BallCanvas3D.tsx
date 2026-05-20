@@ -109,7 +109,7 @@ export default function BallCanvas3D({ physics, width, height }: BallCanvas3DPro
 
   return (
     <Canvas
-      className="pointer-events-none absolute inset-0"
+      className="pointer-events-none absolute inset-0 z-20"
       gl={{ alpha: true, antialias: true }}
       shadows
       dpr={[1, 2]}
