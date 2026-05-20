@@ -15,6 +15,7 @@ import Position from "@/components/playground/projects/position/Position";
 import Position2 from "@/components/playground/projects/position-2/Position2";
 import Position3 from "@/components/playground/projects/position-3/Position3";
 import PnlChart from "@/components/playground/projects/pnl-chart/PnlChart";
+import Ball from "@/components/playground/projects/ball/Ball";
 
 export default function PlaygroundSlide() {
   const pathname = usePathname();
@@ -32,6 +33,7 @@ export default function PlaygroundSlide() {
       <PlaygroundNav activeProject={activeProject} />
       <main className="flex-1 w-full min-w-0">
         <div className="w-full h-full flex items-center justify-center">
+          {activeProject === "ball" && <Ball />}
           {activeProject === "resolved-card" && <ResolvedCard />}
           {activeProject === "leverage-selector" && <LeverageSelector />}
           {activeProject === "binary-market" && <BinaryMarket />}
