@@ -2,6 +2,7 @@
 
 import NumberFlow from "@number-flow/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import Position3Particles from "./Position3Particles";
 
 /**
  * Position #3 — minimalist progress bar (label-only LIQ/Entry, no SL/TP dots).
@@ -21,6 +22,18 @@ const MAX_VALUE_USD = 286;
 const SIM_TICK_MS = 2200;
 const FAST_FORWARD_DELTA_THRESHOLD = 12;
 const FAST_FORWARD_FX_MS = 550;
+
+const FILL_GRADIENT_GREEN =
+  "linear-gradient(180deg, #5dd978 0%, #3ba953 50%, #299040 75%, #18782d 100%)";
+const FILL_GRADIENT_RED =
+  "linear-gradient(180deg, #ff4d5e 0%, #bd2e3d 50%, #9b1f2d 75%, #7a0f1c 100%)";
+
+const CARD_BG_GREEN =
+  "linear-gradient(180deg, rgba(93,217,120,0.04) 0%, rgba(93,217,120,0.1) 100%), #1d1d1d";
+const CARD_BG_RED =
+  "linear-gradient(180deg, rgba(255,77,94,0) 0%, rgba(255,77,94,0.1) 100%), #1d1d1d";
+const CARD_BORDER_GREEN = "rgba(93,217,120,0.1)";
+const CARD_BORDER_RED = "rgba(255,77,94,0.1)";
 
 function randomFillPercent(): number {
   return FILL_MIN + Math.floor(Math.random() * (FILL_MAX - FILL_MIN + 1));
@@ -75,17 +88,23 @@ export default function Position3() {
   const topAbs = Math.abs(currentTotalUsd);
 
   const isAhead = fillPercent >= ENTRY_LINE_PERCENT;
-  const pctColorClass = isAhead ? "text-[#5dd978]" : "text-[#f87171]";
+  const pctColor = isAhead ? "#c2f5ce" : "#fca5af";
   const dashedColor = isAhead ? "#5dd978" : "#f87171";
 
   return (
     <div
-      className={`flex w-full max-w-[400px] flex-col gap-4 rounded-[24px] p-4 ${
+      className={`relative flex w-full max-w-[400px] flex-col gap-4 overflow-hidden rounded-[24px] border p-4 transition-[background,border-color] duration-500 ease-out ${
         isFastForwardFx ? "animate-[position3-shake_360ms_ease-in-out_1]" : ""
       }`}
-      style={{ background: "#1d1d1d" }}
+      style={{
+        background: isAhead ? CARD_BG_GREEN : CARD_BG_RED,
+        borderColor: isAhead ? CARD_BORDER_GREEN : CARD_BORDER_RED,
+      }}
       data-name="Position #3"
     >
+      <Position3Particles variant={isAhead ? "green" : "red"} />
+
+      <div className="relative z-[1] flex flex-col gap-4">
       <div className="flex w-full items-center gap-4">
         <div className="relative size-[52px] shrink-0 overflow-hidden rounded-lg">
           <img
@@ -117,14 +136,14 @@ export default function Position3() {
         <div className="absolute inset-0 rounded-lg bg-white/[0.04]" aria-hidden />
         <div className="relative flex h-full w-full min-w-0">
           <div
-            className="relative h-full shrink-0 rounded-l-lg transition-[width,background-color] duration-500 ease-out"
+            className="relative h-full shrink-0 rounded-l-lg transition-[width,background-image] duration-500 ease-out"
             style={{
               width: `${fillPercent}%`,
-              backgroundColor: isAhead ? "#123224" : "#3a1414",
+              backgroundImage: isAhead ? FILL_GRADIENT_GREEN : FILL_GRADIENT_RED,
             }}
             aria-hidden
           />
-          <div className="relative h-full min-w-0 flex-1 rounded-r-lg bg-[#252525]" />
+          <div className="relative h-full min-w-0 flex-1 rounded-r-lg bg-white/[0.04]" />
         </div>
 
         {/* LIQ label on the filled side */}
@@ -184,7 +203,8 @@ export default function Position3() {
           style={{ left: `${fillPercent}%` }}
         >
           <span
-            className={`font-mono text-[28px] font-normal leading-tight tabular-nums drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)] ${pctColorClass}`}
+            className="font-mono text-[28px] font-normal leading-tight tabular-nums drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)] transition-colors duration-500 ease-out"
+            style={{ color: pctColor }}
           >
             <NumberFlow
               value={fillPercent}
@@ -232,6 +252,7 @@ export default function Position3() {
         >
           <img alt="" className="size-4" src={IMG_SHARE} draggable={false} />
         </button>
+      </div>
       </div>
     </div>
   );
