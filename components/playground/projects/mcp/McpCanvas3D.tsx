@@ -1,7 +1,7 @@
 "use client";
 
 import { Environment } from "@react-three/drei";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Suspense, useLayoutEffect, useMemo, useRef, type MutableRefObject } from "react";
 import { Euler, Quaternion, Vector3, type Group } from "three";
 import { createSphereTextureResource } from "@/components/playground/projects/mcp/create-smiley-texture";
@@ -15,6 +15,8 @@ const FACE_FORWARD_Y = -Math.PI / 2;
 const LOOK_X = 0.95;
 const LOOK_Y = 0.75;
 const LOOK_SMOOTH = 0.1;
+const PRESS_SCALE = 0.92;
+const SCALE_SMOOTH = 0.28;
 
 const BLINK_CLOSE_S = 0.075;
 const BLINK_OPEN_S = 0.12;
@@ -38,6 +40,7 @@ function nextBlinkDelay(): number {
 }
 
 function SmileySphere({ pointer }: { pointer: McpPointerRef }) {
+  const { gl } = useThree();
   const orientRef = useRef<Group>(null);
   const sphereTexture = useMemo(() => createSphereTextureResource(), []);
   const baseQuat = useMemo(
@@ -48,15 +51,24 @@ function SmileySphere({ pointer }: { pointer: McpPointerRef }) {
   const lookQuat = useMemo(() => new Quaternion(), []);
   const restForward = useMemo(() => new Vector3(0, 0, 1), []);
   const lookTarget = useMemo(() => new Vector3(), []);
+  const pressedRef = useRef(false);
+  const scaleRef = useRef(1);
 
   const blinkPhaseRef = useRef<BlinkPhase>("idle");
   const blinkAmountRef = useRef(0);
   const phaseStartRef = useRef(0);
   const nextBlinkAtRef = useRef(nextBlinkDelay());
 
+  const setCanvasCursor = (cursor: string) => {
+    gl.domElement.style.cursor = cursor;
+  };
+
   useLayoutEffect(() => {
     orientRef.current?.quaternion.copy(baseQuat);
-  }, [baseQuat]);
+    return () => {
+      gl.domElement.style.cursor = "";
+    };
+  }, [baseQuat, gl]);
 
   useFrame(({ clock }) => {
     const orient = orientRef.current;
@@ -66,6 +78,10 @@ function SmileySphere({ pointer }: { pointer: McpPointerRef }) {
       lookQuat.setFromUnitVectors(restForward, lookTarget);
       targetQuat.copy(lookQuat).multiply(baseQuat);
       orient.quaternion.slerp(targetQuat, LOOK_SMOOTH);
+
+      const targetScale = pressedRef.current ? PRESS_SCALE : 1;
+      scaleRef.current += (targetScale - scaleRef.current) * SCALE_SMOOTH;
+      orient.scale.setScalar(scaleRef.current);
     }
 
     const t = clock.elapsedTime;
@@ -102,7 +118,27 @@ function SmileySphere({ pointer }: { pointer: McpPointerRef }) {
 
   return (
     <group ref={orientRef}>
-      <mesh>
+      <mesh
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setCanvasCursor("pointer");
+        }}
+        onPointerOut={() => {
+          pressedRef.current = false;
+          setCanvasCursor("");
+        }}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          pressedRef.current = true;
+          gl.domElement.setPointerCapture(e.pointerId);
+        }}
+        onPointerUp={(e) => {
+          pressedRef.current = false;
+          if (gl.domElement.hasPointerCapture(e.pointerId)) {
+            gl.domElement.releasePointerCapture(e.pointerId);
+          }
+        }}
+      >
         <sphereGeometry args={[SPHERE_RADIUS, 48, 48]} />
         <meshPhysicalMaterial
           map={sphereTexture.texture}
