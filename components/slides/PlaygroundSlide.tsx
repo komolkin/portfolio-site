@@ -11,7 +11,6 @@ import ResolvedCard from "@/components/playground/projects/resolved-card/Resolve
 import LeverageSelector from "@/components/playground/projects/leverage-selector/LeverageSelector";
 import BinaryMarket from "@/components/playground/projects/binary-market/BinaryMarket";
 import BinaryCompact from "@/components/playground/projects/binary-compact/BinaryCompact";
-import Position from "@/components/playground/projects/position/Position";
 import Position2 from "@/components/playground/projects/position-2/Position2";
 import Position3 from "@/components/playground/projects/position-3/Position3";
 import PnlChart from "@/components/playground/projects/pnl-chart/PnlChart";
@@ -40,7 +39,6 @@ export default function PlaygroundSlide() {
           {activeProject === "binary-market" && <BinaryMarket />}
           {activeProject === "binary-compact" && <BinaryCompact />}
           {activeProject === "pnl-chart" && <PnlChart />}
-          {activeProject === "position" && <Position />}
           {activeProject === "position-2" && <Position2 />}
           {activeProject === "position-3" && <Position3 />}
           {activeProject === "mcp" && <Mcp />}
