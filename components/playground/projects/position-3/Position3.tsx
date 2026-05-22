@@ -5,10 +5,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Position3Particles from "./Position3Particles";
 
 /**
- * Position #3 — minimalist progress bar (label-only LIQ/Entry, no SL/TP dots).
- * Shares the header + buttons layout with Position; the progress bar replaces
- * dot markers with inline text (LIQ 12¢ on the filled side, Entry under a
- * dashed vertical line, current % big in green).
+ * Position #3 — minimalist progress bar (Entry marker only, no SL/TP dots).
+ * Shares the header + buttons layout with Position; the progress bar uses a
+ * solid fill, a centered Entry vertical line, and a trailing % label.
+ * Click the card to toggle the compact progress bar (Figma 7445:19968).
  */
 const IMG_THUMB = "/playground/position/thumbnail.png";
 const IMG_SHARE = "/playground/position/share-icon.svg";
@@ -23,10 +23,11 @@ const SIM_TICK_MS = 2200;
 const FAST_FORWARD_DELTA_THRESHOLD = 12;
 const FAST_FORWARD_FX_MS = 550;
 
-const FILL_GRADIENT_GREEN =
-  "linear-gradient(180deg, #5dd978 0%, #3ba953 50%, #299040 75%, #18782d 100%)";
-const FILL_GRADIENT_RED =
-  "linear-gradient(180deg, #ff4d5e 0%, #bd2e3d 50%, #9b1f2d 75%, #7a0f1c 100%)";
+/** Progress fill — Figma Progress rectangles (7425:19765 / 7425:19887) */
+const FILL_COLOR_GREEN = "#1c662d";
+const FILL_COLOR_RED = "#7a0f1c";
+const ENTRY_LINE_COLOR_GREEN = "#5dd978";
+const ENTRY_LINE_COLOR_RED = "#ff4d5e";
 
 const CARD_BG_GREEN =
   "linear-gradient(180deg, rgba(93,217,120,0.04) 0%, rgba(93,217,120,0.1) 100%), #1d1d1d";
@@ -35,12 +36,23 @@ const CARD_BG_RED =
 const CARD_BORDER_GREEN = "rgba(93,217,120,0.1)";
 const CARD_BORDER_RED = "rgba(255,77,94,0.1)";
 
+const PROGRESS_EASE = "cubic-bezier(0.33, 1, 0.68, 1)";
+
+/** Fill width + trailing % — shared timing so they move in sync */
+const PROGRESS_FILL_MOTION =
+  "transition-[width,background-color] duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none";
+
+/** Compact progress bar toggle — height, labels, overlays */
+const PROGRESS_BAR_MOTION =
+  "transition-[height,opacity,top,font-size,color,transform] duration-[280ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none";
+
 function randomFillPercent(): number {
   return FILL_MIN + Math.floor(Math.random() * (FILL_MAX - FILL_MIN + 1));
 }
 
 export default function Position3() {
   const [fillPercent, setFillPercent] = useState(60);
+  const [isCompact, setIsCompact] = useState(false);
   const [isFastForwardFx, setIsFastForwardFx] = useState(false);
   const fastForwardTimerRef = useRef<number | null>(null);
 
@@ -88,12 +100,23 @@ export default function Position3() {
   const topAbs = Math.abs(currentTotalUsd);
 
   const isAhead = fillPercent >= ENTRY_LINE_PERCENT;
-  const pctColor = isAhead ? "#c2f5ce" : "#fca5af";
-  const dashedColor = isAhead ? "#5dd978" : "#f87171";
+  const pctColor = isAhead ? "#5dd978" : "#ff7d8a";
+  const entryLineColor = isAhead ? ENTRY_LINE_COLOR_GREEN : ENTRY_LINE_COLOR_RED;
 
   return (
     <div
-      className={`relative flex w-full max-w-[400px] flex-col gap-4 overflow-hidden rounded-[24px] border p-4 transition-[background,border-color] duration-500 ease-out ${
+      role="button"
+      tabIndex={0}
+      aria-expanded={isCompact}
+      aria-label={isCompact ? "Show full progress bar" : "Show compact progress bar"}
+      onClick={() => setIsCompact((prev) => !prev)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setIsCompact((prev) => !prev);
+        }
+      }}
+      className={`relative flex w-full max-w-[400px] cursor-pointer flex-col gap-4 overflow-hidden rounded-[24px] border p-4 transition-[background,border-color] duration-500 ease-out transition-transform duration-150 ease-out active:scale-[0.98] ${
         isFastForwardFx ? "animate-[position3-shake_360ms_ease-in-out_1]" : ""
       }`}
       style={{
@@ -120,7 +143,7 @@ export default function Position3() {
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-[#2d107f] px-2 py-0.5 text-xs font-semibold leading-tight text-white">
-              PHX 40¢
+              PHX
             </span>
             <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold leading-tight text-white">
               3x
@@ -132,28 +155,25 @@ export default function Position3() {
         </div>
       </div>
 
-      <div className="relative h-[112px] w-full overflow-hidden rounded-lg">
-        <div className="absolute inset-0 rounded-lg bg-white/[0.04]" aria-hidden />
-        <div className="relative flex h-full w-full min-w-0">
-          <div
-            className="relative h-full shrink-0 rounded-l-lg transition-[width,background-image] duration-500 ease-out"
-            style={{
-              width: `${fillPercent}%`,
-              backgroundImage: isAhead ? FILL_GRADIENT_GREEN : FILL_GRADIENT_RED,
-            }}
-            aria-hidden
-          />
-          <div className="relative h-full min-w-0 flex-1 rounded-r-lg bg-white/[0.04]" />
-        </div>
+      <div
+        className={`relative w-full overflow-hidden rounded-lg bg-white/[0.04] will-change-[height] ${PROGRESS_BAR_MOTION} ${
+          isCompact ? "h-9" : "h-[112px]"
+        }`}
+      >
+        <div
+          className={`absolute inset-y-0 left-0 rounded-r-lg ${PROGRESS_FILL_MOTION}`}
+          style={{
+            width: `${fillPercent}%`,
+            backgroundColor: isAhead ? FILL_COLOR_GREEN : FILL_COLOR_RED,
+          }}
+          aria-hidden
+        />
 
-        {/* LIQ label on the filled side */}
-        <div className="pointer-events-none absolute bottom-2 left-3 z-[2] flex flex-col leading-none">
-          <span className="text-xs font-semibold leading-tight text-[#ff4d5e]">LIQ</span>
-          <span className="font-mono text-xl leading-tight text-white tabular-nums">12¢</span>
-        </div>
-
-        {/* Right stack: current value + signed PnL */}
-        <div className="pointer-events-none absolute bottom-2 right-3 z-[2] flex flex-col items-end gap-0.5 text-right">
+        <div
+          className={`pointer-events-none absolute bottom-2 right-3 z-[2] flex flex-col items-end gap-0.5 text-right ${PROGRESS_BAR_MOTION} ${
+            isCompact ? "opacity-0" : "opacity-100"
+          }`}
+        >
           <p className="font-mono text-[28px] font-normal leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
             <span className="inline-flex items-baseline">
               <span className="tabular-nums">{topPrefix}</span>
@@ -182,28 +202,41 @@ export default function Position3() {
           </p>
         </div>
 
-        {/* Entry: dashed vertical line + "Entry" label at bottom */}
+        {/* Entry vertical line — compact: Figma 7445:19975; full: + label */}
         <div
-          className="pointer-events-none absolute inset-y-0 z-[3]"
+          className="pointer-events-none absolute inset-y-0 z-[3] -translate-x-1/2"
           style={{ left: `${ENTRY_LINE_PERCENT}%` }}
         >
           <div
-            className="absolute inset-y-0 w-0 border-l border-dashed"
-            style={{ borderColor: dashedColor, opacity: 0.7 }}
+            className={`absolute left-0 w-[2px] rounded-[1px] opacity-40 ${PROGRESS_BAR_MOTION} ${
+              isCompact ? "top-1.5 bottom-1.5" : "top-1/2 h-[85%] -translate-y-1/2"
+            }`}
+            style={{ backgroundColor: entryLineColor }}
             aria-hidden
           />
-          <span className="absolute bottom-2 left-1 whitespace-nowrap text-xs leading-tight text-white/60">
+          <span
+            className={`absolute bottom-[11px] left-2 whitespace-nowrap text-[8px] font-semibold leading-tight text-white/60 ${PROGRESS_BAR_MOTION} ${
+              isCompact ? "pointer-events-none opacity-0" : "opacity-100"
+            }`}
+          >
             Entry
           </span>
         </div>
 
-        {/* Big % label tracks the leading edge of the fill */}
+        {/* % label tracks the trailing edge of the fill */}
         <div
-          className="pointer-events-none absolute top-2 z-[3] -translate-x-full pr-2 transition-[left] duration-500 ease-out"
-          style={{ left: `${fillPercent}%` }}
+          className={`pointer-events-none absolute z-[3] -translate-x-full pr-3 motion-reduce:transition-none ${
+            isCompact ? "top-[5px]" : "top-2"
+          }`}
+          style={{
+            left: `${fillPercent}%`,
+            transition: `left 500ms ${PROGRESS_EASE}, top 280ms ${PROGRESS_EASE}`,
+          }}
         >
           <span
-            className="font-mono text-[28px] font-normal leading-tight tabular-nums drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)] transition-colors duration-500 ease-out"
+            className={`font-semibold leading-tight tabular-nums drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)] ${PROGRESS_BAR_MOTION} ${
+              isCompact ? "text-xl" : "font-mono text-[28px] font-normal"
+            }`}
             style={{ color: pctColor }}
           >
             <NumberFlow
@@ -231,6 +264,7 @@ export default function Position3() {
       <div className="flex w-full items-start justify-center gap-2.5">
         <button
           type="button"
+          onClick={(e) => e.stopPropagation()}
           className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-full border border-white/10 text-sm font-semibold text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
         >
           <span className="inline-flex items-baseline truncate px-1">
@@ -247,6 +281,7 @@ export default function Position3() {
         </button>
         <button
           type="button"
+          onClick={(e) => e.stopPropagation()}
           className="flex size-10 shrink-0 items-center justify-center rounded-full border border-white/10 text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
           aria-label="Share"
         >

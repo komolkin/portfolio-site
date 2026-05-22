@@ -43,16 +43,17 @@ export default function Position3Particles({ variant }: Props) {
     const color = COLORS[variant];
 
     let particles: Particle[] = [];
-    let width = 0;
-    let height = 0;
+    /** Stable layout size — only grows so compact toggle never resets the canvas */
+    let layoutWidth = 0;
+    let layoutHeight = 0;
     let raf = 0;
 
     const createParticle = (spawnAnywhere = false): Particle => ({
-      x: Math.random() * width,
+      x: Math.random() * layoutWidth,
       y: spawnAnywhere
-        ? Math.random() * height
+        ? Math.random() * layoutHeight
         : direction === -1
-          ? height + Math.random() * 12
+          ? layoutHeight + Math.random() * 12
           : -Math.random() * 12,
       size: 0.6 + Math.random() * 1.8,
       opacity: 0.1 + Math.random() * 0.35,
@@ -72,16 +73,27 @@ export default function Position3Particles({ variant }: Props) {
       particle.phase = next.phase;
     };
 
-    const resize = () => {
-      const rect = container.getBoundingClientRect();
-      width = rect.width;
-      height = rect.height;
+    const applyCanvasSize = () => {
       const dpr = Math.min(window.devicePixelRatio ?? 1, 2);
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
+      canvas.width = layoutWidth * dpr;
+      canvas.height = layoutHeight * dpr;
+      canvas.style.width = `${layoutWidth}px`;
+      canvas.style.height = `${layoutHeight}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    const growLayout = () => {
+      const rect = container.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return false;
+
+      const nextWidth = Math.max(layoutWidth, rect.width);
+      const nextHeight = Math.max(layoutHeight, rect.height);
+      if (nextWidth === layoutWidth && nextHeight === layoutHeight) return false;
+
+      layoutWidth = nextWidth;
+      layoutHeight = nextHeight;
+      applyCanvasSize();
+      return true;
     };
 
     const initParticles = () => {
@@ -89,19 +101,21 @@ export default function Position3Particles({ variant }: Props) {
     };
 
     const draw = (time: number) => {
-      ctx.clearRect(0, 0, width, height);
+      ctx.clearRect(0, 0, layoutWidth, layoutHeight);
+
+      const fadeSpan = layoutHeight * 0.18;
 
       for (const particle of particles) {
         particle.y += particle.speedY * direction;
         particle.x += particle.drift + Math.sin(time * 0.0012 + particle.phase) * 0.04;
 
         if (direction === -1 && particle.y < -10) respawn(particle);
-        if (direction === 1 && particle.y > height + 10) respawn(particle);
-        if (particle.x < -10) particle.x = width + 6;
-        if (particle.x > width + 10) particle.x = -6;
+        if (direction === 1 && particle.y > layoutHeight + 10) respawn(particle);
+        if (particle.x < -10) particle.x = layoutWidth + 6;
+        if (particle.x > layoutWidth + 10) particle.x = -6;
 
-        const topFade = Math.min(1, particle.y / (height * 0.18));
-        const bottomFade = Math.min(1, (height - particle.y) / (height * 0.18));
+        const topFade = Math.min(1, particle.y / fadeSpan);
+        const bottomFade = Math.min(1, (layoutHeight - particle.y) / fadeSpan);
         const alpha = particle.opacity * Math.max(0, Math.min(topFade, bottomFade));
 
         ctx.beginPath();
@@ -118,12 +132,13 @@ export default function Position3Particles({ variant }: Props) {
       raf = requestAnimationFrame(draw);
     };
 
-    resize();
+    growLayout();
     initParticles();
 
     const resizeObserver = new ResizeObserver(() => {
-      resize();
-      initParticles();
+      if (growLayout() && particles.length > 0) {
+        initParticles();
+      }
     });
     resizeObserver.observe(container);
 
@@ -141,7 +156,7 @@ export default function Position3Particles({ variant }: Props) {
       className="pointer-events-none absolute inset-0 overflow-hidden rounded-[24px]"
       aria-hidden
     >
-      <canvas ref={canvasRef} className="absolute inset-0" />
+      <canvas ref={canvasRef} className="absolute top-0 left-0" />
     </div>
   );
 }
