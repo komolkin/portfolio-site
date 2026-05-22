@@ -16,6 +16,7 @@ import Position2 from "@/components/playground/projects/position-2/Position2";
 import Position3 from "@/components/playground/projects/position-3/Position3";
 import PnlChart from "@/components/playground/projects/pnl-chart/PnlChart";
 import Ball from "@/components/playground/projects/ball/Ball";
+import Mcp from "@/components/playground/projects/mcp/Mcp";
 
 export default function PlaygroundSlide() {
   const pathname = usePathname();
@@ -42,6 +43,7 @@ export default function PlaygroundSlide() {
           {activeProject === "position" && <Position />}
           {activeProject === "position-2" && <Position2 />}
           {activeProject === "position-3" && <Position3 />}
+          {activeProject === "mcp" && <Mcp />}
         </div>
       </main>
     </div>
