@@ -3,7 +3,8 @@
 import { Environment } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Suspense, useLayoutEffect, useMemo, useRef, type MutableRefObject } from "react";
-import { Euler, Quaternion, Vector3, type Group } from "three";
+import { Euler, Quaternion, Vector3, type Group, type MeshPhysicalMaterial } from "three";
+import { applyPurpleRimGlow } from "@/components/playground/projects/mcp/apply-purple-rim-glow";
 import { createSphereTextureResource } from "@/components/playground/projects/mcp/create-smiley-texture";
 
 const SPHERE_RADIUS = 24;
@@ -42,6 +43,7 @@ function nextBlinkDelay(): number {
 function SmileySphere({ pointer }: { pointer: McpPointerRef }) {
   const { gl } = useThree();
   const orientRef = useRef<Group>(null);
+  const materialRef = useRef<MeshPhysicalMaterial>(null);
   const sphereTexture = useMemo(() => createSphereTextureResource(), []);
   const baseQuat = useMemo(
     () => new Quaternion().setFromEuler(new Euler(0, FACE_FORWARD_Y, 0)),
@@ -65,6 +67,9 @@ function SmileySphere({ pointer }: { pointer: McpPointerRef }) {
 
   useLayoutEffect(() => {
     orientRef.current?.quaternion.copy(baseQuat);
+    if (materialRef.current) {
+      applyPurpleRimGlow(materialRef.current);
+    }
     return () => {
       gl.domElement.style.cursor = "";
     };
@@ -141,13 +146,15 @@ function SmileySphere({ pointer }: { pointer: McpPointerRef }) {
       >
         <sphereGeometry args={[SPHERE_RADIUS, 48, 48]} />
         <meshPhysicalMaterial
-          map={sphereTexture.texture}
+          ref={materialRef}
+          color="#ffffff"
+          map={sphereTexture.bodyMap}
           emissive="#ffffff"
-          emissiveMap={sphereTexture.texture}
-          emissiveIntensity={0.55}
-          roughness={0.62}
-          metalness={0.04}
-          envMapIntensity={0.35}
+          emissiveMap={sphereTexture.emissiveMap}
+          emissiveIntensity={0.62}
+          roughness={0.88}
+          metalness={0}
+          envMapIntensity={0.04}
         />
       </mesh>
     </group>
@@ -157,10 +164,11 @@ function SmileySphere({ pointer }: { pointer: McpPointerRef }) {
 function Scene({ pointer }: { pointer: McpPointerRef }) {
   return (
     <>
-      <ambientLight intensity={0.35} />
-      <directionalLight position={[120, 180, 220]} intensity={1.1} />
-      <directionalLight position={[-160, 80, 140]} intensity={0.28} />
-      <pointLight position={[0, 0, 260]} intensity={0.45} color="#ffffff" />
+      <ambientLight intensity={0.08} />
+      <directionalLight position={[120, 180, 220]} intensity={0.28} />
+      <directionalLight position={[-160, 80, 140]} intensity={0.05} />
+      <pointLight position={[-90, 130, 110]} intensity={0.55} color="#9333ea" />
+      <pointLight position={[0, 0, 260]} intensity={0.06} color="#ffffff" />
 
       <Suspense fallback={null}>
         <SmileySphere pointer={pointer} />

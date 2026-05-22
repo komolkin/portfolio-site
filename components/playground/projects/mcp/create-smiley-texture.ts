@@ -50,11 +50,20 @@ function drawCircleBody(ctx: CanvasRenderingContext2D) {
   const cy = TEXTURE_H / 2;
 
   const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, TEXTURE_W * 0.42);
-  bg.addColorStop(0, "#242424");
-  bg.addColorStop(0.55, "#141414");
-  bg.addColorStop(1, "#080808");
+  bg.addColorStop(0, "#1a1a1a");
+  bg.addColorStop(0.55, "#0e0e0e");
+  bg.addColorStop(1, "#050505");
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, TEXTURE_W, TEXTURE_H);
+}
+
+function drawEmissiveFace(
+  ctx: CanvasRenderingContext2D,
+  blink: number,
+) {
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, TEXTURE_W, TEXTURE_H);
+  drawSmileyFace(ctx, getFaceLayout(), blink);
 }
 
 function drawGlowFill(
@@ -139,38 +148,52 @@ function drawSmileyFace(
   );
 }
 
-/** 0 = eyes open, 1 = eyes closed. Rebuilds the full texture each call. */
+/** 0 = eyes open, 1 = eyes closed. Rebuilds both maps each call. */
 export function drawSphereTexture(
-  ctx: CanvasRenderingContext2D,
+  bodyCtx: CanvasRenderingContext2D,
+  emissiveCtx: CanvasRenderingContext2D,
   blink = 0,
 ) {
-  drawCircleBody(ctx);
-  drawSmileyFace(ctx, getFaceLayout(), blink);
+  drawCircleBody(bodyCtx);
+  drawEmissiveFace(emissiveCtx, blink);
 }
 
 export type SphereTextureResource = {
-  texture: THREE.CanvasTexture;
+  bodyMap: THREE.CanvasTexture;
+  emissiveMap: THREE.CanvasTexture;
   redraw: (blink?: number) => void;
 };
 
-/** Dynamic canvas texture — call `redraw(blink)` to update eyes. */
+/** Dynamic canvas textures — call `redraw(blink)` to update eyes. */
 export function createSphereTextureResource(): SphereTextureResource {
-  const canvas = document.createElement("canvas");
-  canvas.width = TEXTURE_W;
-  canvas.height = TEXTURE_H;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    throw new Error("Could not create sphere texture canvas");
+  const bodyCanvas = document.createElement("canvas");
+  bodyCanvas.width = TEXTURE_W;
+  bodyCanvas.height = TEXTURE_H;
+  const bodyCtx = bodyCanvas.getContext("2d");
+  if (!bodyCtx) {
+    throw new Error("Could not create body texture canvas");
   }
 
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
+  const emissiveCanvas = document.createElement("canvas");
+  emissiveCanvas.width = TEXTURE_W;
+  emissiveCanvas.height = TEXTURE_H;
+  const emissiveCtx = emissiveCanvas.getContext("2d");
+  if (!emissiveCtx) {
+    throw new Error("Could not create emissive texture canvas");
+  }
+
+  const bodyMap = new THREE.CanvasTexture(bodyCanvas);
+  bodyMap.colorSpace = THREE.SRGBColorSpace;
+
+  const emissiveMap = new THREE.CanvasTexture(emissiveCanvas);
+  emissiveMap.colorSpace = THREE.SRGBColorSpace;
 
   const redraw = (blink = 0) => {
-    drawSphereTexture(ctx, blink);
-    texture.needsUpdate = true;
+    drawSphereTexture(bodyCtx, emissiveCtx, blink);
+    bodyMap.needsUpdate = true;
+    emissiveMap.needsUpdate = true;
   };
 
   redraw(0);
-  return { texture, redraw };
+  return { bodyMap, emissiveMap, redraw };
 }
