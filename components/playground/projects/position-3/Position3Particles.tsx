@@ -41,6 +41,31 @@ export default function Position3Particles({ variant }: Props) {
 
     const direction = variant === "green" ? -1 : 1;
     const color = COLORS[variant];
+    /** Triangle apex follows motion: green (up) → pointing up, red (down) → inverted. */
+    const pointDown = direction === 1;
+
+    const CORNER_RADIUS = 1;
+    const tracePath = (cx: number, cy: number, radius: number) => {
+      /** Equilateral triangle inscribed in a circle of `radius`, rotated so one
+       * vertex points along the motion direction. Corners rounded via `arcTo`,
+       * clamped so the radius never exceeds half an edge length. */
+      const apex = pointDown ? radius : -radius;
+      const baseY = pointDown ? -radius / 2 : radius / 2;
+      const halfBase = radius * (Math.sqrt(3) / 2);
+      const v0x = cx;
+      const v0y = cy + apex;
+      const v1x = cx + halfBase;
+      const v1y = cy + baseY;
+      const v2x = cx - halfBase;
+      const v2y = cy + baseY;
+      const r = Math.min(CORNER_RADIUS, radius * 0.9);
+      ctx.beginPath();
+      ctx.moveTo((v0x + v1x) / 2, (v0y + v1y) / 2);
+      ctx.arcTo(v1x, v1y, v2x, v2y, r);
+      ctx.arcTo(v2x, v2y, v0x, v0y, r);
+      ctx.arcTo(v0x, v0y, v1x, v1y, r);
+      ctx.closePath();
+    };
 
     let particles: Particle[] = [];
     /** Stable layout size — only grows so compact toggle never resets the canvas */
@@ -118,13 +143,11 @@ export default function Position3Particles({ variant }: Props) {
         const bottomFade = Math.min(1, (layoutHeight - particle.y) / fadeSpan);
         const alpha = particle.opacity * Math.max(0, Math.min(topFade, bottomFade));
 
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        tracePath(particle.x, particle.y, particle.size * 2.6);
         ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
         ctx.fill();
 
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size * 2.2, 0, Math.PI * 2);
+        tracePath(particle.x, particle.y, particle.size * 4.8);
         ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha * 0.18})`;
         ctx.fill();
       }
