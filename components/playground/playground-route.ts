@@ -1,4 +1,5 @@
 export const PROJECTS = [
+  { id: "ai-cam", label: "AI Cam" },
   { id: "mcp", label: "MCP" },
   { id: "thinking", label: "Thinking" },
   { id: "ball", label: "Ball" },

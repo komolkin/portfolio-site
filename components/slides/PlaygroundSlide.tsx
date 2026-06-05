@@ -18,6 +18,7 @@ import Ball from "@/components/playground/projects/ball/Ball";
 import BallWC from "@/components/playground/projects/ball-wc/BallWC";
 import Mcp from "@/components/playground/projects/mcp/Mcp";
 import Thinking from "@/components/playground/projects/thinking/Thinking";
+import AiCam from "@/components/playground/projects/ai-cam/AiCam";
 
 export default function PlaygroundSlide() {
   const pathname = usePathname();
@@ -54,6 +55,7 @@ export default function PlaygroundSlide() {
           {activeProject === "position-3" && <Position3 />}
           {activeProject === "mcp" && <Mcp />}
           {activeProject === "thinking" && <Thinking />}
+          {activeProject === "ai-cam" && <AiCam />}
         </div>
       </main>
     </div>
