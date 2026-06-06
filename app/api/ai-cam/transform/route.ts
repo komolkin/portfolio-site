@@ -79,8 +79,16 @@ function buildExpressionGuidance(expression: string) {
   ].join(" ");
 }
 
+function buildAgeGuidance() {
+  return [
+    "Keep the exact same apparent age as the reference selfie — same generation, same youthfulness, same skin texture.",
+    "Do NOT age up the person: no extra wrinkles, no older-looking skin, no sagging features, no mature face changes, no graying unless already in the reference.",
+    "Preserve the reference face proportions, smoothness, and age markers exactly — the result should look like the same person at the same age.",
+  ].join(" ");
+}
+
 const NANO_BANANA_SYSTEM_PROMPT =
-  "Edit the reference selfie into a photorealistic World Cup fan selfie. Critical rule: the subject's mouth must stay natural and mostly closed. Prefer closed-mouth smiles, subtle grins, or lips barely parted. Never default to a wide-open screaming or yelling mouth.";
+  "Edit the reference selfie into a photorealistic World Cup fan selfie. Critical rules: (1) keep the subject's exact apparent age from the reference — never make them look older; (2) the mouth must stay natural and mostly closed — prefer closed-mouth smiles or subtle grins, never a wide-open screaming mouth.";
 
 function buildPrompt(model: string, countryId: string, flagFacePaint: boolean) {
   const country = getWorldCupCountry(countryId);
@@ -100,34 +108,37 @@ function buildPrompt(model: string, countryId: string, flagFacePaint: boolean) {
     : null;
 
   const expressionGuidance = buildExpressionGuidance(pickSelfieExpression());
+  const ageGuidance = buildAgeGuidance();
   const useReveTags = model.includes("reve");
 
   if (useReveTags) {
     return [
       "Photorealistic front-facing smartphone selfie — the image IS what the phone front camera captures, first-person POV.",
       "The phone taking the photo must NOT appear in frame: no smartphone visible, no phone in hand, not a photo of someone being photographed.",
-      "Use the exact face and identity from <img index=\"0\" /> — same person, same facial structure, looking directly into the front camera lens.",
+      "Use the exact face and identity from <img index=\"0\" /> — same person, same facial structure, same apparent age, looking directly into the front camera lens.",
+      ageGuidance,
       "They celebrate in a packed outdoor fan zone at night like <img index=\"1\" />: dense happy crowd, stadium floodlights, lively post-goal celebration.",
       teamSupport,
       ...(flagFacePaintLine ? [flagFacePaintLine] : []),
       "One hand holds the golden FIFA World Cup trophy raised beside their face; the other hand holds the phone off-screen to take the selfie — only the trophy and their face are visible, not the device.",
       "Classic selfie framing: face close to lens, slight wide-angle front-camera distortion, candid and handheld.",
       expressionGuidance,
-      "RAW photograph, disposable camera aesthetic, harsh flash, film grain, realistic skin texture, not cartoon, not illustration.",
+      "RAW photograph, disposable camera aesthetic, harsh flash, film grain, gritty candid party-photo vibe, but keep the subject's exact apparent age and natural skin from the reference selfie — do not age up the face, not cartoon, not illustration.",
     ].join(" ");
   }
 
   return [
     "Photorealistic front-facing smartphone selfie — the image IS what the phone front camera captures, first-person POV.",
     "The phone taking the photo must NOT appear in frame: no smartphone visible, no phone in hand, not a photo of someone being photographed by another camera.",
-    "The person from the first reference image must be the exact same person in the result — preserve face, identity, and natural expression from the reference selfie.",
+    "The person from the first reference image must be the exact same person in the result — preserve face, identity, natural expression, and exact apparent age from the reference selfie.",
+    ageGuidance,
     "They celebrate in a packed outdoor fan zone at night like the second reference image: dense happy crowd, stadium floodlights, lively post-goal celebration.",
     teamSupport,
     ...(flagFacePaintLine ? [flagFacePaintLine] : []),
     "One hand holds the golden FIFA World Cup trophy raised beside their face; the other hand holds the phone off-screen to take the selfie — only the trophy and their face are visible, not the device.",
     "Classic selfie framing: face close to lens, slight wide-angle front-camera distortion, candid and handheld.",
     expressionGuidance,
-    "RAW photograph, disposable camera aesthetic, harsh flash, film grain, realistic skin texture, not cartoon, not illustration.",
+    "RAW photograph, disposable camera aesthetic, harsh flash, film grain, gritty candid party-photo vibe, but keep the subject's exact apparent age and natural skin from the reference selfie — do not age up the face, not cartoon, not illustration.",
   ].join(" ");
 }
 
