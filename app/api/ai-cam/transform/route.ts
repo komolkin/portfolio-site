@@ -57,6 +57,31 @@ function isModelNotFound(err: unknown) {
   return message.includes("not found") || message.includes("application 'reve'");
 }
 
+const SELFIE_EXPRESSIONS = [
+  "a closed-mouth smile with relaxed lips",
+  "a subtle grin with lips mostly together",
+  "a soft smile with mouth gently closed",
+  "a warm smile with only a hint of teeth showing",
+  "a calm happy expression with lips relaxed and not wide open",
+  "a natural smile similar to a casual selfie, not shouting",
+];
+
+function pickSelfieExpression() {
+  return SELFIE_EXPRESSIONS[Math.floor(Math.random() * SELFIE_EXPRESSIONS.length)];
+}
+
+function buildExpressionGuidance(expression: string) {
+  return [
+    `Facial expression for this photo: ${expression}.`,
+    "Preserve the mouth shape and expression tendency from the reference selfie when possible.",
+    "Do NOT show a wide open mouth, screaming face, yelling, gaping mouth, or exaggerated open-mouth cheering.",
+    "Avoid cartoon excitement — keep the face natural, human, and selfie-like.",
+  ].join(" ");
+}
+
+const NANO_BANANA_SYSTEM_PROMPT =
+  "Edit the reference selfie into a photorealistic World Cup fan selfie. Critical rule: the subject's mouth must stay natural and mostly closed. Prefer closed-mouth smiles, subtle grins, or lips barely parted. Never default to a wide-open screaming or yelling mouth.";
+
 function buildPrompt(model: string, countryId: string, flagFacePaint: boolean) {
   const country = getWorldCupCountry(countryId);
   if (!country) {
@@ -74,6 +99,7 @@ function buildPrompt(model: string, countryId: string, flagFacePaint: boolean) {
     ? `Add colors of the flag on the face: ${country.label} flag face paint in ${country.fanColors}, with ${country.flagDescription} patterns on the cheeks and forehead like a World Cup fan, while keeping the same recognizable person.`
     : null;
 
+  const expressionGuidance = buildExpressionGuidance(pickSelfieExpression());
   const useReveTags = model.includes("reve");
 
   if (useReveTags) {
@@ -81,11 +107,12 @@ function buildPrompt(model: string, countryId: string, flagFacePaint: boolean) {
       "Photorealistic front-facing smartphone selfie — the image IS what the phone front camera captures, first-person POV.",
       "The phone taking the photo must NOT appear in frame: no smartphone visible, no phone in hand, not a photo of someone being photographed.",
       "Use the exact face and identity from <img index=\"0\" /> — same person, same facial structure, looking directly into the front camera lens.",
-      "They celebrate in a packed outdoor fan zone at night like <img index=\"1\" />: dense cheering crowd, stadium floodlights, ecstatic post-goal energy.",
+      "They celebrate in a packed outdoor fan zone at night like <img index=\"1\" />: dense happy crowd, stadium floodlights, lively post-goal celebration.",
       teamSupport,
       ...(flagFacePaintLine ? [flagFacePaintLine] : []),
       "One hand holds the golden FIFA World Cup trophy raised beside their face; the other hand holds the phone off-screen to take the selfie — only the trophy and their face are visible, not the device.",
       "Classic selfie framing: face close to lens, slight wide-angle front-camera distortion, candid and handheld.",
+      expressionGuidance,
       "RAW photograph, disposable camera aesthetic, harsh flash, film grain, realistic skin texture, not cartoon, not illustration.",
     ].join(" ");
   }
@@ -93,12 +120,13 @@ function buildPrompt(model: string, countryId: string, flagFacePaint: boolean) {
   return [
     "Photorealistic front-facing smartphone selfie — the image IS what the phone front camera captures, first-person POV.",
     "The phone taking the photo must NOT appear in frame: no smartphone visible, no phone in hand, not a photo of someone being photographed by another camera.",
-    "The person from the first reference image must be the exact same person in the result — preserve face, identity, looking directly into the front camera lens.",
-    "They celebrate in a packed outdoor fan zone at night like the second reference image: dense cheering crowd, stadium floodlights, ecstatic post-goal energy.",
+    "The person from the first reference image must be the exact same person in the result — preserve face, identity, and natural expression from the reference selfie.",
+    "They celebrate in a packed outdoor fan zone at night like the second reference image: dense happy crowd, stadium floodlights, lively post-goal celebration.",
     teamSupport,
     ...(flagFacePaintLine ? [flagFacePaintLine] : []),
     "One hand holds the golden FIFA World Cup trophy raised beside their face; the other hand holds the phone off-screen to take the selfie — only the trophy and their face are visible, not the device.",
-    "Classic selfie framing: face close to lens, slight wide-angle front-camera distortion, big joyful smile, mouth open cheering.",
+    "Classic selfie framing: face close to lens, slight wide-angle front-camera distortion, candid and handheld.",
+    expressionGuidance,
     "RAW photograph, disposable camera aesthetic, harsh flash, film grain, realistic skin texture, not cartoon, not illustration.",
   ].join(" ");
 }
@@ -121,6 +149,7 @@ function buildModelInput(
   if (model.includes("nano-banana")) {
     input.resolution = "1K";
     input.limit_generations = true;
+    input.system_prompt = NANO_BANANA_SYSTEM_PROMPT;
   }
 
   return input;
