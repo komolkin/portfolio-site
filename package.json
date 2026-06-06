@@ -25,6 +25,7 @@
     "@vercel/analytics": "^1.6.1",
     "agentation": "^2.3.3",
     "framer-motion": "^12.23.24",
+    "glimm": "^0.1.3",
     "hover-tilt": "^1.0.0",
     "liveline": "^0.0.7",
     "next": "14.2.35",

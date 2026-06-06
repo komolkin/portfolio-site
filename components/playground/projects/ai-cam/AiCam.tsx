@@ -7,6 +7,7 @@ import {
   WORLD_CUP_2026_COUNTRIES,
 } from "@/lib/ai-cam/world-cup-countries";
 import { canUseNativeShare, createShareFileFromDataUrl, prepareShareFile, startNativeShare } from "@/lib/ai-cam/native-share";
+import AiCamGlimmLoader from "@/components/playground/projects/ai-cam/AiCamGlimmLoader";
 
 type CameraState = "idle" | "loading" | "active" | "error";
 
@@ -573,6 +574,15 @@ export default function AiCam() {
           onPointerUp={handleDrawerPointerUp}
           onPointerCancel={handleDrawerPointerUp}
         >
+          {isGenerating && <AiCamGlimmLoader active className="absolute inset-0 z-0" />}
+
+          {isGenerating && (
+            <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 px-4 text-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+              <p className="text-xs text-white/60">{GENERATION_STATUS_MESSAGES[loadingMessageIndex]}</p>
+            </div>
+          )}
+
           {!isGenerating && generatedPhoto && (
             <img
               src={generatedPhoto}
@@ -612,13 +622,6 @@ export default function AiCam() {
           </div>
 
           <div className="relative z-10 min-h-0 flex-1">
-            {isGenerating && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-                <p className="text-xs text-white/60">{GENERATION_STATUS_MESSAGES[loadingMessageIndex]}</p>
-              </div>
-            )}
-
             {!isGenerating && generateError && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-4 text-center">
                 <p className="text-sm text-white/70">{generateError}</p>
