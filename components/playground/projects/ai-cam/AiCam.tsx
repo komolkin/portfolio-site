@@ -394,7 +394,7 @@ export default function AiCam() {
 
     startNativeShare(file, {
       title: `${countryLabel} World Cup selfie`,
-      text: `My ${countryLabel} World Cup selfie from AI Cam`,
+      text: `My ${countryLabel} World Cup selfie from Selfie`,
     })
       .then((result) => {
         if (result === "unsupported") {
@@ -448,7 +448,7 @@ export default function AiCam() {
       <div
         className="relative overflow-hidden rounded-[2.75rem] bg-black"
         style={{ width: 280, height: 580 }}
-        aria-label="AI Cam — phone camera preview"
+        aria-label="Selfie — phone camera preview"
       >
         <video
           ref={videoRef}

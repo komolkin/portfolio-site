@@ -39,7 +39,7 @@ export default function PlaygroundSlide() {
     <div
       id="playground"
       data-section="playground"
-      className="slide w-full h-screen min-h-[100vh] flex relative"
+      className="slide w-full h-[90vh] md:h-screen flex relative"
     >
       <PlaygroundNav activeProject={activeProject} />
       <main className="flex-1 w-full min-w-0">
