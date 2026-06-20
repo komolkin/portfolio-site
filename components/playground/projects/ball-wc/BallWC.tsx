@@ -33,7 +33,7 @@ const MIN_BOUNCE_SPEED = 95;
 const ANG_DAMP_AIR = 0.2;
 const ANG_DAMP_SETTLE = 3.8;
 const REST_ANG_SPEED = 0.65;
-const INITIAL_SCORE = 2000;
+const INITIAL_SCORE = 0;
 
 type GamePhase = "playing" | "settling" | "over";
 
