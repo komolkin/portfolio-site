@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import PlaygroundNav from "@/components/playground/PlaygroundNav";
 import {
@@ -15,7 +15,6 @@ import Position2 from "@/components/playground/projects/position-2/Position2";
 import Position3 from "@/components/playground/projects/position-3/Position3";
 import PnlChart from "@/components/playground/projects/pnl-chart/PnlChart";
 import Ball from "@/components/playground/projects/ball/Ball";
-import BallWC from "@/components/playground/projects/ball-wc/BallWC";
 import Mcp from "@/components/playground/projects/mcp/Mcp";
 import Thinking from "@/components/playground/projects/thinking/Thinking";
 import AiCam from "@/components/playground/projects/ai-cam/AiCam";
@@ -27,14 +26,6 @@ export default function PlaygroundSlide() {
     [pathname]
   );
 
-  useEffect(() => {
-    if (activeProject === "ball-wc") {
-      document.body.dataset.playgroundProject = "ball-wc";
-      return;
-    }
-    delete document.body.dataset.playgroundProject;
-  }, [activeProject]);
-
   return (
     <div
       id="playground"
@@ -45,7 +36,6 @@ export default function PlaygroundSlide() {
       <main className="flex-1 w-full min-w-0">
         <div className="w-full h-full flex items-center justify-center">
           {activeProject === "ball" && <Ball />}
-          {activeProject === "ball-wc" && <BallWC />}
           {activeProject === "resolved-card" && <ResolvedCard />}
           {activeProject === "leverage-selector" && <LeverageSelector />}
           {activeProject === "binary-market" && <BinaryMarket />}
