@@ -79,20 +79,6 @@ body > * {
   z-index: 1;
 }
 
-/* Ball WC — pitch green gradient with the same dot grid */
-body[data-playground-project="ball-wc"] {
-  background: linear-gradient(165deg, #3d9f5c 0%, #247a3f 38%, #145c2e 72%, #0a3d1c 100%);
-}
-
-body[data-playground-project="ball-wc"]::before {
-  background-color: transparent;
-  opacity: 0.32;
-}
-
-body[data-playground-project="ball-wc"]::after {
-  opacity: 0.62;
-}
-
 /* Scroll snapping for slides */
 .slides-scroll {
   scroll-snap-type: y mandatory;
