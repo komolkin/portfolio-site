@@ -20,9 +20,9 @@
   --accent-foreground: 0 0% 98%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
-  --bg-gradient-top: #1a1a1c;
-  --bg-gradient-mid: #373b3e;
-  --bg-gradient-bottom: #5f6368;
+  --bg-gradient-top: #141416;
+  --bg-gradient-mid: #2e3235;
+  --bg-gradient-bottom: #4a4e53;
 }
 
 html,
