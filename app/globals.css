@@ -20,8 +20,9 @@
   --accent-foreground: 0 0% 98%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
-  --gradient-start: 0 0% 15%;
-  --gradient-end: 0 0% 0%;
+  --bg-gradient-top: #1a1a1c;
+  --bg-gradient-mid: #373b3e;
+  --bg-gradient-bottom: #5f6368;
 }
 
 html,
@@ -36,7 +37,13 @@ body {
 
 body {
   @apply text-foreground antialiased;
-  background: #000;
+  background: linear-gradient(
+    180deg,
+    var(--bg-gradient-top) 0%,
+    var(--bg-gradient-mid) 45%,
+    var(--bg-gradient-bottom) 100%
+  );
+  background-attachment: fixed;
 }
 
 body::before,
@@ -53,8 +60,8 @@ body::after {
 
 /* Dim base grid covering the whole viewport */
 body::before {
-  background-color: #000;
-  opacity: 0.3;
+  background-color: transparent;
+  opacity: 0.25;
 }
 
 /* Bright grid revealed only inside cluster regions via mask */
