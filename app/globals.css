@@ -90,12 +90,18 @@ body > * {
 .slides-scroll {
   scroll-snap-type: y mandatory;
   overflow-y: auto;
-  height: 100vh;
+  height: 100dvh;
   scroll-behavior: smooth;
 }
 
 .slide {
   scroll-snap-align: start;
+}
+
+@media (max-width: 767px) {
+  .slides-scroll {
+    scroll-snap-type: y proximity;
+  }
 }
 
 @layer base {

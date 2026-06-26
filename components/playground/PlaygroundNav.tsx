@@ -94,7 +94,7 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
         className="absolute inset-x-0 bottom-0 z-20 md:hidden"
         aria-label="Playground projects"
       >
-        <div className="flex justify-center px-4 pb-[32px] pt-2">
+        <div className="flex justify-center px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-2">
           <div className="relative w-fit max-w-[calc(100%-2rem)]">
             {open && (
               <ul

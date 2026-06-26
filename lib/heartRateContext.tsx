@@ -21,8 +21,8 @@ export function HeartRateProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      // Random BPM between 58-110
-      setBpm(58 + Math.floor(Math.random() * 53));
+      // Random BPM between 66-79
+      setBpm(66 + Math.floor(Math.random() * 14));
     }, 10000);
 
     return () => clearInterval(interval);

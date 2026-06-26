@@ -79,7 +79,7 @@ export default function TopSlide() {
   };
 
   return (
-    <div id="top" className="slide w-full h-[90vh] md:h-screen relative flex flex-col">
+    <div id="top" className="slide w-full min-h-[100dvh] md:h-screen relative flex flex-col">
       {/* Album Cover Popup */}
       <div
         className={`fixed z-[100] w-[240px] h-[240px] flex-shrink-0 transition-opacity duration-150 ${
@@ -113,7 +113,7 @@ export default function TopSlide() {
       </div>
 
       {/* Bottom Info Bar */}
-      <div className="px-6 md:px-8 lg:px-10 pb-6 md:pb-8 lg:pb-10">
+      <div className="shrink-0 px-6 md:px-8 lg:px-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:pb-8 lg:pb-10">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4">
           {/* Location */}
           <div className="space-y-1">

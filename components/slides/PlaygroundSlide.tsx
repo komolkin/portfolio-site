@@ -30,11 +30,11 @@ export default function PlaygroundSlide() {
     <div
       id="playground"
       data-section="playground"
-      className="slide w-full h-[90vh] md:h-screen flex relative"
+      className="slide w-full min-h-[100dvh] md:h-screen flex flex-col relative"
     >
       <PlaygroundNav activeProject={activeProject} />
-      <main className="flex-1 w-full min-w-0">
-        <div className="w-full h-full flex items-center justify-center">
+      <main className="flex-1 w-full min-w-0 pb-28 md:pb-0">
+        <div className="w-full min-h-full md:h-full flex items-center justify-center px-4 pt-16 md:px-0 md:pt-0">
           {activeProject === "ball" && <Ball />}
           {activeProject === "resolved-card" && <ResolvedCard />}
           {activeProject === "leverage-selector" && <LeverageSelector />}
