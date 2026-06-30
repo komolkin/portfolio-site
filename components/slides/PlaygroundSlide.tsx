@@ -9,7 +9,6 @@ import {
 } from "@/components/playground/playground-route";
 import ResolvedCard from "@/components/playground/projects/resolved-card/ResolvedCard";
 import LeverageSelector from "@/components/playground/projects/leverage-selector/LeverageSelector";
-import BinaryMarket from "@/components/playground/projects/binary-market/BinaryMarket";
 import BinaryCompact from "@/components/playground/projects/binary-compact/BinaryCompact";
 import Position2 from "@/components/playground/projects/position-2/Position2";
 import Position3 from "@/components/playground/projects/position-3/Position3";
@@ -18,6 +17,7 @@ import Ball from "@/components/playground/projects/ball/Ball";
 import Mcp from "@/components/playground/projects/mcp/Mcp";
 import Thinking from "@/components/playground/projects/thinking/Thinking";
 import AiCam from "@/components/playground/projects/ai-cam/AiCam";
+import Rewards from "@/components/playground/projects/rewards/Rewards";
 
 export default function PlaygroundSlide() {
   const pathname = usePathname();
@@ -38,7 +38,6 @@ export default function PlaygroundSlide() {
           {activeProject === "ball" && <Ball />}
           {activeProject === "resolved-card" && <ResolvedCard />}
           {activeProject === "leverage-selector" && <LeverageSelector />}
-          {activeProject === "binary-market" && <BinaryMarket />}
           {activeProject === "binary-compact" && <BinaryCompact />}
           {activeProject === "pnl-chart" && <PnlChart />}
           {activeProject === "position-2" && <Position2 />}
@@ -46,6 +45,7 @@ export default function PlaygroundSlide() {
           {activeProject === "mcp" && <Mcp />}
           {activeProject === "thinking" && <Thinking />}
           {activeProject === "ai-cam" && <AiCam />}
+          {activeProject === "rewards" && <Rewards />}
         </div>
       </main>
     </div>
