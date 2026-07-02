@@ -9,7 +9,6 @@ export const PROJECTS = [
   { id: "binary-compact", label: "Binary Compact" },
   { id: "leverage-selector", label: "Categorical" },
   { id: "resolved-card", label: "Resolved" },
-  { id: "rewards", label: "Rewards" },
   { id: "worm", label: "Worm" },
 ] as const;
 

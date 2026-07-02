@@ -17,7 +17,6 @@ import Ball from "@/components/playground/projects/ball/Ball";
 import Mcp from "@/components/playground/projects/mcp/Mcp";
 import Thinking from "@/components/playground/projects/thinking/Thinking";
 import AiCam from "@/components/playground/projects/ai-cam/AiCam";
-import Rewards from "@/components/playground/projects/rewards/Rewards";
 import Worm from "@/components/playground/projects/worm/Worm";
 
 export default function PlaygroundSlide() {
@@ -46,7 +45,6 @@ export default function PlaygroundSlide() {
           {activeProject === "mcp" && <Mcp />}
           {activeProject === "thinking" && <Thinking />}
           {activeProject === "ai-cam" && <AiCam />}
-          {activeProject === "rewards" && <Rewards />}
           {activeProject === "worm" && <Worm />}
         </div>
       </main>
