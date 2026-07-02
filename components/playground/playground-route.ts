@@ -10,6 +10,7 @@ export const PROJECTS = [
   { id: "leverage-selector", label: "Categorical" },
   { id: "resolved-card", label: "Resolved" },
   { id: "rewards", label: "Rewards" },
+  { id: "worm", label: "Worm" },
 ] as const;
 
 export type ProjectId = (typeof PROJECTS)[number]["id"];
