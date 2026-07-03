@@ -8,6 +8,7 @@ import {
   GRID_COLS,
   GRID_ROWS,
   queueDirection,
+  startGame,
   tick,
   TICK_MS,
   type Direction,
@@ -30,8 +31,8 @@ const KEY_TO_DIR: Record<string, Direction> = {
   d: "right",
 };
 
-const SEGMENT_INSET = 0;
-const BODY_SIZE = CELL_SIZE - SEGMENT_INSET * 2;
+const SNAKE_RADIUS = CELL_SIZE / 2 - 1;
+const SNAKE_COLOR = "#fff";
 
 function cellCenter(x: number, y: number) {
   return {
@@ -47,45 +48,47 @@ function prepareDrawContext(ctx: CanvasRenderingContext2D) {
   ctx.shadowOffsetY = 0;
 }
 
-function drawSnake(ctx: CanvasRenderingContext2D, snake: WormGameState["snake"]) {
-  if (snake.length === 0) return;
-
-  prepareDrawContext(ctx);
-  ctx.fillStyle = "#fff";
-  ctx.strokeStyle = "#fff";
-  ctx.lineWidth = BODY_SIZE;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-
-  if (snake.length === 1) {
-    const center = cellCenter(snake[0].x, snake[0].y);
-    ctx.beginPath();
-    ctx.arc(center.x, center.y, BODY_SIZE / 2, 0, Math.PI * 2);
-    ctx.fill();
-    return;
-  }
-
-  ctx.beginPath();
+function traceSnakePath(ctx: CanvasRenderingContext2D, snake: WormGameState["snake"]) {
   const head = cellCenter(snake[0].x, snake[0].y);
+  ctx.beginPath();
   ctx.moveTo(head.x, head.y);
   for (let i = 1; i < snake.length; i++) {
     const center = cellCenter(snake[i].x, snake[i].y);
     ctx.lineTo(center.x, center.y);
   }
+}
+
+function drawSnake(ctx: CanvasRenderingContext2D, snake: WormGameState["snake"]) {
+  if (snake.length === 0) return;
+
+  prepareDrawContext(ctx);
+  const lineWidth = SNAKE_RADIUS * 2;
+
+  if (snake.length === 1) {
+    const center = cellCenter(snake[0].x, snake[0].y);
+    ctx.beginPath();
+    ctx.arc(center.x, center.y, SNAKE_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = SNAKE_COLOR;
+    ctx.fill();
+    return;
+  }
+
+  traceSnakePath(ctx, snake);
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = SNAKE_COLOR;
   ctx.stroke();
 }
 
 function drawFood(ctx: CanvasRenderingContext2D, food: WormGameState["food"]) {
-  prepareDrawContext(ctx);
-  ctx.strokeStyle = "#fff";
-  ctx.lineWidth = BODY_SIZE;
-  ctx.lineCap = "round";
-
   const center = cellCenter(food.x, food.y);
+
+  prepareDrawContext(ctx);
   ctx.beginPath();
-  ctx.moveTo(center.x, center.y);
-  ctx.lineTo(center.x, center.y);
-  ctx.stroke();
+  ctx.arc(center.x, center.y, SNAKE_RADIUS, 0, Math.PI * 2);
+  ctx.fillStyle = SNAKE_COLOR;
+  ctx.fill();
 }
 
 function drawGame(ctx: CanvasRenderingContext2D, state: WormGameState) {
@@ -103,6 +106,7 @@ export default function Worm() {
   const shakeTimerRef = useRef<number | null>(null);
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
+  const [isReady, setIsReady] = useState(true);
   const [isWallShakeFx, setIsWallShakeFx] = useState(false);
 
   const triggerWallShake = useCallback(() => {
@@ -119,6 +123,7 @@ export default function Worm() {
   const syncUi = useCallback((state: WormGameState) => {
     setScore(state.score);
     setGameOver(state.status === "over");
+    setIsReady(state.status === "ready");
   }, []);
 
   const render = useCallback(() => {
@@ -165,6 +170,8 @@ export default function Worm() {
 
   useEffect(() => {
     const interval = window.setInterval(() => {
+      if (stateRef.current.status !== "playing") return;
+
       const prev = stateRef.current;
       const next = tick(prev);
       if (
@@ -191,8 +198,8 @@ export default function Worm() {
   }, []);
 
   useEffect(() => {
-    if (gameOver) frameRef.current?.focus();
-  }, [gameOver]);
+    if (gameOver || isReady) frameRef.current?.focus();
+  }, [gameOver, isReady]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     e.preventDefault();
@@ -200,6 +207,7 @@ export default function Worm() {
       reset();
       return;
     }
+    if (stateRef.current.status === "ready") return;
     pointerStart.current = { x: e.clientX, y: e.clientY };
   };
 
@@ -222,15 +230,28 @@ export default function Worm() {
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
+    const dir = KEY_TO_DIR[e.key];
+
     if (stateRef.current.status === "over") {
       e.preventDefault();
-      const dir = KEY_TO_DIR[e.key];
       reset();
-      if (dir) applyDirection(dir);
+      if (dir) {
+        stateRef.current = startGame(stateRef.current, dir);
+        syncUi(stateRef.current);
+        render();
+      }
       return;
     }
 
-    const dir = KEY_TO_DIR[e.key];
+    if (stateRef.current.status === "ready") {
+      if (!dir) return;
+      e.preventDefault();
+      stateRef.current = startGame(stateRef.current, dir);
+      syncUi(stateRef.current);
+      render();
+      return;
+    }
+
     if (!dir) return;
     e.preventDefault();
     applyDirection(dir);
@@ -245,7 +266,13 @@ export default function Worm() {
           isWallShakeFx ? "animate-[worm-shake_360ms_ease-in-out_1]" : ""
         }`}
         style={{ width: PHONE_WIDTH, height: PHONE_HEIGHT }}
-        aria-label={gameOver ? "Worm — tap or press a key to restart" : "Worm — snake game"}
+        aria-label={
+          gameOver
+            ? "Worm — press a key to restart"
+            : isReady
+              ? "Worm — press a key to start"
+              : "Worm — snake game"
+        }
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
         onKeyDown={onKeyDown}
@@ -258,6 +285,12 @@ export default function Worm() {
         </div>
 
         <canvas ref={canvasRef} className="absolute inset-0 block" />
+
+        {isReady && (
+          <p className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-sm text-muted-foreground">
+            Press a key to start
+          </p>
+        )}
 
         {gameOver && (
           <p className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-sm text-muted-foreground">

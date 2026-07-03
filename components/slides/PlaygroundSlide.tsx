@@ -30,7 +30,7 @@ export default function PlaygroundSlide() {
     <div
       id="playground"
       data-section="playground"
-      className="slide w-full min-h-[100dvh] md:h-screen flex flex-col relative"
+      className="slide w-full h-[80dvh] md:h-screen flex flex-col relative"
     >
       <PlaygroundNav activeProject={activeProject} />
       <main className="flex-1 w-full min-w-0 pb-28 md:pb-0">

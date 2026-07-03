@@ -79,7 +79,7 @@ export default function TopSlide() {
   };
 
   return (
-    <div id="top" className="slide w-full min-h-[100dvh] md:h-screen relative flex flex-col">
+    <div id="top" className="slide w-full h-[80dvh] md:h-screen relative flex flex-col">
       {/* Album Cover Popup */}
       <div
         className={`fixed z-[100] w-[240px] h-[240px] flex-shrink-0 transition-opacity duration-150 ${

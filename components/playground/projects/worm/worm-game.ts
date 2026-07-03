@@ -1,6 +1,6 @@
 export type Direction = "up" | "down" | "left" | "right";
 export type Point = { x: number; y: number };
-export type GameStatus = "playing" | "over";
+export type GameStatus = "ready" | "playing" | "over";
 export type DeathCause = "wall" | "self";
 
 export const GRID_COLS = 14;
@@ -52,7 +52,17 @@ export function createInitialState(): WormGameState {
     queuedDirection: "right",
     food: randomFood(snake),
     score: 0,
+    status: "ready",
+  };
+}
+
+export function startGame(state: WormGameState, dir: Direction): WormGameState {
+  if (state.status !== "ready") return state;
+  return {
+    ...state,
     status: "playing",
+    direction: dir,
+    queuedDirection: dir,
   };
 }
 
