@@ -63,10 +63,6 @@ function getCashOutGlow(fillPercent: number) {
         : 1 - liqDelta / LIQ_GLOW_RANGE
       : 0;
 
-  const endDelta = 100 - fillPercent;
-  const endIntensity =
-    endDelta >= 0 && endDelta <= END_GLOW_RANGE ? 1 - endDelta / END_GLOW_RANGE : 0;
-
   if (liqIntensity > 0) {
     return {
       mode: "liq" as const,
@@ -75,18 +71,26 @@ function getCashOutGlow(fillPercent: number) {
     };
   }
 
-  if (endIntensity > 0) {
-    return {
-      mode: "win" as const,
-      strength: Math.max(0.35, endIntensity),
-      pulseMs: Math.round(280 + (1 - endIntensity) * 720),
-    };
+  if (fillPercent < ENTRY_LINE_PERCENT) {
+    return { mode: "off" as const, strength: 0, pulseMs: 0 };
   }
 
+  const progressFromEntry =
+    (fillPercent - ENTRY_LINE_PERCENT) / (100 - ENTRY_LINE_PERCENT);
+  const endDelta = 100 - fillPercent;
+  const endProximity =
+    endDelta <= END_GLOW_RANGE ? 1 - endDelta / END_GLOW_RANGE : 0;
+
+  const strength = Math.min(1, 0.14 + progressFromEntry * 0.46 + endProximity * 0.24);
+  const pulseMs = Math.max(
+    320,
+    Math.round(2600 - progressFromEntry * 1400 - endProximity * 900),
+  );
+
   return {
-    mode: "neutral" as const,
-    strength: 0.16,
-    pulseMs: 2800,
+    mode: "win" as const,
+    strength,
+    pulseMs,
   };
 }
 
@@ -159,7 +163,7 @@ export default function Position3() {
       ? `position3-cash-out-liq-pulse ${cashOutGlow.pulseMs}ms ease-in-out infinite`
       : cashOutGlow.mode === "win"
         ? `position3-cash-out-win-blink ${cashOutGlow.pulseMs}ms ease-in-out infinite`
-        : `position3-cash-out-neutral-pulse ${cashOutGlow.pulseMs}ms ease-in-out infinite`;
+        : undefined;
 
   return (
     <div
@@ -313,7 +317,7 @@ export default function Position3() {
 
         {/* % label tracks the trailing edge of the fill */}
         <div
-          className={`pointer-events-none absolute z-[3] -translate-x-full pr-3 motion-reduce:transition-none ${
+          className={`pointer-events-none absolute z-[3] w-max max-w-none -translate-x-full pr-3 whitespace-nowrap motion-reduce:transition-none ${
             isCompact ? "top-[5px]" : "top-2"
           }`}
           style={{
@@ -322,7 +326,7 @@ export default function Position3() {
           }}
         >
           <span
-            className={`font-semibold leading-tight tabular-nums drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)] ${PROGRESS_BAR_MOTION} ${
+            className={`inline-flex items-baseline whitespace-nowrap font-semibold leading-none tabular-nums drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)] ${PROGRESS_BAR_MOTION} ${
               isCompact ? "text-xl" : "font-mono text-[28px] font-normal"
             }`}
             style={{ color: pctColor }}
@@ -333,7 +337,7 @@ export default function Position3() {
               className="tabular-nums text-inherit"
               style={{ ["--number-flow-mask-height" as any]: "0em" }}
             />
-            %
+            <span className="shrink-0">%</span>
           </span>
         </div>
       </div>
@@ -370,17 +374,6 @@ export default function Position3() {
           }
         }
 
-        @keyframes position3-cash-out-neutral-pulse {
-          0%, 100% {
-            box-shadow: inset 0 0 0 rgba(255, 255, 255, 0);
-          }
-          50% {
-            box-shadow:
-              inset 0 0 calc(10px + var(--cash-out-glow-strength) * 12px) rgba(255, 255, 255, calc(var(--cash-out-glow-strength) * 0.22)),
-              inset 0 1px 0 rgba(255, 255, 255, calc(var(--cash-out-glow-strength) * 0.12));
-          }
-        }
-
         @media (prefers-reduced-motion: reduce) {
           .position3-cash-out-glow {
             animation: none !important;
@@ -394,14 +387,16 @@ export default function Position3() {
           onClick={(e) => e.stopPropagation()}
           className="relative isolate flex h-14 w-full items-center justify-center overflow-hidden rounded-full border border-white/10 px-8 text-lg font-semibold text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
         >
-          <span
-            aria-hidden
-            className="position3-cash-out-glow pointer-events-none absolute inset-0 rounded-full motion-reduce:opacity-60"
-            style={{
-              ["--cash-out-glow-strength" as string]: cashOutGlow.strength,
-              animation: cashOutGlowAnimation,
-            }}
-          />
+          {cashOutGlow.mode !== "off" && (
+            <span
+              aria-hidden
+              className="position3-cash-out-glow pointer-events-none absolute inset-0 rounded-full motion-reduce:opacity-60"
+              style={{
+                ["--cash-out-glow-strength" as string]: cashOutGlow.strength,
+                animation: cashOutGlowAnimation,
+              }}
+            />
+          )}
           <span className="relative z-[1] inline-flex items-baseline truncate px-1">
             <span>Cash Out</span>
             <span className="ml-2 tabular-nums">{topPrefix}</span>
