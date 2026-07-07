@@ -5,9 +5,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Position3Particles from "./Position3Particles";
 
 /**
- * Position #3 — minimalist progress bar (Entry marker only, no SL/TP dots).
+ * Position #3 — minimalist progress bar with Entry and Liq. markers.
  * Shares the header + buttons layout with Position; the progress bar uses a
- * solid fill, a centered Entry vertical line, and a trailing % label.
+ * solid fill, Entry and Liq. vertical lines, and a trailing % label.
  * Click the card to toggle the compact progress bar (Figma 7445:19968).
  */
 const IMG_THUMB = "/playground/position/thumbnail.png";
@@ -15,7 +15,12 @@ const IMG_SHARE = "/playground/position/share-icon.svg";
 
 const FILL_MIN = 20;
 const FILL_MAX = 80;
+const FILL_NEAR_90_MIN = 88;
+const FILL_NEAR_90_MAX = 92;
+const FILL_NEAR_98_MIN = 96;
+const FILL_NEAR_98_MAX = 98;
 const ENTRY_LINE_PERCENT = 40;
+const LIQ_LINE_PERCENT = 13;
 const INITIAL_VALUE_USD = 100;
 const MAX_VALUE_USD = 286;
 
@@ -46,8 +51,54 @@ const PROGRESS_FILL_MOTION =
 const PROGRESS_BAR_MOTION =
   "transition-[height,opacity,top,font-size,color,transform] duration-[280ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none";
 
+const LIQ_GLOW_RANGE = 18;
+const END_GLOW_RANGE = 22;
+
+function getCashOutGlow(fillPercent: number) {
+  const liqDelta = fillPercent - LIQ_LINE_PERCENT;
+  const liqIntensity =
+    liqDelta <= LIQ_GLOW_RANGE
+      ? liqDelta <= 0
+        ? 1
+        : 1 - liqDelta / LIQ_GLOW_RANGE
+      : 0;
+
+  const endDelta = 100 - fillPercent;
+  const endIntensity =
+    endDelta >= 0 && endDelta <= END_GLOW_RANGE ? 1 - endDelta / END_GLOW_RANGE : 0;
+
+  if (liqIntensity > 0) {
+    return {
+      mode: "liq" as const,
+      strength: Math.max(0.35, liqIntensity),
+      pulseMs: Math.round(220 + (1 - liqIntensity) * 580),
+    };
+  }
+
+  if (endIntensity > 0) {
+    return {
+      mode: "win" as const,
+      strength: Math.max(0.35, endIntensity),
+      pulseMs: Math.round(280 + (1 - endIntensity) * 720),
+    };
+  }
+
+  return {
+    mode: "neutral" as const,
+    strength: 0.16,
+    pulseMs: 2800,
+  };
+}
+
+function randomInt(min: number, max: number): number {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
 function randomFillPercent(): number {
-  return FILL_MIN + Math.floor(Math.random() * (FILL_MAX - FILL_MIN + 1));
+  const roll = Math.random();
+  if (roll < 0.22) return randomInt(FILL_NEAR_90_MIN, FILL_NEAR_90_MAX);
+  if (roll < 0.38) return randomInt(FILL_NEAR_98_MIN, FILL_NEAR_98_MAX);
+  return randomInt(FILL_MIN, FILL_MAX);
 }
 
 export default function Position3() {
@@ -102,6 +153,13 @@ export default function Position3() {
   const isAhead = fillPercent >= ENTRY_LINE_PERCENT;
   const pctColor = isAhead ? "#5dd978" : "#ff7d8a";
   const entryLineColor = isAhead ? ENTRY_LINE_COLOR_GREEN : ENTRY_LINE_COLOR_RED;
+  const cashOutGlow = useMemo(() => getCashOutGlow(fillPercent), [fillPercent]);
+  const cashOutGlowAnimation =
+    cashOutGlow.mode === "liq"
+      ? `position3-cash-out-liq-pulse ${cashOutGlow.pulseMs}ms ease-in-out infinite`
+      : cashOutGlow.mode === "win"
+        ? `position3-cash-out-win-blink ${cashOutGlow.pulseMs}ms ease-in-out infinite`
+        : `position3-cash-out-neutral-pulse ${cashOutGlow.pulseMs}ms ease-in-out infinite`;
 
   return (
     <div
@@ -127,8 +185,17 @@ export default function Position3() {
     >
       <Position3Particles variant={isAhead ? "green" : "red"} />
 
+      <button
+        type="button"
+        onClick={(e) => e.stopPropagation()}
+        className="absolute top-4 right-4 z-[2] flex size-10 shrink-0 items-center justify-center rounded-full border border-white/10 text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
+        aria-label="Share"
+      >
+        <img alt="" className="size-4" src={IMG_SHARE} draggable={false} />
+      </button>
+
       <div className="relative z-[1] flex flex-col gap-4">
-      <div className="flex w-full items-center gap-4">
+      <div className="flex w-full items-center gap-4 pr-10">
         <div className="relative size-[52px] shrink-0 overflow-hidden rounded-lg">
           <img
             alt=""
@@ -202,6 +269,27 @@ export default function Position3() {
           </p>
         </div>
 
+        {/* Liq. vertical line — same treatment as Entry */}
+        <div
+          className="pointer-events-none absolute inset-y-0 z-[3] -translate-x-1/2"
+          style={{ left: `${LIQ_LINE_PERCENT}%` }}
+        >
+          <div
+            className={`absolute left-0 w-[2px] rounded-[1px] opacity-40 ${PROGRESS_BAR_MOTION} ${
+              isCompact ? "top-1.5 bottom-1.5" : "top-1/2 h-[85%] -translate-y-1/2"
+            }`}
+            style={{ backgroundColor: entryLineColor }}
+            aria-hidden
+          />
+          <span
+            className={`absolute bottom-[11px] left-2 whitespace-nowrap text-[8px] font-semibold leading-tight text-white/60 ${PROGRESS_BAR_MOTION} ${
+              isCompact ? "pointer-events-none opacity-0" : "opacity-100"
+            }`}
+          >
+            Liq.
+          </span>
+        </div>
+
         {/* Entry vertical line — compact: Figma 7445:19975; full: + label */}
         <div
           className="pointer-events-none absolute inset-y-0 z-[3] -translate-x-1/2"
@@ -259,17 +347,64 @@ export default function Position3() {
           80% { transform: translate3d(1px, 0, 0); }
           100% { transform: translate3d(0, 0, 0); }
         }
+
+        @keyframes position3-cash-out-liq-pulse {
+          0%, 100% {
+            box-shadow: inset 0 0 0 rgba(255, 77, 94, 0);
+          }
+          50% {
+            box-shadow:
+              inset 0 0 calc(14px + var(--cash-out-glow-strength) * 22px) rgba(255, 77, 94, calc(var(--cash-out-glow-strength) * 0.62)),
+              inset 0 1px 0 rgba(255, 120, 130, calc(var(--cash-out-glow-strength) * 0.35));
+          }
+        }
+
+        @keyframes position3-cash-out-win-blink {
+          0%, 100% {
+            box-shadow: inset 0 0 0 rgba(93, 217, 120, 0);
+          }
+          50% {
+            box-shadow:
+              inset 0 0 calc(16px + var(--cash-out-glow-strength) * 24px) rgba(93, 217, 120, calc(var(--cash-out-glow-strength) * 0.58)),
+              inset 0 1px 0 rgba(140, 255, 170, calc(var(--cash-out-glow-strength) * 0.32));
+          }
+        }
+
+        @keyframes position3-cash-out-neutral-pulse {
+          0%, 100% {
+            box-shadow: inset 0 0 0 rgba(255, 255, 255, 0);
+          }
+          50% {
+            box-shadow:
+              inset 0 0 calc(10px + var(--cash-out-glow-strength) * 12px) rgba(255, 255, 255, calc(var(--cash-out-glow-strength) * 0.22)),
+              inset 0 1px 0 rgba(255, 255, 255, calc(var(--cash-out-glow-strength) * 0.12));
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .position3-cash-out-glow {
+            animation: none !important;
+          }
+        }
       `}</style>
 
-      <div className="flex w-full items-start justify-center gap-2.5">
+      <div className="flex w-full items-start justify-center">
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-full border border-white/10 text-sm font-semibold text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
+          className="relative isolate flex h-14 w-full items-center justify-center overflow-hidden rounded-full border border-white/10 px-8 text-lg font-semibold text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
         >
-          <span className="inline-flex items-baseline truncate px-1">
+          <span
+            aria-hidden
+            className="position3-cash-out-glow pointer-events-none absolute inset-0 rounded-full motion-reduce:opacity-60"
+            style={{
+              ["--cash-out-glow-strength" as string]: cashOutGlow.strength,
+              animation: cashOutGlowAnimation,
+            }}
+          />
+          <span className="relative z-[1] inline-flex items-baseline truncate px-1">
             <span>Cash Out</span>
-            <span className="ml-1.5 tabular-nums">{topPrefix}</span>
+            <span className="ml-2 tabular-nums">{topPrefix}</span>
             <NumberFlow
               value={topAbs}
               trend={0}
@@ -278,14 +413,6 @@ export default function Position3() {
               style={{ ["--number-flow-mask-height" as any]: "0em" }}
             />
           </span>
-        </button>
-        <button
-          type="button"
-          onClick={(e) => e.stopPropagation()}
-          className="flex size-10 shrink-0 items-center justify-center rounded-full border border-white/10 text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
-          aria-label="Share"
-        >
-          <img alt="" className="size-4" src={IMG_SHARE} draggable={false} />
         </button>
       </div>
       </div>

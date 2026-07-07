@@ -3,6 +3,7 @@ export const PROJECTS = [
   { id: "mcp", label: "MCP" },
   { id: "thinking", label: "Thinking" },
   { id: "ball", label: "Ball" },
+  { id: "position-1", label: "Position #1" },
   { id: "position-2", label: "Position #2" },
   { id: "position-3", label: "Position #3" },
   { id: "pnl-chart", label: "PnL" },

@@ -14,6 +14,10 @@ import {
   type Direction,
   type WormGameState,
 } from "@/components/playground/projects/worm/worm-game";
+import UsernamePrompt from "@/components/playground/projects/worm/UsernamePrompt";
+import WormLeaderboard from "@/components/playground/projects/worm/WormLeaderboard";
+
+const USERNAME_KEY = "worm-username";
 
 const PHONE_WIDTH = 280;
 const PHONE_HEIGHT = 580;
@@ -108,6 +112,54 @@ export default function Worm() {
   const [gameOver, setGameOver] = useState(false);
   const [isReady, setIsReady] = useState(true);
   const [isWallShakeFx, setIsWallShakeFx] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [leaderboardRefreshKey, setLeaderboardRefreshKey] = useState(0);
+  const submittedScoreRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setUsername(localStorage.getItem(USERNAME_KEY));
+  }, []);
+
+  const submitScore = useCallback(async (name: string, finalScore: number) => {
+    try {
+      const res = await fetch("/api/worm/leaderboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: name, score: finalScore }),
+      });
+      if (res.ok) setLeaderboardRefreshKey((k) => k + 1);
+    } catch {
+      // Optional — fail silently
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!gameOver) {
+      submittedScoreRef.current = null;
+      return;
+    }
+    if (submittedScoreRef.current === score) return;
+
+    if (!username) {
+      setShowNamePrompt(true);
+      return;
+    }
+
+    submittedScoreRef.current = score;
+    void submitScore(username, score);
+  }, [gameOver, score, username, submitScore]);
+
+  const handleUsernameSubmit = useCallback(
+    (name: string) => {
+      localStorage.setItem(USERNAME_KEY, name);
+      setUsername(name);
+      setShowNamePrompt(false);
+      submittedScoreRef.current = score;
+      void submitScore(name, score);
+    },
+    [score, submitScore]
+  );
 
   const triggerWallShake = useCallback(() => {
     setIsWallShakeFx(true);
@@ -203,6 +255,7 @@ export default function Worm() {
 
   const onPointerDown = (e: React.PointerEvent) => {
     e.preventDefault();
+    if (showNamePrompt) return;
     if (stateRef.current.status === "over") {
       reset();
       return;
@@ -233,6 +286,7 @@ export default function Worm() {
     const dir = KEY_TO_DIR[e.key];
 
     if (stateRef.current.status === "over") {
+      if (showNamePrompt) return;
       e.preventDefault();
       reset();
       if (dir) {
@@ -258,7 +312,7 @@ export default function Worm() {
   };
 
   return (
-    <div className="flex h-full w-full items-center justify-center p-4">
+    <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-4 md:flex-row md:gap-10">
       <div
         ref={frameRef}
         tabIndex={0}
@@ -292,12 +346,18 @@ export default function Worm() {
           </p>
         )}
 
-        {gameOver && (
+        {gameOver && !showNamePrompt && (
           <p className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-sm text-muted-foreground">
             Game over
           </p>
         )}
+
+        {showNamePrompt && (
+          <UsernamePrompt score={score} onSubmit={handleUsernameSubmit} />
+        )}
       </div>
+
+      <WormLeaderboard refreshKey={leaderboardRefreshKey} />
 
       <style>{`
         @keyframes worm-shake {
