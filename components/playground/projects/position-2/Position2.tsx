@@ -578,7 +578,7 @@ export default function Position2() {
                       }
                     }}
                     aria-label={`Edit shortcut ${index + 1}`}
-                    className="flex h-9 min-w-0 flex-1 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] px-2 text-center text-xs font-semibold leading-[1.25] text-white tabular-nums outline-none transition-[background-color,border-color] duration-150 ease-out focus:border-white/20 focus:bg-white/[0.08]"
+                    className="flex h-9 min-w-0 flex-1 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] px-2 text-center text-sm font-semibold leading-[1.25] text-white tabular-nums outline-none transition-[background-color,border-color] duration-150 ease-out focus:border-white/20 focus:bg-white/[0.08]"
                   />
                 );
               }
@@ -592,7 +592,7 @@ export default function Position2() {
                     e.stopPropagation();
                     adjustPositionSize(shortcut.delta);
                   }}
-                  className="flex h-9 min-w-0 flex-1 items-center justify-center rounded-full bg-white/[0.06] px-2 text-xs font-semibold leading-[1.25] text-white tabular-nums transition-[transform,background-color,opacity] duration-150 ease-out hover:bg-white/[0.08] active:scale-[0.95] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
+                  className="flex h-9 min-w-0 flex-1 items-center justify-center rounded-full bg-white/[0.06] px-2 text-sm font-semibold leading-[1.25] text-white tabular-nums transition-[transform,background-color,opacity] duration-150 ease-out hover:bg-white/[0.08] active:scale-[0.95] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
                 >
                   {shortcut.label}
                 </button>
