@@ -11,7 +11,9 @@ import Position2Particles from "./Position2Particles";
  * Click the progress bar to toggle the compact progress bar (Figma 7445:19968).
  */
 const IMG_THUMB = "/playground/position-2/england-flag.svg";
-const IMG_SHARE = "/playground/position/share-icon.svg";
+const VIDEO_SRC = "/playground/position-2/england.mp4";
+const PHONE_WIDTH = 400;
+const PHONE_HEIGHT = 760;
 
 const FILL_MIN = 20;
 const FILL_MAX = 80;
@@ -189,9 +191,17 @@ export default function Position2() {
   const [positionShortcuts, setPositionShortcuts] = useState(DEFAULT_POSITION_SHORTCUTS);
   const [isEditingShortcuts, setIsEditingShortcuts] = useState(false);
   const [draftShortcutLabels, setDraftShortcutLabels] = useState<string[]>([]);
-  const [isCompact, setIsCompact] = useState(false);
+  const [isCompact, setIsCompact] = useState(true);
   const [isFastForwardFx, setIsFastForwardFx] = useState(false);
   const fastForwardTimerRef = useRef<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.play().catch(() => {});
+  }, []);
 
   useEffect(() => {
     setFillPercent(randomFillPercent());
@@ -285,29 +295,44 @@ export default function Position2() {
         : undefined;
 
   return (
-    <div
-      className={`relative flex w-full max-w-[400px] flex-col gap-4 overflow-hidden rounded-[24px] border p-4 transition-[background,border-color] duration-500 ease-out ${
-        isFastForwardFx ? "animate-[position2-shake_360ms_ease-in-out_1]" : ""
-      }`}
-      style={{
-        background: isAhead ? CARD_BG_GREEN : CARD_BG_RED,
-        borderColor: isAhead ? CARD_BORDER_GREEN : CARD_BORDER_RED,
-      }}
-      data-name="Position #2"
-    >
+    <div className="flex h-full w-full items-center justify-center p-4">
+      <div
+        className="relative overflow-hidden rounded-[2.75rem] bg-black"
+        style={{ width: PHONE_WIDTH, height: PHONE_HEIGHT }}
+        aria-label="Position — England match preview"
+        data-name="Position #2"
+      >
+        <video
+          ref={videoRef}
+          className="absolute inset-0 h-full w-full object-cover"
+          src={VIDEO_SRC}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+        />
+
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/70 via-black/20 to-transparent"
+          aria-hidden
+        />
+
+        <div className="absolute inset-x-3 bottom-3 z-10">
+          <div
+            className={`relative flex w-full flex-col gap-4 overflow-hidden rounded-[24px] border p-4 transition-[background,border-color] duration-500 ease-out ${
+              isFastForwardFx ? "animate-[position2-shake_360ms_ease-in-out_1]" : ""
+            }`}
+            style={{
+              background: isAhead ? CARD_BG_GREEN : CARD_BG_RED,
+              borderColor: isAhead ? CARD_BORDER_GREEN : CARD_BORDER_RED,
+            }}
+          >
       <Position2Particles variant={isAhead ? "green" : "red"} />
 
-      <button
-        type="button"
-        className="absolute top-4 right-4 z-[2] flex size-10 shrink-0 items-center justify-center rounded-full border border-white/10 text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
-        aria-label="Share"
-      >
-        <img alt="" className="size-4" src={IMG_SHARE} draggable={false} />
-      </button>
-
       <div className="relative z-[1] flex flex-col gap-4">
-      <div className="flex w-full items-center gap-4 pr-10">
-        <div className="relative size-[52px] shrink-0 overflow-hidden rounded-lg">
+      <div className="flex w-full items-center gap-4">
+        <div className="relative h-10 w-[60px] shrink-0 overflow-hidden rounded-sm">
           <img
             alt="England flag"
             className="pointer-events-none size-full object-cover"
@@ -553,7 +578,7 @@ export default function Position2() {
                       }
                     }}
                     aria-label={`Edit shortcut ${index + 1}`}
-                    className="flex h-9 min-w-0 flex-1 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] px-2 text-center text-sm font-semibold leading-[1.25] text-white tabular-nums outline-none transition-[background-color,border-color] duration-150 ease-out focus:border-white/20 focus:bg-white/[0.08]"
+                    className="flex h-9 min-w-0 flex-1 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] px-2 text-center text-xs font-semibold leading-[1.25] text-white tabular-nums outline-none transition-[background-color,border-color] duration-150 ease-out focus:border-white/20 focus:bg-white/[0.08]"
                   />
                 );
               }
@@ -567,7 +592,7 @@ export default function Position2() {
                     e.stopPropagation();
                     adjustPositionSize(shortcut.delta);
                   }}
-                  className="flex h-9 min-w-0 flex-1 items-center justify-center rounded-full bg-white/[0.06] px-2 text-sm font-semibold leading-[1.25] text-white tabular-nums transition-[transform,background-color,opacity] duration-150 ease-out hover:bg-white/[0.08] active:scale-[0.95] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
+                  className="flex h-9 min-w-0 flex-1 items-center justify-center rounded-full bg-white/[0.06] px-2 text-xs font-semibold leading-[1.25] text-white tabular-nums transition-[transform,background-color,opacity] duration-150 ease-out hover:bg-white/[0.08] active:scale-[0.95] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
                 >
                   {shortcut.label}
                 </button>
@@ -606,7 +631,7 @@ export default function Position2() {
           }}
           aria-pressed={outcome === "no"}
           aria-label={outcome === "yes" ? "Switch to NO" : "Switch to YES"}
-          className="flex h-14 shrink-0 items-center justify-center rounded-full border border-white/10 px-5 text-base font-semibold text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
+          className="flex h-14 shrink-0 items-center justify-center rounded-full border border-white/10 px-5 text-sm font-semibold text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
         >
           <span className="whitespace-nowrap px-1">
             {outcome === "yes" ? "Switch to NO" : "Switch to YES"}
@@ -615,7 +640,7 @@ export default function Position2() {
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className="relative isolate flex h-14 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-full border border-white/10 px-8 text-base font-semibold text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
+          className="relative isolate flex h-14 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-full border border-white/10 px-8 text-sm font-semibold text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
         >
           {cashOutGlow.mode !== "off" && (
             <span
@@ -642,6 +667,9 @@ export default function Position2() {
         </div>
       </div>
       </div>
+        </div>
+      </div>
+    </div>
     </div>
   );
 }
