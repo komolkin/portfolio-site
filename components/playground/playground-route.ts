@@ -5,8 +5,6 @@ export const PROJECTS = [
   { id: "ball", label: "Ball" },
   { id: "position-1", label: "Position #1" },
   { id: "position-2", label: "Position #2" },
-  { id: "position-3", label: "Position #3" },
-  { id: "position-4", label: "Position #4" },
   { id: "pnl-chart", label: "PnL" },
   { id: "binary-compact", label: "Binary Compact" },
   { id: "leverage-selector", label: "Categorical" },
