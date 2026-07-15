@@ -297,7 +297,7 @@ export default function Position2() {
   return (
     <div className="flex h-full w-full items-center justify-center p-4">
       <div
-        className="relative overflow-hidden rounded-[2.75rem] bg-black"
+        className="relative overflow-hidden rounded-[2.25rem] bg-black"
         style={{ width: PHONE_WIDTH, height: PHONE_HEIGHT }}
         aria-label="Position — England match preview"
         data-name="Position #2"
