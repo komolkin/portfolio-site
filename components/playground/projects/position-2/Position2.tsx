@@ -738,7 +738,7 @@ export default function Position2() {
         {/* % label tracks the trailing edge of the fill */}
         <div
           className={`pointer-events-none absolute z-[3] w-max max-w-none -translate-x-full pr-3 whitespace-nowrap motion-reduce:transition-none ${
-            isCompact ? "top-[5px]" : "top-2"
+            isCompact ? "top-[6px]" : "top-2"
           }`}
           style={{
             left: `${fillPercent}%`,
