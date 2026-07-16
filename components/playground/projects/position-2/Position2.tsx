@@ -11,9 +11,17 @@ import Position2Particles from "./Position2Particles";
  * Click the progress bar to toggle the compact progress bar (Figma 7445:19968).
  */
 const IMG_THUMB = "/playground/position-2/england-flag.svg";
+const IMG_ARGENTINA = "/playground/position-2/argentina-flag.svg";
 const VIDEO_SRC = "/playground/position-2/england.mp4";
 const PHONE_WIDTH = 400;
 const PHONE_HEIGHT = 760;
+
+const MATCH_START_SECONDS = 54 * 60 + 16;
+const MATCH_MAX_SECONDS = 90 * 60;
+const MATCH_TICK_MS = 1000;
+const GOAL_CHECK_EVERY_SECONDS = 18;
+const GOAL_CHANCE = 0.42;
+const GOAL_FLASH_MS = 1600;
 
 const FILL_MIN = 20;
 const FILL_MAX = 80;
@@ -102,6 +110,13 @@ function CheckIcon({ className }: { className?: string }) {
   );
 }
 
+function formatMatchClock(totalSeconds: number): string {
+  const clamped = Math.max(0, Math.min(totalSeconds, MATCH_MAX_SECONDS));
+  const minutes = Math.floor(clamped / 60);
+  const seconds = clamped % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
 const SIM_TICK_MS = 2200;
 const FAST_FORWARD_DELTA_THRESHOLD = 12;
 const FAST_FORWARD_FX_MS = 550;
@@ -113,11 +128,11 @@ const ENTRY_LINE_COLOR_GREEN = "#5dd978";
 const ENTRY_LINE_COLOR_RED = "#ff4d5e";
 
 const CARD_BG_GREEN =
-  "linear-gradient(180deg, rgba(93,217,120,0.04) 0%, rgba(93,217,120,0.1) 100%), #1d1d1d";
+  "linear-gradient(180deg, rgba(93,217,120,0.08) 0%, rgba(93,217,120,0.14) 100%), rgba(29,29,29,0.52)";
 const CARD_BG_RED =
-  "linear-gradient(180deg, rgba(255,77,94,0) 0%, rgba(255,77,94,0.1) 100%), #1d1d1d";
-const CARD_BORDER_GREEN = "rgba(93,217,120,0.1)";
-const CARD_BORDER_RED = "rgba(255,77,94,0.1)";
+  "linear-gradient(180deg, rgba(255,77,94,0.04) 0%, rgba(255,77,94,0.14) 100%), rgba(29,29,29,0.52)";
+const CARD_BORDER_GREEN = "rgba(93,217,120,0.14)";
+const CARD_BORDER_RED = "rgba(255,77,94,0.14)";
 
 const PROGRESS_EASE = "cubic-bezier(0.33, 1, 0.68, 1)";
 
@@ -195,12 +210,57 @@ export default function Position2() {
   const [isFastForwardFx, setIsFastForwardFx] = useState(false);
   const fastForwardTimerRef = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [matchSeconds, setMatchSeconds] = useState(MATCH_START_SECONDS);
+  const [homeScore, setHomeScore] = useState(1);
+  const [awayScore, setAwayScore] = useState(0);
+  const [goalFlashTeam, setGoalFlashTeam] = useState<"home" | "away" | null>(null);
+  const goalFlashTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     video.play().catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setMatchSeconds((prev) => {
+        if (prev >= MATCH_MAX_SECONDS) return prev;
+        const next = prev + 1;
+
+        if (
+          next < MATCH_MAX_SECONDS &&
+          next % GOAL_CHECK_EVERY_SECONDS === 0 &&
+          Math.random() < GOAL_CHANCE
+        ) {
+          const scorer: "home" | "away" = Math.random() < 0.62 ? "home" : "away";
+          if (scorer === "home") {
+            setHomeScore((score) => score + 1);
+          } else {
+            setAwayScore((score) => score + 1);
+          }
+          setGoalFlashTeam(scorer);
+          if (goalFlashTimerRef.current !== null) {
+            window.clearTimeout(goalFlashTimerRef.current);
+          }
+          goalFlashTimerRef.current = window.setTimeout(() => {
+            setGoalFlashTeam(null);
+            goalFlashTimerRef.current = null;
+          }, GOAL_FLASH_MS);
+        }
+
+        return next;
+      });
+    }, MATCH_TICK_MS);
+
+    return () => {
+      window.clearInterval(id);
+      if (goalFlashTimerRef.current !== null) {
+        window.clearTimeout(goalFlashTimerRef.current);
+        goalFlashTimerRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -251,6 +311,9 @@ export default function Position2() {
   const currentTotalUsd = positionSizeUsd + pnlSigned;
   const topPrefix = currentTotalUsd < 0 ? "-$" : "$";
   const topAbs = Math.abs(currentTotalUsd);
+
+  const matchMinutes = Math.floor(matchSeconds / 60);
+  const matchClockSeconds = matchSeconds % 60;
 
   const adjustPositionSize = (delta: number) => {
     setPositionSizeUsd((prev) => Math.max(MIN_POSITION_SIZE_USD, prev + delta));
@@ -314,13 +377,114 @@ export default function Position2() {
         />
 
         <div
+          className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-[38%] bg-gradient-to-b from-black/75 via-black/35 to-transparent"
+          aria-hidden
+        />
+
+        <div
+          className="absolute inset-x-0 top-0 z-10 px-5 pt-8"
+          aria-label={`Live match England ${homeScore} Argentina ${awayScore}, ${formatMatchClock(matchSeconds)}`}
+        >
+          <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
+            <div className="flex flex-col items-center gap-2 pt-5">
+              <div
+                className={`relative h-8 w-[46px] overflow-hidden rounded-[5px] transition-transform duration-300 ${
+                  goalFlashTeam === "home" ? "scale-110" : "scale-100"
+                }`}
+              >
+                <img
+                  alt=""
+                  className="size-full object-cover"
+                  src={IMG_THUMB}
+                  draggable={false}
+                />
+              </div>
+              <span className="text-sm font-semibold leading-none text-white">England</span>
+            </div>
+
+            <div className="flex min-w-[132px] flex-col items-center gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <span className="size-1.5 shrink-0 rounded-full bg-[#ff4d5e] shadow-[0_0_8px_rgba(255,77,94,0.75)]" />
+                <span className="text-xs font-semibold tracking-[0.04em] text-[#ff4d5e]">
+                  LIVE
+                </span>
+                <span className="inline-flex items-baseline text-xs font-medium tabular-nums text-white/90">
+                  <NumberFlow
+                    value={matchMinutes}
+                    trend={1}
+                    format={{ useGrouping: false }}
+                    className="tabular-nums text-inherit"
+                    style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                  />
+                  <span>:</span>
+                  <NumberFlow
+                    value={matchClockSeconds}
+                    trend={1}
+                    format={{ useGrouping: false, minimumIntegerDigits: 2 }}
+                    className="tabular-nums text-inherit"
+                    style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                  />
+                </span>
+              </div>
+              <div
+                className={`flex items-baseline gap-2 text-[34px] font-semibold leading-none tracking-tight text-white transition-transform duration-300 ${
+                  goalFlashTeam ? "scale-105" : "scale-100"
+                }`}
+              >
+                <span className="tabular-nums text-white">
+                  <NumberFlow
+                    value={homeScore}
+                    trend={1}
+                    format={{ useGrouping: false }}
+                    className="tabular-nums text-inherit"
+                    style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                  />
+                </span>
+                <span className="text-[28px] font-medium text-white/70">-</span>
+                <span className="tabular-nums text-white">
+                  <NumberFlow
+                    value={awayScore}
+                    trend={1}
+                    format={{ useGrouping: false }}
+                    className="tabular-nums text-inherit"
+                    style={{ ["--number-flow-mask-height" as any]: "0em" }}
+                  />
+                </span>
+              </div>
+              <span className="text-xs font-medium text-white/80">Atlanta Stadium</span>
+              {goalFlashTeam && (
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#5dd978]">
+                  Goal!
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-col items-center gap-2 pt-5">
+              <div
+                className={`relative h-8 w-[46px] overflow-hidden rounded-[5px] transition-transform duration-300 ${
+                  goalFlashTeam === "away" ? "scale-110" : "scale-100"
+                }`}
+              >
+                <img
+                  alt=""
+                  className="size-full object-cover"
+                  src={IMG_ARGENTINA}
+                  draggable={false}
+                />
+              </div>
+              <span className="text-sm font-semibold leading-none text-white">Argentina</span>
+            </div>
+          </div>
+        </div>
+
+        <div
           className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/70 via-black/20 to-transparent"
           aria-hidden
         />
 
         <div className="absolute inset-x-3 bottom-3 z-10">
           <div
-            className={`relative flex w-full flex-col gap-4 overflow-hidden rounded-[24px] border p-4 transition-[background,border-color] duration-500 ease-out ${
+            className={`relative flex w-full flex-col gap-4 overflow-hidden rounded-[24px] border p-4 backdrop-blur-xl transition-[background,border-color] duration-500 ease-out ${
               isFastForwardFx ? "animate-[position2-shake_360ms_ease-in-out_1]" : ""
             }`}
             style={{
