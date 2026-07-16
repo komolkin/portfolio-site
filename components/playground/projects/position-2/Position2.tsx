@@ -19,9 +19,11 @@ const PHONE_HEIGHT = 760;
 const MATCH_START_SECONDS = 54 * 60 + 16;
 const MATCH_MAX_SECONDS = 90 * 60;
 const MATCH_TICK_MS = 1000;
-const GOAL_CHECK_EVERY_SECONDS = 18;
-const GOAL_CHANCE = 0.42;
+const GOAL_FIRST_DELAY_MS = 6000;
+const GOAL_REPEAT_INTERVAL_MS = 15000;
 const GOAL_FLASH_MS = 1600;
+const SIZE_DELTA_HOLD_MS = 900;
+const SIZE_DELTA_EXIT_MS = 480;
 
 const FILL_MIN = 20;
 const FILL_MAX = 80;
@@ -215,6 +217,17 @@ export default function Position2() {
   const [awayScore, setAwayScore] = useState(0);
   const [goalFlashTeam, setGoalFlashTeam] = useState<"home" | "away" | null>(null);
   const goalFlashTimerRef = useRef<number | null>(null);
+  const [sizeDeltaFlash, setSizeDeltaFlash] = useState<{
+    sessionId: number;
+    amount: number;
+    bumpId: number;
+    exiting: boolean;
+  } | null>(null);
+  const sizeDeltaFlashTimerRef = useRef<number | null>(null);
+  const sizeDeltaFlashExitTimerRef = useRef<number | null>(null);
+  const sizeDeltaFlashSessionRef = useRef(0);
+  const sizeDeltaFlashBumpRef = useRef(0);
+  const sizeDeltaStackedRef = useRef(0);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -225,40 +238,49 @@ export default function Position2() {
 
   useEffect(() => {
     const id = window.setInterval(() => {
-      setMatchSeconds((prev) => {
-        if (prev >= MATCH_MAX_SECONDS) return prev;
-        const next = prev + 1;
-
-        if (
-          next < MATCH_MAX_SECONDS &&
-          next % GOAL_CHECK_EVERY_SECONDS === 0 &&
-          Math.random() < GOAL_CHANCE
-        ) {
-          const scorer: "home" | "away" = Math.random() < 0.62 ? "home" : "away";
-          if (scorer === "home") {
-            setHomeScore((score) => score + 1);
-          } else {
-            setAwayScore((score) => score + 1);
-          }
-          setGoalFlashTeam(scorer);
-          if (goalFlashTimerRef.current !== null) {
-            window.clearTimeout(goalFlashTimerRef.current);
-          }
-          goalFlashTimerRef.current = window.setTimeout(() => {
-            setGoalFlashTeam(null);
-            goalFlashTimerRef.current = null;
-          }, GOAL_FLASH_MS);
-        }
-
-        return next;
-      });
+      setMatchSeconds((prev) => (prev >= MATCH_MAX_SECONDS ? prev : prev + 1));
     }, MATCH_TICK_MS);
 
     return () => {
       window.clearInterval(id);
+    };
+  }, []);
+
+  useEffect(() => {
+    const scoreGoal = () => {
+      setHomeScore((score) => score + 1);
+      setGoalFlashTeam("home");
+      if (goalFlashTimerRef.current !== null) {
+        window.clearTimeout(goalFlashTimerRef.current);
+      }
+      goalFlashTimerRef.current = window.setTimeout(() => {
+        setGoalFlashTeam(null);
+        goalFlashTimerRef.current = null;
+      }, GOAL_FLASH_MS);
+    };
+
+    let repeatIntervalId: number | null = null;
+    const firstGoalTimeoutId = window.setTimeout(() => {
+      scoreGoal();
+      repeatIntervalId = window.setInterval(scoreGoal, GOAL_REPEAT_INTERVAL_MS);
+    }, GOAL_FIRST_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(firstGoalTimeoutId);
+      if (repeatIntervalId !== null) {
+        window.clearInterval(repeatIntervalId);
+      }
       if (goalFlashTimerRef.current !== null) {
         window.clearTimeout(goalFlashTimerRef.current);
         goalFlashTimerRef.current = null;
+      }
+      if (sizeDeltaFlashTimerRef.current !== null) {
+        window.clearTimeout(sizeDeltaFlashTimerRef.current);
+        sizeDeltaFlashTimerRef.current = null;
+      }
+      if (sizeDeltaFlashExitTimerRef.current !== null) {
+        window.clearTimeout(sizeDeltaFlashExitTimerRef.current);
+        sizeDeltaFlashExitTimerRef.current = null;
       }
     };
   }, []);
@@ -316,7 +338,47 @@ export default function Position2() {
   const matchClockSeconds = matchSeconds % 60;
 
   const adjustPositionSize = (delta: number) => {
-    setPositionSizeUsd((prev) => Math.max(MIN_POSITION_SIZE_USD, prev + delta));
+    const next = Math.max(MIN_POSITION_SIZE_USD, positionSizeUsd + delta);
+    const appliedDelta = next - positionSizeUsd;
+    if (appliedDelta === 0) return;
+
+    setPositionSizeUsd(next);
+
+    const isNewSession =
+      sizeDeltaFlashTimerRef.current === null &&
+      sizeDeltaFlashExitTimerRef.current === null;
+    if (isNewSession) {
+      sizeDeltaFlashSessionRef.current += 1;
+      sizeDeltaStackedRef.current = appliedDelta;
+    } else {
+      sizeDeltaStackedRef.current += appliedDelta;
+    }
+
+    sizeDeltaFlashBumpRef.current += 1;
+    setSizeDeltaFlash({
+      sessionId: sizeDeltaFlashSessionRef.current,
+      amount: sizeDeltaStackedRef.current,
+      bumpId: sizeDeltaFlashBumpRef.current,
+      exiting: false,
+    });
+
+    if (sizeDeltaFlashTimerRef.current !== null) {
+      window.clearTimeout(sizeDeltaFlashTimerRef.current);
+    }
+    if (sizeDeltaFlashExitTimerRef.current !== null) {
+      window.clearTimeout(sizeDeltaFlashExitTimerRef.current);
+      sizeDeltaFlashExitTimerRef.current = null;
+    }
+
+    sizeDeltaFlashTimerRef.current = window.setTimeout(() => {
+      sizeDeltaFlashTimerRef.current = null;
+      setSizeDeltaFlash((prev) => (prev ? { ...prev, exiting: true } : null));
+      sizeDeltaFlashExitTimerRef.current = window.setTimeout(() => {
+        setSizeDeltaFlash(null);
+        sizeDeltaStackedRef.current = 0;
+        sizeDeltaFlashExitTimerRef.current = null;
+      }, SIZE_DELTA_EXIT_MS);
+    }, SIZE_DELTA_HOLD_MS);
   };
 
   const startEditingShortcuts = () => {
@@ -481,6 +543,35 @@ export default function Position2() {
           className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/70 via-black/20 to-transparent"
           aria-hidden
         />
+
+        {sizeDeltaFlash && sizeDeltaFlash.amount !== 0 && (
+          <div
+            key={sizeDeltaFlash.sessionId}
+            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
+            aria-hidden
+          >
+            <span
+              className={`inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight tabular-nums drop-shadow-[0_4px_24px_rgba(0,0,0,0.55)] ${
+                sizeDeltaFlash.exiting
+                  ? sizeDeltaFlash.amount > 0
+                    ? "position2-size-delta-exit-up"
+                    : "position2-size-delta-exit-down"
+                  : "position2-size-delta-enter"
+              } ${
+                sizeDeltaFlash.amount > 0 ? "text-[#5dd978]" : "text-[#ff7d8a]"
+              }`}
+            >
+              <span>{sizeDeltaFlash.amount > 0 ? "+$" : "-$"}</span>
+              <NumberFlow
+                value={Math.abs(sizeDeltaFlash.amount)}
+                trend={sizeDeltaFlash.amount > 0 ? 1 : -1}
+                format={{ useGrouping: true }}
+                className="tabular-nums text-inherit"
+                style={{ ["--number-flow-mask-height" as any]: "0em" }}
+              />
+            </span>
+          </div>
+        )}
 
         <div className="absolute inset-x-3 bottom-3 z-10">
           <div
@@ -703,9 +794,66 @@ export default function Position2() {
           }
         }
 
+        @keyframes position2-size-delta-enter {
+          0% {
+            opacity: 0;
+            transform: translate3d(0, 18px, 0) scale(0.72);
+          }
+          55% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1.08);
+          }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+        }
+
+        @keyframes position2-size-delta-exit-up {
+          0% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translate3d(0, -42px, 0) scale(0.92);
+          }
+        }
+
+        @keyframes position2-size-delta-exit-down {
+          0% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translate3d(0, 42px, 0) scale(0.92);
+          }
+        }
+
+        .position2-size-delta-enter {
+          animation: position2-size-delta-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        .position2-size-delta-exit-up {
+          animation: position2-size-delta-exit-up 480ms cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        .position2-size-delta-exit-down {
+          animation: position2-size-delta-exit-down 480ms cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .position2-cash-out-glow {
             animation: none !important;
+          }
+
+          .position2-size-delta-enter,
+          .position2-size-delta-exit-up,
+          .position2-size-delta-exit-down {
+            animation: none !important;
+            opacity: 1;
+            transform: none;
           }
         }
       `}</style>
