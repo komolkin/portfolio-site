@@ -13,6 +13,8 @@ import Position2Particles from "./Position2Particles";
 const IMG_THUMB = "/playground/position-2/england-flag.svg";
 const IMG_ARGENTINA = "/playground/position-2/argentina-flag.svg";
 const VIDEO_SRC = "/playground/position-2/england.mp4";
+const FLAG_IMG_CLASS =
+  "relative h-8 w-12 shrink-0 overflow-hidden rounded-[5px] transition-transform duration-300";
 const PHONE_WIDTH = 400;
 const PHONE_HEIGHT = 760;
 
@@ -450,7 +452,7 @@ export default function Position2() {
           <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
             <div className="flex flex-col items-center gap-2 pt-5">
               <div
-                className={`relative h-8 w-[46px] overflow-hidden rounded-[5px] transition-transform duration-300 ${
+                className={`${FLAG_IMG_CLASS} ${
                   goalFlashTeam === "home" ? "scale-110" : "scale-100"
                 }`}
               >
@@ -523,7 +525,7 @@ export default function Position2() {
 
             <div className="flex flex-col items-center gap-2 pt-5">
               <div
-                className={`relative h-8 w-[46px] overflow-hidden rounded-[5px] transition-transform duration-300 ${
+                className={`${FLAG_IMG_CLASS} ${
                   goalFlashTeam === "away" ? "scale-110" : "scale-100"
                 }`}
               >
@@ -587,7 +589,7 @@ export default function Position2() {
 
       <div className="relative z-[1] flex flex-col gap-4">
       <div className="flex w-full items-center gap-4">
-        <div className="relative h-10 w-[60px] shrink-0 overflow-hidden rounded-sm">
+        <div className={FLAG_IMG_CLASS}>
           <img
             alt="England flag"
             className="pointer-events-none size-full object-cover"
