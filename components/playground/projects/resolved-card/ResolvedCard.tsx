@@ -136,8 +136,8 @@ export default function ResolvedCard() {
       <div className="relative w-[360px] min-w-[360px] max-w-[360px] shrink-0">
         <svg width="0" height="0" aria-hidden="true" focusable="false">
           <defs>
-            <mask id="resolvedCardRoundMask" maskUnits="userSpaceOnUse">
-              <rect x="0" y="0" width="1000" height="1000" rx="24" ry="24" fill="white" />
+            <mask id="resolvedCardRoundMask" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse">
+              <rect x="0" y="0" width="360" height="468" rx="24" ry="24" fill="white" />
             </mask>
           </defs>
         </svg>
@@ -151,7 +151,7 @@ export default function ResolvedCard() {
           shadow
           className="resolvedCardTilt resolvedCardTiltHost block h-auto w-full min-w-[360px]"
         >
-        <div className="relative w-full" style={{ height: 468 }}>
+        <div className="relative w-full overflow-hidden rounded-[24px]" style={{ height: 468 }}>
           {/* Reserve final size and fade in smoothly once ready */}
           <div
             ref={cardRef}
@@ -309,6 +309,9 @@ export default function ResolvedCard() {
           min-width: 360px;
           max-width: 360px;
           display: block;
+          overflow: hidden;
+          border-radius: 24px;
+          clip-path: inset(0 round 24px);
         }
 
         .resolvedCardTilt {
@@ -321,6 +324,7 @@ export default function ResolvedCard() {
           isolation: isolate;
           transform-style: preserve-3d;
           overflow: hidden;
+          border-radius: 24px;
           clip-path: inset(0 round 24px);
           transition: transform 0.4s ease;
         }
@@ -330,7 +334,8 @@ export default function ResolvedCard() {
           position: absolute;
           inset: 0;
           pointer-events: none;
-          border-radius: inherit;
+          border-radius: 24px;
+          overflow: hidden;
         }
 
         .resolvedCardRainbow::before {

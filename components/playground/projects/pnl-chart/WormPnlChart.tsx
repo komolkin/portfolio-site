@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import NumberFlow from "@number-flow/react";
-import { PNL_GLASS_INSET, PNL_GLASS_OVERLAY, PNL_GLASS_PANEL } from "@/components/playground/projects/pnl-chart/pnlGlass";
+import { PNL_GLASS_INSET, PNL_GLASS_OVERLAY } from "@/components/playground/projects/pnl-chart/pnlGlass";
 
 const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const GREEN = "#1D9E75";
@@ -443,11 +443,11 @@ export default function WormPnlChart({
 
   return (
     <div
-      className={`relative flex w-full flex-col gap-5 rounded-[20px] p-5 ${PNL_GLASS_PANEL}`}
-      style={{ minHeight: height + 220 }}
+      className="relative flex w-full flex-col gap-5 overflow-hidden rounded-3xl p-5"
+      style={{ background: "#1d1d1d", minHeight: height + 220 }}
     >
       <div
-        className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-[20px] ${PNL_GLASS_OVERLAY} transition-opacity duration-400 ease-out ${
+        className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-3xl ${PNL_GLASS_OVERLAY} transition-opacity duration-400 ease-out ${
           loading ? "opacity-100" : "opacity-0"
         }`}
         aria-hidden={!loading}
@@ -474,7 +474,7 @@ export default function WormPnlChart({
             />
           </p>
         </div>
-        <div className="relative inline-flex items-center rounded-full border border-white/10 bg-white/[0.05] p-1 backdrop-blur-sm">
+        <div className="relative inline-flex items-center rounded-full bg-white/[0.05] p-1 backdrop-blur-sm">
           <span
             className="pointer-events-none absolute top-1 bottom-1 rounded-full bg-white/10 backdrop-blur-[5px] transition-transform duration-300 ease-out"
             style={{
