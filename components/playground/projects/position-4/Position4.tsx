@@ -3,17 +3,17 @@
 import NumberFlow from "@number-flow/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import Position3Particles from "./Position3Particles";
+import Position4Particles from "./Position4Particles";
 
 /**
- * Position #3 — minimalist progress bar with Entry and Liq. markers.
+ * Position #4 — minimalist progress bar with Entry and Liq. markers.
  * Shares the header + buttons layout with Position; the progress bar uses a
  * solid fill, Entry and Liq. vertical lines, and a trailing % label.
  * Click the progress bar to toggle the compact progress bar (Figma 7445:19968).
  */
-const IMG_ENGLAND = "/playground/position-3/england-flag.svg";
-const IMG_ARGENTINA = "/playground/position-3/argentina-flag.svg";
-const VIDEO_SRC = "/playground/position-3/england.mp4";
+const IMG_ENGLAND = "/playground/position-4/england-flag.svg";
+const IMG_ARGENTINA = "/playground/position-4/argentina-flag.svg";
+const VIDEO_SRC = "/playground/position-4/england.mp4";
 const FLAG_IMG_CLASS =
   "relative h-8 w-12 shrink-0 overflow-hidden rounded-[5px] transition-transform duration-300";
 
@@ -246,7 +246,7 @@ function randomFillPercent(): number {
   return randomInt(FILL_MIN, FILL_MAX);
 }
 
-export default function Position3() {
+export default function Position4() {
   const [fillPercent, setFillPercent] = useState(60);
   const [positionSizeUsd, setPositionSizeUsd] = useState(INITIAL_VALUE_USD);
   const [country, setCountry] = useState<CountrySide>("england");
@@ -469,9 +469,9 @@ export default function Position3() {
       };
   const cashOutGlowAnimation =
     cashOutGlow.mode === "liq"
-      ? `position3-cash-out-liq-pulse ${cashOutGlow.pulseMs}ms ease-in-out infinite`
+      ? `position4-cash-out-liq-pulse ${cashOutGlow.pulseMs}ms ease-in-out infinite`
       : cashOutGlow.mode === "win"
-        ? `position3-cash-out-win-blink ${cashOutGlow.pulseMs}ms ease-in-out infinite`
+        ? `position4-cash-out-win-blink ${cashOutGlow.pulseMs}ms ease-in-out infinite`
         : undefined;
 
   return (
@@ -480,7 +480,7 @@ export default function Position3() {
         className="relative overflow-hidden rounded-[2.25rem] bg-black"
         style={{ width: PHONE_WIDTH, height: PHONE_HEIGHT }}
         aria-label="Position — England match preview"
-        data-name="Position #3"
+        data-name="Position #4"
       >
         <video
           ref={videoRef}
@@ -609,9 +609,9 @@ export default function Position3() {
               className={`inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight tabular-nums drop-shadow-[0_4px_24px_rgba(0,0,0,0.55)] ${
                 sizeDeltaFlash.exiting
                   ? sizeDeltaFlash.amount > 0
-                    ? "position3-size-delta-exit-up"
-                    : "position3-size-delta-exit-down"
-                  : "position3-size-delta-enter"
+                    ? "position4-size-delta-exit-up"
+                    : "position4-size-delta-exit-down"
+                  : "position4-size-delta-enter"
               } ${
                 sizeDeltaFlash.amount > 0 ? "text-[#5dd978]" : "text-[#ff7d8a]"
               }`}
@@ -631,14 +631,14 @@ export default function Position3() {
         <div className="absolute inset-x-3 bottom-3 z-10">
           <div
             className={`relative flex w-full flex-col gap-4 overflow-hidden rounded-[24px] border p-4 backdrop-blur-xl transition-[background,border-color] duration-500 ease-out ${
-              isFastForwardFx ? "animate-[position3-shake_360ms_ease-in-out_1]" : ""
+              isFastForwardFx ? "animate-[position4-shake_360ms_ease-in-out_1]" : ""
             }`}
             style={{
               background: isAhead ? CARD_BG_GREEN : CARD_BG_RED,
               borderColor: isAhead ? CARD_BORDER_GREEN : CARD_BORDER_RED,
             }}
           >
-      <Position3Particles variant={isAhead ? "green" : "red"} />
+      <Position4Particles variant={isAhead ? "green" : "red"} />
 
       <button
         type="button"
@@ -851,7 +851,7 @@ export default function Position3() {
       </div>
 
       <style>{`
-        @keyframes position3-shake {
+        @keyframes position4-shake {
           0% { transform: translate3d(0, 0, 0); }
           20% { transform: translate3d(-1px, 0, 0); }
           40% { transform: translate3d(1px, 0, 0); }
@@ -860,7 +860,7 @@ export default function Position3() {
           100% { transform: translate3d(0, 0, 0); }
         }
 
-        @keyframes position3-cash-out-liq-pulse {
+        @keyframes position4-cash-out-liq-pulse {
           0%, 100% {
             box-shadow: inset 0 0 0 rgba(255, 77, 94, 0);
           }
@@ -871,7 +871,7 @@ export default function Position3() {
           }
         }
 
-        @keyframes position3-cash-out-win-blink {
+        @keyframes position4-cash-out-win-blink {
           0%, 100% {
             box-shadow: inset 0 0 0 rgba(93, 217, 120, 0);
           }
@@ -882,7 +882,7 @@ export default function Position3() {
           }
         }
 
-        @keyframes position3-size-delta-enter {
+        @keyframes position4-size-delta-enter {
           0% {
             opacity: 0;
             transform: translate3d(0, 18px, 0) scale(0.72);
@@ -897,7 +897,7 @@ export default function Position3() {
           }
         }
 
-        @keyframes position3-size-delta-exit-up {
+        @keyframes position4-size-delta-exit-up {
           0% {
             opacity: 1;
             transform: translate3d(0, 0, 0) scale(1);
@@ -908,7 +908,7 @@ export default function Position3() {
           }
         }
 
-        @keyframes position3-size-delta-exit-down {
+        @keyframes position4-size-delta-exit-down {
           0% {
             opacity: 1;
             transform: translate3d(0, 0, 0) scale(1);
@@ -919,26 +919,26 @@ export default function Position3() {
           }
         }
 
-        .position3-size-delta-enter {
-          animation: position3-size-delta-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        .position4-size-delta-enter {
+          animation: position4-size-delta-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
         }
 
-        .position3-size-delta-exit-up {
-          animation: position3-size-delta-exit-up 480ms cubic-bezier(0.4, 0, 0.2, 1) both;
+        .position4-size-delta-exit-up {
+          animation: position4-size-delta-exit-up 480ms cubic-bezier(0.4, 0, 0.2, 1) both;
         }
 
-        .position3-size-delta-exit-down {
-          animation: position3-size-delta-exit-down 480ms cubic-bezier(0.4, 0, 0.2, 1) both;
+        .position4-size-delta-exit-down {
+          animation: position4-size-delta-exit-down 480ms cubic-bezier(0.4, 0, 0.2, 1) both;
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .position3-cash-out-glow {
+          .position4-cash-out-glow {
             animation: none !important;
           }
 
-          .position3-size-delta-enter,
-          .position3-size-delta-exit-up,
-          .position3-size-delta-exit-down {
+          .position4-size-delta-enter,
+          .position4-size-delta-exit-up,
+          .position4-size-delta-exit-down {
             animation: none !important;
             opacity: 1;
             transform: none;
@@ -946,80 +946,77 @@ export default function Position3() {
         }
       `}</style>
 
-      <div className="flex w-full flex-col gap-4">
-        <div className="flex w-full items-center gap-2.5">
-          <div className="flex min-w-0 flex-1 gap-2.5">
-            {positionShortcuts.map((shortcut, index) => {
-              const isDisabled =
-                !isEditingShortcuts &&
-                positionSizeUsd + shortcut.delta < MIN_POSITION_SIZE_USD;
+      <div className="flex w-full items-stretch gap-2">
+        {positionShortcuts.map((shortcut, index) => {
+          const isDisabled =
+            !isEditingShortcuts &&
+            positionSizeUsd + shortcut.delta < MIN_POSITION_SIZE_USD;
 
-              if (isEditingShortcuts) {
-                return (
-                  <input
-                    key={shortcut.id}
-                    type="text"
-                    inputMode="text"
-                    value={draftShortcutLabels[index] ?? shortcut.label}
-                    onChange={(e) => {
-                      const nextValue = e.target.value;
-                      setDraftShortcutLabels((prev) => {
-                        const next = [...prev];
-                        next[index] = nextValue;
-                        return next;
-                      });
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => {
-                      e.stopPropagation();
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        confirmEditingShortcuts();
-                      }
-                    }}
-                    aria-label={`Edit shortcut ${index + 1}`}
-                    className="flex h-14 min-w-0 flex-1 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] px-5 text-center text-lg font-semibold leading-[1.25] text-white tabular-nums outline-none transition-[background-color,border-color] duration-150 ease-out focus:border-white/20 focus:bg-white/[0.08]"
-                  />
-                );
-              }
+          if (isEditingShortcuts) {
+            return (
+              <input
+                key={shortcut.id}
+                type="text"
+                inputMode="text"
+                value={draftShortcutLabels[index] ?? shortcut.label}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setDraftShortcutLabels((prev) => {
+                    const next = [...prev];
+                    next[index] = nextValue;
+                    return next;
+                  });
+                }}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    confirmEditingShortcuts();
+                  }
+                }}
+                aria-label={`Edit shortcut ${index + 1}`}
+                className="flex h-20 min-w-0 flex-1 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] px-2 text-center text-lg font-semibold leading-[1.25] text-white tabular-nums outline-none transition-[background-color,border-color] duration-150 ease-out focus:border-white/20 focus:bg-white/[0.08]"
+              />
+            );
+          }
 
-              return (
-                <button
-                  key={shortcut.id}
-                  type="button"
-                  disabled={isDisabled}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    adjustPositionSize(shortcut.delta);
-                  }}
-                  className="flex h-14 min-w-0 flex-1 items-center justify-center rounded-full border border-white/10 px-5 text-lg font-semibold text-white tabular-nums transition-[transform,border-color,background-color,opacity] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
-                >
-                  {shortcut.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+          return (
+            <button
+              key={shortcut.id}
+              type="button"
+              disabled={isDisabled}
+              onClick={(e) => {
+                e.stopPropagation();
+                adjustPositionSize(shortcut.delta);
+              }}
+              className="flex h-20 min-w-0 flex-1 items-center justify-center rounded-2xl border border-white/10 px-2 text-lg font-semibold text-white tabular-nums transition-[transform,border-color,background-color,opacity] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
+            >
+              {shortcut.label}
+            </button>
+          );
+        })}
 
-        <div className="flex w-full items-start justify-center">
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className="relative isolate flex h-11 w-full items-center justify-center overflow-hidden rounded-full border border-white/10 px-6 text-xs font-semibold text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
+          className="relative isolate flex h-20 min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl border border-white/10 px-3 py-2 text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
         >
           {cashOutGlow.mode !== "off" && (
             <span
               aria-hidden
-              className="position3-cash-out-glow pointer-events-none absolute inset-0 rounded-full motion-reduce:opacity-60"
+              className="position4-cash-out-glow pointer-events-none absolute inset-0 rounded-2xl motion-reduce:opacity-60"
               style={{
                 ["--cash-out-glow-strength" as string]: cashOutGlow.strength,
                 animation: cashOutGlowAnimation,
               }}
             />
           )}
-          <span className="relative z-[1] inline-flex items-baseline truncate px-1">
-            <span>Cash Out</span>
-            <span className="ml-2 tabular-nums">{topPrefix}</span>
+          <span className="relative z-[1] text-xs font-semibold leading-none">
+            Cash Out
+          </span>
+          <span className="relative z-[1] inline-flex items-baseline text-base font-semibold leading-none tabular-nums">
+            <span>{topPrefix}</span>
             <NumberFlow
               value={topAbs}
               trend={0}
@@ -1029,7 +1026,6 @@ export default function Position3() {
             />
           </span>
         </button>
-        </div>
       </div>
       </div>
         </div>
