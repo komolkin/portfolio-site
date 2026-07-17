@@ -976,7 +976,7 @@ export default function Position4() {
                   }
                 }}
                 aria-label={`Edit shortcut ${index + 1}`}
-                className="flex h-20 min-w-0 flex-1 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] px-2 text-center text-lg font-semibold leading-[1.25] text-white tabular-nums outline-none transition-[background-color,border-color] duration-150 ease-out focus:border-white/20 focus:bg-white/[0.08]"
+                className="flex h-20 min-w-0 flex-1 items-center justify-center rounded-2xl border-2 border-white/10 bg-white/[0.06] px-2 text-center text-2xl font-semibold leading-[1.25] text-white tabular-nums outline-none transition-[background-color,border-color] duration-150 ease-out focus:border-white/20 focus:bg-white/[0.08]"
               />
             );
           }
@@ -990,7 +990,7 @@ export default function Position4() {
                 e.stopPropagation();
                 adjustPositionSize(shortcut.delta);
               }}
-              className="flex h-20 min-w-0 flex-1 items-center justify-center rounded-2xl border border-white/10 px-2 text-lg font-semibold text-white tabular-nums transition-[transform,border-color,background-color,opacity] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
+              className="flex h-20 min-w-0 flex-1 items-center justify-center rounded-2xl border-2 border-white/10 px-2 text-2xl font-semibold text-white tabular-nums transition-[transform,border-color,background-color,opacity] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
             >
               {shortcut.label}
             </button>
@@ -1000,7 +1000,7 @@ export default function Position4() {
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className="relative isolate flex h-20 min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl border border-white/10 px-3 py-2 text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
+          className="relative isolate flex h-20 min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl border-2 border-white/10 px-3 py-2 text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
         >
           {cashOutGlow.mode !== "off" && (
             <span
