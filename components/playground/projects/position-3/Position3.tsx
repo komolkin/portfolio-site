@@ -1,7 +1,7 @@
 "use client";
 
 import NumberFlow from "@number-flow/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Position3Particles from "./Position3Particles";
 
 /**
@@ -112,6 +112,31 @@ function CheckIcon({ className }: { className?: string }) {
   );
 }
 
+function SwitchSidesIcon({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <svg
+      className={className ?? "size-4"}
+      style={style}
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path
+        fillRule="evenodd"
+        d="M4.755 10.059a7.5 7.5 0 0 1 12.548-3.364l1.903 1.903h-3.183a.75.75 0 1 0 0 1.5h4.992a.75.75 0 0 0 .75-.75V4.356a.75.75 0 0 0-1.5 0v3.18l-1.9-1.9A9 9 0 0 0 3.306 9.67a.75.75 0 1 0 1.45.388m15.408 3.352a.75.75 0 0 0-.919.53a7.5 7.5 0 0 1-12.548 3.364l-1.902-1.903h3.183a.75.75 0 0 0 0-1.5H2.984a.75.75 0 0 0-.75.75v4.992a.75.75 0 0 0 1.5 0v-3.18l1.9 1.9a9 9 0 0 0 15.059-4.035a.75.75 0 0 0-.53-.918"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
 function formatMatchClock(totalSeconds: number): string {
   const clamped = Math.max(0, Math.min(totalSeconds, MATCH_MAX_SECONDS));
   const minutes = Math.floor(clamped / 60);
@@ -205,6 +230,7 @@ export default function Position3() {
   const [fillPercent, setFillPercent] = useState(60);
   const [positionSizeUsd, setPositionSizeUsd] = useState(INITIAL_VALUE_USD);
   const [outcome, setOutcome] = useState<"yes" | "no">("yes");
+  const [switchSidesRotation, setSwitchSidesRotation] = useState(0);
   const [positionShortcuts, setPositionShortcuts] = useState(DEFAULT_POSITION_SHORTCUTS);
   const [isEditingShortcuts, setIsEditingShortcuts] = useState(false);
   const [draftShortcutLabels, setDraftShortcutLabels] = useState<string[]>([]);
@@ -940,12 +966,16 @@ export default function Position3() {
           onClick={(e) => {
             e.stopPropagation();
             setOutcome((prev) => (prev === "yes" ? "no" : "yes"));
+            setSwitchSidesRotation((prev) => prev + 180);
           }}
           aria-pressed={outcome === "no"}
           aria-label="Switch Sides"
-          className="flex h-11 shrink-0 items-center justify-center rounded-full border border-white/10 px-4 text-xs font-semibold text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
+          className="flex size-11 shrink-0 items-center justify-center rounded-full border border-white/10 text-white transition-[border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
         >
-          <span className="whitespace-nowrap px-1">Switch Sides</span>
+          <SwitchSidesIcon
+            className="size-[18px] transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+            style={{ transform: `rotate(${switchSidesRotation}deg)` }}
+          />
         </button>
         <button
           type="button"
