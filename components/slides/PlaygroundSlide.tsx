@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import PlaygroundNav from "@/components/playground/PlaygroundNav";
 import {
   projectIdFromIndex1,
@@ -23,10 +24,21 @@ import Worm from "@/components/playground/projects/worm/Worm";
 
 export default function PlaygroundSlide() {
   const pathname = usePathname();
+  const prefersReducedMotion = useReducedMotion();
   const activeProject = useMemo(
     () => projectIdFromIndex1(playgroundIndexFromPathname(pathname ?? "/")),
     [pathname]
   );
+
+  const zoomClass =
+    activeProject === "ball" ||
+    activeProject === "mcp" ||
+    activeProject === "thinking" ||
+    activeProject === "resolved-card"
+      ? "h-full [zoom:1]"
+      : activeProject.startsWith("position-")
+        ? "[zoom:0.6]"
+        : "[zoom:0.7]";
 
   return (
     <div
@@ -36,32 +48,39 @@ export default function PlaygroundSlide() {
     >
       <PlaygroundNav activeProject={activeProject} />
       <main className="relative z-0 flex min-h-0 w-full min-w-0 flex-1 items-center justify-center overflow-hidden py-28 md:py-0">
-        <div
-          className={`flex w-full items-center justify-center px-4 md:h-full md:px-0 md:[zoom:1] ${
-            activeProject === "ball" ||
-            activeProject === "mcp" ||
-            activeProject === "thinking" ||
-            activeProject === "resolved-card"
-              ? "h-full [zoom:1]"
-              : activeProject.startsWith("position-")
-                ? "[zoom:0.6]"
-                : "[zoom:0.7]"
-          }`}
-        >
-          {activeProject === "ball" && <Ball />}
-          {activeProject === "resolved-card" && <ResolvedCard />}
-          {activeProject === "leverage-selector" && <LeverageSelector />}
-          {activeProject === "binary-compact" && <BinaryCompact />}
-          {activeProject === "pnl-chart" && <PnlChart />}
-          {activeProject === "position-1" && <Position1 />}
-          {activeProject === "position-2" && <Position2 />}
-          {activeProject === "position-3" && <Position3 />}
-          {activeProject === "position-4" && <Position4 />}
-          {activeProject === "mcp" && <Mcp />}
-          {activeProject === "thinking" && <Thinking />}
-          {activeProject === "ai-cam" && <AiCam />}
-          {activeProject === "worm" && <Worm />}
-        </div>
+        <AnimatePresence mode="wait" initial>
+          <motion.div
+            key={activeProject}
+            initial={{ opacity: prefersReducedMotion ? 1 : 0 }}
+            animate={{
+              opacity: 1,
+              transition: prefersReducedMotion
+                ? { duration: 0 }
+                : { duration: 0.32, delay: 0.5, ease: [0.22, 1, 0.36, 1] },
+            }}
+            exit={{
+              opacity: prefersReducedMotion ? 1 : 0,
+              transition: prefersReducedMotion
+                ? { duration: 0 }
+                : { duration: 0.2, ease: "easeIn" },
+            }}
+            className={`flex w-full items-center justify-center px-4 md:h-full md:px-0 md:[zoom:1] ${zoomClass}`}
+          >
+            {activeProject === "ball" && <Ball />}
+            {activeProject === "resolved-card" && <ResolvedCard />}
+            {activeProject === "leverage-selector" && <LeverageSelector />}
+            {activeProject === "binary-compact" && <BinaryCompact />}
+            {activeProject === "pnl-chart" && <PnlChart />}
+            {activeProject === "position-1" && <Position1 />}
+            {activeProject === "position-2" && <Position2 />}
+            {activeProject === "position-3" && <Position3 />}
+            {activeProject === "position-4" && <Position4 />}
+            {activeProject === "mcp" && <Mcp />}
+            {activeProject === "thinking" && <Thinking />}
+            {activeProject === "ai-cam" && <AiCam />}
+            {activeProject === "worm" && <Worm />}
+          </motion.div>
+        </AnimatePresence>
       </main>
     </div>
   );
