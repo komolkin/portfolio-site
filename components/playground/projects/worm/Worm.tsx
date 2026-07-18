@@ -341,7 +341,7 @@ export default function Worm() {
         <canvas ref={canvasRef} className="absolute inset-0 block" />
 
         {isReady && (
-          <p className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-sm text-muted-foreground">
+          <p className="pointer-events-none absolute inset-x-0 bottom-10 z-10 text-center text-sm text-muted-foreground">
             Press a key to start
           </p>
         )}
