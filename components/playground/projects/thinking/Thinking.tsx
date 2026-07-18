@@ -46,39 +46,43 @@ export default function Thinking() {
   }, []);
 
   return (
-    <div className="flex h-full w-full items-center justify-center gap-2 px-6 sm:gap-3 md:gap-4">
-      <div
-        ref={areaRef}
-        className="relative h-20 w-20 shrink-0 select-none md:h-24 md:w-24"
-        aria-hidden
-      >
-        <ThinkingCanvas3D width={areaSize.width} height={areaSize.height} />
-      </div>
-      <div
-        className="grid text-left text-2xl font-normal tracking-tight sm:text-3xl md:text-4xl"
-        aria-live="polite"
-      >
-        {THINKING_PHRASES.map((phrase, i) =>
-          i === phraseIndex ? (
-            <TextShimmer
-              key={phrase}
-              as="span"
-              className="col-start-1 row-start-1 whitespace-nowrap"
-              duration={2}
-            >
-              {phrase}
-            </TextShimmer>
-          ) : (
-            <span
-              key={phrase}
-              className="col-start-1 row-start-1 whitespace-nowrap"
-              style={{ visibility: "hidden" }}
-              aria-hidden
-            >
-              {phrase}
-            </span>
-          ),
-        )}
+    <div className="flex h-full w-full items-center justify-center px-4 sm:px-6">
+      <div className="flex w-fit max-w-full items-center gap-2.5 sm:gap-3 md:gap-4">
+        <div
+          ref={areaRef}
+          className="relative size-14 shrink-0 select-none sm:size-20 md:size-24"
+          aria-hidden
+        >
+          <ThinkingCanvas3D width={areaSize.width} height={areaSize.height} />
+        </div>
+        <div
+          className="min-w-0 text-left text-lg font-normal leading-none tracking-tight sm:text-3xl md:text-4xl"
+          aria-live="polite"
+        >
+          <div className="grid">
+            {THINKING_PHRASES.map((phrase, i) =>
+              i === phraseIndex ? (
+                <TextShimmer
+                  key={phrase}
+                  as="span"
+                  className="col-start-1 row-start-1 whitespace-nowrap"
+                  duration={2}
+                >
+                  {phrase}
+                </TextShimmer>
+              ) : (
+                <span
+                  key={phrase}
+                  className="col-start-1 row-start-1 whitespace-nowrap"
+                  style={{ visibility: "hidden" }}
+                  aria-hidden
+                >
+                  {phrase}
+                </span>
+              ),
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
