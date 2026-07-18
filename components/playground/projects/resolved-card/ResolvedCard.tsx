@@ -171,8 +171,12 @@ export default function ResolvedCard() {
           glare-mask-mode="alpha"
           shadow
           className="resolvedCardTilt resolvedCardTiltHost block h-auto w-full min-w-[360px]"
+          style={{ borderRadius: 24 }}
         >
-        <div className="relative w-full overflow-hidden rounded-[24px]" style={{ height: CARD_HEIGHT }}>
+        <div
+          className="relative w-full overflow-hidden rounded-[24px]"
+          style={{ height: CARD_HEIGHT, clipPath: "inset(0 round 24px)" }}
+        >
           {/* Reserve final size and fade in smoothly once ready */}
           <div
             ref={cardRef}
@@ -331,23 +335,27 @@ export default function ResolvedCard() {
           min-width: 360px;
           max-width: 360px;
           display: block;
-          overflow: hidden;
           border-radius: 24px;
+        }
+
+        /* Clip the actual tilting layer — overflow/radius on ancestors won't hold under 3D transforms */
+        :global(hover-tilt.resolvedCardTiltHost::part(tilt)) {
+          border-radius: 24px;
+          overflow: hidden;
           clip-path: inset(0 round 24px);
+          -webkit-clip-path: inset(0 round 24px);
         }
 
         .resolvedCardTilt {
-          overflow: hidden;
           border-radius: 24px;
-          clip-path: inset(0 round 24px);
         }
 
         .resolvedCardRainbow {
           isolation: isolate;
-          transform-style: preserve-3d;
           overflow: hidden;
           border-radius: 24px;
           clip-path: inset(0 round 24px);
+          -webkit-clip-path: inset(0 round 24px);
           transition: transform 0.4s ease;
         }
 
@@ -357,6 +365,8 @@ export default function ResolvedCard() {
           inset: 0;
           pointer-events: none;
           border-radius: 24px;
+          clip-path: inset(0 round 24px);
+          -webkit-clip-path: inset(0 round 24px);
           overflow: hidden;
         }
 
