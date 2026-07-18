@@ -15,6 +15,8 @@ const CLOSE_THRESHOLD = 72;
 const STORY_ASPECT = 9 / 16;
 const STORY_WIDTH = 1080;
 const STORY_HEIGHT = 1920;
+const PHONE_WIDTH = 280;
+const PHONE_HEIGHT = 580;
 const GENERATION_STATUS_MESSAGES = [
   "Polishing the golden cup…",
   "Firing up the floodlights…",
@@ -164,8 +166,10 @@ export default function AiCam() {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: "user",
-            width: { ideal: STORY_WIDTH },
-            height: { ideal: STORY_HEIGHT },
+            // Prefer portrait, but avoid forcing 1080×1920 — that often triggers
+            // digital zoom / heavy cropping on mobile front cameras.
+            width: { ideal: 720 },
+            height: { ideal: 1280 },
             aspectRatio: { ideal: STORY_ASPECT },
           },
           audio: false,
@@ -447,7 +451,7 @@ export default function AiCam() {
     <div className="flex h-full w-full items-center justify-center p-4">
       <div
         className="relative overflow-hidden rounded-[2.75rem] bg-black"
-        style={{ width: 280, height: 580 }}
+        style={{ width: PHONE_WIDTH, height: PHONE_HEIGHT }}
         aria-label="Selfie — phone camera preview"
       >
         <video
