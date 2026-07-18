@@ -173,18 +173,15 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
           transition: isDragging ? "none" : "transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)",
         }}
       >
-        <div
-          className="flex shrink-0 touch-none flex-col items-center pt-3"
-          onPointerDown={handleDrawerPointerDown}
-          onPointerMove={handleDrawerPointerMove}
-          onPointerUp={handleDrawerPointerUp}
-          onPointerCancel={handleDrawerPointerUp}
-        >
-          <div className="h-1 w-10 rounded-full bg-white/25" aria-hidden />
-          <div className="flex w-full items-center justify-center px-4 pb-3 pt-3">
-            <h2 className="text-[17px] font-semibold tracking-tight text-white">Playground</h2>
+          <div
+            className="flex shrink-0 touch-none flex-col items-center pb-2 pt-3"
+            onPointerDown={handleDrawerPointerDown}
+            onPointerMove={handleDrawerPointerMove}
+            onPointerUp={handleDrawerPointerUp}
+            onPointerCancel={handleDrawerPointerUp}
+          >
+            <div className="h-1 w-10 rounded-full bg-white/25" aria-hidden />
           </div>
-        </div>
 
         <ul className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-3">
           {PROJECTS.map(({ id, label }, i) => {
