@@ -8,6 +8,8 @@ import { applyPurpleRimGlow } from "@/components/playground/projects/mcp/apply-p
 import { createSphereTextureResource } from "@/components/playground/projects/mcp/create-smiley-texture";
 
 const SPHERE_RADIUS = 24;
+const MOBILE_SIZE_SCALE = 2;
+const MOBILE_MAX_WIDTH = 767;
 
 /** Equirect center (u=0.5) sits on +X; rotate so the face points at the +Z camera. */
 const FACE_FORWARD_Y = -Math.PI / 2;
@@ -40,7 +42,13 @@ function nextBlinkDelay(): number {
   return BLINK_IDLE_MIN_S + Math.random() * (BLINK_IDLE_MAX_S - BLINK_IDLE_MIN_S);
 }
 
-function SmileySphere({ pointer }: { pointer: McpPointerRef }) {
+function SmileySphere({
+  pointer,
+  sizeScale,
+}: {
+  pointer: McpPointerRef;
+  sizeScale: number;
+}) {
   const { gl } = useThree();
   const orientRef = useRef<Group>(null);
   const materialRef = useRef<MeshPhysicalMaterial>(null);
@@ -55,6 +63,8 @@ function SmileySphere({ pointer }: { pointer: McpPointerRef }) {
   const lookTarget = useMemo(() => new Vector3(), []);
   const pressedRef = useRef(false);
   const scaleRef = useRef(1);
+  const sizeScaleRef = useRef(sizeScale);
+  sizeScaleRef.current = sizeScale;
 
   const blinkPhaseRef = useRef<BlinkPhase>("idle");
   const blinkAmountRef = useRef(0);
@@ -86,7 +96,7 @@ function SmileySphere({ pointer }: { pointer: McpPointerRef }) {
 
       const targetScale = pressedRef.current ? PRESS_SCALE : 1;
       scaleRef.current += (targetScale - scaleRef.current) * SCALE_SMOOTH;
-      orient.scale.setScalar(scaleRef.current);
+      orient.scale.setScalar(scaleRef.current * sizeScaleRef.current);
     }
 
     const t = clock.elapsedTime;
@@ -161,7 +171,13 @@ function SmileySphere({ pointer }: { pointer: McpPointerRef }) {
   );
 }
 
-function Scene({ pointer }: { pointer: McpPointerRef }) {
+function Scene({
+  pointer,
+  sizeScale,
+}: {
+  pointer: McpPointerRef;
+  sizeScale: number;
+}) {
   return (
     <>
       <ambientLight intensity={0.08} />
@@ -171,7 +187,7 @@ function Scene({ pointer }: { pointer: McpPointerRef }) {
       <pointLight position={[0, 0, 260]} intensity={0.06} color="#ffffff" />
 
       <Suspense fallback={null}>
-        <SmileySphere pointer={pointer} />
+        <SmileySphere pointer={pointer} sizeScale={sizeScale} />
         <Environment preset="city" />
       </Suspense>
     </>
@@ -187,6 +203,8 @@ type McpCanvas3DProps = {
 export default function McpCanvas3D({ pointer, width, height }: McpCanvas3DProps) {
   if (width <= 0 || height <= 0) return null;
 
+  const sizeScale = width <= MOBILE_MAX_WIDTH ? MOBILE_SIZE_SCALE : 1;
+
   return (
     <Canvas
       className="absolute inset-0"
@@ -195,7 +213,7 @@ export default function McpCanvas3D({ pointer, width, height }: McpCanvas3DProps
       style={{ background: "transparent" }}
       camera={{ position: [0, 0, 420], fov: 42, near: 0.1, far: 2000 }}
     >
-      <Scene pointer={pointer} />
+      <Scene pointer={pointer} sizeScale={sizeScale} />
     </Canvas>
   );
 }
