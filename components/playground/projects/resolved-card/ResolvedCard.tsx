@@ -131,7 +131,7 @@ export default function ResolvedCard() {
   };
 
   return (
-    <div className="relative flex items-center justify-center p-4">
+    <div className="relative flex items-center justify-center p-4 pb-8 md:pb-4">
       {/* Padding lives on the outer shell so the card can be a full 360px wide (not 360px minus padding). */}
       <div className="relative w-[360px] min-w-[360px] max-w-[360px] shrink-0">
         <svg width="0" height="0" aria-hidden="true" focusable="false">

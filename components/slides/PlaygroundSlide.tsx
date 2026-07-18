@@ -37,11 +37,11 @@ export default function PlaygroundSlide() {
       <PlaygroundNav activeProject={activeProject} />
       <main className="relative z-0 flex min-h-0 w-full min-w-0 flex-1 items-center justify-center overflow-hidden py-28 md:py-0">
         <div
-          className={`flex h-full w-full items-center justify-center px-4 md:px-0 md:[zoom:1] ${
+          className={`flex w-full items-center justify-center px-4 md:h-full md:px-0 md:[zoom:1] ${
             activeProject === "ball" ||
             activeProject === "mcp" ||
             activeProject === "thinking"
-              ? "[zoom:1]"
+              ? "h-full [zoom:1]"
               : "[zoom:0.7]"
           }`}
         >
