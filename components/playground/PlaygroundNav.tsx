@@ -140,7 +140,7 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
           aria-haspopup="dialog"
           aria-controls="playground-project-drawer"
           tabIndex={mobileNavVisible && !open ? 0 : -1}
-          className="inline-flex max-w-full items-center justify-between gap-3 rounded-lg bg-black/40 px-4 py-2.5 text-left text-sm text-foreground backdrop-blur-md transition-colors"
+          className="inline-flex max-w-full items-center justify-between gap-3 rounded-lg bg-black/40 px-4 py-2.5 text-left text-sm text-foreground backdrop-blur-md transition-transform active:scale-[0.95]"
         >
           <span className="whitespace-nowrap font-medium">{activeLabel}</span>
           <ChevronIcon />

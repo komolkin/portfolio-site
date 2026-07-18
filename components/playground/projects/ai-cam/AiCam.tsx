@@ -55,13 +55,15 @@ async function openUserCamera(): Promise<MediaStream> {
       zoom?: { min: number; max: number };
       resizeMode?: string[];
     };
-    const next: MediaTrackConstraints = {};
+    const next: MediaTrackConstraints & {
+      zoom?: number;
+      resizeMode?: string;
+    } = {};
 
     if (capabilities.zoom && typeof capabilities.zoom.min === "number") {
       next.zoom = capabilities.zoom.min;
     }
     if (capabilities.resizeMode?.includes("none")) {
-      // @ts-expect-error resizeMode is supported in Chromium but missing from older DOM libs
       next.resizeMode = "none";
     }
 
