@@ -37,6 +37,44 @@ function stopStream(
   }
 }
 
+/** Prefer the widest native field of view — high-res / portrait ideals often
+ * trigger a cropped (digitally zoomed) mode on mobile front cameras. */
+async function openUserCamera(): Promise<MediaStream> {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: {
+      facingMode: { ideal: "user" },
+    },
+    audio: false,
+  });
+
+  const track = stream.getVideoTracks()[0];
+  if (!track?.getCapabilities) return stream;
+
+  try {
+    const capabilities = track.getCapabilities() as MediaTrackCapabilities & {
+      zoom?: { min: number; max: number };
+      resizeMode?: string[];
+    };
+    const next: MediaTrackConstraints = {};
+
+    if (capabilities.zoom && typeof capabilities.zoom.min === "number") {
+      next.zoom = capabilities.zoom.min;
+    }
+    if (capabilities.resizeMode?.includes("none")) {
+      // @ts-expect-error resizeMode is supported in Chromium but missing from older DOM libs
+      next.resizeMode = "none";
+    }
+
+    if (Object.keys(next).length > 0) {
+      await track.applyConstraints(next);
+    }
+  } catch {
+    // Capabilities / constraints vary widely — keep the stream as-is.
+  }
+
+  return stream;
+}
+
 function getStoryCrop(videoWidth: number, videoHeight: number) {
   const videoAspect = videoWidth / videoHeight;
 
@@ -163,17 +201,7 @@ export default function AiCam() {
       stopStream(streamRef, videoRef);
 
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "user",
-            // Prefer portrait, but avoid forcing 1080×1920 — that often triggers
-            // digital zoom / heavy cropping on mobile front cameras.
-            width: { ideal: 720 },
-            height: { ideal: 1280 },
-            aspectRatio: { ideal: STORY_ASPECT },
-          },
-          audio: false,
-        });
+        const stream = await openUserCamera();
 
         if (cancelled) {
           stream.getTracks().forEach((track) => track.stop());
@@ -456,9 +484,10 @@ export default function AiCam() {
       >
         <video
           ref={videoRef}
-          className="h-full w-full scale-x-[-1] object-cover"
+          className="h-full w-full scale-x-[-1] object-cover object-center max-md:object-contain"
           playsInline
           muted
+          autoPlay
         />
 
         {flash && <div className="pointer-events-none absolute inset-0 z-10 bg-white" />}

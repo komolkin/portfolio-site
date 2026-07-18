@@ -13,6 +13,10 @@ const IMG_YES = "/playground/resolved-card/yes.png";
 /** Share control — Figma Frame (node 1154:23130) */
 const IMG_SHARE_ICON = "/playground/resolved-card/share-icon.svg";
 
+const CARD_WIDTH = 360;
+const CARD_HEIGHT = 468;
+const MOBILE_SCALE = 0.7;
+
 export default function ResolvedCard() {
   const [claimState, setClaimState] = useState<"idle" | "claiming" | "claimed">("idle");
   const [isVisible, setIsVisible] = useState(false);
@@ -131,9 +135,26 @@ export default function ResolvedCard() {
   };
 
   return (
-    <div className="relative flex items-center justify-center p-4 pb-8 md:pb-4">
-      {/* Padding lives on the outer shell so the card can be a full 360px wide (not 360px minus padding). */}
-      <div className="relative w-[360px] min-w-[360px] max-w-[360px] shrink-0">
+    <div className="relative flex h-full w-full items-center justify-center px-4">
+      {/*
+        Mobile: sized shell + transform scale so layout matches the visual.
+        marginBottom stays outside the scale so bottom spacing isn't lost.
+      */}
+      <div
+        className="relative mb-6 shrink-0 md:mb-0 md:contents"
+        style={{
+          width: CARD_WIDTH * MOBILE_SCALE,
+          height: CARD_HEIGHT * MOBILE_SCALE,
+        }}
+      >
+        <div
+          className="relative origin-top-left max-md:scale-[0.7] md:w-[360px]"
+          style={{
+            width: CARD_WIDTH,
+            minWidth: CARD_WIDTH,
+            maxWidth: CARD_WIDTH,
+          }}
+        >
         <svg width="0" height="0" aria-hidden="true" focusable="false">
           <defs>
             <mask id="resolvedCardRoundMask" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse">
@@ -151,7 +172,7 @@ export default function ResolvedCard() {
           shadow
           className="resolvedCardTilt resolvedCardTiltHost block h-auto w-full min-w-[360px]"
         >
-        <div className="relative w-full overflow-hidden rounded-[24px]" style={{ height: 468 }}>
+        <div className="relative w-full overflow-hidden rounded-[24px]" style={{ height: CARD_HEIGHT }}>
           {/* Reserve final size and fade in smoothly once ready */}
           <div
             ref={cardRef}
@@ -160,7 +181,7 @@ export default function ResolvedCard() {
             className={`resolvedCardRainbow relative w-full overflow-hidden rounded-[24px] transition-opacity duration-300 ease-out ${
               isVisible ? "opacity-100" : "opacity-0"
             }`}
-            style={{ height: 468, background: "#1d1d1d" }}
+            style={{ height: CARD_HEIGHT, background: "#1d1d1d" }}
           >
           {/* Content overlay */}
           <div className="relative z-30 flex h-full flex-col gap-4 p-4">
@@ -302,6 +323,7 @@ export default function ResolvedCard() {
 
         </div>
       </hover-tilt>
+        </div>
       </div>
       <style jsx>{`
         :global(hover-tilt.resolvedCardTiltHost) {

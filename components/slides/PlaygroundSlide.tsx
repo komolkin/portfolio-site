@@ -40,7 +40,8 @@ export default function PlaygroundSlide() {
           className={`flex w-full items-center justify-center px-4 md:h-full md:px-0 md:[zoom:1] ${
             activeProject === "ball" ||
             activeProject === "mcp" ||
-            activeProject === "thinking"
+            activeProject === "thinking" ||
+            activeProject === "resolved-card"
               ? "h-full [zoom:1]"
               : "[zoom:0.7]"
           }`}
