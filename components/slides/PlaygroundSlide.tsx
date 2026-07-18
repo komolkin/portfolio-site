@@ -43,7 +43,9 @@ export default function PlaygroundSlide() {
             activeProject === "thinking" ||
             activeProject === "resolved-card"
               ? "h-full [zoom:1]"
-              : "[zoom:0.7]"
+              : activeProject.startsWith("position-")
+                ? "[zoom:0.6]"
+                : "[zoom:0.7]"
           }`}
         >
           {activeProject === "ball" && <Ball />}

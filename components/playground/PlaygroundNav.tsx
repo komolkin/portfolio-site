@@ -121,7 +121,10 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
   const listClass = "flex flex-col rounded-lg bg-black/40 py-1 backdrop-blur-md";
 
   const mobileNav = (
-    <div className="fixed inset-0 z-[999] md:hidden" aria-hidden={!mobileNavVisible && !open}>
+    <div
+      className="pointer-events-none fixed inset-0 z-[999] md:hidden"
+      aria-hidden={!mobileNavVisible && !open}
+    >
       {/* Trigger */}
       <div
         className={`absolute inset-x-0 bottom-0 flex justify-center px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-2 transition-[opacity,transform] duration-200 ease-out ${
