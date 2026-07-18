@@ -152,7 +152,7 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
 
       {/* Backdrop */}
       <div
-        className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ${
+        className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${
           open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         }`}
         onClick={closeDrawer}
@@ -165,7 +165,7 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
         role="dialog"
         aria-modal="true"
         aria-label="Select playground project"
-        className={`absolute inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] ${
+        className={`absolute inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] flex max-h-[min(72dvh,560px)] flex-col overflow-hidden rounded-[1.75rem] bg-black/55 backdrop-blur-xl ${
           open ? "pointer-events-auto" : "pointer-events-none"
         }`}
         style={{
@@ -173,64 +173,55 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
           transition: isDragging ? "none" : "transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)",
         }}
       >
-        <div className="relative flex max-h-[min(72dvh,560px)] flex-col overflow-hidden rounded-[1.75rem] bg-[#1c1c1e]/90 backdrop-blur-xl">
-          <div
-            className="flex shrink-0 touch-none flex-col items-center pt-3"
-            onPointerDown={handleDrawerPointerDown}
-            onPointerMove={handleDrawerPointerMove}
-            onPointerUp={handleDrawerPointerUp}
-            onPointerCancel={handleDrawerPointerUp}
-          >
-            <div className="h-1 w-10 rounded-full bg-white/25" aria-hidden />
-            <div className="flex w-full items-center justify-center px-4 pb-3 pt-3">
-              <h2 className="text-[17px] font-semibold tracking-tight text-white">Playground</h2>
-            </div>
-          </div>
-
-          <ul className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-3">
-            {PROJECTS.map(({ id, label }, i) => {
-              const index1 = i + 1;
-              const isActive = activeProject === id;
-              return (
-                <li key={id}>
-                  <Link
-                    href={`/${index1}`}
-                    scroll={false}
-                    onClick={closeDrawer}
-                    className={`flex items-center justify-between rounded-xl px-4 py-3.5 text-[17px] transition-colors ${
-                      isActive
-                        ? "bg-white/10 font-semibold text-white"
-                        : "font-normal text-white/80 active:bg-white/[0.06]"
-                    }`}
-                  >
-                    <span>{label}</span>
-                    {isActive && (
-                      <svg
-                        className="h-5 w-5 shrink-0 text-white"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        aria-hidden
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-        {/* Covers the floating bottom inset while dismissing so the page gradient doesn't flash through */}
         <div
-          aria-hidden
-          className={`pointer-events-none h-[50dvh] bg-[#1c1c1e] transition-opacity duration-150 ${
-            isDragging || drawerOffset > 0 ? "opacity-100" : "opacity-0"
-          }`}
-        />
+          className="flex shrink-0 touch-none flex-col items-center pt-3"
+          onPointerDown={handleDrawerPointerDown}
+          onPointerMove={handleDrawerPointerMove}
+          onPointerUp={handleDrawerPointerUp}
+          onPointerCancel={handleDrawerPointerUp}
+        >
+          <div className="h-1 w-10 rounded-full bg-white/25" aria-hidden />
+          <div className="flex w-full items-center justify-center px-4 pb-3 pt-3">
+            <h2 className="text-[17px] font-semibold tracking-tight text-white">Playground</h2>
+          </div>
+        </div>
+
+        <ul className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-3">
+          {PROJECTS.map(({ id, label }, i) => {
+            const index1 = i + 1;
+            const isActive = activeProject === id;
+            return (
+              <li key={id}>
+                <Link
+                  href={`/${index1}`}
+                  scroll={false}
+                  onClick={closeDrawer}
+                  className={`flex items-center justify-between rounded-xl px-4 py-3.5 text-[17px] transition-colors ${
+                    isActive
+                      ? "bg-white/10 font-semibold text-white"
+                      : "font-normal text-white/80 active:bg-white/[0.06]"
+                  }`}
+                >
+                  <span>{label}</span>
+                  {isActive && (
+                    <svg
+                      className="h-5 w-5 shrink-0 text-white"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      aria-hidden
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  )}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </div>
   );
