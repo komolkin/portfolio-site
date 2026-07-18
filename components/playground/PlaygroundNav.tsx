@@ -29,7 +29,8 @@ function ChevronIcon({ open }: { open: boolean }) {
 
 export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [mobileNavVisible, setMobileNavVisible] = useState(true);
+  const containerRef = useRef<HTMLElement>(null);
 
   const activeLabel =
     PROJECTS.find((p) => p.id === activeProject)?.label ?? "Component";
@@ -56,6 +57,24 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
+
+  useEffect(() => {
+    const playground = document.getElementById("playground");
+    const scrollRoot = document.querySelector(".slides-scroll");
+    if (!playground || !scrollRoot) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const visible = Boolean(entry?.isIntersecting && entry.intersectionRatio >= 0.45);
+        setMobileNavVisible(visible);
+        if (!visible) setOpen(false);
+      },
+      { root: scrollRoot, threshold: [0, 0.45, 0.7, 1] },
+    );
+
+    observer.observe(playground);
+    return () => observer.disconnect();
+  }, []);
 
   const listClass =
     "flex flex-col rounded-lg border border-white/[0.08] bg-black/40 py-1 shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-md";
@@ -91,8 +110,13 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
 
       <nav
         ref={containerRef}
-        className="absolute inset-x-0 bottom-0 z-20 md:hidden"
+        className={`fixed inset-x-0 bottom-0 z-20 md:hidden transition-[opacity,transform] duration-200 ease-out ${
+          mobileNavVisible
+            ? "pointer-events-auto translate-y-0 opacity-100"
+            : "pointer-events-none translate-y-full opacity-0"
+        }`}
         aria-label="Playground projects"
+        aria-hidden={!mobileNavVisible}
       >
         <div className="flex justify-center px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-2">
           <div className="relative w-fit max-w-[calc(100%-2rem)]">
@@ -129,6 +153,7 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
               aria-expanded={open}
               aria-haspopup="true"
               aria-controls={open ? "playground-project-picker" : undefined}
+              tabIndex={mobileNavVisible ? 0 : -1}
               className="inline-flex max-w-full items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-black/40 px-4 py-2.5 text-left text-sm text-foreground shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-md transition-colors"
             >
               <span className="whitespace-nowrap font-medium">{activeLabel}</span>
