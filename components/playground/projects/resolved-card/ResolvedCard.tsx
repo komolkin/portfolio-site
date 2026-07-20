@@ -170,8 +170,7 @@ export default function ResolvedCard() {
           glare-mask="url(#resolvedCardRoundMask)"
           glare-mask-mode="alpha"
           shadow
-          className="resolvedCardTilt resolvedCardTiltHost block h-auto w-full min-w-[360px]"
-          style={{ borderRadius: 24 }}
+          className="resolvedCardTilt resolvedCardTiltHost block h-auto w-full min-w-[360px] rounded-[24px]"
         >
         <div
           className="relative w-full overflow-hidden rounded-[24px]"
