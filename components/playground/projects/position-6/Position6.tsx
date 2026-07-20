@@ -685,7 +685,7 @@ export default function Position6() {
                 </span>
               </div>
               <div
-                className={`flex items-baseline gap-2 text-[34px] font-semibold leading-none tracking-tight text-white transition-transform duration-300 ${
+                className={`flex items-baseline gap-2 text-[56px] font-semibold leading-none tracking-tight text-white transition-transform duration-300 ${instrumentSansCondensed.className} ${
                   goalFlashTeam ? "scale-105" : "scale-100"
                 }`}
               >
@@ -698,7 +698,7 @@ export default function Position6() {
                     style={{ ["--number-flow-mask-height" as any]: "0em" }}
                   />
                 </span>
-                <span className="text-[28px] font-medium text-white/70">-</span>
+                <span className="text-[48px] font-medium text-white/70">-</span>
                 <span className="tabular-nums text-white">
                   <NumberFlow
                     value={awayScore}
