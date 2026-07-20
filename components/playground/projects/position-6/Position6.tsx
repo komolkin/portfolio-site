@@ -743,7 +743,7 @@ export default function Position6() {
         {sizeDeltaFlash && sizeDeltaFlash.amount !== 0 && (
           <div
             key={sizeDeltaFlash.sessionId}
-            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
+            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center -translate-y-10"
             aria-hidden
           >
             <SizeDeltaFlashLabel
