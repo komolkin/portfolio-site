@@ -265,6 +265,73 @@ function randomFillPercent(): number {
   return randomInt(FILL_MIN, FILL_MAX);
 }
 
+/** Simple integer count animation (no NumberFlow digit scrapers). */
+function useAnimatedCount(target: number, durationMs = 140): number {
+  const [display, setDisplay] = useState(0);
+  const displayRef = useRef(0);
+  const prefersReducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      displayRef.current = target;
+      setDisplay(target);
+      return;
+    }
+
+    const from = displayRef.current;
+    if (from === target) return;
+
+    const start = performance.now();
+    let raf = 0;
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - (1 - t) ** 3;
+      const next = Math.round(from + (target - from) * eased);
+      displayRef.current = next;
+      setDisplay(next);
+      if (t < 1) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        displayRef.current = target;
+        setDisplay(target);
+      }
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, durationMs, prefersReducedMotion]);
+
+  return display;
+}
+
+function SizeDeltaFlashLabel({
+  amount,
+  exiting,
+}: {
+  amount: number;
+  exiting: boolean;
+}) {
+  const animatedAbs = useAnimatedCount(Math.abs(amount));
+
+  return (
+    <span
+      className={`inline-flex items-baseline text-[102px] font-semibold leading-none tracking-tight text-white tabular-nums drop-shadow-[0_4px_24px_rgba(0,0,0,0.55)] ${instrumentSansCondensed.className} ${
+        exiting
+          ? amount > 0
+            ? "position5-size-delta-exit-up"
+            : "position5-size-delta-exit-down"
+          : "position5-size-delta-enter"
+      }`}
+    >
+      <span>
+        {amount > 0 ? "+$" : "-$"}
+        {animatedAbs.toLocaleString("en-US")}
+      </span>
+    </span>
+  );
+}
+
 export default function Position5() {
   const [fillPercent, setFillPercent] = useState(60);
   const [positionSizeUsd, setPositionSizeUsd] = useState(INITIAL_VALUE_USD);
@@ -705,24 +772,10 @@ export default function Position5() {
             className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
             aria-hidden
           >
-            <span
-              className={`inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight text-white tabular-nums drop-shadow-[0_4px_24px_rgba(0,0,0,0.55)] ${
-                sizeDeltaFlash.exiting
-                  ? sizeDeltaFlash.amount > 0
-                    ? "position5-size-delta-exit-up"
-                    : "position5-size-delta-exit-down"
-                  : "position5-size-delta-enter"
-              }`}
-            >
-              <span>{sizeDeltaFlash.amount > 0 ? "+$" : "-$"}</span>
-              <NumberFlow
-                value={Math.abs(sizeDeltaFlash.amount)}
-                trend={sizeDeltaFlash.amount > 0 ? 1 : -1}
-                format={{ useGrouping: true }}
-                className="tabular-nums text-inherit"
-                style={{ ["--number-flow-mask-height" as any]: "0em" }}
-              />
-            </span>
+            <SizeDeltaFlashLabel
+              amount={sizeDeltaFlash.amount}
+              exiting={sizeDeltaFlash.exiting}
+            />
           </div>
         )}
 
@@ -852,20 +905,36 @@ export default function Position5() {
         role="button"
         tabIndex={0}
         aria-expanded={isCompact}
-        aria-label={isCompact ? "Show full progress bar" : "Show compact progress bar"}
-        onClick={() => setIsCompact((prev) => !prev)}
+        aria-label={
+          actionsCollapsed
+            ? "Progress"
+            : isCompact
+              ? "Show full progress bar"
+              : "Show compact progress bar"
+        }
+        onClick={() => {
+          if (actionsCollapsed) return;
+          setIsCompact((prev) => !prev);
+        }}
         onKeyDown={(e) => {
+          if (actionsCollapsed) return;
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             setIsCompact((prev) => !prev);
           }
         }}
-        className={`relative w-full cursor-pointer overflow-hidden rounded-lg bg-white/[0.04] will-change-[height] transition-transform duration-150 ease-out active:scale-[0.99] ${PROGRESS_BAR_MOTION} ${
-          isCompact ? "h-9" : "h-[112px]"
+        className={`relative w-full overflow-hidden rounded-lg bg-white/[0.04] will-change-[height] transition-transform duration-150 ease-out ${PROGRESS_BAR_MOTION} ${
+          actionsCollapsed
+            ? "h-[19px] cursor-default"
+            : isCompact
+              ? "h-9 cursor-pointer active:scale-[0.99]"
+              : "h-[112px] cursor-pointer active:scale-[0.99]"
         }`}
       >
         <div
-          className={`absolute inset-y-0 left-0 rounded-r-lg ${PROGRESS_FILL_MOTION}`}
+          className={`absolute inset-y-0 left-0 ${PROGRESS_FILL_MOTION} ${
+            actionsCollapsed || isCompact ? "rounded-lg" : "rounded-r-lg"
+          }`}
           style={{
             width: `${fillPercent}%`,
             backgroundColor: isAhead ? FILL_COLOR_GREEN : FILL_COLOR_RED,
@@ -875,7 +944,7 @@ export default function Position5() {
 
         <div
           className={`pointer-events-none absolute bottom-2 right-3 z-[2] flex flex-col items-end gap-0.5 text-right ${PROGRESS_BAR_MOTION} ${
-            isCompact ? "opacity-0" : "opacity-100"
+            actionsCollapsed || isCompact ? "opacity-0" : "opacity-100"
           }`}
         >
           <p className="font-mono text-[28px] font-normal leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
@@ -906,60 +975,79 @@ export default function Position5() {
           </p>
         </div>
 
-        {/* Liq. vertical line — same treatment as Entry */}
+        {/* Liq. vertical line */}
         <div
           className="pointer-events-none absolute inset-y-0 z-[3] -translate-x-1/2"
           style={{ left: `${LIQ_LINE_PERCENT}%` }}
         >
           <div
-            className={`absolute left-0 w-[2px] rounded-[1px] opacity-40 ${PROGRESS_BAR_MOTION} ${
-              isCompact ? "top-1.5 bottom-1.5" : "top-1/2 h-[85%] -translate-y-1/2"
+            className={`absolute left-0 rounded-[2px] ${PROGRESS_BAR_MOTION} ${
+              actionsCollapsed
+                ? "top-1/2 h-[10px] w-1 -translate-y-1/2 bg-white/40 opacity-60"
+                : isCompact
+                  ? "top-1.5 bottom-1.5 w-[2px] opacity-40"
+                  : "top-1/2 h-[85%] w-[2px] -translate-y-1/2 opacity-40"
             }`}
-            style={{ backgroundColor: entryLineColor }}
+            style={
+              actionsCollapsed ? undefined : { backgroundColor: entryLineColor }
+            }
             aria-hidden
           />
           <span
             className={`absolute bottom-[11px] left-2 whitespace-nowrap text-[8px] font-semibold leading-tight text-white/60 ${PROGRESS_BAR_MOTION} ${
-              isCompact ? "pointer-events-none opacity-0" : "opacity-100"
+              actionsCollapsed || isCompact
+                ? "pointer-events-none opacity-0"
+                : "opacity-100"
             }`}
           >
             Liq.
           </span>
         </div>
 
-        {/* Entry vertical line — compact: Figma 7445:19975; full: + label */}
+        {/* Entry vertical line */}
         <div
           className="pointer-events-none absolute inset-y-0 z-[3] -translate-x-1/2"
           style={{ left: `${ENTRY_LINE_PERCENT}%` }}
         >
           <div
             className={`absolute left-0 w-0 border-l-2 border-dashed opacity-40 ${PROGRESS_BAR_MOTION} ${
-              isCompact ? "top-1.5 bottom-1.5" : "top-1/2 h-[85%] -translate-y-1/2"
+              actionsCollapsed
+                ? "top-1 bottom-1"
+                : isCompact
+                  ? "top-1.5 bottom-1.5"
+                  : "top-1/2 h-[85%] -translate-y-1/2"
             }`}
             style={{ borderColor: entryLineColor }}
             aria-hidden
           />
           <span
             className={`absolute bottom-[11px] left-2 whitespace-nowrap text-[8px] font-semibold leading-tight text-white/60 ${PROGRESS_BAR_MOTION} ${
-              isCompact ? "pointer-events-none opacity-0" : "opacity-100"
+              actionsCollapsed || isCompact
+                ? "pointer-events-none opacity-0"
+                : "opacity-100"
             }`}
           >
             Entry
           </span>
         </div>
 
-        {/* % label tracks the trailing edge of the fill */}
+        {/* % label — hidden only when card actions are fully collapsed */}
         <div
-          className={`pointer-events-none absolute z-[3] w-max max-w-none -translate-x-full pr-3 whitespace-nowrap motion-reduce:transition-none ${
-            isCompact ? "top-[6px]" : "top-2"
+          className={`pointer-events-none absolute z-[3] w-max max-w-none -translate-x-full pr-3 whitespace-nowrap motion-reduce:transition-none ${PROGRESS_BAR_MOTION} ${
+            actionsCollapsed
+              ? "pointer-events-none top-0 opacity-0"
+              : isCompact
+                ? "top-[6px] opacity-100"
+                : "top-2 opacity-100"
           }`}
           style={{
             left: `${fillPercent}%`,
-            transition: `left 500ms ${PROGRESS_EASE}, top 280ms ${PROGRESS_EASE}`,
+            transition: `left 500ms ${PROGRESS_EASE}, top 280ms ${PROGRESS_EASE}, opacity 280ms ${PROGRESS_EASE}`,
           }}
+          aria-hidden={actionsCollapsed}
         >
           <span
-            className={`inline-flex items-baseline whitespace-nowrap font-semibold leading-none tabular-nums drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)] ${PROGRESS_BAR_MOTION} ${
+            className={`inline-flex items-baseline whitespace-nowrap font-semibold leading-none tabular-nums drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)] ${
               isCompact ? "text-xl" : "font-mono text-[28px] font-normal"
             }`}
             style={{ color: pctColor }}
