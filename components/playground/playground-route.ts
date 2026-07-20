@@ -8,6 +8,7 @@ export const PROJECTS = [
   { id: "position-3", label: "Position #3" },
   { id: "position-4", label: "Position #4" },
   { id: "position-5", label: "Position #5" },
+  { id: "position-6", label: "Position #6" },
   { id: "pnl-chart", label: "PnL" },
   { id: "binary-compact", label: "Binary Compact" },
   { id: "leverage-selector", label: "Categorical" },
