@@ -1127,11 +1127,12 @@ export default function Position6() {
             aria-hidden
           />
           <span
-            className={`absolute bottom-[11px] left-2 whitespace-nowrap text-[8px] font-semibold leading-tight text-white/60 ${PROGRESS_BAR_MOTION} ${
+            className={`absolute bottom-[11px] left-2 whitespace-nowrap text-[8px] font-semibold leading-tight ${PROGRESS_BAR_MOTION} ${
               actionsCollapsed || isCompact
                 ? "pointer-events-none opacity-0"
                 : "opacity-100"
             }`}
+            style={{ color: ENTRY_DASH_COLOR }}
           >
             Entry
           </span>
