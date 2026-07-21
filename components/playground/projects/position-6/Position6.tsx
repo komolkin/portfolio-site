@@ -151,6 +151,63 @@ function CheckIcon({ className }: { className?: string }) {
   );
 }
 
+function BackIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className ?? "size-5"}
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden
+    >
+      <path
+        d="M12.5 4.75 7.25 10l5.25 5.25"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function SwitchSidesIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className ?? "size-8"}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
+      <path
+        d="M16.5 3.75 19.5 6.75 16.5 9.75"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4.5 6.75h15"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M7.5 20.25 4.5 17.25 7.5 14.25"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M19.5 17.25h-15"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function formatMatchClock(totalSeconds: number): string {
   const clamped = Math.max(0, Math.min(totalSeconds, MATCH_MAX_SECONDS));
   const minutes = Math.floor(clamped / 60);
@@ -310,7 +367,8 @@ function SizeDeltaFlashLabel({
 export default function Position6() {
   const [fillPercent, setFillPercent] = useState(60);
   const [positionSizeUsd, setPositionSizeUsd] = useState(INITIAL_VALUE_USD);
-  const [country] = useState<CountrySide>("england");
+  const [country, setCountry] = useState<CountrySide>("england");
+  const [cardPanel, setCardPanel] = useState<"position" | "actions">("position");
   const [positionShortcuts, setPositionShortcuts] = useState(DEFAULT_POSITION_SHORTCUTS);
   const [isEditingShortcuts, setIsEditingShortcuts] = useState(false);
   const [draftShortcutLabels, setDraftShortcutLabels] = useState<string[]>([]);
@@ -565,9 +623,34 @@ export default function Position6() {
     });
   };
 
+  const openActionMenu = () => {
+    if (actionsCollapsedRef.current) settleActionsCollapse(false);
+    setCardPanel("actions");
+  };
+
+  const closeActionMenu = () => {
+    setCardPanel("position");
+  };
+
+  const panelMotion = prefersReducedMotion
+    ? {
+        initial: { opacity: 1, y: 0 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 1, y: 0 },
+        transition: { duration: 0 } as const,
+      }
+    : {
+        initial: { opacity: 0, y: 10 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 0, y: -8 },
+        transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] as const },
+      };
+
   const onActionsHandlePointerDown = (e: React.PointerEvent<HTMLElement>) => {
     const target = e.target as HTMLElement;
     if (target.closest("[data-cash-out]")) return;
+    if (target.closest("[data-action-menu]")) return;
+    if (cardPanel === "actions") return;
     if (!actionsCollapsedRef.current) {
       if (target.closest("#position6-actions")) return;
       if (target.closest("[data-progress-bar]")) return;
@@ -769,6 +852,17 @@ export default function Position6() {
           >
       <Position6Particles variant={isAhead ? "green" : "red"} />
 
+      <AnimatePresence mode="wait" initial={false}>
+      {cardPanel === "position" ? (
+      <motion.div
+        key="position-panel"
+        data-position-panel
+        className="relative z-[1] flex w-full flex-col"
+        initial={panelMotion.initial}
+        animate={panelMotion.animate}
+        exit={panelMotion.exit}
+        transition={panelMotion.transition}
+      >
       <div
         data-actions-handle
         role="button"
@@ -790,7 +884,6 @@ export default function Position6() {
         />
       </div>
 
-      <div className="relative z-[1] flex flex-col">
       <div className="flex flex-col gap-4">
       <div className="flex w-full items-center gap-4">
         <div className={`${FLAG_IMG_CLASS} relative`}>
@@ -858,7 +951,10 @@ export default function Position6() {
         <button
           type="button"
           data-cash-out
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            openActionMenu();
+          }}
           className="relative z-[4] isolate flex shrink-0 flex-col items-end justify-center gap-1.5 overflow-hidden rounded-[12px] border-2 border-white/10 bg-white/[0.06] px-3.5 py-2 text-white transition-[border-color,background-color,transform] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.08] active:scale-[0.97]"
         >
           {cashOutGlow.mode !== "off" && (
@@ -1228,7 +1324,92 @@ export default function Position6() {
           })}
       </div>
       </motion.div>
-      </div>
+      </motion.div>
+      ) : (
+      <motion.div
+        key="actions-panel"
+        data-action-menu
+        className="relative z-[1] flex w-full flex-col gap-4 pt-1"
+        initial={panelMotion.initial}
+        animate={panelMotion.animate}
+        exit={panelMotion.exit}
+        transition={panelMotion.transition}
+      >
+        <div className="flex items-center">
+          <button
+            type="button"
+            data-action-menu
+            onClick={(e) => {
+              e.stopPropagation();
+              closeActionMenu();
+            }}
+            aria-label="Back"
+            className="relative z-[4] flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-white/10 text-white transition-[border-color,background-color,transform] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
+          >
+            <BackIcon className="size-5" />
+          </button>
+        </div>
+
+        <p className="text-xl font-semibold leading-tight text-white">
+          What would you like to do?
+        </p>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            data-action-menu
+            onClick={(e) => {
+              e.stopPropagation();
+              closeActionMenu();
+            }}
+            className="relative isolate flex min-w-0 flex-1 flex-col items-start justify-between gap-3 overflow-hidden rounded-2xl bg-white/10 px-4 py-4 text-left text-white shadow-[inset_0_-6px_0_0_rgba(255,255,255,0.1)] transition-[transform,filter] duration-100 ease-out active:translate-y-1.5 active:shadow-none"
+          >
+            {cashOutGlow.mode !== "off" && (
+              <span
+                aria-hidden
+                className="position6-cash-out-glow pointer-events-none absolute inset-0 rounded-2xl motion-reduce:opacity-60"
+                style={{
+                  ["--cash-out-glow-strength" as string]: cashOutGlow.strength,
+                  animation: cashOutGlowAnimation,
+                }}
+              />
+            )}
+            <span className="relative z-[1] text-lg font-semibold leading-none text-white/80">
+              Cash out
+            </span>
+            <span
+              className={`relative z-[1] inline-flex items-baseline text-[32px] font-semibold leading-none tabular-nums ${instrumentSansCondensed.className}`}
+            >
+              <span>{topPrefix}</span>
+              <NumberFlow
+                value={topAbs}
+                trend={0}
+                format={{ useGrouping: true }}
+                className="tabular-nums text-inherit"
+                style={{ ["--number-flow-mask-height" as any]: "0em" }}
+              />
+            </span>
+          </button>
+
+          <button
+            type="button"
+            data-action-menu
+            onClick={(e) => {
+              e.stopPropagation();
+              setCountry((prev) => (prev === "england" ? "argentina" : "england"));
+              closeActionMenu();
+            }}
+            className="relative flex min-w-0 flex-1 flex-col items-start justify-between gap-3 overflow-hidden rounded-2xl bg-white/10 px-4 py-4 text-left text-white shadow-[inset_0_-6px_0_0_rgba(255,255,255,0.1)] transition-[transform,filter] duration-100 ease-out active:translate-y-1.5 active:shadow-none"
+          >
+            <span className="text-lg font-semibold leading-none text-white/80">
+              Switch sides
+            </span>
+            <SwitchSidesIcon className="size-8 text-white" />
+          </button>
+        </div>
+      </motion.div>
+      )}
+      </AnimatePresence>
         </div>
       </div>
     </div>
