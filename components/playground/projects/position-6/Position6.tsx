@@ -222,8 +222,7 @@ const FAST_FORWARD_FX_MS = 550;
 /** Progress fill — Figma Progress rectangles (7425:19765 / 7425:19887) */
 const FILL_COLOR_GREEN = "#1c662d";
 const FILL_COLOR_RED = "#7a0f1c";
-const ENTRY_LINE_COLOR_GREEN = "#5dd978";
-const ENTRY_LINE_COLOR_RED = "#ff4d5e";
+const ENTRY_DASH_COLOR = "#ffe600";
 
 const CARD_BG_GREEN =
   "linear-gradient(180deg, rgba(93,217,120,0.08) 0%, rgba(93,217,120,0.14) 100%), rgba(29,29,29,0.52)";
@@ -244,6 +243,15 @@ const PROGRESS_BAR_MOTION =
 
 const LIQ_GLOW_RANGE = 18;
 const END_GLOW_RANGE = 22;
+const LIQ_LINE_COLOR_HOT = "#ff0037";
+
+function getLiqLineProximity(fillPercent: number, country: CountrySide) {
+  const effectiveFill = country === "england" ? fillPercent : 100 - fillPercent;
+  const liqDelta = effectiveFill - LIQ_LINE_PERCENT;
+  if (liqDelta > LIQ_GLOW_RANGE) return 0;
+  if (liqDelta <= 0) return 1;
+  return 1 - liqDelta / LIQ_GLOW_RANGE;
+}
 
 function getCashOutGlow(fillPercent: number, country: CountrySide) {
   const effectiveFill = country === "england" ? fillPercent : 100 - fillPercent;
@@ -587,9 +595,12 @@ export default function Position6() {
       ? fillPercent >= ENTRY_LINE_PERCENT
       : fillPercent < ENTRY_LINE_PERCENT;
   const pctColor = isAhead ? "#5dd978" : "#ff7d8a";
-  const entryLineColor = isAhead ? ENTRY_LINE_COLOR_GREEN : ENTRY_LINE_COLOR_RED;
   const cashOutGlow = useMemo(
     () => getCashOutGlow(fillPercent, country),
+    [fillPercent, country],
+  );
+  const liqLineProximity = useMemo(
+    () => getLiqLineProximity(fillPercent, country),
     [fillPercent, country],
   );
   const selectedCountry = COUNTRY_META[country];
@@ -1066,20 +1077,30 @@ export default function Position6() {
           style={{ left: `${LIQ_LINE_PERCENT}%` }}
         >
           <div
-            className={`absolute left-0 rounded-[2px] ${PROGRESS_BAR_MOTION} ${
+            className={`absolute left-0 rounded-[2px] transition-[opacity,box-shadow,width] duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${PROGRESS_BAR_MOTION} ${
               actionsCollapsed
-                ? "top-1/2 h-[10px] w-1 -translate-y-1/2 bg-white/40 opacity-60"
+                ? "top-1/2 h-[12px] w-[3px] -translate-y-1/2"
                 : isCompact
-                  ? "top-1.5 bottom-1.5 w-[2px] opacity-40"
-                  : "top-1/2 h-[85%] w-[2px] -translate-y-1/2 opacity-40"
+                  ? "top-1 bottom-1 w-[3px]"
+                  : "top-1/2 h-[85%] w-[3px] -translate-y-1/2"
+            } ${
+              liqLineProximity > 0.35
+                ? "position6-liq-line-pulse"
+                : ""
             }`}
-            style={
-              actionsCollapsed ? undefined : { backgroundColor: entryLineColor }
-            }
+            style={{
+              backgroundColor: LIQ_LINE_COLOR_HOT,
+              opacity: actionsCollapsed ? 0.85 : 1,
+              boxShadow:
+                liqLineProximity > 0.15
+                  ? `0 0 ${8 + liqLineProximity * 18}px rgba(255, 0, 55, ${0.35 + liqLineProximity * 0.65})`
+                  : "none",
+              ["--liq-pulse-ms" as string]: `${Math.round(320 + (1 - liqLineProximity) * 700)}ms`,
+            }}
             aria-hidden
           />
           <span
-            className={`absolute bottom-[11px] left-2 whitespace-nowrap text-[8px] font-semibold leading-tight text-white/60 ${PROGRESS_BAR_MOTION} ${
+            className={`absolute bottom-[11px] left-2 whitespace-nowrap text-[8px] font-semibold leading-tight text-[#ff0037] ${PROGRESS_BAR_MOTION} ${
               actionsCollapsed || isCompact
                 ? "pointer-events-none opacity-0"
                 : "opacity-100"
@@ -1095,14 +1116,14 @@ export default function Position6() {
           style={{ left: `${ENTRY_LINE_PERCENT}%` }}
         >
           <div
-            className={`absolute left-0 w-0 border-l-2 border-dashed opacity-40 ${PROGRESS_BAR_MOTION} ${
+            className={`absolute left-0 w-0 border-l-2 border-dashed opacity-90 ${PROGRESS_BAR_MOTION} ${
               actionsCollapsed
                 ? "top-1 bottom-1"
                 : isCompact
                   ? "top-1.5 bottom-1.5"
                   : "top-1/2 h-[85%] -translate-y-1/2"
             }`}
-            style={{ borderColor: entryLineColor }}
+            style={{ borderColor: ENTRY_DASH_COLOR }}
             aria-hidden
           />
           <span
@@ -1170,6 +1191,21 @@ export default function Position6() {
           }
         }
 
+        @keyframes position6-liq-line-pulse {
+          0%, 100% {
+            filter: brightness(1);
+            opacity: 1;
+          }
+          50% {
+            filter: brightness(1.35);
+            opacity: 0.85;
+          }
+        }
+
+        .position6-liq-line-pulse {
+          animation: position6-liq-line-pulse var(--liq-pulse-ms, 700ms) ease-in-out infinite;
+        }
+
         @keyframes position6-cash-out-win-blink {
           0%, 100% {
             box-shadow: inset 0 0 0 rgba(93, 217, 120, 0);
@@ -1232,6 +1268,10 @@ export default function Position6() {
 
         @media (prefers-reduced-motion: reduce) {
           .position6-cash-out-glow {
+            animation: none !important;
+          }
+
+          .position6-liq-line-pulse {
             animation: none !important;
           }
 
