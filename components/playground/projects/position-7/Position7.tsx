@@ -1407,7 +1407,7 @@ export default function Position7() {
           </div>
 
           <div
-            className={`relative flex w-full flex-col overflow-hidden rounded-[24px] border px-4 pb-4 pt-2 backdrop-blur-xl transition-[background,border-color] duration-500 ease-out ${
+            className={`relative flex w-full flex-col overflow-hidden rounded-[24px] border px-4 pb-4 pt-1 backdrop-blur-xl transition-[background,border-color] duration-500 ease-out ${
               isFastForwardFx ? "animate-[position7-shake_360ms_ease-in-out_1]" : ""
             } ${isDraggingActions ? "cursor-grabbing touch-none" : ""}`}
             style={{
@@ -1445,7 +1445,7 @@ export default function Position7() {
             settleActionsCollapse(!actionsCollapsedRef.current);
           }
         }}
-        className="relative z-[3] -mx-1 flex cursor-pointer items-center justify-center py-2"
+        className="relative z-[3] -mx-1 flex cursor-pointer items-center justify-center py-1"
       >
         <span
           aria-hidden
