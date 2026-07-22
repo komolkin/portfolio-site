@@ -36,9 +36,9 @@ type PlayByPlayEvent = {
 };
 
 const MEDIA_VIEWS: { id: MediaView; label: string }[] = [
-  { id: "video", label: "Stream" },
-  { id: "odds", label: "Odds" },
-  { id: "playByPlay", label: "Play-by-play" },
+  { id: "video", label: "Live-stream" },
+  { id: "odds", label: "Chart" },
+  { id: "playByPlay", label: "Timeline" },
 ];
 
 const ODDS_HISTORY_MAX = 56;
@@ -852,7 +852,6 @@ export default function Position7() {
     ],
     [oddsHistory, englandOdds, argentinaOdds],
   );
-  const mediaViewIndex = MEDIA_VIEWS.findIndex((view) => view.id === mediaView);
   const prefersReducedMotion = useReducedMotion();
   const countryMotion = prefersReducedMotion
     ? { initial: false, animate: { opacity: 1, y: 0, scale: 1 }, exit: { opacity: 1 } }
@@ -1251,19 +1250,10 @@ export default function Position7() {
 
         <div className="absolute inset-x-3 bottom-3 z-10 flex flex-col gap-2">
           <div
-            className="relative mx-auto flex h-10 w-[100px] items-center rounded-full border border-white/10 bg-black/45 p-1 backdrop-blur-xl"
+            className="relative mx-auto flex h-10 items-center rounded-full border border-white/10 bg-black/45 p-1 backdrop-blur-xl"
             role="tablist"
             aria-label="Media view"
           >
-            <span
-              className="pointer-events-none absolute top-1 bottom-1 rounded-full bg-white/20 transition-transform duration-300 ease-out"
-              style={{
-                left: "4px",
-                width: "calc((100% - 8px) / 3)",
-                transform: `translateX(${Math.max(0, mediaViewIndex) * 100}%)`,
-              }}
-              aria-hidden
-            />
             {MEDIA_VIEWS.map((view) => {
               const Icon = MEDIA_VIEW_ICONS[view.id];
               const isActive = mediaView === view.id;
@@ -1275,11 +1265,48 @@ export default function Position7() {
                   aria-selected={isActive}
                   aria-label={view.label}
                   onClick={() => setMediaView(view.id)}
-                  className={`relative z-10 flex h-full flex-1 items-center justify-center rounded-full transition-colors duration-200 ${
+                  className={`relative z-10 flex h-full items-center justify-center gap-1.5 rounded-full px-2.5 transition-colors duration-200 ${
                     isActive ? "text-white" : "text-white/45 hover:text-white/75"
                   }`}
                 >
-                  <Icon className="size-5 shrink-0" />
+                  {isActive && (
+                    <motion.span
+                      layoutId={
+                        prefersReducedMotion ? undefined : "position7-media-pill"
+                      }
+                      className="absolute inset-0 rounded-full bg-white/20"
+                      transition={{
+                        type: "spring",
+                        stiffness: 420,
+                        damping: 34,
+                        mass: 0.7,
+                      }}
+                      aria-hidden
+                    />
+                  )}
+                  <Icon className="relative z-10 size-5 shrink-0" />
+                  <AnimatePresence initial={false}>
+                    {isActive && (
+                      <motion.span
+                        key={`${view.id}-label`}
+                        initial={
+                          prefersReducedMotion
+                            ? false
+                            : { opacity: 0, width: 0 }
+                        }
+                        animate={{ opacity: 1, width: "auto" }}
+                        exit={
+                          prefersReducedMotion
+                            ? undefined
+                            : { opacity: 0, width: 0 }
+                        }
+                        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                        className="relative z-10 overflow-hidden whitespace-nowrap text-[11px] font-semibold tracking-wide"
+                      >
+                        {view.label}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </button>
               );
             })}
