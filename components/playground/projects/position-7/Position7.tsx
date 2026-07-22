@@ -840,14 +840,12 @@ export default function Position7() {
     () => [
       {
         id: "eng",
-        label: "ENG",
         color: ODDS_ENG_COLOR,
         data: oddsHistory,
         value: englandOdds,
       },
       {
         id: "arg",
-        label: "ARG",
         color: ODDS_ARG_COLOR,
         data: oddsHistory.map((point) => ({
           time: point.time,
@@ -858,6 +856,38 @@ export default function Position7() {
     ],
     [oddsHistory, englandOdds, argentinaOdds],
   );
+  const oddsEndpointLabels = useMemo(() => {
+    let min = Infinity;
+    let max = -Infinity;
+    for (const point of oddsHistory) {
+      min = Math.min(min, point.value, 100 - point.value);
+      max = Math.max(max, point.value, 100 - point.value);
+    }
+    min = Math.min(min, englandOdds, argentinaOdds);
+    max = Math.max(max, englandOdds, argentinaOdds);
+    const rawRange = Math.max(1, max - min);
+    const margin = rawRange * 0.12;
+    const rangeMax = max + margin;
+    const range = Math.max(1, rangeMax - (min - margin));
+
+    const entries = [
+      { id: "eng", code: "ENG", value: englandOdds, color: ODDS_ENG_COLOR },
+      { id: "arg", code: "ARG", value: argentinaOdds, color: ODDS_ARG_COLOR },
+    ];
+    const sorted = [...entries].sort((a, b) => b.value - a.value);
+    const tops = sorted.map(
+      (entry) => ((rangeMax - entry.value) / range) * 100,
+    );
+    if (tops.length === 2 && Math.abs(tops[1] - tops[0]) < 32) {
+      const mid = (tops[0] + tops[1]) / 2;
+      tops[0] = mid - 16;
+      tops[1] = mid + 16;
+    }
+    return sorted.map((entry, index) => ({
+      ...entry,
+      topPercent: tops[index],
+    }));
+  }, [oddsHistory, englandOdds, argentinaOdds]);
   const prefersReducedMotion = useReducedMotion();
   const mediaViewIndex = MEDIA_VIEW_ORDER.indexOf(mediaView);
   mediaViewIndexRef.current = mediaViewIndex;
@@ -1070,27 +1100,65 @@ export default function Position7() {
             aria-hidden={mediaView !== "odds"}
           >
             <motion.div
-              className="absolute inset-x-0 overflow-hidden px-1 [&>div:first-child]:!hidden"
+              className="absolute inset-x-0 overflow-hidden px-1"
               style={{ top: oddsChartTop, bottom: oddsChartBottom }}
             >
-              <Liveline
-                data={oddsHistory}
-                value={englandOdds}
-                series={oddsSeries}
-                theme="dark"
-                grid
-                pulse
-                scrub={false}
-                momentum={false}
-                paused={mediaView !== "odds"}
-                window={ODDS_WINDOW_SECS}
-                formatValue={(v) => `${Math.round(v)}%`}
-                formatTime={() => ""}
-                lerpSpeed={0.1}
-                lineWidth={2.5}
-                padding={{ top: 12, right: 72, bottom: 28, left: 8 }}
-                className="!h-[calc(100%+28px)] w-full"
-              />
+              <div className="relative h-full w-full [&>div:first-child]:!hidden">
+                <Liveline
+                  data={oddsHistory}
+                  value={englandOdds}
+                  series={oddsSeries}
+                  theme="dark"
+                  grid={false}
+                  pulse
+                  scrub={false}
+                  momentum={false}
+                  paused={mediaView !== "odds"}
+                  window={ODDS_WINDOW_SECS}
+                  formatValue={(v) => `${Math.round(v)}%`}
+                  formatTime={() => ""}
+                  lerpSpeed={0.1}
+                  lineWidth={2.5}
+                  padding={{ top: 12, right: 76, bottom: 56, left: 8 }}
+                  className="!h-[calc(100%+56px)] w-full"
+                />
+                <div
+                  className="pointer-events-none absolute inset-x-0"
+                  style={{ top: 12, bottom: 56 }}
+                  aria-hidden
+                >
+                  {oddsEndpointLabels.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="absolute right-4"
+                      style={{
+                        top: `${entry.topPercent}%`,
+                        color: entry.color,
+                      }}
+                    >
+                      <div className="relative flex -translate-y-1/2 flex-col items-start leading-none">
+                        <span className="mb-1.5 text-[11px] font-semibold tracking-[0.04em]">
+                          {entry.code}
+                        </span>
+                        <span
+                          className={`inline-flex items-baseline text-[38px] font-semibold tabular-nums ${instrumentSansCondensed.className}`}
+                        >
+                          <NumberFlow
+                            value={entry.value}
+                            trend={0}
+                            format={{ useGrouping: false }}
+                            className="tabular-nums text-inherit"
+                            style={{
+                              ["--number-flow-mask-height" as any]: "0em",
+                            }}
+                          />
+                          <span>%</span>
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </motion.div>
           </div>
 
