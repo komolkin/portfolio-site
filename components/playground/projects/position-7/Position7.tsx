@@ -299,6 +299,8 @@ const MEDIA_VIEW_ICONS: Record<MediaView, (props: { className?: string }) => JSX
 
 const ODDS_ENG_COLOR = "#e05454";
 const ODDS_ARG_COLOR = "#5b8fd4";
+const MEDIA_BG_GRADIENT =
+  "linear-gradient(180deg, #161618 0%, #0c0c0e 48%, #080809 100%)";
 const ODDS_MAX_STEP = 6;
 const ODDS_SPIKE_CHANCE = 0.1;
 const ODDS_SPIKE_MAX = 14;
@@ -979,9 +981,10 @@ export default function Position7() {
         />
 
         <div
-          className={`absolute inset-0 bg-black transition-opacity duration-300 ${
+          className={`absolute inset-0 transition-opacity duration-300 ${
             mediaView === "odds" ? "opacity-100" : "pointer-events-none opacity-0"
           }`}
+          style={{ background: MEDIA_BG_GRADIENT }}
           aria-hidden={mediaView !== "odds"}
         >
           <motion.div
@@ -1010,20 +1013,14 @@ export default function Position7() {
         </div>
 
         <div
-          className={`absolute inset-0 bg-[#08090b] transition-opacity duration-300 ${
+          className={`absolute inset-0 transition-opacity duration-300 ${
             mediaView === "playByPlay"
               ? "opacity-100"
               : "pointer-events-none opacity-0"
           }`}
+          style={{ background: MEDIA_BG_GRADIENT }}
           aria-hidden={mediaView !== "playByPlay"}
         >
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "radial-gradient(ellipse 70% 40% at 50% 0%, rgba(255,255,255,0.06) 0%, transparent 65%), linear-gradient(180deg, #101218 0%, #07080a 100%)",
-            }}
-          />
           <div className="absolute inset-x-0 top-[22%] bottom-0 overflow-hidden px-5 pt-3">
             <div className="relative h-full overflow-y-auto pb-[200px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div
