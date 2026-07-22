@@ -41,6 +41,10 @@ const MEDIA_VIEWS: { id: MediaView; label: string }[] = [
   { id: "playByPlay", label: "Timeline" },
 ];
 
+const MEDIA_VIEW_ORDER: MediaView[] = MEDIA_VIEWS.map((view) => view.id);
+const MEDIA_DRAG_THRESHOLD_PX = 52;
+const MEDIA_DRAG_VELOCITY = 550;
+
 const ODDS_HISTORY_MAX = 56;
 const SIM_TICK_MS = 2200;
 const FAST_FORWARD_DELTA_THRESHOLD = 12;
@@ -574,6 +578,8 @@ export default function Position7() {
   const actionsDragStartProgress = useRef(0);
   const actionsDragMoved = useRef(false);
   const actionsDragFromHandle = useRef(false);
+  const mediaViewIndexRef = useRef(0);
+  const mediaPagerX = useMotionValue(0);
   const fastForwardTimerRef = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [matchSeconds, setMatchSeconds] = useState(MATCH_START_SECONDS);
@@ -853,6 +859,67 @@ export default function Position7() {
     [oddsHistory, englandOdds, argentinaOdds],
   );
   const prefersReducedMotion = useReducedMotion();
+  const mediaViewIndex = MEDIA_VIEW_ORDER.indexOf(mediaView);
+  mediaViewIndexRef.current = mediaViewIndex;
+
+  useEffect(() => {
+    const targetX = -mediaViewIndex * PHONE_WIDTH;
+    if (prefersReducedMotion) {
+      mediaPagerX.set(targetX);
+      return;
+    }
+    animate(mediaPagerX, targetX, {
+      type: "spring",
+      stiffness: 420,
+      damping: 38,
+      mass: 0.75,
+    });
+  }, [mediaViewIndex, mediaPagerX, prefersReducedMotion]);
+
+  const snapMediaPager = (nextIndex: number) => {
+    const clamped = Math.max(0, Math.min(MEDIA_VIEW_ORDER.length - 1, nextIndex));
+    const nextView = MEDIA_VIEW_ORDER[clamped];
+    if (nextView !== mediaView) {
+      setMediaView(nextView);
+      return;
+    }
+    const targetX = -clamped * PHONE_WIDTH;
+    if (prefersReducedMotion) {
+      mediaPagerX.set(targetX);
+      return;
+    }
+    animate(mediaPagerX, targetX, {
+      type: "spring",
+      stiffness: 420,
+      damping: 38,
+      mass: 0.75,
+    });
+  };
+
+  const onMediaPagerDragEnd = (
+    _event: MouseEvent | TouchEvent | PointerEvent,
+    info: { offset: { x: number }; velocity: { x: number } },
+  ) => {
+    const startIndex = mediaViewIndexRef.current;
+    const goNext =
+      info.offset.x < -MEDIA_DRAG_THRESHOLD_PX ||
+      info.velocity.x < -MEDIA_DRAG_VELOCITY;
+    const goPrev =
+      info.offset.x > MEDIA_DRAG_THRESHOLD_PX ||
+      info.velocity.x > MEDIA_DRAG_VELOCITY;
+
+    if (goNext) {
+      snapMediaPager(startIndex + 1);
+      return;
+    }
+    if (goPrev) {
+      snapMediaPager(startIndex - 1);
+      return;
+    }
+
+    snapMediaPager(Math.round(-mediaPagerX.get() / PHONE_WIDTH));
+  };
+
   const countryMotion = prefersReducedMotion
     ? { initial: false, animate: { opacity: 1, y: 0, scale: 1 }, exit: { opacity: 1 } }
     : {
@@ -965,163 +1032,187 @@ export default function Position7() {
         aria-label="Position — England match preview"
         data-name="Position #7"
       >
-        <video
-          ref={videoRef}
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
-            mediaView === "video" ? "opacity-100" : "opacity-0"
-          }`}
-          src={VIDEO_SRC}
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="auto"
-          aria-hidden={mediaView !== "video"}
-        />
-
-        <div
-          className={`absolute inset-0 transition-opacity duration-300 ${
-            mediaView === "odds" ? "opacity-100" : "pointer-events-none opacity-0"
-          }`}
-          style={{ background: MEDIA_BG_GRADIENT }}
-          aria-hidden={mediaView !== "odds"}
+        <motion.div
+          className="absolute inset-y-0 left-0 flex h-full touch-pan-y"
+          style={{
+            x: mediaPagerX,
+            width: PHONE_WIDTH * MEDIA_VIEW_ORDER.length,
+          }}
+          drag="x"
+          dragDirectionLock
+          dragConstraints={{
+            left: -PHONE_WIDTH * (MEDIA_VIEW_ORDER.length - 1),
+            right: 0,
+          }}
+          dragElastic={0.14}
+          onDragEnd={onMediaPagerDragEnd}
         >
-          <motion.div
-            className="absolute inset-x-0 overflow-hidden px-1 [&>div:first-child]:!hidden"
-            style={{ top: oddsChartTop, bottom: oddsChartBottom }}
+          <div
+            className="relative h-full shrink-0 overflow-hidden"
+            style={{ width: PHONE_WIDTH }}
+            aria-hidden={mediaView !== "video"}
           >
-            <Liveline
-              data={oddsHistory}
-              value={englandOdds}
-              series={oddsSeries}
-              theme="dark"
-              grid
-              pulse
-              scrub={false}
-              momentum={false}
-              paused={mediaView !== "odds"}
-              window={ODDS_WINDOW_SECS}
-              formatValue={(v) => `${Math.round(v)}%`}
-              formatTime={() => ""}
-              lerpSpeed={0.1}
-              lineWidth={2.5}
-              padding={{ top: 12, right: 72, bottom: 28, left: 8 }}
-              className="!h-[calc(100%+28px)] w-full"
+            <video
+              ref={videoRef}
+              className="absolute inset-0 h-full w-full object-cover"
+              src={VIDEO_SRC}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="auto"
             />
-          </motion.div>
-        </div>
+          </div>
 
-        <div
-          className={`absolute inset-0 transition-opacity duration-300 ${
-            mediaView === "playByPlay"
-              ? "opacity-100"
-              : "pointer-events-none opacity-0"
-          }`}
-          style={{ background: MEDIA_BG_GRADIENT }}
-          aria-hidden={mediaView !== "playByPlay"}
-        >
-          <div className="absolute inset-x-0 top-[22%] bottom-0 overflow-hidden px-5 pt-3">
-            <div className="relative h-full overflow-y-auto pb-[200px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <div
-                className="pointer-events-none absolute bottom-0 top-3 w-px -translate-x-1/2 bg-gradient-to-b from-white/25 via-white/12 to-transparent"
-                style={{ left: "calc(0.5rem + 1rem)" }}
-                aria-hidden
+          <div
+            className="relative h-full shrink-0 overflow-hidden"
+            style={{ width: PHONE_WIDTH, background: MEDIA_BG_GRADIENT }}
+            aria-hidden={mediaView !== "odds"}
+          >
+            <motion.div
+              className="absolute inset-x-0 overflow-hidden px-1 [&>div:first-child]:!hidden"
+              style={{ top: oddsChartTop, bottom: oddsChartBottom }}
+            >
+              <Liveline
+                data={oddsHistory}
+                value={englandOdds}
+                series={oddsSeries}
+                theme="dark"
+                grid
+                pulse
+                scrub={false}
+                momentum={false}
+                paused={mediaView !== "odds"}
+                window={ODDS_WINDOW_SECS}
+                formatValue={(v) => `${Math.round(v)}%`}
+                formatTime={() => ""}
+                lerpSpeed={0.1}
+                lineWidth={2.5}
+                padding={{ top: 12, right: 72, bottom: 28, left: 8 }}
+                className="!h-[calc(100%+28px)] w-full"
               />
-              <ul className="relative flex flex-col gap-2.5">
-                <AnimatePresence initial={false} mode="popLayout">
-                  {playByPlay.map((event, index) => {
-                    const isLatest = index === 0;
-                    return (
-                      <motion.li
-                        key={event.id}
-                        layout={!prefersReducedMotion}
-                        initial={
-                          prefersReducedMotion
-                            ? false
-                            : { opacity: 0, y: -18, scale: 0.97 }
-                        }
-                        animate={{
-                          opacity: 1,
-                          y: 0,
-                          scale: 1,
-                          backgroundColor: isLatest
-                            ? "rgba(255,255,255,0.07)"
-                            : "rgba(255,255,255,0)",
-                        }}
-                        exit={
-                          prefersReducedMotion
-                            ? undefined
-                            : { opacity: 0, y: 8, scale: 0.98 }
-                        }
-                        transition={{
-                          layout: {
-                            type: "spring",
-                            stiffness: 420,
-                            damping: 36,
-                            mass: 0.7,
-                          },
-                          opacity: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
-                          y: {
-                            type: "spring",
-                            stiffness: 480,
-                            damping: 32,
-                            mass: 0.65,
-                          },
-                          scale: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
-                          backgroundColor: { duration: 0.45, ease: "easeOut" },
-                        }}
-                        className="relative flex gap-3 rounded-2xl px-2 py-2"
-                      >
-                        <div className="relative z-[1] flex w-8 shrink-0 items-start justify-center pt-[7px]">
-                          <motion.span
-                            className={`size-2.5 rounded-full ring-2 ring-[#08090b] ${
-                              isLatest ? "bg-[#ff4d5e]" : "bg-white/40"
-                            }`}
-                            animate={
-                              prefersReducedMotion || !isLatest
-                                ? undefined
-                                : {
-                                    scale: [1, 1.35, 1],
-                                    boxShadow: [
-                                      "0 0 0 rgba(255,77,94,0)",
-                                      "0 0 12px rgba(255,77,94,0.9)",
-                                      "0 0 6px rgba(255,77,94,0.45)",
-                                    ],
-                                  }
-                            }
-                            transition={
-                              isLatest
-                                ? {
-                                    duration: 1.1,
-                                    ease: "easeInOut",
-                                    times: [0, 0.35, 1],
-                                  }
-                                : undefined
-                            }
-                          />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline justify-between gap-3">
-                            <p className="text-[13px] font-semibold leading-snug text-white">
-                              {event.label}
-                            </p>
-                            <span className="shrink-0 text-[11px] font-medium tabular-nums text-white/45">
-                              {formatMatchClock(event.clockSeconds)}
-                            </span>
+            </motion.div>
+          </div>
+
+          <div
+            className="relative h-full shrink-0 overflow-hidden"
+            style={{ width: PHONE_WIDTH, background: MEDIA_BG_GRADIENT }}
+            aria-hidden={mediaView !== "playByPlay"}
+          >
+            <div className="absolute inset-x-0 top-[22%] bottom-0 overflow-hidden px-5 pt-3">
+              <div className="relative h-full overflow-y-auto pb-[200px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div
+                  className="pointer-events-none absolute bottom-0 top-3 w-px -translate-x-1/2 bg-gradient-to-b from-white/25 via-white/12 to-transparent"
+                  style={{ left: "calc(0.5rem + 1rem)" }}
+                  aria-hidden
+                />
+                <ul className="relative flex flex-col gap-2.5">
+                  <AnimatePresence initial={false} mode="popLayout">
+                    {playByPlay.map((event, index) => {
+                      const isLatest = index === 0;
+                      return (
+                        <motion.li
+                          key={event.id}
+                          layout={!prefersReducedMotion}
+                          initial={
+                            prefersReducedMotion
+                              ? false
+                              : { opacity: 0, y: -18, scale: 0.97 }
+                          }
+                          animate={{
+                            opacity: 1,
+                            y: 0,
+                            scale: 1,
+                            backgroundColor: isLatest
+                              ? "rgba(255,255,255,0.07)"
+                              : "rgba(255,255,255,0)",
+                          }}
+                          exit={
+                            prefersReducedMotion
+                              ? undefined
+                              : { opacity: 0, y: 8, scale: 0.98 }
+                          }
+                          transition={{
+                            layout: {
+                              type: "spring",
+                              stiffness: 420,
+                              damping: 36,
+                              mass: 0.7,
+                            },
+                            opacity: {
+                              duration: 0.28,
+                              ease: [0.22, 1, 0.36, 1],
+                            },
+                            y: {
+                              type: "spring",
+                              stiffness: 480,
+                              damping: 32,
+                              mass: 0.65,
+                            },
+                            scale: {
+                              duration: 0.28,
+                              ease: [0.22, 1, 0.36, 1],
+                            },
+                            backgroundColor: {
+                              duration: 0.45,
+                              ease: "easeOut",
+                            },
+                          }}
+                          className="relative flex gap-3 rounded-2xl px-2 py-2"
+                        >
+                          <div className="relative z-[1] flex w-8 shrink-0 items-start justify-center pt-[7px]">
+                            <motion.span
+                              className={`size-2.5 rounded-full ring-2 ring-[#08090b] ${
+                                isLatest ? "bg-[#ff4d5e]" : "bg-white/40"
+                              }`}
+                              animate={
+                                prefersReducedMotion || !isLatest
+                                  ? undefined
+                                  : {
+                                      scale: [1, 1.35, 1],
+                                      boxShadow: [
+                                        "0 0 0 rgba(255,77,94,0)",
+                                        "0 0 12px rgba(255,77,94,0.9)",
+                                        "0 0 6px rgba(255,77,94,0.45)",
+                                      ],
+                                    }
+                              }
+                              transition={
+                                isLatest
+                                  ? {
+                                      duration: 1.1,
+                                      ease: "easeInOut",
+                                      times: [0, 0.35, 1],
+                                    }
+                                  : undefined
+                              }
+                            />
                           </div>
-                          <p className="mt-0.5 text-[11px] capitalize text-white/40">
-                            {event.kind}
-                            {event.team !== "neutral" ? ` · ${event.team}` : ""}
-                          </p>
-                        </div>
-                      </motion.li>
-                    );
-                  })}
-                </AnimatePresence>
-              </ul>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline justify-between gap-3">
+                              <p className="text-[13px] font-semibold leading-snug text-white">
+                                {event.label}
+                              </p>
+                              <span className="shrink-0 text-[11px] font-medium tabular-nums text-white/45">
+                                {formatMatchClock(event.clockSeconds)}
+                              </span>
+                            </div>
+                            <p className="mt-0.5 text-[11px] capitalize text-white/40">
+                              {event.kind}
+                              {event.team !== "neutral"
+                                ? ` · ${event.team}`
+                                : ""}
+                            </p>
+                          </div>
+                        </motion.li>
+                      );
+                    })}
+                  </AnimatePresence>
+                </ul>
+              </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         <div
           className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-[38%] bg-gradient-to-b from-black/75 via-black/35 to-transparent"
@@ -1129,7 +1220,7 @@ export default function Position7() {
         />
 
         <div
-          className="absolute inset-x-0 top-0 z-10 px-5 pt-8"
+          className="pointer-events-none absolute inset-x-0 top-0 z-10 px-5 pt-8"
           aria-label={`Live match England ${homeScore} Argentina ${awayScore}, ${formatMatchClock(matchSeconds)}`}
         >
           <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
@@ -1248,7 +1339,10 @@ export default function Position7() {
           </div>
         )}
 
-        <div className="absolute inset-x-3 bottom-3 z-10 flex flex-col gap-2">
+        <div
+          data-no-media-swipe
+          className="absolute inset-x-3 bottom-3 z-10 flex flex-col gap-2"
+        >
           <div
             className="relative mx-auto flex h-10 items-center rounded-full border border-white/10 bg-black/45 p-1 backdrop-blur-xl"
             role="tablist"
