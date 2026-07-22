@@ -17,6 +17,7 @@ import Position3 from "@/components/playground/projects/position-3/Position3";
 import Position4 from "@/components/playground/projects/position-4/Position4";
 import Position5 from "@/components/playground/projects/position-5/Position5";
 import Position6 from "@/components/playground/projects/position-6/Position6";
+import Position7 from "@/components/playground/projects/position-7/Position7";
 import PnlChart from "@/components/playground/projects/pnl-chart/PnlChart";
 import Ball from "@/components/playground/projects/ball/Ball";
 import Mcp from "@/components/playground/projects/mcp/Mcp";
@@ -79,6 +80,7 @@ export default function PlaygroundSlide() {
             {activeProject === "position-4" && <Position4 />}
             {activeProject === "position-5" && <Position5 />}
             {activeProject === "position-6" && <Position6 />}
+            {activeProject === "position-7" && <Position7 />}
             {activeProject === "mcp" && <Mcp />}
             {activeProject === "thinking" && <Thinking />}
             {activeProject === "ai-cam" && <AiCam />}
