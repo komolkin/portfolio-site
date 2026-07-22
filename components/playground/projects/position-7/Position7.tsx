@@ -1025,10 +1025,7 @@ export default function Position7() {
             }}
           />
           <div className="absolute inset-x-0 top-[22%] bottom-0 overflow-hidden px-5 pt-3">
-            <p className="mb-3 text-center text-sm font-medium text-white/70">
-              Live event timeline
-            </p>
-            <div className="relative h-[calc(100%-2rem)] overflow-y-auto pb-[200px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="relative h-full overflow-y-auto pb-[200px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div
                 className="pointer-events-none absolute bottom-0 top-3 w-px -translate-x-1/2 bg-gradient-to-b from-white/25 via-white/12 to-transparent"
                 style={{ left: "calc(0.5rem + 1rem)" }}
