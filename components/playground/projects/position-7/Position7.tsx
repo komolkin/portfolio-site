@@ -1168,92 +1168,66 @@ export default function Position7() {
             aria-hidden={mediaView !== "playByPlay"}
           >
             <div className="absolute inset-x-0 top-[22%] bottom-0 overflow-hidden px-5 pt-3">
-              <div className="relative h-full overflow-y-auto pb-[200px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <motion.div
+                layoutScroll
+                className="relative h-full overflow-y-auto overscroll-contain pb-[200px] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
+              >
                 <div
                   className="pointer-events-none absolute bottom-0 top-3 w-px -translate-x-1/2 bg-gradient-to-b from-white/25 via-white/12 to-transparent"
                   style={{ left: "calc(0.5rem + 1rem)" }}
                   aria-hidden
                 />
                 <ul className="relative flex flex-col gap-2.5">
-                  <AnimatePresence initial={false} mode="popLayout">
+                  <AnimatePresence initial={false}>
                     {playByPlay.map((event, index) => {
                       const isLatest = index === 0;
                       return (
                         <motion.li
                           key={event.id}
-                          layout={!prefersReducedMotion}
                           initial={
                             prefersReducedMotion
                               ? false
-                              : { opacity: 0, y: -18, scale: 0.97 }
+                              : { opacity: 0, y: -14 }
                           }
                           animate={{
                             opacity: 1,
                             y: 0,
-                            scale: 1,
                             backgroundColor: isLatest
                               ? "rgba(255,255,255,0.07)"
                               : "rgba(255,255,255,0)",
                           }}
                           exit={
                             prefersReducedMotion
-                              ? undefined
-                              : { opacity: 0, y: 8, scale: 0.98 }
+                              ? { opacity: 0 }
+                              : { opacity: 0, y: 6 }
                           }
                           transition={{
-                            layout: {
-                              type: "spring",
-                              stiffness: 420,
-                              damping: 36,
-                              mass: 0.7,
-                            },
                             opacity: {
-                              duration: 0.28,
+                              duration: 0.25,
                               ease: [0.22, 1, 0.36, 1],
                             },
                             y: {
-                              type: "spring",
-                              stiffness: 480,
-                              damping: 32,
-                              mass: 0.65,
-                            },
-                            scale: {
-                              duration: 0.28,
+                              duration: 0.3,
                               ease: [0.22, 1, 0.36, 1],
                             },
                             backgroundColor: {
-                              duration: 0.45,
+                              duration: 0.35,
                               ease: "easeOut",
                             },
                           }}
                           className="relative flex gap-3 rounded-2xl px-2 py-2"
                         >
                           <div className="relative z-[1] flex w-8 shrink-0 items-start justify-center pt-[7px]">
-                            <motion.span
+                            <span
                               className={`size-2.5 rounded-full ring-2 ring-[#08090b] ${
-                                isLatest ? "bg-[#ff4d5e]" : "bg-white/40"
-                              }`}
-                              animate={
-                                prefersReducedMotion || !isLatest
-                                  ? undefined
-                                  : {
-                                      scale: [1, 1.35, 1],
-                                      boxShadow: [
-                                        "0 0 0 rgba(255,77,94,0)",
-                                        "0 0 12px rgba(255,77,94,0.9)",
-                                        "0 0 6px rgba(255,77,94,0.45)",
-                                      ],
-                                    }
-                              }
-                              transition={
                                 isLatest
-                                  ? {
-                                      duration: 1.1,
-                                      ease: "easeInOut",
-                                      times: [0, 0.35, 1],
-                                    }
-                                  : undefined
-                              }
+                                  ? "bg-[#ff4d5e] shadow-[0_0_10px_rgba(255,77,94,0.75)]"
+                                  : "bg-white/40"
+                              } ${
+                                isLatest && !prefersReducedMotion
+                                  ? "position7-pbp-dot-pulse"
+                                  : ""
+                              }`}
                             />
                           </div>
                           <div className="min-w-0 flex-1">
@@ -1277,7 +1251,7 @@ export default function Position7() {
                     })}
                   </AnimatePresence>
                 </ul>
-              </div>
+              </motion.div>
             </div>
           </div>
         </motion.div>
@@ -1893,12 +1867,35 @@ export default function Position7() {
           animation: position7-size-delta-exit-down 480ms cubic-bezier(0.4, 0, 0.2, 1) both;
         }
 
+        @keyframes position7-pbp-dot-pulse {
+          0% {
+            transform: scale(1);
+            box-shadow: 0 0 0 rgba(255, 77, 94, 0);
+          }
+          35% {
+            transform: scale(1.35);
+            box-shadow: 0 0 12px rgba(255, 77, 94, 0.9);
+          }
+          100% {
+            transform: scale(1);
+            box-shadow: 0 0 6px rgba(255, 77, 94, 0.45);
+          }
+        }
+
+        .position7-pbp-dot-pulse {
+          animation: position7-pbp-dot-pulse 1.1s ease-in-out both;
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .position7-cash-out-glow {
             animation: none !important;
           }
 
           .position7-liq-line-pulse {
+            animation: none !important;
+          }
+
+          .position7-pbp-dot-pulse {
             animation: none !important;
           }
 
