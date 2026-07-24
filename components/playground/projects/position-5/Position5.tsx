@@ -192,8 +192,18 @@ const FILL_COLOR_GREEN = "#1c662d";
 const FILL_COLOR_RED = "#7a0f1c";
 const ENTRY_DASH_COLOR = "rgba(255,255,255,0.4)";
 const LIQ_BLOCK_COLOR = "#ff4d5e";
-const LIQ_BLOCK_STRIPES =
-  "repeating-linear-gradient(-45deg, rgba(255,255,255,0.28) 0 3px, transparent 3px 9px)";
+/** Tiled hazard stripes — animate by exactly one tile for a seamless loop */
+const LIQ_STRIPE_TILE_PX = 12;
+const LIQ_BLOCK_STRIPES = `linear-gradient(
+  -45deg,
+  rgba(255,255,255,0.28) 25%,
+  transparent 25%,
+  transparent 50%,
+  rgba(255,255,255,0.28) 50%,
+  rgba(255,255,255,0.28) 75%,
+  transparent 75%,
+  transparent
+)`;
 
 const CARD_BG_GREEN =
   "linear-gradient(180deg, rgba(93,217,120,0.08) 0%, rgba(93,217,120,0.14) 100%), rgba(29,29,29,0.52)";
@@ -978,7 +988,7 @@ export default function Position5() {
 
         {/* Liq. zone — solid block for all bar states */}
         <div
-          className={`pointer-events-none absolute z-[3] ${PROGRESS_BAR_MOTION} ${
+          className={`pointer-events-none absolute z-[3] overflow-hidden ${PROGRESS_BAR_MOTION} ${
             actionsCollapsed
               ? "left-[5px] top-[5px] bottom-[5px] rounded-[7px] opacity-90"
               : "left-1.5 top-1.5 bottom-1.5 rounded-[6px] opacity-100"
@@ -986,10 +996,17 @@ export default function Position5() {
           style={{
             width: `calc(${LIQ_LINE_PERCENT}% - ${actionsCollapsed ? 5 : 6}px)`,
             backgroundColor: LIQ_BLOCK_COLOR,
-            backgroundImage: LIQ_BLOCK_STRIPES,
           }}
           aria-hidden
-        />
+        >
+          <div
+            className="position5-liq-stripes absolute inset-0 rounded-[inherit]"
+            style={{
+              backgroundImage: LIQ_BLOCK_STRIPES,
+              backgroundSize: `${LIQ_STRIPE_TILE_PX}px ${LIQ_STRIPE_TILE_PX}px`,
+            }}
+          />
+        </div>
         <span
           className={`pointer-events-none absolute bottom-[11px] z-[3] whitespace-nowrap pl-1.5 text-[8px] font-semibold leading-tight text-white/60 ${PROGRESS_BAR_MOTION} ${
             actionsCollapsed || isCompact
@@ -1142,8 +1159,21 @@ export default function Position5() {
           animation: position5-size-delta-exit-down 480ms cubic-bezier(0.4, 0, 0.2, 1) both;
         }
 
+        @keyframes position5-liq-stripes {
+          from { background-position: 0 0; }
+          to { background-position: 12px 12px; }
+        }
+
+        .position5-liq-stripes {
+          animation: position5-liq-stripes 2.4s linear infinite;
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .position5-cash-out-glow {
+            animation: none !important;
+          }
+
+          .position5-liq-stripes {
             animation: none !important;
           }
 

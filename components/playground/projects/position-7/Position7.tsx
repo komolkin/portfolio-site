@@ -378,8 +378,18 @@ const PROGRESS_BAR_MOTION =
 const LIQ_GLOW_RANGE = 18;
 const END_GLOW_RANGE = 22;
 const LIQ_BLOCK_COLOR = "#ff4d5e";
-const LIQ_BLOCK_STRIPES =
-  "repeating-linear-gradient(-45deg, rgba(255,255,255,0.28) 0 3px, transparent 3px 9px)";
+/** Tiled hazard stripes — animate by exactly one tile for a seamless loop */
+const LIQ_STRIPE_TILE_PX = 12;
+const LIQ_BLOCK_STRIPES = `linear-gradient(
+  -45deg,
+  rgba(255,255,255,0.28) 25%,
+  transparent 25%,
+  transparent 50%,
+  rgba(255,255,255,0.28) 50%,
+  rgba(255,255,255,0.28) 75%,
+  transparent 75%,
+  transparent
+)`;
 
 function getLiqLineProximity(fillPercent: number, country: CountrySide) {
   const effectiveFill = country === "england" ? fillPercent : 100 - fillPercent;
@@ -1675,7 +1685,7 @@ export default function Position7() {
 
         {/* Liq. zone — solid block for all bar states */}
         <div
-          className={`pointer-events-none absolute z-[3] transition-[opacity,box-shadow] duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${PROGRESS_BAR_MOTION} ${
+          className={`pointer-events-none absolute z-[3] overflow-hidden transition-[opacity,box-shadow] duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${PROGRESS_BAR_MOTION} ${
             actionsCollapsed
               ? "left-[5px] top-[5px] bottom-[5px] rounded-[7px]"
               : "left-1.5 top-1.5 bottom-1.5 rounded-[6px]"
@@ -1683,7 +1693,6 @@ export default function Position7() {
           style={{
             width: `calc(${LIQ_LINE_PERCENT}% - ${actionsCollapsed ? 5 : 6}px)`,
             backgroundColor: LIQ_BLOCK_COLOR,
-            backgroundImage: LIQ_BLOCK_STRIPES,
             opacity: actionsCollapsed ? 0.9 : 1,
             boxShadow:
               liqLineProximity > 0.15
@@ -1692,7 +1701,15 @@ export default function Position7() {
             ["--liq-pulse-ms" as string]: `${Math.round(320 + (1 - liqLineProximity) * 700)}ms`,
           }}
           aria-hidden
-        />
+        >
+          <div
+            className="position7-liq-stripes absolute inset-0 rounded-[inherit]"
+            style={{
+              backgroundImage: LIQ_BLOCK_STRIPES,
+              backgroundSize: `${LIQ_STRIPE_TILE_PX}px ${LIQ_STRIPE_TILE_PX}px`,
+            }}
+          />
+        </div>
         <span
           className={`pointer-events-none absolute bottom-[11px] z-[3] whitespace-nowrap pl-1.5 text-[8px] font-semibold leading-tight text-white/60 ${PROGRESS_BAR_MOTION} ${
             actionsCollapsed || isCompact
@@ -1800,6 +1817,15 @@ export default function Position7() {
           animation: position7-liq-line-pulse var(--liq-pulse-ms, 700ms) ease-in-out infinite;
         }
 
+        @keyframes position7-liq-stripes {
+          from { background-position: 0 0; }
+          to { background-position: 12px 12px; }
+        }
+
+        .position7-liq-stripes {
+          animation: position7-liq-stripes 2.4s linear infinite;
+        }
+
         @keyframes position7-cash-out-win-blink {
           0%, 100% {
             box-shadow: inset 0 0 0 rgba(93, 217, 120, 0);
@@ -1885,6 +1911,10 @@ export default function Position7() {
           }
 
           .position7-liq-line-pulse {
+            animation: none !important;
+          }
+
+          .position7-liq-stripes {
             animation: none !important;
           }
 
