@@ -356,7 +356,7 @@ function formatMatchClock(totalSeconds: number): string {
 /** Progress fill — Figma Progress rectangles (7425:19765 / 7425:19887) */
 const FILL_COLOR_GREEN = "#1c662d";
 const FILL_COLOR_RED = "#7a0f1c";
-const ENTRY_DASH_COLOR = "#ffe600";
+const ENTRY_DASH_COLOR = "rgba(255,255,255,0.4)";
 
 const CARD_BG_GREEN =
   "linear-gradient(180deg, rgba(93,217,120,0.08) 0%, rgba(93,217,120,0.14) 100%), rgba(29,29,29,0.52)";
@@ -377,7 +377,9 @@ const PROGRESS_BAR_MOTION =
 
 const LIQ_GLOW_RANGE = 18;
 const END_GLOW_RANGE = 22;
-const LIQ_LINE_COLOR_HOT = "#ff0037";
+const LIQ_BLOCK_COLOR = "#ff4d5e";
+const LIQ_BLOCK_STRIPES =
+  "repeating-linear-gradient(-45deg, rgba(255,255,255,0.28) 0 3px, transparent 3px 9px)";
 
 function getLiqLineProximity(fillPercent: number, country: CountrySide) {
   const effectiveFill = country === "england" ? fillPercent : 100 - fillPercent;
@@ -1671,44 +1673,36 @@ export default function Position7() {
           </p>
         </div>
 
-        {/* Liq. vertical line */}
+        {/* Liq. zone — solid block for all bar states */}
         <div
-          className="pointer-events-none absolute inset-y-0 z-[3] -translate-x-1/2"
+          className={`pointer-events-none absolute z-[3] transition-[opacity,box-shadow] duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${PROGRESS_BAR_MOTION} ${
+            actionsCollapsed
+              ? "left-[5px] top-[5px] bottom-[5px] rounded-[7px]"
+              : "left-1.5 top-1.5 bottom-1.5 rounded-[6px]"
+          } ${liqLineProximity > 0.35 ? "position7-liq-line-pulse" : ""}`}
+          style={{
+            width: `calc(${LIQ_LINE_PERCENT}% - ${actionsCollapsed ? 5 : 6}px)`,
+            backgroundColor: LIQ_BLOCK_COLOR,
+            backgroundImage: LIQ_BLOCK_STRIPES,
+            opacity: actionsCollapsed ? 0.9 : 1,
+            boxShadow:
+              liqLineProximity > 0.15
+                ? `0 0 ${8 + liqLineProximity * 18}px rgba(255, 77, 94, ${0.35 + liqLineProximity * 0.65})`
+                : "none",
+            ["--liq-pulse-ms" as string]: `${Math.round(320 + (1 - liqLineProximity) * 700)}ms`,
+          }}
+          aria-hidden
+        />
+        <span
+          className={`pointer-events-none absolute bottom-[11px] z-[3] whitespace-nowrap pl-1.5 text-[8px] font-semibold leading-tight text-white/60 ${PROGRESS_BAR_MOTION} ${
+            actionsCollapsed || isCompact
+              ? "pointer-events-none opacity-0"
+              : "opacity-100"
+          }`}
           style={{ left: `${LIQ_LINE_PERCENT}%` }}
         >
-          <div
-            className={`absolute left-0 rounded-[2px] transition-[opacity,box-shadow,width] duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${PROGRESS_BAR_MOTION} ${
-              actionsCollapsed
-                ? "top-1/2 h-[12px] w-[3px] -translate-y-1/2"
-                : isCompact
-                  ? "top-1 bottom-1 w-[3px]"
-                  : "top-1/2 h-[85%] w-[3px] -translate-y-1/2"
-            } ${
-              liqLineProximity > 0.35
-                ? "position7-liq-line-pulse"
-                : ""
-            }`}
-            style={{
-              backgroundColor: LIQ_LINE_COLOR_HOT,
-              opacity: actionsCollapsed ? 0.85 : 1,
-              boxShadow:
-                liqLineProximity > 0.15
-                  ? `0 0 ${8 + liqLineProximity * 18}px rgba(255, 0, 55, ${0.35 + liqLineProximity * 0.65})`
-                  : "none",
-              ["--liq-pulse-ms" as string]: `${Math.round(320 + (1 - liqLineProximity) * 700)}ms`,
-            }}
-            aria-hidden
-          />
-          <span
-            className={`absolute bottom-[11px] left-2 whitespace-nowrap text-[8px] font-semibold leading-tight text-[#ff0037] ${PROGRESS_BAR_MOTION} ${
-              actionsCollapsed || isCompact
-                ? "pointer-events-none opacity-0"
-                : "opacity-100"
-            }`}
-          >
-            Liq.
-          </span>
-        </div>
+          Liq.
+        </span>
 
         {/* Entry vertical line */}
         <div
@@ -1716,7 +1710,7 @@ export default function Position7() {
           style={{ left: `${ENTRY_LINE_PERCENT}%` }}
         >
           <div
-            className={`absolute left-0 w-0 border-l-2 border-dashed opacity-90 ${PROGRESS_BAR_MOTION} ${
+            className={`absolute left-0 w-0 border-l-2 border-dashed ${PROGRESS_BAR_MOTION} ${
               actionsCollapsed
                 ? "top-1 bottom-1"
                 : isCompact
@@ -1727,12 +1721,11 @@ export default function Position7() {
             aria-hidden
           />
           <span
-            className={`absolute bottom-[11px] left-2 whitespace-nowrap text-[8px] font-semibold leading-tight ${PROGRESS_BAR_MOTION} ${
+            className={`absolute bottom-[11px] left-2 whitespace-nowrap text-[8px] font-semibold leading-tight text-white/60 ${PROGRESS_BAR_MOTION} ${
               actionsCollapsed || isCompact
                 ? "pointer-events-none opacity-0"
                 : "opacity-100"
             }`}
-            style={{ color: ENTRY_DASH_COLOR }}
           >
             Entry
           </span>

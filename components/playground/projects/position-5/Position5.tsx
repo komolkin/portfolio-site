@@ -190,8 +190,10 @@ const FAST_FORWARD_FX_MS = 550;
 /** Progress fill — Figma Progress rectangles (7425:19765 / 7425:19887) */
 const FILL_COLOR_GREEN = "#1c662d";
 const FILL_COLOR_RED = "#7a0f1c";
-const ENTRY_LINE_COLOR_GREEN = "#5dd978";
-const ENTRY_LINE_COLOR_RED = "#ff4d5e";
+const ENTRY_DASH_COLOR = "rgba(255,255,255,0.4)";
+const LIQ_BLOCK_COLOR = "#ff4d5e";
+const LIQ_BLOCK_STRIPES =
+  "repeating-linear-gradient(-45deg, rgba(255,255,255,0.28) 0 3px, transparent 3px 9px)";
 
 const CARD_BG_GREEN =
   "linear-gradient(180deg, rgba(93,217,120,0.08) 0%, rgba(93,217,120,0.14) 100%), rgba(29,29,29,0.52)";
@@ -555,7 +557,6 @@ export default function Position5() {
       ? fillPercent >= ENTRY_LINE_PERCENT
       : fillPercent < ENTRY_LINE_PERCENT;
   const pctColor = isAhead ? "#5dd978" : "#ff7d8a";
-  const entryLineColor = isAhead ? ENTRY_LINE_COLOR_GREEN : ENTRY_LINE_COLOR_RED;
   const cashOutGlow = useMemo(
     () => getCashOutGlow(fillPercent, country),
     [fillPercent, country],
@@ -975,34 +976,30 @@ export default function Position5() {
           </p>
         </div>
 
-        {/* Liq. vertical line */}
+        {/* Liq. zone — solid block for all bar states */}
         <div
-          className="pointer-events-none absolute inset-y-0 z-[3] -translate-x-1/2"
+          className={`pointer-events-none absolute z-[3] ${PROGRESS_BAR_MOTION} ${
+            actionsCollapsed
+              ? "left-[5px] top-[5px] bottom-[5px] rounded-[7px] opacity-90"
+              : "left-1.5 top-1.5 bottom-1.5 rounded-[6px] opacity-100"
+          }`}
+          style={{
+            width: `calc(${LIQ_LINE_PERCENT}% - ${actionsCollapsed ? 5 : 6}px)`,
+            backgroundColor: LIQ_BLOCK_COLOR,
+            backgroundImage: LIQ_BLOCK_STRIPES,
+          }}
+          aria-hidden
+        />
+        <span
+          className={`pointer-events-none absolute bottom-[11px] z-[3] whitespace-nowrap pl-1.5 text-[8px] font-semibold leading-tight text-white/60 ${PROGRESS_BAR_MOTION} ${
+            actionsCollapsed || isCompact
+              ? "pointer-events-none opacity-0"
+              : "opacity-100"
+          }`}
           style={{ left: `${LIQ_LINE_PERCENT}%` }}
         >
-          <div
-            className={`absolute left-0 rounded-[2px] ${PROGRESS_BAR_MOTION} ${
-              actionsCollapsed
-                ? "top-1/2 h-[10px] w-1 -translate-y-1/2 bg-white/40 opacity-60"
-                : isCompact
-                  ? "top-1.5 bottom-1.5 w-[2px] opacity-40"
-                  : "top-1/2 h-[85%] w-[2px] -translate-y-1/2 opacity-40"
-            }`}
-            style={
-              actionsCollapsed ? undefined : { backgroundColor: entryLineColor }
-            }
-            aria-hidden
-          />
-          <span
-            className={`absolute bottom-[11px] left-2 whitespace-nowrap text-[8px] font-semibold leading-tight text-white/60 ${PROGRESS_BAR_MOTION} ${
-              actionsCollapsed || isCompact
-                ? "pointer-events-none opacity-0"
-                : "opacity-100"
-            }`}
-          >
-            Liq.
-          </span>
-        </div>
+          Liq.
+        </span>
 
         {/* Entry vertical line */}
         <div
@@ -1010,14 +1007,14 @@ export default function Position5() {
           style={{ left: `${ENTRY_LINE_PERCENT}%` }}
         >
           <div
-            className={`absolute left-0 w-0 border-l-2 border-dashed opacity-40 ${PROGRESS_BAR_MOTION} ${
+            className={`absolute left-0 w-0 border-l-2 border-dashed ${PROGRESS_BAR_MOTION} ${
               actionsCollapsed
                 ? "top-1 bottom-1"
                 : isCompact
                   ? "top-1.5 bottom-1.5"
                   : "top-1/2 h-[85%] -translate-y-1/2"
             }`}
-            style={{ borderColor: entryLineColor }}
+            style={{ borderColor: ENTRY_DASH_COLOR }}
             aria-hidden
           />
           <span
