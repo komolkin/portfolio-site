@@ -1,7 +1,7 @@
 const GRAPHQL_ENDPOINT = "https://api.github.com/graphql";
 const REST_ENDPOINT = "https://api.github.com";
 
-export interface GitHubMonthCommits {
+export interface GitHubYearCommits {
   commits: number;
   from: string;
   to: string;
@@ -27,14 +27,13 @@ function githubHeaders(token: string): HeadersInit {
   };
 }
 
-/** Start of the calendar month (Paris) through now. */
-export function getCurrentMonthRange(timeZone = "Europe/Paris"): {
+/** Start of the calendar year (Paris) through now. */
+export function getCurrentYearRange(timeZone = "Europe/Paris"): {
   from: string;
   to: string;
   fromDate: string;
   toDate: string;
   year: number;
-  month: number;
 } {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
@@ -47,12 +46,12 @@ export function getCurrentMonthRange(timeZone = "Europe/Paris"): {
   const month = Number(parts.find((p) => p.type === "month")?.value);
   const day = Number(parts.find((p) => p.type === "day")?.value);
 
-  const from = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0)).toISOString();
+  const from = new Date(Date.UTC(year, 0, 1, 0, 0, 0)).toISOString();
   const to = new Date().toISOString();
-  const fromDate = `${year}-${String(month).padStart(2, "0")}-01`;
+  const fromDate = `${year}-01-01`;
   const toDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
-  return { from, to, fromDate, toDate, year, month };
+  return { from, to, fromDate, toDate, year };
 }
 
 async function countCommitsInRepo(
@@ -240,14 +239,14 @@ async function countContributionCommits(
   );
 }
 
-export async function getCurrentMonthCommits(): Promise<GitHubMonthCommits | null> {
+export async function getCurrentYearCommits(): Promise<GitHubYearCommits | null> {
   const { token, username, rawToken } = getCredentialStatus();
   if (!token || !rawToken) {
     console.error("GITHUB_TOKEN is not configured");
     return null;
   }
 
-  const { from, to } = getCurrentMonthRange();
+  const { from, to } = getCurrentYearRange();
 
   try {
     const repoCount = await countCommitsAcrossRepos(rawToken, username, from);

@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getCurrentMonthCommits } from "@/lib/github";
+import { getCurrentYearCommits } from "@/lib/github";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET() {
-  const data = await getCurrentMonthCommits();
+  const data = await getCurrentYearCommits();
 
   if (!data) {
     return NextResponse.json(

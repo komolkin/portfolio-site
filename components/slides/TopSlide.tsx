@@ -26,7 +26,7 @@ export default function TopSlide() {
   const [parisMinutes, setParisMinutes] = useState(0);
   const [parisSeconds, setParisSeconds] = useState(0);
   const [spotifyData, setSpotifyData] = useState<SpotifyData | null>(null);
-  const [monthCommits, setMonthCommits] = useState<number | null>(null);
+  const [yearCommits, setYearCommits] = useState<number | null>(null);
   const [isHovering, setIsHovering] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const artwork = spotifyData?.track?.artwork ?? "";
@@ -74,7 +74,7 @@ export default function TopSlide() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch GitHub commits for the current month
+  // Fetch GitHub commits for the current year
   useEffect(() => {
     const fetchCommits = async () => {
       try {
@@ -82,7 +82,7 @@ export default function TopSlide() {
         if (response.ok) {
           const result = await response.json();
           if (typeof result.commits === "number") {
-            setMonthCommits(result.commits);
+            setYearCommits(result.commits);
           }
         }
       } catch (error) {
@@ -146,7 +146,7 @@ export default function TopSlide() {
               </a>
             </span>
           ) : null}
-          {monthCommits !== null ? (
+          {yearCommits !== null ? (
             <span className="block leading-none">
               <span className="opacity-40">made</span>{" "}
               <a
@@ -156,12 +156,12 @@ export default function TopSlide() {
                 className="hover:text-muted-foreground transition-colors"
               >
                 <NumberFlow
-                  value={monthCommits}
+                  value={yearCommits}
                   style={{ ["--number-flow-mask-height" as string]: "0em" }}
                 />{" "}
                 commits
               </a>{" "}
-              <span className="opacity-40">this month</span>
+              <span className="opacity-40">this year</span>
             </span>
           ) : null}
         </h1>
