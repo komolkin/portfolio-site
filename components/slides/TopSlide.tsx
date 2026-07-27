@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import NumberFlow from "@number-flow/react";
 import { useHeartRate } from "@/lib/heartRateContext";
 
@@ -28,7 +28,6 @@ export default function TopSlide() {
   const [spotifyData, setSpotifyData] = useState<SpotifyData | null>(null);
   const [isHovering, setIsHovering] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
-  const songLinkRef = useRef<HTMLAnchorElement>(null);
   const artwork = spotifyData?.track?.artwork ?? "";
 
   // Update Paris time every second
@@ -109,12 +108,28 @@ export default function TopSlide() {
       <div className="flex-1 flex items-center px-6 md:px-8 lg:px-10">
         <h1 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-[1.2] max-w-2xl xl:max-w-4xl">
           Ilya Komolkin
+          {spotifyData?.isPlaying && spotifyData.track ? (
+            <span className="block">
+              <span className="opacity-40">is listening</span>{" "}
+              <a
+                href={spotifyData.track.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-muted-foreground transition-colors"
+                onMouseEnter={() => setIsHovering(true)}
+                onMouseLeave={() => setIsHovering(false)}
+                onMouseMove={handleMouseMove}
+              >
+                {spotifyData.track.title} – {spotifyData.track.artist}
+              </a>
+            </span>
+          ) : null}
         </h1>
       </div>
 
       {/* Bottom Info Bar */}
       <div className="shrink-0 px-6 md:px-8 lg:px-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:pb-8 lg:pb-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-4">
           {/* Location */}
           <div className="space-y-1">
             <div className="text-sm text-muted-foreground">Location</div>
@@ -177,33 +192,6 @@ export default function TopSlide() {
             <div className="text-sm text-muted-foreground">Heart Rate</div>
             <div className="text-sm text-foreground font-mono">
               <NumberFlow value={bpm} suffix=" BPM" />
-            </div>
-          </div>
-
-          {/* Recently Played */}
-          <div
-            className="space-y-1 cursor-pointer"
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
-            onMouseMove={handleMouseMove}
-          >
-            <div className="text-sm text-muted-foreground">
-              {spotifyData?.isPlaying ? "Now playing" : "Recently played"}
-            </div>
-            <div className="text-sm text-foreground">
-              {spotifyData?.track ? (
-                <a
-                  ref={songLinkRef}
-                  href={spotifyData.track.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-muted-foreground transition-colors"
-                >
-                  {spotifyData.track.title} – {spotifyData.track.artist}
-                </a>
-              ) : (
-                "–"
-              )}
             </div>
           </div>
         </div>
