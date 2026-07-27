@@ -13,9 +13,26 @@ export async function GET(request: Request) {
   }
 
   if (!code) {
-    return NextResponse.json(
-      { error: 'No authorization code provided' },
-      { status: 400 }
+    const url = new URL(request.url);
+    const authUrl = `${url.protocol}//${url.host}/api/spotify/auth`;
+    return new NextResponse(
+      `<!DOCTYPE html>
+<html>
+<head><title>Start Spotify auth</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 48px auto; padding: 24px; background: #000; color: #fff; }
+  a { color: #1db954; }
+</style>
+</head>
+<body>
+  <h1>No authorization code</h1>
+  <p>Open the auth URL first — don't visit the callback directly.</p>
+  <p><a href="${authUrl}">${authUrl}</a></p>
+  <p>Also confirm this redirect URI is listed in the Spotify Developer Dashboard:</p>
+  <p><code>${url.protocol}//${url.host}/api/spotify/callback</code></p>
+</body>
+</html>`,
+      { status: 400, headers: { "Content-Type": "text/html" } }
     );
   }
 
