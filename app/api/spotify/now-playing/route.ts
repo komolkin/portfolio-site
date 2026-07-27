@@ -1,15 +1,17 @@
-import { NextResponse } from 'next/server';
-import { getNowPlaying } from '@/lib/spotify';
+import { NextResponse } from "next/server";
+import { getNowPlaying } from "@/lib/spotify";
 
-export const revalidate = 15;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET() {
   const data = await getNowPlaying();
-  
-  if (!data) {
-    return NextResponse.json({ isPlaying: false, track: null }, { status: 200 });
-  }
 
-  return NextResponse.json(data);
+  const body = data ?? { isPlaying: false, track: null };
+
+  return NextResponse.json(body, {
+    headers: {
+      "Cache-Control": "no-store, max-age=0",
+    },
+  });
 }
-

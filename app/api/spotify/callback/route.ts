@@ -117,15 +117,19 @@ export async function GET(request: Request) {
 <body>
   <div class="container">
     <h1>✅ Success! Your Spotify Refresh Token</h1>
-    <p>Copy this refresh token and add it to your <code>.env.local</code> file:</p>
+    <p>Copy this refresh token into your env vars:</p>
     <div class="token">${refreshToken}</div>
     <div class="instructions">
-      <h3>Next Steps:</h3>
+      <h3>Production (Vercel)</h3>
       <ol>
-        <li>Open your <code>.env.local</code> file in the project root</li>
-        <li>Find the line: <code>SPOTIFY_REFRESH_TOKEN=your_refresh_token_here</code></li>
-        <li>Replace <code>your_refresh_token_here</code> with the token above</li>
-        <li>Save the file and restart your dev server</li>
+        <li>Vercel → Project → Settings → Environment Variables</li>
+        <li>Set <code>SPOTIFY_REFRESH_TOKEN</code> (and client id/secret if missing)</li>
+        <li>Redeploy so the new token is picked up</li>
+      </ol>
+      <h3>Local</h3>
+      <ol>
+        <li>Set <code>SPOTIFY_REFRESH_TOKEN</code> in <code>.env.local</code></li>
+        <li>Restart the dev server</li>
       </ol>
     </div>
     <div class="warning">
