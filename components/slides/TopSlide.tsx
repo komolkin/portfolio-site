@@ -128,10 +128,10 @@ export default function TopSlide() {
 
       {/* Main Content */}
       <div className="flex-1 flex items-center px-6 md:px-8 lg:px-10">
-        <h1 className="flex flex-col gap-1 text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-[1.2] max-w-2xl xl:max-w-4xl">
-          <span>Ilya Komolkin</span>
+        <h1 className="flex flex-col gap-2 md:gap-3 text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-none max-w-2xl xl:max-w-4xl">
+          <span className="block leading-none">Ilya Komolkin</span>
           {spotifyData?.isPlaying && spotifyData.track ? (
-            <span>
+            <span className="block leading-none">
               <span className="opacity-40">is listening</span>{" "}
               <a
                 href={spotifyData.track.url}
@@ -147,9 +147,21 @@ export default function TopSlide() {
             </span>
           ) : null}
           {monthCommits !== null ? (
-            <span>
-              <span className="opacity-40">committed</span>{" "}
-              <NumberFlow value={monthCommits} /> times this month
+            <span className="block leading-none">
+              <span className="opacity-40">made</span>{" "}
+              <a
+                href="https://github.com/komolkin"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-muted-foreground transition-colors"
+              >
+                <NumberFlow
+                  value={monthCommits}
+                  style={{ ["--number-flow-mask-height" as string]: "0em" }}
+                />{" "}
+                commits
+              </a>{" "}
+              <span className="opacity-40">this month</span>
             </span>
           ) : null}
         </h1>
