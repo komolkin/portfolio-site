@@ -26,6 +26,7 @@ export default function TopSlide() {
   const [parisMinutes, setParisMinutes] = useState(0);
   const [parisSeconds, setParisSeconds] = useState(0);
   const [spotifyData, setSpotifyData] = useState<SpotifyData | null>(null);
+  const [monthCommits, setMonthCommits] = useState<number | null>(null);
   const [isHovering, setIsHovering] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const artwork = spotifyData?.track?.artwork ?? "";
@@ -73,6 +74,27 @@ export default function TopSlide() {
     return () => clearInterval(interval);
   }, []);
 
+  // Fetch GitHub commits for the current month
+  useEffect(() => {
+    const fetchCommits = async () => {
+      try {
+        const response = await fetch("/api/github/commits");
+        if (response.ok) {
+          const result = await response.json();
+          if (typeof result.commits === "number") {
+            setMonthCommits(result.commits);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch GitHub commits:", error);
+      }
+    };
+
+    fetchCommits();
+    const interval = setInterval(fetchCommits, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleMouseMove = (e: React.MouseEvent) => {
     setCursorPosition({ x: e.clientX, y: e.clientY });
   };
@@ -106,10 +128,10 @@ export default function TopSlide() {
 
       {/* Main Content */}
       <div className="flex-1 flex items-center px-6 md:px-8 lg:px-10">
-        <h1 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-[1.2] max-w-2xl xl:max-w-4xl">
-          Ilya Komolkin
+        <h1 className="flex flex-col gap-1 text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-[1.2] max-w-2xl xl:max-w-4xl">
+          <span>Ilya Komolkin</span>
           {spotifyData?.isPlaying && spotifyData.track ? (
-            <span className="block">
+            <span>
               <span className="opacity-40">is listening</span>{" "}
               <a
                 href={spotifyData.track.url}
@@ -122,6 +144,12 @@ export default function TopSlide() {
               >
                 {spotifyData.track.title} – {spotifyData.track.artist}
               </a>
+            </span>
+          ) : null}
+          {monthCommits !== null ? (
+            <span>
+              <span className="opacity-40">committed</span>{" "}
+              <NumberFlow value={monthCommits} /> times this month
             </span>
           ) : null}
         </h1>
