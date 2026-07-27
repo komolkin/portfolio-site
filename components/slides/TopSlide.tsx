@@ -148,7 +148,7 @@ export default function TopSlide() {
           ) : null}
           {yearCommits !== null ? (
             <span className="block leading-none">
-              <span className="opacity-40">made</span>{" "}
+              <span className="opacity-40">pushed</span>{" "}
               <a
                 href="https://github.com/komolkin"
                 target="_blank"
