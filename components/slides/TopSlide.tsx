@@ -212,13 +212,15 @@ export default function TopSlide() {
                   </a>{" "}
                   <span className="opacity-40">this year</span>
                   <span className="opacity-40">, his HR is</span>{" "}
-                  <span className="inline-flex items-baseline font-mono">
-                    <NumberFlow
-                      value={bpm}
-                      style={{ ["--number-flow-mask-height" as string]: "0em" }}
-                    />
+                  <span className="whitespace-nowrap">
+                    <span className="font-mono">
+                      <NumberFlow
+                        value={bpm}
+                        style={{ ["--number-flow-mask-height" as string]: "0em" }}
+                      />
+                    </span>{" "}
+                    BPM
                   </span>{" "}
-                  BPM{" "}
                   <span className="opacity-40">and it&apos;s</span>{" "}
                   <span className="inline-flex items-baseline font-mono">
                     <NumberFlow
