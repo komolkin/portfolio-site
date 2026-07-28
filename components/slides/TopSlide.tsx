@@ -128,41 +128,52 @@ export default function TopSlide() {
 
       {/* Main Content */}
       <div className="flex-1 flex items-center px-6 md:px-8 lg:px-10">
-        <h1 className="flex flex-col gap-2 md:gap-3 text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-none max-w-2xl xl:max-w-4xl">
-          <span className="block leading-none">Ilya Komolkin</span>
-          {spotifyData?.isPlaying && spotifyData.track ? (
-            <span className="block leading-none">
-              <span className="opacity-40">is listening</span>{" "}
-              <a
-                href={spotifyData.track.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-muted-foreground transition-colors"
-                onMouseEnter={() => setIsHovering(true)}
-                onMouseLeave={() => setIsHovering(false)}
-                onMouseMove={handleMouseMove}
-              >
-                {spotifyData.track.title} – {spotifyData.track.artist}
-              </a>
-            </span>
-          ) : null}
-          {yearCommits !== null ? (
-            <span className="block leading-none">
-              <span className="opacity-40">pushed</span>{" "}
-              <a
-                href="https://github.com/komolkin"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-muted-foreground transition-colors"
-              >
-                <NumberFlow
-                  value={yearCommits}
-                  style={{ ["--number-flow-mask-height" as string]: "0em" }}
-                />{" "}
-                commits
-              </a>{" "}
-              <span className="opacity-40">this year</span>
-            </span>
+        <h1 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-[1.15] max-w-2xl xl:max-w-4xl">
+          Ilya Komolkin
+          {spotifyData?.isPlaying && spotifyData.track || yearCommits !== null ? (
+            <>
+              <br />
+              {spotifyData?.isPlaying && spotifyData.track ? (
+                <>
+                  <span className="opacity-40">is listening to</span>{" "}
+                  <a
+                    href={spotifyData.track.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-muted-foreground transition-colors"
+                    onMouseEnter={() => setIsHovering(true)}
+                    onMouseLeave={() => setIsHovering(false)}
+                    onMouseMove={handleMouseMove}
+                  >
+                    {spotifyData.track.title} – {spotifyData.track.artist}
+                  </a>
+                  {yearCommits !== null ? (
+                    <span className="opacity-40">,</span>
+                  ) : null}
+                </>
+              ) : null}
+              {spotifyData?.isPlaying && spotifyData.track && yearCommits !== null
+                ? " "
+                : null}
+              {yearCommits !== null ? (
+                <>
+                  <span className="opacity-40">pushed</span>{" "}
+                  <a
+                    href="https://github.com/komolkin"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-muted-foreground transition-colors"
+                  >
+                    <NumberFlow
+                      value={yearCommits}
+                      style={{ ["--number-flow-mask-height" as string]: "0em" }}
+                    />{" "}
+                    commits
+                  </a>{" "}
+                  <span className="opacity-40">this year</span>
+                </>
+              ) : null}
+            </>
           ) : null}
         </h1>
       </div>
