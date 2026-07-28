@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
+import { usePathname } from "next/navigation";
+import { isPlaygroundDeepLink } from "@/components/playground/playground-route";
 
 const tabs = [
   { id: "top", label: "About" },
@@ -9,7 +11,10 @@ const tabs = [
 ];
 
 export default function HeaderNav() {
-  const [activeTab, setActiveTab] = useState("top");
+  const pathname = usePathname();
+  const [activeTab, setActiveTab] = useState(() =>
+    pathname && isPlaygroundDeepLink(pathname) ? "playground" : "top"
+  );
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const navRef = useRef<HTMLDivElement>(null);

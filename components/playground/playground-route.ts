@@ -36,3 +36,10 @@ export function playgroundIndexFromPathname(pathname: string): number {
   }
   return 1;
 }
+
+/** True for deep links like `/5` (not bare `/`). */
+export function isPlaygroundDeepLink(pathname: string): boolean {
+  const m = pathname.match(/^\/(\d+)$/);
+  if (!m) return false;
+  return parsePlaygroundPathSegment(m[1]) !== null;
+}

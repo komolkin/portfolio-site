@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useLayoutEffect, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import PlaygroundNav from "@/components/playground/PlaygroundNav";
 import {
   projectIdFromIndex1,
   playgroundIndexFromPathname,
+  isPlaygroundDeepLink,
 } from "@/components/playground/playground-route";
 import ResolvedCard from "@/components/playground/projects/resolved-card/ResolvedCard";
 import LeverageSelector from "@/components/playground/projects/leverage-selector/LeverageSelector";
@@ -27,6 +28,16 @@ export default function PlaygroundSlide() {
     () => projectIdFromIndex1(playgroundIndexFromPathname(pathname ?? "/")),
     [pathname]
   );
+
+  // `/5` etc. should land on the playground slide, not About
+  useLayoutEffect(() => {
+    if (!pathname || !isPlaygroundDeepLink(pathname)) return;
+
+    const playground = document.getElementById("playground");
+    if (!playground) return;
+
+    playground.scrollIntoView({ behavior: "auto", block: "start" });
+  }, [pathname]);
 
   const zoomClass =
     activeProject === "ball" ||
