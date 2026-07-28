@@ -14,6 +14,10 @@ import {
   type StreamingWord,
 } from "@/components/StreamingWords";
 import type { ContributionCalendarWeek } from "@/lib/github";
+import {
+  readLastSpotifyTrack,
+  writeLastSpotifyTrack,
+} from "@/lib/spotify-last-track";
 
 interface SpotifyTrack {
   title: string;
@@ -123,16 +127,16 @@ export default function TopSlide() {
       current: { track: SpotifyTrack; seenAt: number } | null;
     } = { current: null };
 
-    // Drop stale browser cache from an earlier implementation
-    try {
-      localStorage.removeItem("spotify-last-track");
-    } catch {
-      // ignore private mode
+    const cachedTrack = readLastSpotifyTrack();
+    if (cachedTrack) {
+      setSpotifyData({ isPlaying: false, track: cachedTrack });
+      setSpotifyResolved(true);
     }
 
     const resolveSpotifyData = (result: SpotifyData): SpotifyData | null => {
       if (result.isPlaying && result.track) {
         lastLiveTrackRef.current = { track: result.track, seenAt: Date.now() };
+        writeLastSpotifyTrack(result.track);
         return result;
       }
 
@@ -149,15 +153,22 @@ export default function TopSlide() {
             Number.isNaN(recentPlayedAt) ||
             recentPlayedAt < live.seenAt - 60_000
           ) {
+            writeLastSpotifyTrack(live.track);
             return { isPlaying: false, track: live.track };
           }
         }
+        writeLastSpotifyTrack(result.track);
         return result;
       }
 
       const live = lastLiveTrackRef.current;
       if (live && Date.now() - live.seenAt < 30 * 60_000) {
+        writeLastSpotifyTrack(live.track);
         return { isPlaying: false, track: live.track };
+      }
+
+      if (cachedTrack) {
+        return { isPlaying: false, track: cachedTrack };
       }
 
       return null;
