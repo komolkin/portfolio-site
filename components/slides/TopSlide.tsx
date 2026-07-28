@@ -47,8 +47,7 @@ type TitleSegment =
       words: StreamingWord[];
     };
 
-const TRACK_POPUP_SIZE = 240;
-const TRACK_POPUP_SIZE_MOBILE = 120;
+const TRACK_POPUP_SIZE = 120;
 const COMMITS_GRAPH_PADDING = 10;
 
 function getCommitsPopupSize(weekCount: number) {
@@ -84,7 +83,6 @@ export default function TopSlide() {
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   /** Mobile only: which preview link is armed for a second-tap navigation. */
   const [touchArmedPreview, setTouchArmedPreview] = useState<HoverPreview>(null);
-  const [isMobilePreview, setIsMobilePreview] = useState(false);
   const trackLinkRef = useRef<HTMLAnchorElement>(null);
   const commitsLinkRef = useRef<HTMLAnchorElement>(null);
   const spotifyInitialFetchDoneRef = useRef(false);
@@ -97,16 +95,8 @@ export default function TopSlide() {
   const commitsPopupSize = contributionWeeks
     ? getCommitsPopupSize(contributionWeeks.length)
     : { width: 0, height: 0 };
-  const previewWidth = showCommitsPreview
-    ? commitsPopupSize.width
-    : isMobilePreview
-      ? TRACK_POPUP_SIZE_MOBILE
-      : TRACK_POPUP_SIZE;
-  const previewHeight = showCommitsPreview
-    ? commitsPopupSize.height
-    : isMobilePreview
-      ? TRACK_POPUP_SIZE_MOBILE
-      : TRACK_POPUP_SIZE;
+  const previewWidth = showCommitsPreview ? commitsPopupSize.width : TRACK_POPUP_SIZE;
+  const previewHeight = showCommitsPreview ? commitsPopupSize.height : TRACK_POPUP_SIZE;
 
   // Update Paris time every second
   useEffect(() => {
@@ -119,14 +109,6 @@ export default function TopSlide() {
     updateTime();
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 767px)");
-    const sync = () => setIsMobilePreview(media.matches);
-    sync();
-    media.addEventListener("change", sync);
-    return () => media.removeEventListener("change", sync);
   }, []);
 
   useEffect(() => {
@@ -499,8 +481,8 @@ export default function TopSlide() {
             }
             className="h-full w-full object-cover rounded-lg shadow-2xl"
             style={{
-              minWidth: isMobilePreview ? TRACK_POPUP_SIZE_MOBILE : TRACK_POPUP_SIZE,
-              minHeight: isMobilePreview ? TRACK_POPUP_SIZE_MOBILE : TRACK_POPUP_SIZE,
+              minWidth: TRACK_POPUP_SIZE,
+              minHeight: TRACK_POPUP_SIZE,
             }}
           />
         ) : null}
