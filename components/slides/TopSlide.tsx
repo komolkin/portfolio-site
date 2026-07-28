@@ -43,7 +43,6 @@ export default function TopSlide() {
   const { bpm } = useHeartRate();
   const [parisHours, setParisHours] = useState(0);
   const [parisMinutes, setParisMinutes] = useState(0);
-  const [parisSeconds, setParisSeconds] = useState(0);
   const [spotifyData, setSpotifyData] = useState<SpotifyData | null>(null);
   const [yearCommits, setYearCommits] = useState<number | null>(null);
   const [contributionWeeks, setContributionWeeks] = useState<ContributionCalendarWeek[] | null>(
@@ -68,7 +67,6 @@ export default function TopSlide() {
       const parisDate = getTimeInTimezone("Europe/Paris");
       setParisHours(parisDate.getHours());
       setParisMinutes(parisDate.getMinutes());
-      setParisSeconds(parisDate.getSeconds());
     };
 
     updateTime();
@@ -309,7 +307,7 @@ export default function TopSlide() {
                       style={{ ["--number-flow-mask-height" as string]: "0em" }}
                     />
                   </span>{" "}
-                  <span className="opacity-40">now.</span>
+                  <span className="opacity-40">now in Paris.</span>
                 </>
               ) : null}
             </>
@@ -319,62 +317,35 @@ export default function TopSlide() {
 
       {/* Bottom Info Bar */}
       <div className="shrink-0 px-6 md:px-8 lg:px-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:pb-8 lg:pb-10">
-        <div className="grid grid-cols-2 gap-8 md:gap-4">
-          {/* Location */}
-          <div className="space-y-1">
-            <div className="text-sm text-muted-foreground">Location</div>
-            <div className="text-sm text-foreground flex items-center gap-1">
-              <span>Paris,</span>
-              <span className="font-mono flex items-center">
-                <NumberFlow
-                  value={parisHours}
-                  format={{ minimumIntegerDigits: 2 }}
-                />
-                <span>:</span>
-                <NumberFlow
-                  value={parisMinutes}
-                  format={{ minimumIntegerDigits: 2 }}
-                />
-                <span>:</span>
-                <NumberFlow
-                  value={parisSeconds}
-                  format={{ minimumIntegerDigits: 2 }}
-                />
-              </span>
-            </div>
-          </div>
-
-          {/* Quick Links */}
-          <div className="space-y-1">
-            <div className="text-sm text-muted-foreground">Quick Links</div>
-            <div className="text-sm text-foreground">
-              <a
-                href="https://x.com/dappdesigner"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-muted-foreground transition-colors"
-              >
-                X
-              </a>
-              ,{" "}
-              <a
-                href="https://www.instagram.com/komolkin/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-muted-foreground transition-colors"
-              >
-                Instagram
-              </a>
-              ,{" "}
-              <a
-                href="https://github.com/komolkin"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-muted-foreground transition-colors"
-              >
-                GitHub
-              </a>
-            </div>
+        <div className="space-y-1">
+          <div className="text-sm text-muted-foreground">Quick Links</div>
+          <div className="text-sm text-foreground">
+            <a
+              href="https://x.com/dappdesigner"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-muted-foreground transition-colors"
+            >
+              X
+            </a>
+            ,{" "}
+            <a
+              href="https://www.instagram.com/komolkin/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-muted-foreground transition-colors"
+            >
+              Instagram
+            </a>
+            ,{" "}
+            <a
+              href="https://github.com/komolkin"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-muted-foreground transition-colors"
+            >
+              GitHub
+            </a>
           </div>
         </div>
       </div>
