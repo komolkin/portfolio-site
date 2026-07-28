@@ -390,18 +390,16 @@ export default function TopSlide() {
           key: "commits-count",
           delayIndex: delayIndex.current++,
           content: (
-            <span className="inline-flex items-baseline font-mono">
-              <NumberFlow
-                value={yearCommits}
-                style={{ ["--number-flow-mask-height" as string]: "0em" }}
-              />
+            <span className="whitespace-nowrap">
+              <span className="inline-flex items-baseline font-mono">
+                <NumberFlow
+                  value={yearCommits}
+                  style={{ ["--number-flow-mask-height" as string]: "0em" }}
+                />
+              </span>{" "}
+              commits{" "}
             </span>
           ),
-        },
-        {
-          key: "commits-label",
-          delayIndex: delayIndex.current++,
-          content: <> commits </>,
         },
       ];
       segments.push({
