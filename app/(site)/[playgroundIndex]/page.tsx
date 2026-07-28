@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import HomePage from "@/components/HomePage";
 import { parsePlaygroundPathSegment } from "@/components/playground/playground-route";
 
 type Props = {
@@ -9,5 +8,5 @@ type Props = {
 export default function PlaygroundIndexPage({ params }: Props) {
   const n = parsePlaygroundPathSegment(params.playgroundIndex);
   if (n === null) notFound();
-  return <HomePage />;
+  return null;
 }
