@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import NumberFlow from "@number-flow/react";
 import { useHeartRate } from "@/lib/heartRateContext";
 import ContributionGraph, {
@@ -39,6 +39,12 @@ function getTimeInTimezone(timezone: string): Date {
   return new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
 }
 
+/** True when the device lacks real hover (phones / most tablets). */
+function isTouchLikePointer(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(hover: none), (pointer: coarse)").matches;
+}
+
 export default function TopSlide() {
   const { bpm } = useHeartRate();
   const [parisHours, setParisHours] = useState(0);
@@ -50,6 +56,10 @@ export default function TopSlide() {
   );
   const [hoverPreview, setHoverPreview] = useState<HoverPreview>(null);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  /** On touch: which preview link is armed for a second-tap navigation. */
+  const [touchArmedPreview, setTouchArmedPreview] = useState<HoverPreview>(null);
+  const trackLinkRef = useRef<HTMLAnchorElement>(null);
+  const commitsLinkRef = useRef<HTMLAnchorElement>(null);
   const artwork = spotifyData?.track?.artwork ?? "";
   const showTrackPreview = hoverPreview === "track" && Boolean(artwork) && cursorPosition.y > 0;
   const showCommitsPreview =
@@ -189,8 +199,50 @@ export default function TopSlide() {
     return () => clearInterval(interval);
   }, []);
 
+  // Dismiss touch-armed preview when tapping outside the active link
+  useEffect(() => {
+    if (!touchArmedPreview) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      const activeLink =
+        touchArmedPreview === "track" ? trackLinkRef.current : commitsLinkRef.current;
+      if (activeLink && target && activeLink.contains(target)) return;
+
+      setTouchArmedPreview(null);
+      setHoverPreview(null);
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [touchArmedPreview]);
+
   const handleMouseMove = (e: React.MouseEvent) => {
     setCursorPosition({ x: e.clientX, y: e.clientY });
+  };
+
+  const clearHoverPreview = () => {
+    if (isTouchLikePointer() && touchArmedPreview) return;
+    setHoverPreview(null);
+  };
+
+  const handlePreviewClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    preview: "track" | "commits"
+  ) => {
+    if (!isTouchLikePointer()) return;
+
+    if (touchArmedPreview !== preview) {
+      e.preventDefault();
+      setTouchArmedPreview(preview);
+      setHoverPreview(preview);
+      setCursorPosition({ x: e.clientX, y: e.clientY });
+      return;
+    }
+
+    // Second tap: follow the link and clear the preview
+    setTouchArmedPreview(null);
+    setHoverPreview(null);
   };
 
   return (
@@ -246,13 +298,17 @@ export default function TopSlide() {
                     {spotifyData.isPlaying ? "is listening to" : "listened to"}
                   </span>{" "}
                   <a
+                    ref={trackLinkRef}
                     href={spotifyData.track.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-muted-foreground transition-colors"
-                    onMouseEnter={() => setHoverPreview("track")}
-                    onMouseLeave={() => setHoverPreview(null)}
+                    onMouseEnter={() => {
+                      if (!isTouchLikePointer()) setHoverPreview("track");
+                    }}
+                    onMouseLeave={clearHoverPreview}
                     onMouseMove={handleMouseMove}
+                    onClick={(e) => handlePreviewClick(e, "track")}
                   >
                     {spotifyData.track.title} – {spotifyData.track.artist}
                   </a>
@@ -266,13 +322,17 @@ export default function TopSlide() {
                 <>
                   <span className="opacity-40">pushed</span>{" "}
                   <a
+                    ref={commitsLinkRef}
                     href="https://github.com/komolkin"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-muted-foreground transition-colors"
-                    onMouseEnter={() => setHoverPreview("commits")}
-                    onMouseLeave={() => setHoverPreview(null)}
+                    onMouseEnter={() => {
+                      if (!isTouchLikePointer()) setHoverPreview("commits");
+                    }}
+                    onMouseLeave={clearHoverPreview}
                     onMouseMove={handleMouseMove}
+                    onClick={(e) => handlePreviewClick(e, "commits")}
                   >
                     <span className="inline-flex items-baseline font-mono">
                       <NumberFlow
