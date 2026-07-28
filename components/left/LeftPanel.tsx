@@ -92,7 +92,7 @@ export default function LeftPanel() {
       }
     };
     fetchSpotify();
-    const interval = setInterval(fetchSpotify, 30_000);
+    const interval = setInterval(fetchSpotify, 15000);
     return () => clearInterval(interval);
   }, []);
 

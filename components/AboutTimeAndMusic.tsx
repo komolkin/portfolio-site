@@ -54,7 +54,7 @@ export default function AboutTimeAndMusic() {
 
     fetchNowPlaying();
     // Poll every 15 seconds
-    const interval = setInterval(fetchNowPlaying, 30_000);
+    const interval = setInterval(fetchNowPlaying, 15000);
 
     return () => clearInterval(interval);
   }, []);

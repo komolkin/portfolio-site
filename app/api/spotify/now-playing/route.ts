@@ -11,8 +11,7 @@ export async function GET() {
 
   return NextResponse.json(body, {
     headers: {
-      // Short public cache — Spotify quota is limited; server also caches in-memory.
-      "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+      "Cache-Control": "no-store, max-age=0",
     },
   });
 }
