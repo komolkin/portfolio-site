@@ -88,19 +88,26 @@ body > * {
 
 /* Scroll snapping for slides */
 .slides-scroll {
+  display: flex;
+  flex-direction: column;
   scroll-snap-type: y mandatory;
   overflow-y: auto;
+  overflow-x: hidden;
   height: 100dvh;
   scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .slide {
+  flex: 0 0 100dvh;
   scroll-snap-align: start;
+  scroll-snap-stop: always;
 }
 
-@media (max-width: 767px) {
-  .slides-scroll {
-    scroll-snap-type: y proximity;
+@media (min-width: 768px) {
+  .slide {
+    scroll-snap-stop: normal;
   }
 }
 

@@ -209,12 +209,14 @@ export default function TopSlide() {
                     commits
                   </a>{" "}
                   <span className="opacity-40">this year</span>
-                  <span className="opacity-40">, the HR is</span>{" "}
-                  <NumberFlow
-                    value={bpm}
-                    suffix=" BPM"
-                    style={{ ["--number-flow-mask-height" as string]: "0em" }}
-                  />{" "}
+                  <span className="opacity-40">, his HR is</span>{" "}
+                  <span className="inline-flex items-baseline font-mono">
+                    <NumberFlow
+                      value={bpm}
+                      style={{ ["--number-flow-mask-height" as string]: "0em" }}
+                    />
+                  </span>{" "}
+                  BPM{" "}
                   <span className="opacity-40">and it&apos;s</span>{" "}
                   <span className="inline-flex items-baseline font-mono">
                     <NumberFlow
