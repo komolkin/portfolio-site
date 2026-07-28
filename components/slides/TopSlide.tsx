@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import NumberFlow from "@number-flow/react";
 import { useHeartRate } from "@/lib/heartRateContext";
 import ContributionGraph, {
@@ -39,11 +39,16 @@ function getTimeInTimezone(timezone: string): Date {
   return new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
 }
 
+/** Mobile viewport only (below Tailwind `md`). Desktop keeps hover + single click. */
+function isMobileViewport(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(max-width: 767px)").matches;
+}
+
 export default function TopSlide() {
   const { bpm } = useHeartRate();
   const [parisHours, setParisHours] = useState(0);
   const [parisMinutes, setParisMinutes] = useState(0);
-  const [parisSeconds, setParisSeconds] = useState(0);
   const [spotifyData, setSpotifyData] = useState<SpotifyData | null>(null);
   const [yearCommits, setYearCommits] = useState<number | null>(null);
   const [contributionWeeks, setContributionWeeks] = useState<ContributionCalendarWeek[] | null>(
@@ -51,6 +56,10 @@ export default function TopSlide() {
   );
   const [hoverPreview, setHoverPreview] = useState<HoverPreview>(null);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  /** Mobile only: which preview link is armed for a second-tap navigation. */
+  const [touchArmedPreview, setTouchArmedPreview] = useState<HoverPreview>(null);
+  const trackLinkRef = useRef<HTMLAnchorElement>(null);
+  const commitsLinkRef = useRef<HTMLAnchorElement>(null);
   const artwork = spotifyData?.track?.artwork ?? "";
   const showTrackPreview = hoverPreview === "track" && Boolean(artwork) && cursorPosition.y > 0;
   const showCommitsPreview =
@@ -68,7 +77,6 @@ export default function TopSlide() {
       const parisDate = getTimeInTimezone("Europe/Paris");
       setParisHours(parisDate.getHours());
       setParisMinutes(parisDate.getMinutes());
-      setParisSeconds(parisDate.getSeconds());
     };
 
     updateTime();
@@ -191,8 +199,54 @@ export default function TopSlide() {
     return () => clearInterval(interval);
   }, []);
 
+  // Mobile only: dismiss armed preview when tapping outside the active link
+  useEffect(() => {
+    if (!touchArmedPreview) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!isMobileViewport()) return;
+
+      const target = event.target as Node | null;
+      const activeLink =
+        touchArmedPreview === "track" ? trackLinkRef.current : commitsLinkRef.current;
+      if (activeLink && target && activeLink.contains(target)) return;
+
+      setTouchArmedPreview(null);
+      setHoverPreview(null);
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [touchArmedPreview]);
+
   const handleMouseMove = (e: React.MouseEvent) => {
     setCursorPosition({ x: e.clientX, y: e.clientY });
+  };
+
+  const clearHoverPreview = () => {
+    // Don't clear an armed mobile preview via mouseleave
+    if (isMobileViewport() && touchArmedPreview) return;
+    setHoverPreview(null);
+  };
+
+  /** Mobile only: first tap = preview, second tap = follow link. Desktop: no-op. */
+  const handlePreviewClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    preview: "track" | "commits"
+  ) => {
+    if (!isMobileViewport()) return;
+
+    if (touchArmedPreview !== preview) {
+      e.preventDefault();
+      setTouchArmedPreview(preview);
+      setHoverPreview(preview);
+      setCursorPosition({ x: e.clientX, y: e.clientY });
+      return;
+    }
+
+    // Second tap: follow the link and clear the preview
+    setTouchArmedPreview(null);
+    setHoverPreview(null);
   };
 
   return (
@@ -248,13 +302,17 @@ export default function TopSlide() {
                     {spotifyData.isPlaying ? "is listening to" : "listened to"}
                   </span>{" "}
                   <a
+                    ref={trackLinkRef}
                     href={spotifyData.track.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-muted-foreground transition-colors"
-                    onMouseEnter={() => setHoverPreview("track")}
-                    onMouseLeave={() => setHoverPreview(null)}
+                    onMouseEnter={() => {
+                      if (!isMobileViewport()) setHoverPreview("track");
+                    }}
+                    onMouseLeave={clearHoverPreview}
                     onMouseMove={handleMouseMove}
+                    onClick={(e) => handlePreviewClick(e, "track")}
                   >
                     {spotifyData.track.title} – {spotifyData.track.artist}
                   </a>
@@ -268,13 +326,17 @@ export default function TopSlide() {
                 <>
                   <span className="opacity-40">pushed</span>{" "}
                   <a
+                    ref={commitsLinkRef}
                     href="https://github.com/komolkin"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-muted-foreground transition-colors"
-                    onMouseEnter={() => setHoverPreview("commits")}
-                    onMouseLeave={() => setHoverPreview(null)}
+                    onMouseEnter={() => {
+                      if (!isMobileViewport()) setHoverPreview("commits");
+                    }}
+                    onMouseLeave={clearHoverPreview}
                     onMouseMove={handleMouseMove}
+                    onClick={(e) => handlePreviewClick(e, "commits")}
                   >
                     <span className="inline-flex items-baseline font-mono">
                       <NumberFlow
@@ -309,7 +371,7 @@ export default function TopSlide() {
                       style={{ ["--number-flow-mask-height" as string]: "0em" }}
                     />
                   </span>{" "}
-                  <span className="opacity-40">now.</span>
+                  <span className="opacity-40">now in Paris.</span>
                 </>
               ) : null}
             </>
@@ -319,62 +381,35 @@ export default function TopSlide() {
 
       {/* Bottom Info Bar */}
       <div className="shrink-0 px-6 md:px-8 lg:px-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:pb-8 lg:pb-10">
-        <div className="grid grid-cols-2 gap-8 md:gap-4">
-          {/* Location */}
-          <div className="space-y-1">
-            <div className="text-sm text-muted-foreground">Location</div>
-            <div className="text-sm text-foreground flex items-center gap-1">
-              <span>Paris,</span>
-              <span className="font-mono flex items-center">
-                <NumberFlow
-                  value={parisHours}
-                  format={{ minimumIntegerDigits: 2 }}
-                />
-                <span>:</span>
-                <NumberFlow
-                  value={parisMinutes}
-                  format={{ minimumIntegerDigits: 2 }}
-                />
-                <span>:</span>
-                <NumberFlow
-                  value={parisSeconds}
-                  format={{ minimumIntegerDigits: 2 }}
-                />
-              </span>
-            </div>
-          </div>
-
-          {/* Quick Links */}
-          <div className="space-y-1">
-            <div className="text-sm text-muted-foreground">Quick Links</div>
-            <div className="text-sm text-foreground">
-              <a
-                href="https://x.com/dappdesigner"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-muted-foreground transition-colors"
-              >
-                X
-              </a>
-              ,{" "}
-              <a
-                href="https://www.instagram.com/komolkin/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-muted-foreground transition-colors"
-              >
-                Instagram
-              </a>
-              ,{" "}
-              <a
-                href="https://github.com/komolkin"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-muted-foreground transition-colors"
-              >
-                GitHub
-              </a>
-            </div>
+        <div className="space-y-1">
+          <div className="text-sm text-muted-foreground">Quick Links</div>
+          <div className="text-sm text-foreground">
+            <a
+              href="https://x.com/dappdesigner"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-muted-foreground transition-colors"
+            >
+              X
+            </a>
+            ,{" "}
+            <a
+              href="https://www.instagram.com/komolkin/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-muted-foreground transition-colors"
+            >
+              Instagram
+            </a>
+            ,{" "}
+            <a
+              href="https://github.com/komolkin"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-muted-foreground transition-colors"
+            >
+              GitHub
+            </a>
           </div>
         </div>
       </div>
