@@ -91,7 +91,6 @@ export default function TopSlide() {
   const showTrackPreview = hoverPreview === "track" && Boolean(artwork) && cursorPosition.y > 0;
   const showCommitsPreview =
     hoverPreview === "commits" && contributionWeeks !== null && cursorPosition.y > 0;
-  const showPreview = showTrackPreview || showCommitsPreview;
   const commitsPopupSize = contributionWeeks
     ? getCommitsPopupSize(contributionWeeks.length)
     : { width: 0, height: 0 };
@@ -439,21 +438,18 @@ export default function TopSlide() {
   return (
     <div id="top" className="slide w-full h-[100dvh] md:h-screen relative flex flex-col">
       {/* Hover Preview Popup */}
-      <div
-        className={`fixed z-[100] flex-shrink-0 transition-opacity duration-150 ${
-          showPreview ? "pointer-events-none opacity-100" : "pointer-events-none opacity-0"
-        }`}
-        style={{
-          ...(showTrackPreview
-            ? { width: previewWidth, height: previewHeight }
-            : undefined),
-          left: cursorPosition.x,
-          top: Math.max(16, cursorPosition.y - previewHeight - 16),
-          transform: "translateX(-50%)",
-        }}
-        aria-hidden={!showPreview}
-      >
-        {showTrackPreview && artwork ? (
+      {showTrackPreview && artwork ? (
+        <div
+          className="pointer-events-none fixed z-[100] flex-shrink-0"
+          style={{
+            width: previewWidth,
+            height: previewHeight,
+            left: cursorPosition.x,
+            top: Math.max(16, cursorPosition.y - previewHeight - 16),
+            transform: "translateX(-50%)",
+          }}
+          aria-hidden={!showTrackPreview}
+        >
           <img
             src={artwork}
             alt={
@@ -465,13 +461,30 @@ export default function TopSlide() {
               minHeight: TRACK_POPUP_SIZE,
             }}
           />
-        ) : null}
-        {showCommitsPreview && contributionWeeks ? (
+        </div>
+      ) : null}
+
+      {/*
+        Keep backdrop-blur at full opacity — fading opacity on a blurred layer
+        makes the browser recompute the blur each frame (stepped / laggy).
+      */}
+      {contributionWeeks ? (
+        <div
+          className={`pointer-events-none fixed z-[100] flex-shrink-0 ${
+            showCommitsPreview ? "visible" : "invisible"
+          }`}
+          style={{
+            left: cursorPosition.x,
+            top: Math.max(16, cursorPosition.y - previewHeight - 16),
+            transform: "translateX(-50%)",
+          }}
+          aria-hidden={!showCommitsPreview}
+        >
           <div className="inline-flex rounded-lg bg-white/10 p-[10px] shadow-2xl backdrop-blur-md">
             <ContributionGraph weeks={contributionWeeks} />
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {/* Main Content */}
       <div className="flex-1 flex items-center px-6 md:px-8 lg:px-10">
