@@ -194,7 +194,7 @@ export default function TopSlide() {
     };
 
     fetchNowPlaying();
-    const interval = setInterval(fetchNowPlaying, 15000);
+    const interval = setInterval(fetchNowPlaying, 30_000);
     return () => clearInterval(interval);
   }, []);
 

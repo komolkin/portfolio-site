@@ -156,7 +156,7 @@ export default function SpotifyWidget() {
     fetchNowPlaying(true);
 
     // Poll every 15 seconds without showing loading state
-    const interval = setInterval(() => fetchNowPlaying(false), 15000);
+    const interval = setInterval(() => fetchNowPlaying(false), 30_000);
 
     return () => clearInterval(interval);
   }, []);
