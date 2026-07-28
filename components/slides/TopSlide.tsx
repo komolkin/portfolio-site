@@ -8,6 +8,7 @@ import ContributionGraph, {
 } from "@/components/widgets/ContributionGraph";
 import {
   StreamingWords,
+  assignSegmentWordDelays,
   pushTextWords,
   type StreamingWord,
 } from "@/components/StreamingWords";
@@ -78,7 +79,8 @@ export default function TopSlide() {
   const [touchArmedPreview, setTouchArmedPreview] = useState<HoverPreview>(null);
   const trackLinkRef = useRef<HTMLAnchorElement>(null);
   const commitsLinkRef = useRef<HTMLAnchorElement>(null);
-  const seenTitleSegmentsRef = useRef(new Set<string>());
+  const wordDelaysRef = useRef(new Map<string, number>());
+  const animatedWordKeysRef = useRef(new Set<string>());
   const artwork = spotifyData?.track?.artwork ?? "";
   const showTrackPreview = hoverPreview === "track" && Boolean(artwork) && cursorPosition.y > 0;
   const showCommitsPreview =
@@ -370,11 +372,11 @@ export default function TopSlide() {
       });
 
       const tailWords: StreamingWord[] = [];
-      pushTextWords(tailWords, "commits-tail", "this year", delayIndex, (word) => (
-        <span className="opacity-40">
-          {word}{" "}
-        </span>
-      ));
+      tailWords.push({
+        key: "commits-tail",
+        delayIndex: delayIndex.current++,
+        content: <span className="opacity-40">this year</span>,
+      });
       pushTextWords(tailWords, "commits-hr", ", his HR is", delayIndex, (word) => (
         <span className="opacity-40">
           {word}{" "}
@@ -404,19 +406,21 @@ export default function TopSlide() {
         key: "commits-time",
         delayIndex: delayIndex.current++,
         content: (
-          <span className="inline-flex items-baseline font-mono">
-            <NumberFlow
-              value={parisHours}
-              format={{ minimumIntegerDigits: 2 }}
-              style={{ ["--number-flow-mask-height" as string]: "0em" }}
-            />
-            <span>:</span>
-            <NumberFlow
-              value={parisMinutes}
-              format={{ minimumIntegerDigits: 2 }}
-              style={{ ["--number-flow-mask-height" as string]: "0em" }}
-            />{" "}
-          </span>
+          <>
+            <span className="inline-flex items-baseline font-mono">
+              <NumberFlow
+                value={parisHours}
+                format={{ minimumIntegerDigits: 2 }}
+                style={{ ["--number-flow-mask-height" as string]: "0em" }}
+              />
+              <span>:</span>
+              <NumberFlow
+                value={parisMinutes}
+                format={{ minimumIntegerDigits: 2 }}
+                style={{ ["--number-flow-mask-height" as string]: "0em" }}
+              />
+            </span>{" "}
+          </>
         ),
       });
       pushTextWords(tailWords, "commits-paris", "now in Paris.", delayIndex, (word) => (
@@ -430,21 +434,7 @@ export default function TopSlide() {
     return segments;
   }, [spotifyData, yearCommits, bpm, parisHours, parisMinutes]);
 
-  let newStreamDelay = 0;
-  const animatedTitleSegments = titleSegments.map((segment) => {
-    const isNew = !seenTitleSegmentsRef.current.has(segment.key);
-    const words = segment.words.map((word) => {
-      const delayIndex = isNew ? newStreamDelay++ : word.delayIndex;
-      return { ...word, delayIndex };
-    });
-    return { ...segment, words };
-  });
-
-  useEffect(() => {
-    titleSegments.forEach((segment) => {
-      seenTitleSegmentsRef.current.add(segment.key);
-    });
-  }, [titleSegments]);
+  const animatedTitleSegments = assignSegmentWordDelays(titleSegments, wordDelaysRef);
 
   return (
     <div id="top" className="slide w-full h-[100dvh] md:h-screen relative flex flex-col">
@@ -514,12 +504,21 @@ export default function TopSlide() {
                         : undefined
                   }
                 >
-                  <StreamingWords words={segment.words} />
+                  <StreamingWords
+                    words={segment.words}
+                    animatedWordKeysRef={animatedWordKeysRef}
+                  />
                 </a>
               );
             }
 
-            return <StreamingWords key={segment.key} words={segment.words} />;
+            return (
+              <StreamingWords
+                key={segment.key}
+                words={segment.words}
+                animatedWordKeysRef={animatedWordKeysRef}
+              />
+            );
           })}
         </h1>
       </div>
