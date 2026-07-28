@@ -121,12 +121,8 @@ export default function TopSlide() {
     };
   }, [artwork]);
 
-  // Fetch Spotify now playing (falls back to recently played on the server)
+  // Fetch Spotify now playing (falls back to last stored track)
   useEffect(() => {
-    const lastLiveTrackRef: {
-      current: { track: SpotifyTrack; seenAt: number } | null;
-    } = { current: null };
-
     const cachedTrack = readLastSpotifyTrack();
     if (cachedTrack) {
       setSpotifyData({ isPlaying: false, track: cachedTrack });
@@ -134,41 +130,14 @@ export default function TopSlide() {
     }
 
     const resolveSpotifyData = (result: SpotifyData): SpotifyData | null => {
-      if (result.isPlaying && result.track) {
-        lastLiveTrackRef.current = { track: result.track, seenAt: Date.now() };
-        writeLastSpotifyTrack(result.track);
-        return result;
-      }
-
       if (result.track) {
-        const live = lastLiveTrackRef.current;
-        if (live) {
-          const recentPlayedAt = result.playedAt
-            ? Date.parse(result.playedAt)
-            : 0;
-          // Spotify's recently-played endpoint is often stale; prefer a track
-          // we saw live in this session when the API timestamp is older.
-          if (
-            !result.playedAt ||
-            Number.isNaN(recentPlayedAt) ||
-            recentPlayedAt < live.seenAt - 60_000
-          ) {
-            writeLastSpotifyTrack(live.track);
-            return { isPlaying: false, track: live.track };
-          }
-        }
         writeLastSpotifyTrack(result.track);
         return result;
       }
 
-      const live = lastLiveTrackRef.current;
-      if (live && Date.now() - live.seenAt < 30 * 60_000) {
-        writeLastSpotifyTrack(live.track);
-        return { isPlaying: false, track: live.track };
-      }
-
-      if (cachedTrack) {
-        return { isPlaying: false, track: cachedTrack };
+      const stored = readLastSpotifyTrack() ?? cachedTrack;
+      if (stored) {
+        return { isPlaying: false, track: stored };
       }
 
       return null;
@@ -194,7 +163,7 @@ export default function TopSlide() {
     };
 
     fetchNowPlaying();
-    const interval = setInterval(fetchNowPlaying, 15000);
+    const interval = setInterval(fetchNowPlaying, 30_000);
     return () => clearInterval(interval);
   }, []);
 

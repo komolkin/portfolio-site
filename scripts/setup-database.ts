@@ -191,6 +191,47 @@ async function setupDatabase() {
     `;
     console.log("✅ Public read/write policies created for worm_scores!");
 
+    // Latest Spotify track — kept until a new song starts playing
+    await sql`
+      CREATE TABLE IF NOT EXISTS spotify_last_track (
+        id TEXT PRIMARY KEY DEFAULT 'current',
+        title TEXT NOT NULL,
+        artist TEXT NOT NULL,
+        artwork TEXT NOT NULL DEFAULT '',
+        url TEXT NOT NULL,
+        played_at TIMESTAMP WITH TIME ZONE,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      )
+    `;
+    console.log("✅ Table 'spotify_last_track' created!");
+
+    await sql`ALTER TABLE spotify_last_track ENABLE ROW LEVEL SECURITY`;
+    await sql`
+      DO $$
+      BEGIN
+        DROP POLICY IF EXISTS "Allow public read spotify_last_track" ON spotify_last_track;
+        CREATE POLICY "Allow public read spotify_last_track"
+          ON spotify_last_track
+          FOR SELECT
+          TO anon, authenticated
+          USING (true);
+        DROP POLICY IF EXISTS "Allow public insert spotify_last_track" ON spotify_last_track;
+        CREATE POLICY "Allow public insert spotify_last_track"
+          ON spotify_last_track
+          FOR INSERT
+          TO anon, authenticated
+          WITH CHECK (true);
+        DROP POLICY IF EXISTS "Allow public update spotify_last_track" ON spotify_last_track;
+        CREATE POLICY "Allow public update spotify_last_track"
+          ON spotify_last_track
+          FOR UPDATE
+          TO anon, authenticated
+          USING (true)
+          WITH CHECK (true);
+      END $$
+    `;
+    console.log("✅ Public read/write policies created for spotify_last_track!");
+
     console.log("\n🎉 Database setup complete!");
   } catch (error: any) {
     console.error("❌ Error:", error.message || error);
