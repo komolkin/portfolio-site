@@ -170,7 +170,22 @@ export default function TopSlide() {
                     />{" "}
                     commits
                   </a>{" "}
-                  <span className="opacity-40">this year</span>
+                  <span className="opacity-40">this year</span>{" "}
+                  <span className="opacity-40">and it&apos;s</span>{" "}
+                  <span className="inline-flex items-baseline font-mono">
+                    <NumberFlow
+                      value={parisHours}
+                      format={{ minimumIntegerDigits: 2 }}
+                      style={{ ["--number-flow-mask-height" as string]: "0em" }}
+                    />
+                    <span>:</span>
+                    <NumberFlow
+                      value={parisMinutes}
+                      format={{ minimumIntegerDigits: 2 }}
+                      style={{ ["--number-flow-mask-height" as string]: "0em" }}
+                    />
+                  </span>{" "}
+                  <span className="opacity-40">now.</span>
                 </>
               ) : null}
             </>
