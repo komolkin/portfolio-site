@@ -94,7 +94,7 @@ export default function Position1() {
       className={`relative flex w-full max-w-[450px] flex-col overflow-hidden rounded-[24px] p-4 transition-transform duration-150 ease-out ${
         isFastForwardFx ? "animate-[position1-shake_360ms_ease-in-out_1]" : ""
       } ${expanded ? "active:scale-[0.98]" : "cursor-pointer active:scale-[0.98]"}`}
-      data-name="Position #1"
+      data-name="Position"
       role={expanded ? undefined : "button"}
       tabIndex={expanded ? undefined : 0}
       aria-expanded={expanded}

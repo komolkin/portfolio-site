@@ -1072,7 +1072,7 @@ export default function Position7() {
         className="relative overflow-hidden rounded-[2.25rem] bg-black"
         style={{ width: PHONE_WIDTH, height: PHONE_HEIGHT }}
         aria-label="Position — England match preview"
-        data-name="Position #7"
+        data-name="Controller"
       >
         <motion.div
           className="absolute inset-y-0 left-0 flex h-full touch-pan-y"

@@ -12,11 +12,6 @@ import ResolvedCard from "@/components/playground/projects/resolved-card/Resolve
 import LeverageSelector from "@/components/playground/projects/leverage-selector/LeverageSelector";
 import BinaryCompact from "@/components/playground/projects/binary-compact/BinaryCompact";
 import Position1 from "@/components/playground/projects/position-1/Position1";
-import Position2 from "@/components/playground/projects/position-2/Position2";
-import Position3 from "@/components/playground/projects/position-3/Position3";
-import Position4 from "@/components/playground/projects/position-4/Position4";
-import Position5 from "@/components/playground/projects/position-5/Position5";
-import Position6 from "@/components/playground/projects/position-6/Position6";
 import Position7 from "@/components/playground/projects/position-7/Position7";
 import PnlChart from "@/components/playground/projects/pnl-chart/PnlChart";
 import Ball from "@/components/playground/projects/ball/Ball";
@@ -75,11 +70,6 @@ export default function PlaygroundSlide() {
             {activeProject === "binary-compact" && <BinaryCompact />}
             {activeProject === "pnl-chart" && <PnlChart />}
             {activeProject === "position-1" && <Position1 />}
-            {activeProject === "position-2" && <Position2 />}
-            {activeProject === "position-3" && <Position3 />}
-            {activeProject === "position-4" && <Position4 />}
-            {activeProject === "position-5" && <Position5 />}
-            {activeProject === "position-6" && <Position6 />}
             {activeProject === "position-7" && <Position7 />}
             {activeProject === "mcp" && <Mcp />}
             {activeProject === "thinking" && <Thinking />}

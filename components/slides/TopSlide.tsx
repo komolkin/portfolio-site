@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import NumberFlow from "@number-flow/react";
 import { useHeartRate } from "@/lib/heartRateContext";
 import ContributionGraph, {
   getContributionGraphSize,
 } from "@/components/widgets/ContributionGraph";
+import {
+  StreamingWords,
+  pushTextWords,
+  type StreamingWord,
+} from "@/components/StreamingWords";
 import type { ContributionCalendarWeek } from "@/lib/github";
 
 interface SpotifyTrack {
@@ -22,6 +27,19 @@ interface SpotifyData {
 }
 
 type HoverPreview = "track" | "commits" | null;
+
+type TitleSegment =
+  | {
+      key: string;
+      type: "link";
+      href: string;
+      words: StreamingWord[];
+    }
+  | {
+      key: string;
+      type: "words";
+      words: StreamingWord[];
+    };
 
 const TRACK_POPUP_SIZE = 240;
 const COMMITS_GRAPH_PADDING = 10;
@@ -60,6 +78,7 @@ export default function TopSlide() {
   const [touchArmedPreview, setTouchArmedPreview] = useState<HoverPreview>(null);
   const trackLinkRef = useRef<HTMLAnchorElement>(null);
   const commitsLinkRef = useRef<HTMLAnchorElement>(null);
+  const seenTitleSegmentsRef = useRef(new Set<string>());
   const artwork = spotifyData?.track?.artwork ?? "";
   const showTrackPreview = hoverPreview === "track" && Boolean(artwork) && cursorPosition.y > 0;
   const showCommitsPreview =
@@ -249,6 +268,184 @@ export default function TopSlide() {
     setHoverPreview(null);
   };
 
+  const titleSegments = useMemo((): TitleSegment[] => {
+    const segments: TitleSegment[] = [];
+    const delayIndex = { current: 0 };
+
+    const nameWords: StreamingWord[] = [];
+    pushTextWords(nameWords, "name", "Ilya Komolkin", delayIndex);
+    segments.push({
+      key: "name",
+      type: "link",
+      href: "https://x.com/dappdesigner",
+      words: nameWords,
+    });
+
+    const showSecondLine = Boolean(spotifyData?.track || yearCommits !== null);
+    if (!showSecondLine) return segments;
+
+    segments.push({
+      key: "line-break",
+      type: "words",
+      words: [{ key: "line-break", delayIndex: delayIndex.current++, content: <br /> }],
+    });
+
+    if (spotifyData?.track) {
+      const prefixWords: StreamingWord[] = [];
+      pushTextWords(
+        prefixWords,
+        "spotify-prefix",
+        spotifyData.isPlaying ? "is listening to" : "listened to",
+        delayIndex,
+        (word) => (
+          <span className="opacity-40">
+            {word}{" "}
+          </span>
+        )
+      );
+      segments.push({ key: "spotify-prefix", type: "words", words: prefixWords });
+
+      const trackWords: StreamingWord[] = [];
+      pushTextWords(
+        trackWords,
+        "track",
+        `${spotifyData.track.title} – ${spotifyData.track.artist}`,
+        delayIndex
+      );
+      segments.push({
+        key: "track",
+        type: "link",
+        href: spotifyData.track.url,
+        words: trackWords,
+      });
+
+      if (yearCommits !== null) {
+        segments.push({
+          key: "track-comma",
+          type: "words",
+          words: [
+            {
+              key: "track-comma",
+              delayIndex: delayIndex.current++,
+              content: <span className="opacity-40">, </span>,
+            },
+          ],
+        });
+      }
+    }
+
+    if (yearCommits !== null) {
+      const pushedWords: StreamingWord[] = [];
+      pushTextWords(pushedWords, "commits-prefix", "pushed", delayIndex, (word) => (
+        <span className="opacity-40">
+          {word}{" "}
+        </span>
+      ));
+      segments.push({ key: "commits-prefix", type: "words", words: pushedWords });
+
+      const commitsLinkWords: StreamingWord[] = [
+        {
+          key: "commits-count",
+          delayIndex: delayIndex.current++,
+          content: (
+            <span className="inline-flex items-baseline font-mono">
+              <NumberFlow
+                value={yearCommits}
+                style={{ ["--number-flow-mask-height" as string]: "0em" }}
+              />
+            </span>
+          ),
+        },
+        {
+          key: "commits-label",
+          delayIndex: delayIndex.current++,
+          content: <> commits </>,
+        },
+      ];
+      segments.push({
+        key: "commits-link",
+        type: "link",
+        href: "https://github.com/komolkin",
+        words: commitsLinkWords,
+      });
+
+      const tailWords: StreamingWord[] = [];
+      pushTextWords(tailWords, "commits-tail", "this year", delayIndex, (word) => (
+        <span className="opacity-40">
+          {word}{" "}
+        </span>
+      ));
+      pushTextWords(tailWords, "commits-hr", ", his HR is", delayIndex, (word) => (
+        <span className="opacity-40">
+          {word}{" "}
+        </span>
+      ));
+      tailWords.push({
+        key: "commits-bpm",
+        delayIndex: delayIndex.current++,
+        content: (
+          <span className="whitespace-nowrap">
+            <span className="font-mono">
+              <NumberFlow
+                value={bpm}
+                style={{ ["--number-flow-mask-height" as string]: "0em" }}
+              />
+            </span>{" "}
+            BPM{" "}
+          </span>
+        ),
+      });
+      pushTextWords(tailWords, "commits-and", "and it's", delayIndex, (word) => (
+        <span className="opacity-40">
+          {word}{" "}
+        </span>
+      ));
+      tailWords.push({
+        key: "commits-time",
+        delayIndex: delayIndex.current++,
+        content: (
+          <span className="inline-flex items-baseline font-mono">
+            <NumberFlow
+              value={parisHours}
+              format={{ minimumIntegerDigits: 2 }}
+              style={{ ["--number-flow-mask-height" as string]: "0em" }}
+            />
+            <span>:</span>
+            <NumberFlow
+              value={parisMinutes}
+              format={{ minimumIntegerDigits: 2 }}
+              style={{ ["--number-flow-mask-height" as string]: "0em" }}
+            />{" "}
+          </span>
+        ),
+      });
+      pushTextWords(tailWords, "commits-paris", "now in Paris.", delayIndex, (word) => (
+        <span className="opacity-40">
+          {word}{" "}
+        </span>
+      ));
+      segments.push({ key: "commits-tail", type: "words", words: tailWords });
+    }
+
+    return segments;
+  }, [spotifyData, yearCommits, bpm, parisHours, parisMinutes]);
+
+  let newStreamDelay = 0;
+  const animatedTitleSegments = titleSegments.map((segment) => {
+    const isNew = !seenTitleSegmentsRef.current.has(segment.key);
+    const words = segment.words.map((word) => {
+      const delayIndex = isNew ? newStreamDelay++ : word.delayIndex;
+      return { ...word, delayIndex };
+    });
+    return { ...segment, words };
+  });
+
+  useEffect(() => {
+    titleSegments.forEach((segment) => {
+      seenTitleSegmentsRef.current.add(segment.key);
+    });
+  }, [titleSegments]);
+
   return (
     <div id="top" className="slide w-full h-[100dvh] md:h-screen relative flex flex-col">
       {/* Hover Preview Popup */}
@@ -285,97 +482,45 @@ export default function TopSlide() {
       {/* Main Content */}
       <div className="flex-1 flex items-center px-6 md:px-8 lg:px-10">
         <h1 className="text-balance text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-[1.15] max-w-2xl xl:max-w-4xl">
-          <a
-            href="https://x.com/dappdesigner"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-muted-foreground transition-colors"
-          >
-            Ilya Komolkin
-          </a>
-          {spotifyData?.track || yearCommits !== null ? (
-            <>
-              <br />
-              {spotifyData?.track ? (
-                <>
-                  <span className="opacity-40">
-                    {spotifyData.isPlaying ? "is listening to" : "listened to"}
-                  </span>{" "}
-                  <a
-                    ref={trackLinkRef}
-                    href={spotifyData.track.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-muted-foreground transition-colors"
-                    onMouseEnter={() => {
-                      if (!isMobileViewport()) setHoverPreview("track");
-                    }}
-                    onMouseLeave={clearHoverPreview}
-                    onMouseMove={handleMouseMove}
-                    onClick={(e) => handlePreviewClick(e, "track")}
-                  >
-                    {spotifyData.track.title} – {spotifyData.track.artist}
-                  </a>
-                  {yearCommits !== null ? (
-                    <span className="opacity-40">,</span>
-                  ) : null}
-                </>
-              ) : null}
-              {spotifyData?.track && yearCommits !== null ? " " : null}
-              {yearCommits !== null ? (
-                <>
-                  <span className="opacity-40">pushed</span>{" "}
-                  <a
-                    ref={commitsLinkRef}
-                    href="https://github.com/komolkin"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-muted-foreground transition-colors"
-                    onMouseEnter={() => {
-                      if (!isMobileViewport()) setHoverPreview("commits");
-                    }}
-                    onMouseLeave={clearHoverPreview}
-                    onMouseMove={handleMouseMove}
-                    onClick={(e) => handlePreviewClick(e, "commits")}
-                  >
-                    <span className="inline-flex items-baseline font-mono">
-                      <NumberFlow
-                        value={yearCommits}
-                        style={{ ["--number-flow-mask-height" as string]: "0em" }}
-                      />
-                    </span>{" "}
-                    commits
-                  </a>{" "}
-                  <span className="opacity-40">this year</span>
-                  <span className="opacity-40">, his HR is</span>{" "}
-                  <span className="whitespace-nowrap">
-                    <span className="font-mono">
-                      <NumberFlow
-                        value={bpm}
-                        style={{ ["--number-flow-mask-height" as string]: "0em" }}
-                      />
-                    </span>{" "}
-                    BPM
-                  </span>{" "}
-                  <span className="opacity-40">and it&apos;s</span>{" "}
-                  <span className="inline-flex items-baseline font-mono">
-                    <NumberFlow
-                      value={parisHours}
-                      format={{ minimumIntegerDigits: 2 }}
-                      style={{ ["--number-flow-mask-height" as string]: "0em" }}
-                    />
-                    <span>:</span>
-                    <NumberFlow
-                      value={parisMinutes}
-                      format={{ minimumIntegerDigits: 2 }}
-                      style={{ ["--number-flow-mask-height" as string]: "0em" }}
-                    />
-                  </span>{" "}
-                  <span className="opacity-40">now in Paris.</span>
-                </>
-              ) : null}
-            </>
-          ) : null}
+          {animatedTitleSegments.map((segment) => {
+            if (segment.type === "link") {
+              const isTrackLink = segment.key === "track";
+              const isCommitsLink = segment.key === "commits-link";
+
+              return (
+                <a
+                  key={segment.key}
+                  href={segment.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  ref={isTrackLink ? trackLinkRef : isCommitsLink ? commitsLinkRef : undefined}
+                  className="hover:text-muted-foreground transition-colors"
+                  onMouseEnter={
+                    isTrackLink || isCommitsLink
+                      ? () => {
+                          if (!isMobileViewport()) {
+                            setHoverPreview(isTrackLink ? "track" : "commits");
+                          }
+                        }
+                      : undefined
+                  }
+                  onMouseLeave={isTrackLink || isCommitsLink ? clearHoverPreview : undefined}
+                  onMouseMove={isTrackLink || isCommitsLink ? handleMouseMove : undefined}
+                  onClick={
+                    isTrackLink
+                      ? (e) => handlePreviewClick(e, "track")
+                      : isCommitsLink
+                        ? (e) => handlePreviewClick(e, "commits")
+                        : undefined
+                  }
+                >
+                  <StreamingWords words={segment.words} />
+                </a>
+              );
+            }
+
+            return <StreamingWords key={segment.key} words={segment.words} />;
+          })}
         </h1>
       </div>
 
