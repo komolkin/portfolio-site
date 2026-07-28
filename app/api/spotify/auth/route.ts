@@ -14,7 +14,8 @@ export async function GET(request: Request) {
   }
 
   const redirectUri = getSpotifyRedirectUri(request);
-  const scopes = "user-read-currently-playing user-read-recently-played";
+  const scopes =
+    "user-read-currently-playing user-read-recently-played user-read-playback-state";
 
   const params = new URLSearchParams({
     response_type: "code",

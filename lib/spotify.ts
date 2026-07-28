@@ -1,7 +1,7 @@
 const NOW_PLAYING_ENDPOINT =
   "https://api.spotify.com/v1/me/player/currently-playing";
 const RECENTLY_PLAYED_ENDPOINT =
-  "https://api.spotify.com/v1/me/player/recently-played?limit=1";
+  "https://api.spotify.com/v1/me/player/recently-played?limit=5";
 const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
 
 const fetchNoStore = {
@@ -18,6 +18,8 @@ export interface SpotifyTrack {
 export interface SpotifyNowPlaying {
   isPlaying: boolean;
   track: SpotifyTrack | null;
+  /** ISO timestamp from Spotify when the track was last played (recently-played only). */
+  playedAt?: string;
 }
 
 function getCredentials() {
@@ -149,12 +151,26 @@ export async function getNowPlaying(): Promise<SpotifyNowPlaying | null> {
 
     if (recentResponse.ok) {
       const recentData = await recentResponse.json();
-      const item = recentData.items?.[0]?.track;
-      const track = item ? trackFromItem(item) : null;
+      const items = recentData.items as
+        | { played_at?: string; track?: Parameters<typeof trackFromItem>[0] }[]
+        | undefined;
+
+      const mostRecent = (items ?? [])
+        .filter((entry) => entry.track)
+        .sort(
+          (a, b) =>
+            Date.parse(b.played_at ?? "") - Date.parse(a.played_at ?? "")
+        )[0];
+
+      const track = mostRecent?.track
+        ? trackFromItem(mostRecent.track)
+        : null;
+
       if (track) {
         return {
           isPlaying: false,
           track,
+          playedAt: mostRecent.played_at,
         };
       }
     } else {

@@ -18,6 +18,7 @@ interface SpotifyTrack {
 interface SpotifyData {
   isPlaying: boolean;
   track: SpotifyTrack | null;
+  playedAt?: string;
 }
 
 type HoverPreview = "track" | "commits" | null;
@@ -85,46 +86,60 @@ export default function TopSlide() {
     };
   }, [artwork]);
 
-  // Fetch Spotify now playing (falls back to recently played; keep last known track)
+  // Fetch Spotify now playing (falls back to recently played on the server)
   useEffect(() => {
-    const storageKey = "spotify-last-track";
+    const lastLiveTrackRef: {
+      current: { track: SpotifyTrack; seenAt: number } | null;
+    } = { current: null };
 
+    // Drop stale browser cache from an earlier implementation
     try {
-      const cached = localStorage.getItem(storageKey);
-      if (cached) {
-        const parsed = JSON.parse(cached) as SpotifyData;
-        if (parsed?.track) setSpotifyData(parsed);
-      }
+      localStorage.removeItem("spotify-last-track");
     } catch {
-      // ignore invalid cache
+      // ignore private mode
     }
+
+    const resolveSpotifyData = (result: SpotifyData): SpotifyData | null => {
+      if (result.isPlaying && result.track) {
+        lastLiveTrackRef.current = { track: result.track, seenAt: Date.now() };
+        return result;
+      }
+
+      if (result.track) {
+        const live = lastLiveTrackRef.current;
+        if (live) {
+          const recentPlayedAt = result.playedAt
+            ? Date.parse(result.playedAt)
+            : 0;
+          // Spotify's recently-played endpoint is often stale; prefer a track
+          // we saw live in this session when the API timestamp is older.
+          if (
+            !result.playedAt ||
+            Number.isNaN(recentPlayedAt) ||
+            recentPlayedAt < live.seenAt - 60_000
+          ) {
+            return { isPlaying: false, track: live.track };
+          }
+        }
+        return result;
+      }
+
+      const live = lastLiveTrackRef.current;
+      if (live && Date.now() - live.seenAt < 30 * 60_000) {
+        return { isPlaying: false, track: live.track };
+      }
+
+      return null;
+    };
 
     const fetchNowPlaying = async () => {
       try {
-        const response = await fetch("/api/spotify/now-playing");
+        const response = await fetch("/api/spotify/now-playing", {
+          cache: "no-store",
+        });
         if (!response.ok) return;
         const result = (await response.json()) as SpotifyData;
-
-        setSpotifyData((prev) => {
-          const next: SpotifyData = result.track
-            ? result
-            : prev?.track
-              ? { isPlaying: false, track: prev.track }
-              : result;
-
-          if (next.track) {
-            try {
-              localStorage.setItem(
-                storageKey,
-                JSON.stringify({ isPlaying: false, track: next.track })
-              );
-            } catch {
-              // ignore quota / private mode
-            }
-          }
-
-          return next;
-        });
+        setSpotifyData(resolveSpotifyData(result));
       } catch (error) {
         console.error("Failed to fetch Spotify data:", error);
       }
