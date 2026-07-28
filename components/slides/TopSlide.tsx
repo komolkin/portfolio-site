@@ -202,10 +202,12 @@ export default function TopSlide() {
                     rel="noopener noreferrer"
                     className="hover:text-muted-foreground transition-colors"
                   >
-                    <NumberFlow
-                      value={yearCommits}
-                      style={{ ["--number-flow-mask-height" as string]: "0em" }}
-                    />{" "}
+                    <span className="inline-flex items-baseline font-mono">
+                      <NumberFlow
+                        value={yearCommits}
+                        style={{ ["--number-flow-mask-height" as string]: "0em" }}
+                      />
+                    </span>{" "}
                     commits
                   </a>{" "}
                   <span className="opacity-40">this year</span>
