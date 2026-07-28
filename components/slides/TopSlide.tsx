@@ -208,7 +208,13 @@ export default function TopSlide() {
                     />{" "}
                     commits
                   </a>{" "}
-                  <span className="opacity-40">this year</span>{" "}
+                  <span className="opacity-40">this year</span>
+                  <span className="opacity-40">, the HR is</span>{" "}
+                  <NumberFlow
+                    value={bpm}
+                    suffix=" BPM"
+                    style={{ ["--number-flow-mask-height" as string]: "0em" }}
+                  />{" "}
                   <span className="opacity-40">and it&apos;s</span>{" "}
                   <span className="inline-flex items-baseline font-mono">
                     <NumberFlow
@@ -233,7 +239,7 @@ export default function TopSlide() {
 
       {/* Bottom Info Bar */}
       <div className="shrink-0 px-6 md:px-8 lg:px-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:pb-8 lg:pb-10">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-4">
+        <div className="grid grid-cols-2 gap-8 md:gap-4">
           {/* Location */}
           <div className="space-y-1">
             <div className="text-sm text-muted-foreground">Location</div>
@@ -288,14 +294,6 @@ export default function TopSlide() {
               >
                 GitHub
               </a>
-            </div>
-          </div>
-
-          {/* Heart Rate */}
-          <div className="space-y-1">
-            <div className="text-sm text-muted-foreground">Heart Rate</div>
-            <div className="text-sm text-foreground font-mono">
-              <NumberFlow value={bpm} suffix=" BPM" />
             </div>
           </div>
         </div>
