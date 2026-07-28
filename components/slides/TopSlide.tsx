@@ -10,6 +10,7 @@ import {
   StreamingWords,
   assignSegmentWordDelays,
   pushTextWords,
+  splitWords,
   type StreamingWord,
 } from "@/components/StreamingWords";
 import type { ContributionCalendarWeek } from "@/lib/github";
@@ -308,12 +309,14 @@ export default function TopSlide() {
       segments.push({ key: "spotify-prefix", type: "words", words: prefixWords });
 
       const trackWords: StreamingWord[] = [];
-      pushTextWords(
-        trackWords,
-        "track",
-        `${spotifyData.track.title} – ${spotifyData.track.artist}`,
-        delayIndex
-      );
+      const trackText = `${spotifyData.track.title} – ${spotifyData.track.artist}`;
+      splitWords(trackText).forEach((word, i, arr) => {
+        trackWords.push({
+          key: `track-${i}`,
+          delayIndex: delayIndex.current++,
+          content: i === arr.length - 1 ? word : <>{word}{" "}</>,
+        });
+      });
       segments.push({
         key: "track",
         type: "link",

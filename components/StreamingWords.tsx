@@ -90,9 +90,9 @@ export function StreamingWords({
             initial={
               prefersReducedMotion || hasAnimated
                 ? false
-                : { opacity: 0, y: "0.3em", filter: "blur(10px)" }
+                : { opacity: 0, y: "0.3em" }
             }
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{
               duration: WORD_DURATION,
               delay: delayIndex * WORD_STAGGER,
