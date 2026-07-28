@@ -8,7 +8,7 @@ import { Analytics } from "@vercel/analytics/next";
 export const metadata: Metadata = {
   title: "Ilya Komolkin",
   description:
-    "Paris-based generalist designer focused on building impactful products and brands",
+    "Generalist design engineer focused on building impactful products and brands",
 };
 
 export default function RootLayout({
