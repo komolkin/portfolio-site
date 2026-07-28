@@ -23,7 +23,7 @@ export function HeartRateProvider({ children }: { children: ReactNode }) {
     const interval = setInterval(() => {
       // Random BPM between 66-79
       setBpm(66 + Math.floor(Math.random() * 14));
-    }, 10000);
+    }, 60_000);
 
     return () => clearInterval(interval);
   }, []);
