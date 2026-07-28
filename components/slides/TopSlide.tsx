@@ -8,7 +8,7 @@ import ContributionGraph, {
 } from "@/components/widgets/ContributionGraph";
 import {
   StreamingWords,
-  assignSegmentWordDelays,
+  assignDomOrderDelays,
   pushTextWords,
   splitWords,
   type StreamingWord,
@@ -70,6 +70,7 @@ export default function TopSlide() {
   const [parisHours, setParisHours] = useState(0);
   const [parisMinutes, setParisMinutes] = useState(0);
   const [spotifyData, setSpotifyData] = useState<SpotifyData | null>(null);
+  const [spotifyResolved, setSpotifyResolved] = useState(false);
   const [yearCommits, setYearCommits] = useState<number | null>(null);
   const [contributionWeeks, setContributionWeeks] = useState<ContributionCalendarWeek[] | null>(
     null
@@ -80,7 +81,7 @@ export default function TopSlide() {
   const [touchArmedPreview, setTouchArmedPreview] = useState<HoverPreview>(null);
   const trackLinkRef = useRef<HTMLAnchorElement>(null);
   const commitsLinkRef = useRef<HTMLAnchorElement>(null);
-  const wordDelaysRef = useRef(new Map<string, number>());
+  const spotifyInitialFetchDoneRef = useRef(false);
   const animatedWordKeysRef = useRef(new Set<string>());
   const artwork = spotifyData?.track?.artwork ?? "";
   const showTrackPreview = hoverPreview === "track" && Boolean(artwork) && cursorPosition.y > 0;
@@ -167,11 +168,17 @@ export default function TopSlide() {
         const response = await fetch("/api/spotify/now-playing", {
           cache: "no-store",
         });
-        if (!response.ok) return;
-        const result = (await response.json()) as SpotifyData;
-        setSpotifyData(resolveSpotifyData(result));
+        if (response.ok) {
+          const result = (await response.json()) as SpotifyData;
+          setSpotifyData(resolveSpotifyData(result));
+        }
       } catch (error) {
         console.error("Failed to fetch Spotify data:", error);
+      } finally {
+        if (!spotifyInitialFetchDoneRef.current) {
+          spotifyInitialFetchDoneRef.current = true;
+          setSpotifyResolved(true);
+        }
       }
     };
 
@@ -284,7 +291,8 @@ export default function TopSlide() {
       words: nameWords,
     });
 
-    const showSecondLine = Boolean(spotifyData?.track || yearCommits !== null);
+    const showSecondLine =
+      spotifyResolved && Boolean(spotifyData?.track || yearCommits !== null);
     if (!showSecondLine) return segments;
 
     segments.push({
@@ -435,9 +443,9 @@ export default function TopSlide() {
     }
 
     return segments;
-  }, [spotifyData, yearCommits, bpm, parisHours, parisMinutes]);
+  }, [spotifyData, spotifyResolved, yearCommits, bpm, parisHours, parisMinutes]);
 
-  const animatedTitleSegments = assignSegmentWordDelays(titleSegments, wordDelaysRef);
+  const animatedTitleSegments = assignDomOrderDelays(titleSegments);
 
   return (
     <div id="top" className="slide w-full h-[100dvh] md:h-screen relative flex flex-col">

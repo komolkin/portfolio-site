@@ -60,6 +60,20 @@ export function assignWordDelays(
   });
 }
 
+export function assignDomOrderDelays<
+  T extends { words: StreamingWord[] },
+>(segments: T[]): T[] {
+  let order = 0;
+
+  return segments.map((segment) => ({
+    ...segment,
+    words: segment.words.map((word) => ({
+      ...word,
+      delayIndex: order++,
+    })),
+  }));
+}
+
 export function assignSegmentWordDelays<
   T extends { words: StreamingWord[] },
 >(segments: T[], delaysRef: MutableRefObject<Map<string, number>>): T[] {
