@@ -8,7 +8,7 @@ import ContributionGraph, {
 } from "@/components/widgets/ContributionGraph";
 import {
   StreamingWords,
-  assignDomOrderDelays,
+  assignFreshWordDelays,
   pushTextWords,
   splitWords,
   type StreamingWord,
@@ -163,7 +163,7 @@ export default function TopSlide() {
     };
 
     fetchNowPlaying();
-    const interval = setInterval(fetchNowPlaying, 30_000);
+    const interval = setInterval(fetchNowPlaying, 10_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -282,11 +282,14 @@ export default function TopSlide() {
     });
 
     if (spotifyData?.track) {
+      const listeningLabel = spotifyData.isPlaying
+        ? "is listening to"
+        : "listened to";
       const prefixWords: StreamingWord[] = [];
       pushTextWords(
         prefixWords,
-        "spotify-prefix",
-        spotifyData.isPlaying ? "is listening to" : "listened to",
+        `spotify-prefix-${spotifyData.isPlaying ? "playing" : "paused"}`,
+        listeningLabel,
         delayIndex,
         (word) => (
           <span className="opacity-40">
@@ -294,19 +297,24 @@ export default function TopSlide() {
           </span>
         )
       );
-      segments.push({ key: "spotify-prefix", type: "words", words: prefixWords });
+      segments.push({
+        key: `spotify-prefix-${spotifyData.isPlaying ? "playing" : "paused"}`,
+        type: "words",
+        words: prefixWords,
+      });
 
+      const trackId = spotifyData.track.url || `${spotifyData.track.title}-${spotifyData.track.artist}`;
       const trackWords: StreamingWord[] = [];
       const trackText = `${spotifyData.track.title} – ${spotifyData.track.artist}`;
       splitWords(trackText).forEach((word, i, arr) => {
         trackWords.push({
-          key: `track-${i}`,
+          key: `track-${trackId}-${i}`,
           delayIndex: delayIndex.current++,
           content: i === arr.length - 1 ? word : <>{word}{" "}</>,
         });
       });
       segments.push({
-        key: "track",
+        key: `track-${trackId}`,
         type: "link",
         href: spotifyData.track.url,
         words: trackWords,
@@ -423,7 +431,10 @@ export default function TopSlide() {
     return segments;
   }, [spotifyData, spotifyResolved, yearCommits, bpm, parisHours, parisMinutes]);
 
-  const animatedTitleSegments = assignDomOrderDelays(titleSegments);
+  const animatedTitleSegments = assignFreshWordDelays(
+    titleSegments,
+    animatedWordKeysRef
+  );
 
   return (
     <div id="top" className="slide w-full h-[100dvh] md:h-screen relative flex flex-col">
@@ -467,7 +478,7 @@ export default function TopSlide() {
         <h1 className="text-balance text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-[1.15] max-w-2xl xl:max-w-4xl">
           {animatedTitleSegments.map((segment) => {
             if (segment.type === "link") {
-              const isTrackLink = segment.key === "track";
+              const isTrackLink = segment.key.startsWith("track-");
               const isCommitsLink = segment.key === "commits-link";
 
               return (

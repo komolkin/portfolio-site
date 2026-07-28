@@ -9,9 +9,11 @@ const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
 const LAST_TRACK_ROW_ID = "current";
 
 /** Reuse a successful API response briefly to avoid hammering Spotify. */
-const RESULT_CACHE_TTL_MS = 30_000;
+const RESULT_CACHE_TTL_MS = 8_000;
 /** Minimum wait after a 429 before calling Spotify again. */
 const RATE_LIMIT_BACKOFF_MS = 60_000;
+/** Spotify access tokens last ~1h — refresh a bit early. */
+const ACCESS_TOKEN_TTL_MS = 50 * 60_000;
 
 const fetchNoStore = {
   cache: "no-store" as const,
@@ -57,6 +59,7 @@ let memoryLastTrack: StoredLastTrack | null = null;
 let rateLimitedUntil = 0;
 let inFlight: Promise<SpotifyNowPlaying | null> | null = null;
 let supabaseAdmin: SupabaseClient | null | undefined;
+let accessTokenCache: { token: string; expiresAt: number } | null = null;
 
 function getSupabaseAdmin(): SupabaseClient | null {
   if (supabaseAdmin !== undefined) return supabaseAdmin;
@@ -92,6 +95,10 @@ export function getSpotifyCredentialStatus() {
 }
 
 async function getAccessToken(): Promise<string> {
+  if (accessTokenCache && accessTokenCache.expiresAt > Date.now()) {
+    return accessTokenCache.token;
+  }
+
   const { clientId, clientSecret, refreshToken } = getCredentials();
 
   if (!clientId || !clientSecret || !refreshToken) {
@@ -121,7 +128,18 @@ async function getAccessToken(): Promise<string> {
   if (!data.access_token) {
     throw new Error("Spotify token response missing access_token");
   }
-  return data.access_token as string;
+
+  const expiresInMs =
+    typeof data.expires_in === "number"
+      ? Math.max(30_000, data.expires_in * 1000 - 60_000)
+      : ACCESS_TOKEN_TTL_MS;
+
+  accessTokenCache = {
+    token: data.access_token as string,
+    expiresAt: Date.now() + expiresInMs,
+  };
+
+  return accessTokenCache.token;
 }
 
 function trackFromItem(item: {

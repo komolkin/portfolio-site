@@ -74,6 +74,30 @@ export function assignDomOrderDelays<
   }));
 }
 
+/**
+ * Already-seen words stay visible; new words stream in from delay 0
+ * (e.g. when the Spotify track title changes).
+ */
+export function assignFreshWordDelays<
+  T extends { words: StreamingWord[] },
+>(
+  segments: T[],
+  animatedWordKeysRef: MutableRefObject<Set<string>>,
+): T[] {
+  let order = 0;
+
+  return segments.map((segment) => ({
+    ...segment,
+    words: segment.words.map((word) => {
+      const hasAnimated = animatedWordKeysRef.current.has(word.key);
+      return {
+        ...word,
+        delayIndex: hasAnimated ? 0 : order++,
+      };
+    }),
+  }));
+}
+
 export function assignSegmentWordDelays<
   T extends { words: StreamingWord[] },
 >(segments: T[], delaysRef: MutableRefObject<Map<string, number>>): T[] {
