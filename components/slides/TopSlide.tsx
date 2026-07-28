@@ -55,15 +55,46 @@ export default function TopSlide() {
     };
   }, [artwork]);
 
-  // Fetch Spotify now playing
+  // Fetch Spotify now playing (falls back to recently played; keep last known track)
   useEffect(() => {
+    const storageKey = "spotify-last-track";
+
+    try {
+      const cached = localStorage.getItem(storageKey);
+      if (cached) {
+        const parsed = JSON.parse(cached) as SpotifyData;
+        if (parsed?.track) setSpotifyData(parsed);
+      }
+    } catch {
+      // ignore invalid cache
+    }
+
     const fetchNowPlaying = async () => {
       try {
         const response = await fetch("/api/spotify/now-playing");
-        if (response.ok) {
-          const result = await response.json();
-          setSpotifyData(result);
-        }
+        if (!response.ok) return;
+        const result = (await response.json()) as SpotifyData;
+
+        setSpotifyData((prev) => {
+          const next: SpotifyData = result.track
+            ? result
+            : prev?.track
+              ? { isPlaying: false, track: prev.track }
+              : result;
+
+          if (next.track) {
+            try {
+              localStorage.setItem(
+                storageKey,
+                JSON.stringify({ isPlaying: false, track: next.track })
+              );
+            } catch {
+              // ignore quota / private mode
+            }
+          }
+
+          return next;
+        });
       } catch (error) {
         console.error("Failed to fetch Spotify data:", error);
       }
@@ -137,12 +168,14 @@ export default function TopSlide() {
           >
             Ilya Komolkin
           </a>
-          {spotifyData?.isPlaying && spotifyData.track || yearCommits !== null ? (
+          {spotifyData?.track || yearCommits !== null ? (
             <>
               <br />
-              {spotifyData?.isPlaying && spotifyData.track ? (
+              {spotifyData?.track ? (
                 <>
-                  <span className="opacity-40">is listening to</span>{" "}
+                  <span className="opacity-40">
+                    {spotifyData.isPlaying ? "is listening to" : "listened to"}
+                  </span>{" "}
                   <a
                     href={spotifyData.track.url}
                     target="_blank"
@@ -159,9 +192,7 @@ export default function TopSlide() {
                   ) : null}
                 </>
               ) : null}
-              {spotifyData?.isPlaying && spotifyData.track && yearCommits !== null
-                ? " "
-                : null}
+              {spotifyData?.track && yearCommits !== null ? " " : null}
               {yearCommits !== null ? (
                 <>
                   <span className="opacity-40">pushed</span>{" "}
