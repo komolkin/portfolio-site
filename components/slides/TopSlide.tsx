@@ -39,10 +39,10 @@ function getTimeInTimezone(timezone: string): Date {
   return new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
 }
 
-/** True when the device lacks real hover (phones / most tablets). */
-function isTouchLikePointer(): boolean {
+/** Mobile viewport only (below Tailwind `md`). Desktop keeps hover + single click. */
+function isMobileViewport(): boolean {
   if (typeof window === "undefined") return false;
-  return window.matchMedia("(hover: none), (pointer: coarse)").matches;
+  return window.matchMedia("(max-width: 767px)").matches;
 }
 
 export default function TopSlide() {
@@ -56,7 +56,7 @@ export default function TopSlide() {
   );
   const [hoverPreview, setHoverPreview] = useState<HoverPreview>(null);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
-  /** On touch: which preview link is armed for a second-tap navigation. */
+  /** Mobile only: which preview link is armed for a second-tap navigation. */
   const [touchArmedPreview, setTouchArmedPreview] = useState<HoverPreview>(null);
   const trackLinkRef = useRef<HTMLAnchorElement>(null);
   const commitsLinkRef = useRef<HTMLAnchorElement>(null);
@@ -199,11 +199,13 @@ export default function TopSlide() {
     return () => clearInterval(interval);
   }, []);
 
-  // Dismiss touch-armed preview when tapping outside the active link
+  // Mobile only: dismiss armed preview when tapping outside the active link
   useEffect(() => {
     if (!touchArmedPreview) return;
 
     const onPointerDown = (event: PointerEvent) => {
+      if (!isMobileViewport()) return;
+
       const target = event.target as Node | null;
       const activeLink =
         touchArmedPreview === "track" ? trackLinkRef.current : commitsLinkRef.current;
@@ -222,15 +224,17 @@ export default function TopSlide() {
   };
 
   const clearHoverPreview = () => {
-    if (isTouchLikePointer() && touchArmedPreview) return;
+    // Don't clear an armed mobile preview via mouseleave
+    if (isMobileViewport() && touchArmedPreview) return;
     setHoverPreview(null);
   };
 
+  /** Mobile only: first tap = preview, second tap = follow link. Desktop: no-op. */
   const handlePreviewClick = (
     e: React.MouseEvent<HTMLAnchorElement>,
     preview: "track" | "commits"
   ) => {
-    if (!isTouchLikePointer()) return;
+    if (!isMobileViewport()) return;
 
     if (touchArmedPreview !== preview) {
       e.preventDefault();
@@ -304,7 +308,7 @@ export default function TopSlide() {
                     rel="noopener noreferrer"
                     className="hover:text-muted-foreground transition-colors"
                     onMouseEnter={() => {
-                      if (!isTouchLikePointer()) setHoverPreview("track");
+                      if (!isMobileViewport()) setHoverPreview("track");
                     }}
                     onMouseLeave={clearHoverPreview}
                     onMouseMove={handleMouseMove}
@@ -328,7 +332,7 @@ export default function TopSlide() {
                     rel="noopener noreferrer"
                     className="hover:text-muted-foreground transition-colors"
                     onMouseEnter={() => {
-                      if (!isTouchLikePointer()) setHoverPreview("commits");
+                      if (!isMobileViewport()) setHoverPreview("commits");
                     }}
                     onMouseLeave={clearHoverPreview}
                     onMouseMove={handleMouseMove}
