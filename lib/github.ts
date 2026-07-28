@@ -9,6 +9,32 @@ export interface GitHubYearCommits {
   source: "repos" | "contributions";
 }
 
+export type ContributionLevel =
+  | "NONE"
+  | "FIRST_QUARTILE"
+  | "SECOND_QUARTILE"
+  | "THIRD_QUARTILE"
+  | "FOURTH_QUARTILE";
+
+export interface ContributionDay {
+  date: string;
+  contributionCount: number;
+  contributionLevel: ContributionLevel;
+  color: string;
+}
+
+export interface ContributionCalendarWeek {
+  contributionDays: ContributionDay[];
+}
+
+export interface GitHubContributionCalendar {
+  totalContributions: number;
+  weeks: ContributionCalendarWeek[];
+  from: string;
+  to: string;
+  username: string;
+}
+
 function getCredentialStatus() {
   const token = process.env.GITHUB_TOKEN?.trim();
   const username = process.env.GITHUB_USERNAME?.trim() || "komolkin";
@@ -237,6 +263,93 @@ async function countContributionCommits(
   return (
     json.data?.user?.contributionsCollection?.totalCommitContributions ?? 0
   );
+}
+
+export async function getContributionCalendar(): Promise<GitHubContributionCalendar | null> {
+  const { token, username, rawToken } = getCredentialStatus();
+  if (!token || !rawToken) {
+    console.error("GITHUB_TOKEN is not configured");
+    return null;
+  }
+
+  const { from, to } = getCurrentYearRange();
+
+  const query = `
+    query($login: String!, $from: DateTime!, $to: DateTime!) {
+      user(login: $login) {
+        contributionsCollection(from: $from, to: $to) {
+          contributionCalendar {
+            totalContributions
+            weeks {
+              contributionDays {
+                date
+                contributionCount
+                contributionLevel
+                color
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  try {
+    const response = await fetch(GRAPHQL_ENDPOINT, {
+      method: "POST",
+      headers: {
+        ...githubHeaders(rawToken),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query,
+        variables: { login: username, from, to },
+      }),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      console.error(
+        "GitHub GraphQL request failed:",
+        response.status,
+        await response.text()
+      );
+      return null;
+    }
+
+    const json = (await response.json()) as {
+      data?: {
+        user?: {
+          contributionsCollection?: {
+            contributionCalendar?: {
+              totalContributions?: number;
+              weeks?: ContributionCalendarWeek[];
+            };
+          };
+        };
+      };
+      errors?: Array<{ message: string }>;
+    };
+
+    if (json.errors?.length) {
+      console.error("GitHub GraphQL errors:", json.errors);
+      return null;
+    }
+
+    const calendar = json.data?.user?.contributionsCollection?.contributionCalendar;
+    if (!calendar?.weeks) return null;
+
+    return {
+      totalContributions: calendar.totalContributions ?? 0,
+      weeks: calendar.weeks,
+      from,
+      to,
+      username,
+    };
+  } catch (error) {
+    console.error("Error fetching GitHub contribution calendar:", error);
+    return null;
+  }
 }
 
 export async function getCurrentYearCommits(): Promise<GitHubYearCommits | null> {

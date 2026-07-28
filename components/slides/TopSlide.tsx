@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import NumberFlow from "@number-flow/react";
 import { useHeartRate } from "@/lib/heartRateContext";
+import ContributionGraph, {
+  getContributionGraphSize,
+} from "@/components/widgets/ContributionGraph";
+import type { ContributionCalendarWeek } from "@/lib/github";
 
 interface SpotifyTrack {
   title: string;
@@ -16,6 +20,20 @@ interface SpotifyData {
   track: SpotifyTrack | null;
 }
 
+type HoverPreview = "track" | "commits" | null;
+
+const TRACK_POPUP_SIZE = 240;
+const COMMITS_GRAPH_PADDING = 10;
+
+function getCommitsPopupSize(weekCount: number) {
+  const graph = getContributionGraphSize(weekCount);
+
+  return {
+    width: graph.width + COMMITS_GRAPH_PADDING * 2,
+    height: graph.height + COMMITS_GRAPH_PADDING * 2,
+  };
+}
+
 function getTimeInTimezone(timezone: string): Date {
   return new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
 }
@@ -27,9 +45,21 @@ export default function TopSlide() {
   const [parisSeconds, setParisSeconds] = useState(0);
   const [spotifyData, setSpotifyData] = useState<SpotifyData | null>(null);
   const [yearCommits, setYearCommits] = useState<number | null>(null);
-  const [isHovering, setIsHovering] = useState(false);
+  const [contributionWeeks, setContributionWeeks] = useState<ContributionCalendarWeek[] | null>(
+    null
+  );
+  const [hoverPreview, setHoverPreview] = useState<HoverPreview>(null);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const artwork = spotifyData?.track?.artwork ?? "";
+  const showTrackPreview = hoverPreview === "track" && Boolean(artwork) && cursorPosition.y > 0;
+  const showCommitsPreview =
+    hoverPreview === "commits" && contributionWeeks !== null && cursorPosition.y > 0;
+  const showPreview = showTrackPreview || showCommitsPreview;
+  const commitsPopupSize = contributionWeeks
+    ? getCommitsPopupSize(contributionWeeks.length)
+    : { width: 0, height: 0 };
+  const previewWidth = showCommitsPreview ? commitsPopupSize.width : TRACK_POPUP_SIZE;
+  const previewHeight = showCommitsPreview ? commitsPopupSize.height : TRACK_POPUP_SIZE;
 
   // Update Paris time every second
   useEffect(() => {
@@ -126,35 +156,61 @@ export default function TopSlide() {
     return () => clearInterval(interval);
   }, []);
 
+  // Fetch GitHub contribution graph for hover preview
+  useEffect(() => {
+    const fetchContributions = async () => {
+      try {
+        const response = await fetch("/api/github/contributions");
+        if (!response.ok) return;
+        const result = await response.json();
+        if (Array.isArray(result.weeks)) {
+          setContributionWeeks(result.weeks);
+        }
+      } catch (error) {
+        console.error("Failed to fetch GitHub contributions:", error);
+      }
+    };
+
+    fetchContributions();
+    const interval = setInterval(fetchContributions, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleMouseMove = (e: React.MouseEvent) => {
     setCursorPosition({ x: e.clientX, y: e.clientY });
   };
 
   return (
     <div id="top" className="slide w-full h-[100dvh] md:h-screen relative flex flex-col">
-      {/* Album Cover Popup */}
+      {/* Hover Preview Popup */}
       <div
-        className={`fixed z-[100] w-[240px] h-[240px] flex-shrink-0 transition-opacity duration-150 ${
-          isHovering && Boolean(artwork) && cursorPosition.y > 0
-            ? "pointer-events-none opacity-100"
-            : "pointer-events-none opacity-0"
+        className={`fixed z-[100] flex-shrink-0 transition-opacity duration-150 ${
+          showPreview ? "pointer-events-none opacity-100" : "pointer-events-none opacity-0"
         }`}
         style={{
+          ...(showTrackPreview
+            ? { width: previewWidth, height: previewHeight }
+            : undefined),
           left: cursorPosition.x,
-          top: Math.max(16, cursorPosition.y - 240 - 16),
+          top: Math.max(16, cursorPosition.y - previewHeight - 16),
           transform: "translateX(-50%)",
         }}
-        aria-hidden={!isHovering || !artwork}
+        aria-hidden={!showPreview}
       >
-        {artwork && (
+        {showTrackPreview && artwork ? (
           <img
             src={artwork}
             alt={
               spotifyData?.track ? `${spotifyData.track.title} album cover` : "Spotify album cover"
             }
-            className="w-[240px] h-[240px] min-w-[240px] min-h-[240px] object-cover rounded-lg shadow-2xl"
+            className="h-full w-full min-h-[240px] min-w-[240px] object-cover rounded-lg shadow-2xl"
           />
-        )}
+        ) : null}
+        {showCommitsPreview && contributionWeeks ? (
+          <div className="inline-flex rounded-lg bg-white/10 p-[10px] shadow-2xl backdrop-blur-md">
+            <ContributionGraph weeks={contributionWeeks} />
+          </div>
+        ) : null}
       </div>
 
       {/* Main Content */}
@@ -181,8 +237,8 @@ export default function TopSlide() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-muted-foreground transition-colors"
-                    onMouseEnter={() => setIsHovering(true)}
-                    onMouseLeave={() => setIsHovering(false)}
+                    onMouseEnter={() => setHoverPreview("track")}
+                    onMouseLeave={() => setHoverPreview(null)}
                     onMouseMove={handleMouseMove}
                   >
                     {spotifyData.track.title} – {spotifyData.track.artist}
@@ -201,6 +257,9 @@ export default function TopSlide() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-muted-foreground transition-colors"
+                    onMouseEnter={() => setHoverPreview("commits")}
+                    onMouseLeave={() => setHoverPreview(null)}
+                    onMouseMove={handleMouseMove}
                   >
                     <span className="inline-flex items-baseline font-mono">
                       <NumberFlow
