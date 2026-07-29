@@ -1,30 +1,15 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { usePathname, useRouter } from "next/navigation";
-import { isPlaygroundDeepLink } from "@/components/playground/playground-route";
 
 const tabs = [
-  { id: "top", label: "About" },
   { id: "playground", label: "Playground" },
+  { id: "top", label: "About" },
 ];
 
 export default function HeaderNav() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState(() =>
-    pathname && isPlaygroundDeepLink(pathname) ? "playground" : "top"
-  );
-
-  const updateUrlForSection = useCallback(
-    (sectionId: string) => {
-      if (sectionId === "top" && pathname !== "/") {
-        router.replace("/", { scroll: false });
-      }
-    },
-    [pathname, router]
-  );
+  const [activeTab, setActiveTab] = useState("playground");
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const navRef = useRef<HTMLDivElement>(null);
@@ -68,14 +53,12 @@ export default function HeaderNav() {
             const section = entry.target.getAttribute("data-section");
             if (section && tabs.some((tab) => tab.id === section)) {
               setActiveTab(section);
-              updateUrlForSection(section);
               return;
             }
             // Fallback to id-based detection
             const id = entry.target.id;
             if (tabs.some((tab) => tab.id === id)) {
               setActiveTab(id);
-              updateUrlForSection(id);
             }
           }
         });
@@ -90,7 +73,7 @@ export default function HeaderNav() {
     });
 
     return () => observer.disconnect();
-  }, [updateUrlForSection]);
+  }, []);
 
   const scrollTo = (id: string) => {
     // Set scrolling flag to prevent observer from updating during scroll
@@ -102,7 +85,6 @@ export default function HeaderNav() {
     }
 
     setActiveTab(id);
-    updateUrlForSection(id);
     const element = document.getElementById(id);
     if (element) {
       element.scrollIntoView({ behavior: "smooth" });
@@ -128,7 +110,7 @@ export default function HeaderNav() {
       ref={navRef}
       className="relative flex items-center"
       animate={{
-        x: activeTab !== "top" ? -8 : 0,
+        x: activeTab === "top" ? -8 : 0,
       }}
       transition={{
         type: "spring",

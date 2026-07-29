@@ -1,14 +1,20 @@
 import { Color, Vector3, type MeshPhysicalMaterial } from "three";
 
-const RIM_COLOR = new Color("#a855f7");
+const DEFAULT_RIM_COLOR = "#a855f7";
 const RIM_BIAS = new Vector3(-0.42, 0.58, 0.7).normalize();
 
-/** View-dependent purple rim emissive — strongest at silhouette edges, biased top-left. */
-export function applyPurpleRimGlow(material: MeshPhysicalMaterial) {
+/** View-dependent rim emissive — strongest at silhouette edges, biased top-left. */
+export function applyPurpleRimGlow(
+  material: MeshPhysicalMaterial,
+  rimColor = DEFAULT_RIM_COLOR,
+  rimIntensity = 1.05,
+) {
+  const rimColorValue = new Color(rimColor);
+
   material.onBeforeCompile = (shader) => {
-    shader.uniforms.uRimColor = { value: RIM_COLOR };
+    shader.uniforms.uRimColor = { value: rimColorValue };
     shader.uniforms.uRimPower = { value: 2.35 };
-    shader.uniforms.uRimIntensity = { value: 1.05 };
+    shader.uniforms.uRimIntensity = { value: rimIntensity };
     shader.uniforms.uRimBias = { value: RIM_BIAS };
 
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -31,6 +37,6 @@ totalEmissiveRadiance += uRimColor * rimFresnel * rimBias * uRimIntensity;`,
     );
   };
 
-  material.customProgramCacheKey = () => "mcp-purple-rim-glow";
+  material.customProgramCacheKey = () => `mcp-rim-glow-${rimColor}-${rimIntensity}`;
   material.needsUpdate = true;
 }

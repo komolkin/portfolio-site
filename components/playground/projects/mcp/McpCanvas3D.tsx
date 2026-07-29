@@ -5,11 +5,15 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Suspense, useLayoutEffect, useMemo, useRef, type MutableRefObject } from "react";
 import { Euler, Quaternion, Vector3, type Group, type MeshPhysicalMaterial } from "three";
 import { applyPurpleRimGlow } from "@/components/playground/projects/mcp/apply-purple-rim-glow";
-import { createSphereTextureResource } from "@/components/playground/projects/mcp/create-smiley-texture";
+import { createSphereTextureResource, FACE_TEXTURE_SCALE } from "@/components/playground/projects/mcp/create-smiley-texture";
 
 const SPHERE_RADIUS = 24;
 const MOBILE_SIZE_SCALE = 2;
 const MOBILE_MAX_WIDTH = 767;
+/** Small embeds (e.g. leverage picker avatar) — scale sphere to fill the circle. */
+const MINI_EMBED_MAX_PX = 96;
+const MINI_SIZE_SCALE = 6.2;
+const MINI_FACE_TEXTURE_SCALE = 0.38;
 
 /** Equirect center (u=0.5) sits on +X; rotate so the face points at the +Z camera. */
 const FACE_FORWARD_Y = -Math.PI / 2;
@@ -42,17 +46,49 @@ function nextBlinkDelay(): number {
   return BLINK_IDLE_MIN_S + Math.random() * (BLINK_IDLE_MAX_S - BLINK_IDLE_MIN_S);
 }
 
+export type McpAccent = "purple" | "grey";
+
+const MCP_ACCENT = {
+  purple: {
+    rimColor: "#a855f7",
+    rimIntensity: 1.05,
+    lightColor: "#9333ea",
+    lightIntensity: 0.55,
+    sphereColor: "#ffffff",
+    emissive: "#ffffff",
+    emissiveIntensity: 0.62,
+    envMapIntensity: 0.04,
+  },
+  grey: {
+    rimColor: "#6e6e6e",
+    rimIntensity: 0.72,
+    lightColor: "#858585",
+    lightIntensity: 0.28,
+    sphereColor: "#a3a3a3",
+    emissive: "#ffffff",
+    emissiveIntensity: 0.62,
+    envMapIntensity: 0.015,
+  },
+} as const;
+
 function SmileySphere({
   pointer,
   sizeScale,
+  faceTextureScale,
+  accent,
 }: {
   pointer: McpPointerRef;
   sizeScale: number;
+  faceTextureScale: number;
+  accent: McpAccent;
 }) {
   const { gl } = useThree();
   const orientRef = useRef<Group>(null);
   const materialRef = useRef<MeshPhysicalMaterial>(null);
-  const sphereTexture = useMemo(() => createSphereTextureResource(), []);
+  const sphereTexture = useMemo(
+    () => createSphereTextureResource({ faceTextureScale }),
+    [faceTextureScale],
+  );
   const baseQuat = useMemo(
     () => new Quaternion().setFromEuler(new Euler(0, FACE_FORWARD_Y, 0)),
     [],
@@ -75,15 +111,21 @@ function SmileySphere({
     gl.domElement.style.cursor = cursor;
   };
 
+  const accentStyle = MCP_ACCENT[accent];
+
   useLayoutEffect(() => {
     orientRef.current?.quaternion.copy(baseQuat);
     if (materialRef.current) {
-      applyPurpleRimGlow(materialRef.current);
+      applyPurpleRimGlow(
+        materialRef.current,
+        accentStyle.rimColor,
+        accentStyle.rimIntensity,
+      );
     }
     return () => {
       gl.domElement.style.cursor = "";
     };
-  }, [baseQuat, gl]);
+  }, [accent, accentStyle.rimColor, accentStyle.rimIntensity, baseQuat, gl]);
 
   useFrame(({ clock }) => {
     const orient = orientRef.current;
@@ -157,14 +199,14 @@ function SmileySphere({
         <sphereGeometry args={[SPHERE_RADIUS, 48, 48]} />
         <meshPhysicalMaterial
           ref={materialRef}
-          color="#ffffff"
+          color={accentStyle.sphereColor}
           map={sphereTexture.bodyMap}
-          emissive="#ffffff"
+          emissive={accentStyle.emissive}
           emissiveMap={sphereTexture.emissiveMap}
-          emissiveIntensity={0.62}
+          emissiveIntensity={accentStyle.emissiveIntensity}
           roughness={0.88}
           metalness={0}
-          envMapIntensity={0.04}
+          envMapIntensity={accentStyle.envMapIntensity}
         />
       </mesh>
     </group>
@@ -174,20 +216,31 @@ function SmileySphere({
 function Scene({
   pointer,
   sizeScale,
+  faceTextureScale,
+  accent,
 }: {
   pointer: McpPointerRef;
   sizeScale: number;
+  faceTextureScale: number;
+  accent: McpAccent;
 }) {
+  const { lightColor, lightIntensity } = MCP_ACCENT[accent];
+
   return (
     <>
       <ambientLight intensity={0.08} />
       <directionalLight position={[120, 180, 220]} intensity={0.28} />
       <directionalLight position={[-160, 80, 140]} intensity={0.05} />
-      <pointLight position={[-90, 130, 110]} intensity={0.55} color="#9333ea" />
+      <pointLight position={[-90, 130, 110]} intensity={lightIntensity} color={lightColor} />
       <pointLight position={[0, 0, 260]} intensity={0.06} color="#ffffff" />
 
       <Suspense fallback={null}>
-        <SmileySphere pointer={pointer} sizeScale={sizeScale} />
+        <SmileySphere
+          pointer={pointer}
+          sizeScale={sizeScale}
+          faceTextureScale={faceTextureScale}
+          accent={accent}
+        />
         <Environment preset="city" />
       </Suspense>
     </>
@@ -198,12 +251,24 @@ type McpCanvas3DProps = {
   pointer: McpPointerRef;
   width: number;
   height: number;
+  sizeScale?: number;
+  accent?: McpAccent;
 };
 
-export default function McpCanvas3D({ pointer, width, height }: McpCanvas3DProps) {
+export default function McpCanvas3D({
+  pointer,
+  width,
+  height,
+  sizeScale: sizeScaleOverride,
+  accent = "purple",
+}: McpCanvas3DProps) {
   if (width <= 0 || height <= 0) return null;
 
-  const sizeScale = width <= MOBILE_MAX_WIDTH ? MOBILE_SIZE_SCALE : 1;
+  const isMiniEmbed = width <= MINI_EMBED_MAX_PX;
+  const sizeScale =
+    sizeScaleOverride ??
+    (isMiniEmbed ? MINI_SIZE_SCALE : width <= MOBILE_MAX_WIDTH ? MOBILE_SIZE_SCALE : 1);
+  const faceTextureScale = isMiniEmbed ? MINI_FACE_TEXTURE_SCALE : FACE_TEXTURE_SCALE;
 
   return (
     <Canvas
@@ -213,7 +278,12 @@ export default function McpCanvas3D({ pointer, width, height }: McpCanvas3DProps
       style={{ background: "transparent" }}
       camera={{ position: [0, 0, 420], fov: 42, near: 0.1, far: 2000 }}
     >
-      <Scene pointer={pointer} sizeScale={sizeScale} />
+      <Scene
+        pointer={pointer}
+        sizeScale={sizeScale}
+        faceTextureScale={faceTextureScale}
+        accent={accent}
+      />
     </Canvas>
   );
 }

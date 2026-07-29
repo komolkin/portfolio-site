@@ -9,7 +9,7 @@ const TEXTURE_W = 1024;
 const TEXTURE_H = 512;
 
 /** Equirect math overshoots; tune down to match perceived size on the sphere. */
-const FACE_TEXTURE_SCALE = 0.52;
+export const FACE_TEXTURE_SCALE = 0.52;
 
 /** Feature layout in the Wormie SVG viewBox (17 × 16.077). */
 const EYE_CENTERS = [
@@ -29,11 +29,11 @@ type FaceLayout = {
   faceY: number;
 };
 
-function getFaceLayout(): FaceLayout {
+function getFaceLayout(faceTextureScale = FACE_TEXTURE_SCALE): FaceLayout {
   const cx = TEXTURE_W / 2;
   const cy = TEXTURE_H / 2;
   const faceW =
-    TEXTURE_W * 0.5 * (FIGMA_FACE_W / FIGMA_WORMIE_SIZE) * FACE_TEXTURE_SCALE;
+    TEXTURE_W * 0.5 * (FIGMA_FACE_W / FIGMA_WORMIE_SIZE) * faceTextureScale;
   const faceH = faceW * (FIGMA_FACE_H / FIGMA_FACE_W);
   return {
     cx,
@@ -60,10 +60,11 @@ function drawCircleBody(ctx: CanvasRenderingContext2D) {
 function drawEmissiveFace(
   ctx: CanvasRenderingContext2D,
   blink: number,
+  faceTextureScale = FACE_TEXTURE_SCALE,
 ) {
   ctx.fillStyle = "#000000";
   ctx.fillRect(0, 0, TEXTURE_W, TEXTURE_H);
-  drawSmileyFace(ctx, getFaceLayout(), blink);
+  drawSmileyFace(ctx, getFaceLayout(faceTextureScale), blink);
 }
 
 function drawGlowFill(
@@ -153,9 +154,10 @@ export function drawSphereTexture(
   bodyCtx: CanvasRenderingContext2D,
   emissiveCtx: CanvasRenderingContext2D,
   blink = 0,
+  faceTextureScale = FACE_TEXTURE_SCALE,
 ) {
   drawCircleBody(bodyCtx);
-  drawEmissiveFace(emissiveCtx, blink);
+  drawEmissiveFace(emissiveCtx, blink, faceTextureScale);
 }
 
 export type SphereTextureResource = {
@@ -164,8 +166,15 @@ export type SphereTextureResource = {
   redraw: (blink?: number) => void;
 };
 
+export type SphereTextureOptions = {
+  faceTextureScale?: number;
+};
+
 /** Dynamic canvas textures — call `redraw(blink)` to update eyes. */
-export function createSphereTextureResource(): SphereTextureResource {
+export function createSphereTextureResource(
+  options: SphereTextureOptions = {},
+): SphereTextureResource {
+  const faceTextureScale = options.faceTextureScale ?? FACE_TEXTURE_SCALE;
   const bodyCanvas = document.createElement("canvas");
   bodyCanvas.width = TEXTURE_W;
   bodyCanvas.height = TEXTURE_H;
@@ -189,7 +198,7 @@ export function createSphereTextureResource(): SphereTextureResource {
   emissiveMap.colorSpace = THREE.SRGBColorSpace;
 
   const redraw = (blink = 0) => {
-    drawSphereTexture(bodyCtx, emissiveCtx, blink);
+    drawSphereTexture(bodyCtx, emissiveCtx, blink, faceTextureScale);
     bodyMap.needsUpdate = true;
     emissiveMap.needsUpdate = true;
   };

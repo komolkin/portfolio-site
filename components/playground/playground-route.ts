@@ -1,4 +1,5 @@
 export const PROJECTS = [
+  { id: "smart-leverage", label: "Smart Leverage" },
   { id: "thinking", label: "Thinking" },
   { id: "mcp", label: "MCP" },
   { id: "ball", label: "Ball" },

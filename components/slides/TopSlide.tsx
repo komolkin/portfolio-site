@@ -498,7 +498,7 @@ export default function TopSlide() {
   );
 
   return (
-    <div id="top" className="slide w-full h-[100dvh] md:h-screen relative flex flex-col">
+    <div id="top" data-section="top" className="slide w-full h-[100dvh] md:h-screen relative flex flex-col">
       {/* Hover Preview Popup */}
       {showTrackPreview && artwork ? (
         <div

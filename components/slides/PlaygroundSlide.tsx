@@ -12,6 +12,7 @@ import {
 } from "@/components/playground/playground-route";
 import ResolvedCard from "@/components/playground/projects/resolved-card/ResolvedCard";
 import LeverageSelector from "@/components/playground/projects/leverage-selector/LeverageSelector";
+import SmartLeverage from "@/components/playground/projects/smart-leverage/SmartLeverage";
 import BinaryCompact from "@/components/playground/projects/binary-compact/BinaryCompact";
 import Position1 from "@/components/playground/projects/position-1/Position1";
 import Position7 from "@/components/playground/projects/position-7/Position7";
@@ -87,6 +88,7 @@ export default function PlaygroundSlide() {
           >
             {activeProject === "ball" && <Ball />}
             {activeProject === "resolved-card" && <ResolvedCard />}
+            {activeProject === "smart-leverage" && <SmartLeverage />}
             {activeProject === "leverage-selector" && <LeverageSelector />}
             {activeProject === "binary-compact" && <BinaryCompact />}
             {activeProject === "pnl-chart" && <PnlChart />}
