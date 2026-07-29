@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useMemo } from "react";
+import { useLayoutEffect, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import PlaygroundNav from "@/components/playground/PlaygroundNav";
@@ -8,6 +8,7 @@ import {
   projectIdFromIndex1,
   playgroundIndexFromPathname,
   isPlaygroundDeepLink,
+  type ProjectId,
 } from "@/components/playground/playground-route";
 import ResolvedCard from "@/components/playground/projects/resolved-card/ResolvedCard";
 import LeverageSelector from "@/components/playground/projects/leverage-selector/LeverageSelector";
@@ -24,10 +25,19 @@ import Worm from "@/components/playground/projects/worm/Worm";
 export default function PlaygroundSlide() {
   const pathname = usePathname();
   const prefersReducedMotion = useReducedMotion();
-  const activeProject = useMemo(
-    () => projectIdFromIndex1(playgroundIndexFromPathname(pathname ?? "/")),
-    [pathname]
+  const routeIndex = playgroundIndexFromPathname(pathname ?? "/");
+  const deepLink = isPlaygroundDeepLink(pathname ?? "/");
+
+  const [activeProject, setActiveProject] = useState<ProjectId>(() =>
+    projectIdFromIndex1(routeIndex)
   );
+
+  // Sync from URL on deep links; bare `/` keeps the last selected project.
+  useEffect(() => {
+    if (deepLink) {
+      setActiveProject(projectIdFromIndex1(routeIndex));
+    }
+  }, [deepLink, routeIndex]);
 
   // `/5` etc. should land on the playground slide, not About
   useLayoutEffect(() => {
