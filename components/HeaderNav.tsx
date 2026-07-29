@@ -4,12 +4,12 @@ import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 
 const tabs = [
-  { id: "playground", label: "Playground" },
   { id: "top", label: "About" },
+  { id: "playground", label: "Playground" },
 ];
 
 export default function HeaderNav() {
-  const [activeTab, setActiveTab] = useState("playground");
+  const [activeTab, setActiveTab] = useState("top");
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const navRef = useRef<HTMLDivElement>(null);
@@ -110,7 +110,7 @@ export default function HeaderNav() {
       ref={navRef}
       className="relative flex items-center"
       animate={{
-        x: activeTab === "top" ? -8 : 0,
+        x: activeTab === "playground" ? -8 : 0,
       }}
       transition={{
         type: "spring",
