@@ -6,6 +6,7 @@ import { useHeartRate } from "@/lib/heartRateContext";
 import ContributionGraph, {
   getContributionGraphSize,
 } from "@/components/widgets/ContributionGraph";
+import WeatherIcon from "@/components/widgets/WeatherIcon";
 import {
   StreamingWords,
   assignFreshWordDelays,
@@ -14,6 +15,7 @@ import {
   type StreamingWord,
 } from "@/components/StreamingWords";
 import type { ContributionCalendarWeek } from "@/lib/github";
+import { getWeatherCondition } from "@/lib/weather";
 import {
   readLastSpotifyTrack,
   writeLastSpotifyTrack,
@@ -32,13 +34,19 @@ interface SpotifyData {
   playedAt?: string;
 }
 
-type HoverPreview = "track" | "commits" | null;
+type HoverPreview = "track" | "commits" | "weather" | null;
 
 type TitleSegment =
   | {
       key: string;
       type: "link";
       href: string;
+      words: StreamingWord[];
+    }
+  | {
+      key: string;
+      type: "hover";
+      preview: Exclude<HoverPreview, null>;
       words: StreamingWord[];
     }
   | {
@@ -73,6 +81,8 @@ export default function TopSlide() {
   const { bpm } = useHeartRate();
   const [parisHours, setParisHours] = useState(0);
   const [parisMinutes, setParisMinutes] = useState(0);
+  const [parisTemperature, setParisTemperature] = useState<number | null>(null);
+  const [parisWeatherCode, setParisWeatherCode] = useState<number | null>(null);
   const [spotifyData, setSpotifyData] = useState<SpotifyData | null>(null);
   const [spotifyResolved, setSpotifyResolved] = useState(false);
   const [yearCommits, setYearCommits] = useState<number | null>(null);
@@ -85,12 +95,15 @@ export default function TopSlide() {
   const [touchArmedPreview, setTouchArmedPreview] = useState<HoverPreview>(null);
   const trackLinkRef = useRef<HTMLAnchorElement>(null);
   const commitsLinkRef = useRef<HTMLAnchorElement>(null);
+  const parisLinkRef = useRef<HTMLSpanElement>(null);
   const spotifyInitialFetchDoneRef = useRef(false);
   const animatedWordKeysRef = useRef(new Set<string>());
   const artwork = spotifyData?.track?.artwork ?? "";
   const showTrackPreview = hoverPreview === "track" && Boolean(artwork) && cursorPosition.y > 0;
   const showCommitsPreview =
     hoverPreview === "commits" && contributionWeeks !== null && cursorPosition.y > 0;
+  const showWeatherPreview =
+    hoverPreview === "weather" && parisTemperature !== null && cursorPosition.y > 0;
   const commitsPopupSize = contributionWeeks
     ? getCommitsPopupSize(contributionWeeks.length)
     : { width: 0, height: 0 };
@@ -107,6 +120,32 @@ export default function TopSlide() {
 
     updateTime();
     const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch Paris weather
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        const response = await fetch("/api/weather/paris");
+        if (!response.ok) return;
+        const result = (await response.json()) as {
+          celsius?: number;
+          weatherCode?: number;
+        };
+        if (typeof result.celsius === "number") {
+          setParisTemperature(result.celsius);
+        }
+        if (typeof result.weatherCode === "number") {
+          setParisWeatherCode(result.weatherCode);
+        }
+      } catch (error) {
+        console.error("Failed to fetch Paris weather:", error);
+      }
+    };
+
+    fetchWeather();
+    const interval = setInterval(fetchWeather, 15 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -215,9 +254,15 @@ export default function TopSlide() {
       if (!isMobileViewport()) return;
 
       const target = event.target as Node | null;
-      const activeLink =
-        touchArmedPreview === "track" ? trackLinkRef.current : commitsLinkRef.current;
-      if (activeLink && target && activeLink.contains(target)) return;
+      const activeTarget =
+        touchArmedPreview === "track"
+          ? trackLinkRef.current
+          : touchArmedPreview === "commits"
+            ? commitsLinkRef.current
+            : touchArmedPreview === "weather"
+              ? parisLinkRef.current
+              : null;
+      if (activeTarget && target && activeTarget.contains(target)) return;
 
       setTouchArmedPreview(null);
       setHoverPreview(null);
@@ -237,10 +282,10 @@ export default function TopSlide() {
     setHoverPreview(null);
   };
 
-  /** Mobile only: first tap = preview, second tap = follow link. Desktop: no-op. */
+  /** Mobile only: first tap = preview; links navigate on second tap. */
   const handlePreviewClick = (
-    e: React.MouseEvent<HTMLAnchorElement>,
-    preview: "track" | "commits"
+    e: React.MouseEvent<HTMLElement>,
+    preview: Exclude<HoverPreview, null>
   ) => {
     if (!isMobileViewport()) return;
 
@@ -252,9 +297,11 @@ export default function TopSlide() {
       return;
     }
 
-    // Second tap: follow the link and clear the preview
     setTouchArmedPreview(null);
     setHoverPreview(null);
+    if (preview === "weather") {
+      e.preventDefault();
+    }
   };
 
   const titleSegments = useMemo((): TitleSegment[] => {
@@ -419,12 +466,29 @@ export default function TopSlide() {
           </>
         ),
       });
-      pushTextWords(tailWords, "commits-paris", "now in Paris.", delayIndex, (word) => (
+      pushTextWords(tailWords, "commits-now-in", "now in", delayIndex, (word) => (
         <span className="opacity-40">
           {word}{" "}
         </span>
       ));
       segments.push({ key: "commits-tail", type: "words", words: tailWords });
+
+      segments.push({
+        key: "paris-weather",
+        type: "hover",
+        preview: "weather",
+        words: [
+          {
+            key: "paris",
+            delayIndex: delayIndex.current++,
+            content: (
+              <span className="text-white whitespace-nowrap">
+                {"\u00A0"}Paris.
+              </span>
+            ),
+          },
+        ],
+      });
     }
 
     return segments;
@@ -486,10 +550,60 @@ export default function TopSlide() {
         </div>
       ) : null}
 
+      <div
+        className={`pointer-events-none fixed z-[100] flex-shrink-0 ${
+          showWeatherPreview ? "visible" : "invisible"
+        }`}
+        style={{
+          width: TRACK_POPUP_SIZE,
+          height: TRACK_POPUP_SIZE,
+          left: cursorPosition.x,
+          top: Math.max(16, cursorPosition.y - TRACK_POPUP_SIZE - 16),
+          transform: "translateX(-50%)",
+        }}
+        aria-hidden={!showWeatherPreview}
+      >
+        <div className="flex size-full flex-col justify-between rounded-lg bg-white/10 p-[10px] shadow-2xl backdrop-blur-md">
+          {parisWeatherCode !== null ? (
+            <WeatherIcon
+              condition={getWeatherCondition(parisWeatherCode)}
+              className="size-5 text-white"
+            />
+          ) : (
+            <span aria-hidden="true" />
+          )}
+          <span className="font-mono text-3xl tabular-nums text-foreground leading-none">
+            {parisTemperature}°C
+          </span>
+        </div>
+      </div>
+
       {/* Main Content */}
       <div className="flex-1 flex items-center px-6 md:px-8 lg:px-10">
         <h1 className="text-pretty text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-[1.15] max-w-2xl xl:max-w-4xl">
           {animatedTitleSegments.map((segment) => {
+            if (segment.type === "hover") {
+              return (
+                <span
+                  key={segment.key}
+                  ref={segment.preview === "weather" ? parisLinkRef : undefined}
+                  role="presentation"
+                  className="text-white transition-colors cursor-pointer"
+                  onMouseEnter={() => {
+                    if (!isMobileViewport()) setHoverPreview(segment.preview);
+                  }}
+                  onMouseLeave={clearHoverPreview}
+                  onMouseMove={handleMouseMove}
+                  onClick={(e) => handlePreviewClick(e, segment.preview)}
+                >
+                  <StreamingWords
+                    words={segment.words}
+                    animatedWordKeysRef={animatedWordKeysRef}
+                  />
+                </span>
+              );
+            }
+
             if (segment.type === "link") {
               const isTrackLink = segment.key.startsWith("track-");
               const isCommitsLink = segment.key === "commits-link";
