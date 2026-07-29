@@ -565,7 +565,7 @@ export default function TopSlide() {
           {parisWeatherCode !== null ? (
             <WeatherIcon
               condition={getWeatherCondition(parisWeatherCode)}
-              className="size-5 text-white"
+              className="size-10 text-white"
             />
           ) : (
             <span aria-hidden="true" />
