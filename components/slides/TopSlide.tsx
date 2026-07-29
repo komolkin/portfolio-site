@@ -482,9 +482,7 @@ export default function TopSlide() {
             key: "paris",
             delayIndex: delayIndex.current++,
             content: (
-              <span className="text-white whitespace-nowrap">
-                {"\u00A0"}Paris.
-              </span>
+              <span className="text-white whitespace-nowrap">Paris.</span>
             ),
           },
         ],
