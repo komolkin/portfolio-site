@@ -482,7 +482,7 @@ export default function TopSlide() {
             key: "paris",
             delayIndex: delayIndex.current++,
             content: (
-              <span className="text-white whitespace-nowrap">Paris.</span>
+              <span className="whitespace-nowrap">Paris.</span>
             ),
           },
         ],
@@ -586,7 +586,7 @@ export default function TopSlide() {
                   key={segment.key}
                   ref={segment.preview === "weather" ? parisLinkRef : undefined}
                   role="presentation"
-                  className="text-white transition-colors cursor-pointer"
+                  className="hover:text-muted-foreground transition-colors cursor-pointer"
                   onMouseEnter={() => {
                     if (!isMobileViewport()) setHoverPreview(segment.preview);
                   }}
