@@ -488,7 +488,7 @@ export default function TopSlide() {
 
       {/* Main Content */}
       <div className="flex-1 flex items-center px-6 md:px-8 lg:px-10">
-        <h1 className="text-balance text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-[1.15] max-w-2xl xl:max-w-4xl">
+        <h1 className="text-pretty text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-[1.15] max-w-2xl xl:max-w-4xl">
           {animatedTitleSegments.map((segment) => {
             if (segment.type === "link") {
               const isTrackLink = segment.key.startsWith("track-");
