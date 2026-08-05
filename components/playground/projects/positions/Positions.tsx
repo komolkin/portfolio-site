@@ -546,18 +546,25 @@ function OpenOrderRowItem({
           <div className="flex shrink-0 items-center gap-2">{sideBadge}</div>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-semibold leading-[1.25] text-white">
-            {row.orderLabel}
-          </p>
-          <p className="text-xs font-normal leading-[1.25] text-white/60">
-            {row.totalLabel} in total
-          </p>
-        </div>
+        <div className="flex w-full items-start justify-between gap-4">
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <p className="text-sm font-semibold leading-[1.25] text-white">
+              {row.orderLabel}
+            </p>
+            <p className="text-xs font-normal leading-[1.25] text-white/60">
+              {row.totalLabel} in total
+            </p>
+          </div>
 
-        <p className="text-sm font-semibold leading-[1.25] text-white">
-          {row.filledLabel}
-        </p>
+          <div className="flex shrink-0 flex-col gap-1 text-right">
+            <p className="text-xs font-normal leading-[1.25] text-white/60">
+              Filled
+            </p>
+            <p className="text-sm font-semibold leading-[1.25] text-white">
+              {row.filledAmount}
+            </p>
+          </div>
+        </div>
 
         {cancelButton}
       </div>
@@ -584,7 +591,7 @@ function OpenOrderRowItem({
       </div>
 
       <p className="w-[140px] shrink-0 text-sm font-semibold leading-[1.25] text-white">
-        {row.filledLabel}
+        {row.filledAmount} filled
       </p>
 
       {cancelButton}

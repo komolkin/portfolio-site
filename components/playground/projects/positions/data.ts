@@ -26,8 +26,8 @@ export type OpenOrderRow = {
   orderLabel: string;
   side: PositionSide;
   leverage: string;
-  /** e.g. "0 of 16 filled" */
-  filledLabel: string;
+  /** e.g. "0 of 16" */
+  filledAmount: string;
   /** e.g. "$5.44" */
   totalLabel: string;
 };
@@ -120,7 +120,7 @@ export const OPEN_ORDER_ROWS: OpenOrderRow[] = [
     orderLabel: "Buy 16 shares at 34¢",
     side: "YES",
     leverage: "3×",
-    filledLabel: "0 of 16 filled",
+    filledAmount: "0 of 16",
     totalLabel: "$5.44",
   },
   {
@@ -129,7 +129,7 @@ export const OPEN_ORDER_ROWS: OpenOrderRow[] = [
     orderLabel: "Buy 40 shares at 22¢",
     side: "NO",
     leverage: "3×",
-    filledLabel: "0 of 40 filled",
+    filledAmount: "0 of 40",
     totalLabel: "$8.80",
   },
   {
@@ -138,7 +138,7 @@ export const OPEN_ORDER_ROWS: OpenOrderRow[] = [
     orderLabel: "Buy 100 shares at 51¢",
     side: "YES",
     leverage: "3×",
-    filledLabel: "0 of 100 filled",
+    filledAmount: "0 of 100",
     totalLabel: "$51.00",
   },
   {
@@ -147,7 +147,7 @@ export const OPEN_ORDER_ROWS: OpenOrderRow[] = [
     orderLabel: "Buy 8 shares at 67¢",
     side: "NO",
     leverage: "3×",
-    filledLabel: "0 of 8 filled",
+    filledAmount: "0 of 8",
     totalLabel: "$5.36",
   },
 ];
