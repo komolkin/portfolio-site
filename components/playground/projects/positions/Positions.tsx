@@ -489,7 +489,7 @@ function PositionRowItem({
 
   if (mobile) {
     return (
-      <div className="flex w-full flex-col gap-3 rounded-2xl bg-white/[0.06] p-4">
+      <div className="flex w-full cursor-pointer flex-col gap-3 rounded-2xl bg-white/[0.06] p-4 transition-colors duration-150 ease-out hover:bg-white/[0.1]">
         <div className="flex w-full items-center justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-2">
             <p className="text-base font-semibold leading-none text-white">
@@ -506,7 +506,7 @@ function PositionRowItem({
               <span className="inline-flex items-center justify-center rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold leading-[1.25] text-white">
                 {row.leverage}
               </span>
-              <p className="ml-1.5 text-xs font-semibold leading-[1.25] text-white">
+              <p className="ml-1.5 text-xs font-normal leading-[1.25] text-white">
                 <span>{row.from} → </span>
                 <span className="text-[#5dd978]">${formatUsd(row.to)}</span>
               </p>
@@ -537,7 +537,7 @@ function PositionRowItem({
       <div className="flex w-[100px] shrink-0 items-center gap-2">{sideBadge}</div>
 
       <div className="flex w-[180px] shrink-0 flex-col gap-1">
-        <p className="text-sm font-semibold leading-[1.25] text-white">
+        <p className="text-sm font-normal leading-[1.25] text-white">
           <span>{row.from} → </span>
           <span className="text-[#5dd978]">${formatUsd(row.to)}</span>
         </p>
@@ -602,7 +602,7 @@ function OpenOrderRowItem({
 
   if (mobile) {
     return (
-      <div className="flex w-full flex-col gap-3 rounded-2xl bg-white/[0.06] p-4">
+      <div className="flex w-full cursor-pointer flex-col gap-3 rounded-2xl bg-white/[0.06] p-4 transition-colors duration-150 ease-out hover:bg-white/[0.1]">
         <div className="flex w-full items-center justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-2">
             <p className="text-base font-semibold leading-none text-white">
@@ -619,7 +619,7 @@ function OpenOrderRowItem({
               <span className="inline-flex items-center justify-center rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold leading-[1.25] text-white">
                 {row.leverage}
               </span>
-              <p className="ml-1.5 text-xs font-semibold leading-[1.25] text-white">
+              <p className="ml-1.5 text-xs font-normal leading-[1.25] text-white">
                 {row.orderLabel}
               </p>
             </div>
@@ -642,7 +642,7 @@ function OpenOrderRowItem({
       <div className="flex w-[100px] shrink-0 items-center gap-2">{sideBadge}</div>
 
       <div className="flex w-[180px] shrink-0 flex-col gap-1">
-        <p className="text-sm font-semibold leading-[1.25] text-white">
+        <p className="text-sm font-normal leading-[1.25] text-white">
           {row.orderLabel}
         </p>
         <p className="text-xs font-normal leading-[1.25] text-white/60">
@@ -650,7 +650,7 @@ function OpenOrderRowItem({
         </p>
       </div>
 
-      <p className="w-[140px] shrink-0 text-sm font-semibold leading-[1.25] text-white">
+      <p className="w-[140px] shrink-0 text-sm font-normal leading-[1.25] text-white">
         {row.filledAmount} filled
       </p>
 

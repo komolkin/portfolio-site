@@ -420,7 +420,7 @@ export default function TopSlide() {
         delayIndex: delayIndex.current++,
         content: <span className="opacity-40">this year</span>,
       });
-      pushTextWords(tailWords, "commits-hr", ", his HR is", delayIndex, (word) => (
+      pushTextWords(tailWords, "commits-hr", ", the HR is", delayIndex, (word) => (
         <span className="opacity-40">
           {word}{" "}
         </span>
