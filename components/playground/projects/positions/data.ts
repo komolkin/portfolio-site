@@ -19,6 +19,19 @@ export type PositionRow = {
   entryLeft: number;
 };
 
+export type OpenOrderRow = {
+  id: string;
+  title: string;
+  /** e.g. "Buy 16 shares at 34¢" */
+  orderLabel: string;
+  side: PositionSide;
+  leverage: string;
+  /** e.g. "0 of 16 filled" */
+  filledLabel: string;
+  /** e.g. "$5.44" */
+  totalLabel: string;
+};
+
 export const POSITION_ROWS: PositionRow[] = [
   {
     id: "1",
@@ -97,5 +110,44 @@ export const POSITION_ROWS: PositionRow[] = [
     fillWidthBase: 98,
     liqWidth: 55,
     entryLeft: 78,
+  },
+];
+
+export const OPEN_ORDER_ROWS: OpenOrderRow[] = [
+  {
+    id: "o1",
+    title: "25,001-50,000",
+    orderLabel: "Buy 16 shares at 34¢",
+    side: "YES",
+    leverage: "3×",
+    filledLabel: "0 of 16 filled",
+    totalLabel: "$5.44",
+  },
+  {
+    id: "o2",
+    title: "≥25,000",
+    orderLabel: "Buy 40 shares at 22¢",
+    side: "NO",
+    leverage: "3×",
+    filledLabel: "0 of 40 filled",
+    totalLabel: "$8.80",
+  },
+  {
+    id: "o3",
+    title: "200,001-500,000",
+    orderLabel: "Buy 100 shares at 51¢",
+    side: "YES",
+    leverage: "3×",
+    filledLabel: "0 of 100 filled",
+    totalLabel: "$51.00",
+  },
+  {
+    id: "o4",
+    title: "25,001-50,000",
+    orderLabel: "Buy 8 shares at 67¢",
+    side: "NO",
+    leverage: "3×",
+    filledLabel: "0 of 8 filled",
+    totalLabel: "$5.36",
   },
 ];

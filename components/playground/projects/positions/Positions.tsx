@@ -2,7 +2,12 @@
 
 import NumberFlow from "@number-flow/react";
 import { useEffect, useRef, useState } from "react";
-import { POSITION_ROWS, type PositionRow } from "./data";
+import {
+  OPEN_ORDER_ROWS,
+  POSITION_ROWS,
+  type OpenOrderRow,
+  type PositionRow,
+} from "./data";
 
 /**
  * Positions compact list — Figma node 11999:30251
@@ -400,9 +405,55 @@ function PositionRowItem({
   );
 }
 
+function OpenOrderRowItem({ row }: { row: OpenOrderRow }) {
+  return (
+    <div className="flex w-full items-center gap-6">
+      <div className="flex w-40 shrink-0 flex-col gap-1">
+        <p className="whitespace-nowrap text-base font-semibold leading-none text-white">
+          {row.title}
+        </p>
+        <p className="text-xs font-normal leading-[1.25] text-white/60">
+          {row.totalLabel} in total
+        </p>
+      </div>
+
+      <div className="flex w-[100px] shrink-0 items-center gap-2">
+        <span
+          className={`inline-flex items-center justify-center rounded-xl px-[10px] py-1 text-xs font-semibold leading-[1.25] text-white ${
+            row.side === "YES" ? "bg-[#214a2a]" : "bg-[#7a0f1c]"
+          }`}
+        >
+          {row.side}
+        </span>
+        <span className="inline-flex items-center justify-center rounded-full bg-white/10 px-[10px] py-1 text-xs font-semibold leading-[1.25] text-white">
+          {row.leverage}
+        </span>
+      </div>
+
+      <p className="w-[160px] shrink-0 text-sm font-semibold leading-[1.25] text-white">
+        {row.orderLabel}
+      </p>
+
+      <p className="w-[140px] shrink-0 text-sm font-semibold leading-[1.25] text-white">
+        {row.filledLabel}
+      </p>
+
+      <button
+        type="button"
+        className="ml-auto flex h-10 min-w-[161px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white/10 px-3 text-center text-sm font-semibold leading-[1.25] text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.04] active:scale-[0.97]"
+      >
+        Cancel order
+      </button>
+    </div>
+  );
+}
+
 export default function Positions() {
   const [activeTab, setActiveTab] = useState<TabId>("positions");
   const [sims, setSims] = useState<RowSim[]>(initialSims);
+  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
+  const positionsTabRef = useRef<HTMLButtonElement>(null);
+  const openOrdersTabRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -425,13 +476,33 @@ export default function Positions() {
     return () => window.clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    const updateIndicator = () => {
+      const tab =
+        activeTab === "positions"
+          ? positionsTabRef.current
+          : openOrdersTabRef.current;
+      if (!tab) return;
+      setIndicator({ left: tab.offsetLeft, width: tab.offsetWidth });
+    };
+
+    updateIndicator();
+    window.addEventListener("resize", updateIndicator);
+    return () => window.removeEventListener("resize", updateIndicator);
+  }, [activeTab]);
+
   return (
     <div className="relative flex w-full max-w-[852px] flex-col items-start overflow-x-auto px-4 md:px-0">
       <div className="flex min-w-[820px] w-full flex-col gap-6">
         {/* Tabs */}
         <div className="flex w-full flex-col gap-4">
-          <div className="flex items-center gap-4" role="tablist" aria-label="Positions views">
+          <div
+            className="flex items-center gap-4"
+            role="tablist"
+            aria-label="Positions views"
+          >
             <button
+              ref={positionsTabRef}
               type="button"
               role="tab"
               aria-selected={activeTab === "positions"}
@@ -451,6 +522,7 @@ export default function Positions() {
             </button>
 
             <button
+              ref={openOrdersTabRef}
               type="button"
               role="tab"
               aria-selected={activeTab === "open-orders"}
@@ -473,11 +545,7 @@ export default function Positions() {
           <div className="relative h-px w-full">
             <div
               className="absolute top-0 h-px bg-white transition-[left,width] duration-200 ease-out"
-              style={
-                activeTab === "positions"
-                  ? { left: 0, width: 98 }
-                  : { left: 114, width: 128 }
-              }
+              style={{ left: indicator.left, width: indicator.width }}
             />
           </div>
         </div>
@@ -499,11 +567,15 @@ export default function Positions() {
             ))}
           </div>
         ) : (
-          <div
-            className="flex w-full max-w-[820px] items-center justify-center py-16 text-sm text-white/40"
-            role="tabpanel"
-          >
-            No open orders
+          <div className="flex w-full max-w-[820px] flex-col gap-3" role="tabpanel">
+            {OPEN_ORDER_ROWS.map((row, index) => (
+              <div key={row.id} className="flex w-full flex-col gap-3">
+                <OpenOrderRowItem row={row} />
+                {index < OPEN_ORDER_ROWS.length - 1 && (
+                  <div className="h-px w-full bg-white/10" aria-hidden />
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
