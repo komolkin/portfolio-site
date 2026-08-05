@@ -85,6 +85,47 @@ function PhoneIcon({ className }: { className?: string }) {
   );
 }
 
+function CashOutIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 19V5" />
+      <path d="M5 12l7-7 7 7" />
+      <path d="M4 19h16" />
+    </svg>
+  );
+}
+
+function CancelIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M18 6L6 18" />
+      <path d="M6 6l12 12" />
+    </svg>
+  );
+}
+
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
@@ -428,38 +469,67 @@ function PositionRowItem({
   const cashOutButton = (
     <button
       type="button"
-      className={`flex h-10 items-center justify-center overflow-hidden rounded-full border-2 border-white/10 px-3 text-center text-sm font-semibold leading-[1.25] text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.04] active:scale-[0.97] ${
-        mobile ? "w-full" : "ml-auto min-w-[161px] shrink-0"
+      aria-label={`Cash out $${formatUsd(cashOut)}`}
+      className={`flex items-center justify-center overflow-hidden rounded-full border-2 border-white/10 text-sm font-semibold leading-[1.25] text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.04] active:scale-[0.97] ${
+        mobile
+          ? "h-10 shrink-0 gap-1.5 px-3"
+          : "ml-auto h-10 min-w-[161px] shrink-0 px-3 text-center"
       }`}
     >
-      <span className="inline-flex items-baseline">
-        <span>Cash Out&nbsp;$</span>
-        <NumberFlow
-          value={cashOut}
-          trend={0}
-          format={{ useGrouping: true }}
-          className="tabular-nums text-inherit"
-        />
-      </span>
+      {mobile ? (
+        <span className="inline-flex items-center gap-1.5">
+          <CashOutIcon />
+          <span className="inline-flex items-baseline">
+            <span>$</span>
+            <NumberFlow
+              value={cashOut}
+              trend={0}
+              format={{ useGrouping: true }}
+              className="tabular-nums text-inherit"
+            />
+          </span>
+        </span>
+      ) : (
+        <span className="inline-flex items-baseline">
+          <span>Cash Out&nbsp;$</span>
+          <NumberFlow
+            value={cashOut}
+            trend={0}
+            format={{ useGrouping: true }}
+            className="tabular-nums text-inherit"
+          />
+        </span>
+      )}
     </button>
   );
 
   if (mobile) {
     return (
       <div className="flex w-full flex-col gap-3 rounded-2xl bg-white/[0.06] p-4">
-        <div className="flex w-full items-start justify-between gap-3">
-          <p className="text-base font-semibold leading-none text-white">{row.title}</p>
-          <div className="flex shrink-0 items-center gap-2">{sideBadge}</div>
-        </div>
+        <div className="flex w-full items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-2">
+            <p className="text-base font-semibold leading-none text-white">
+              {row.title}
+            </p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span
+                className={`inline-flex items-center justify-center rounded-lg px-2 py-0.5 text-[11px] font-semibold leading-[1.25] text-white ${
+                  row.side === "YES" ? "bg-[#214a2a]" : "bg-[#7a0f1c]"
+                }`}
+              >
+                {row.side}
+              </span>
+              <span className="inline-flex items-center justify-center rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold leading-[1.25] text-white">
+                {row.leverage}
+              </span>
+              <p className="text-xs font-semibold leading-[1.25] text-white">
+                <span>{row.from} → </span>
+                <span className="text-[#5dd978]">${formatUsd(row.to)}</span>
+              </p>
+            </div>
+          </div>
 
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-semibold leading-[1.25] text-white">
-            <span>{row.from} → </span>
-            <span className="text-[#5dd978]">${formatUsd(row.to)}</span>
-          </p>
-          <p className="text-xs font-normal leading-[1.25] text-white/60">
-            {row.sharesLabel}
-          </p>
+          {cashOutButton}
         </div>
 
         <PositionBar
@@ -468,8 +538,6 @@ function PositionRowItem({
           entryLeft={row.entryLeft}
           fluid
         />
-
-        {cashOutButton}
       </div>
     );
   }
@@ -530,43 +598,44 @@ function OpenOrderRowItem({
   const cancelButton = (
     <button
       type="button"
-      className={`flex h-10 items-center justify-center overflow-hidden rounded-full border-2 border-white/10 px-3 text-center text-sm font-semibold leading-[1.25] text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.04] active:scale-[0.97] ${
-        mobile ? "w-full" : "ml-auto min-w-[161px] shrink-0"
+      aria-label="Cancel order"
+      className={`flex items-center justify-center overflow-hidden rounded-full border-2 border-white/10 text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.04] active:scale-[0.97] ${
+        mobile
+          ? "size-10 shrink-0"
+          : "ml-auto h-10 min-w-[161px] shrink-0 px-3 text-center text-sm font-semibold leading-[1.25]"
       }`}
     >
-      Cancel order
+      {mobile ? <CancelIcon /> : "Cancel order"}
     </button>
   );
 
   if (mobile) {
     return (
       <div className="flex w-full flex-col gap-3 rounded-2xl bg-white/[0.06] p-4">
-        <div className="flex w-full items-start justify-between gap-3">
-          <p className="text-base font-semibold leading-none text-white">{row.title}</p>
-          <div className="flex shrink-0 items-center gap-2">{sideBadge}</div>
-        </div>
-
-        <div className="flex w-full items-start justify-between gap-4">
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <p className="text-sm font-semibold leading-[1.25] text-white">
-              {row.orderLabel}
+        <div className="flex w-full items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-2">
+            <p className="text-base font-semibold leading-none text-white">
+              {row.title}
             </p>
-            <p className="text-xs font-normal leading-[1.25] text-white/60">
-              {row.totalLabel} in total
-            </p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span
+                className={`inline-flex items-center justify-center rounded-lg px-2 py-0.5 text-[11px] font-semibold leading-[1.25] text-white ${
+                  row.side === "YES" ? "bg-[#214a2a]" : "bg-[#7a0f1c]"
+                }`}
+              >
+                {row.side}
+              </span>
+              <span className="inline-flex items-center justify-center rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold leading-[1.25] text-white">
+                {row.leverage}
+              </span>
+              <p className="text-xs font-semibold leading-[1.25] text-white">
+                {row.orderLabel}
+              </p>
+            </div>
           </div>
 
-          <div className="flex shrink-0 flex-col gap-1 text-right">
-            <p className="text-xs font-normal leading-[1.25] text-white/60">
-              Filled
-            </p>
-            <p className="text-sm font-semibold leading-[1.25] text-white">
-              {row.filledAmount}
-            </p>
-          </div>
+          {cancelButton}
         </div>
-
-        {cancelButton}
       </div>
     );
   }
@@ -654,7 +723,7 @@ export default function Positions() {
     >
       <div className="flex w-full flex-col gap-6">
         {/* Tabs */}
-        <div className="flex w-full flex-col gap-4">
+        <div className="flex w-full flex-col gap-1.5">
           <div className="flex w-full items-center gap-4">
             <div
               className="flex items-center gap-4"
