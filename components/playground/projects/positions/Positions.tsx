@@ -451,6 +451,8 @@ function PositionRowItem({
   fillWidth: number;
   mobile?: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   const sideBadge = (
     <>
       <span
@@ -473,6 +475,7 @@ function PositionRowItem({
       className={`flex h-10 items-center justify-center gap-1.5 overflow-hidden rounded-full border-2 border-white/10 px-3 text-sm font-semibold leading-[1.25] text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.04] active:scale-[0.97] ${
         mobile ? "shrink-0" : "ml-auto min-w-[120px] shrink-0"
       }`}
+      onClick={(e) => e.stopPropagation()}
     >
       <CashOutIcon />
       <span className="inline-flex items-baseline">
@@ -489,7 +492,19 @@ function PositionRowItem({
 
   if (mobile) {
     return (
-      <div className="flex w-full cursor-pointer flex-col gap-3 rounded-2xl bg-white/[0.06] p-4 transition-colors duration-150 ease-out hover:bg-white/[0.1]">
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        className="flex w-full cursor-pointer flex-col rounded-2xl bg-white/[0.06] p-4 transition-[colors,transform] duration-150 ease-out hover:bg-white/[0.1] active:scale-[0.98]"
+        onClick={() => setExpanded((prev) => !prev)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setExpanded((prev) => !prev);
+          }
+        }}
+      >
         <div className="flex w-full items-center justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-2">
             <p className="text-base font-semibold leading-none text-white">
@@ -516,12 +531,21 @@ function PositionRowItem({
           {cashOutButton}
         </div>
 
-        <PositionBar
-          fillWidth={fillWidth}
-          liqWidth={row.liqWidth}
-          entryLeft={row.entryLeft}
-          fluid
-        />
+        <div
+          className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+            expanded ? "mt-3 grid-rows-[1fr]" : "grid-rows-[0fr]"
+          }`}
+          aria-hidden={!expanded}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <PositionBar
+              fillWidth={fillWidth}
+              liqWidth={row.liqWidth}
+              entryLeft={row.entryLeft}
+              fluid
+            />
+          </div>
+        </div>
       </div>
     );
   }
