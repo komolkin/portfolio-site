@@ -10,6 +10,8 @@ import {
   isPlaygroundDeepLink,
   type ProjectId,
 } from "@/components/playground/playground-route";
+import HotTopics from "@/components/playground/projects/hot-topics/HotTopics";
+import Positions from "@/components/playground/projects/positions/Positions";
 import ResolvedCard from "@/components/playground/projects/resolved-card/ResolvedCard";
 import LeverageSelector from "@/components/playground/projects/leverage-selector/LeverageSelector";
 import SmartLeverage from "@/components/playground/projects/smart-leverage/SmartLeverage";
@@ -40,7 +42,7 @@ export default function PlaygroundSlide() {
     }
   }, [deepLink, routeIndex]);
 
-  // `/5` etc. should land on the playground slide, not About
+  // `/5` etc. should land on the playground slide (first)
   useLayoutEffect(() => {
     if (!pathname || !isPlaygroundDeepLink(pathname)) return;
 
@@ -54,7 +56,9 @@ export default function PlaygroundSlide() {
     activeProject === "ball" ||
     activeProject === "mcp" ||
     activeProject === "thinking" ||
-    activeProject === "resolved-card"
+    activeProject === "resolved-card" ||
+    activeProject === "hot-topics" ||
+    activeProject === "positions"
       ? "h-full [zoom:1]"
       : activeProject.startsWith("position-")
         ? "[zoom:0.6]"
@@ -86,6 +90,8 @@ export default function PlaygroundSlide() {
             }}
             className={`flex w-full items-center justify-center px-4 md:h-full md:px-0 md:[zoom:1] ${zoomClass}`}
           >
+            {activeProject === "hot-topics" && <HotTopics />}
+            {activeProject === "positions" && <Positions />}
             {activeProject === "ball" && <Ball />}
             {activeProject === "resolved-card" && <ResolvedCard />}
             {activeProject === "smart-leverage" && <SmartLeverage />}
