@@ -28,6 +28,9 @@ const ENTRY_MARKER_HEIGHT = 7;
 
 const BAR_TRACK_WIDTH = 147;
 const BAR_TRACK_HEIGHT = 17;
+/** Red liq line height; left inset matches top/bottom padding in the track */
+const LIQ_LINE_HEIGHT = 7;
+const LIQ_INSET = (BAR_TRACK_HEIGHT - LIQ_LINE_HEIGHT) / 2;
 const SIM_TICK_MS = 1600;
 /** Progress fill stays clear of the track edge */
 const FILL_MAX = BAR_TRACK_WIDTH - 4;
@@ -35,11 +38,52 @@ const FILL_MAX = BAR_TRACK_WIDTH - 4;
 const TRACK_CENTS = 100;
 
 type TabId = "positions" | "open-orders";
+type ViewMode = "desktop" | "mobile";
 
 type RowSim = {
   cashOut: number;
   fillWidth: number;
 };
+
+function LaptopIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M2 20h20" />
+    </svg>
+  );
+}
+
+function PhoneIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="7" y="2" width="10" height="20" rx="2" />
+      <path d="M11 18h2" />
+    </svg>
+  );
+}
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
@@ -198,10 +242,13 @@ function PositionBar({
   fillWidth,
   liqWidth,
   entryLeft,
+  fluid = false,
 }: {
   fillWidth: number;
   liqWidth: number;
   entryLeft: number;
+  /** Stretch track to full container width (mobile) */
+  fluid?: boolean;
 }) {
   const barRef = useRef<HTMLDivElement>(null);
   const [tip, setTip] = useState<BarTooltipState>({
@@ -214,6 +261,10 @@ function PositionBar({
   const liquidationCents = centsFromPx(liqWidth);
   const entryCents = centsFromPx(entryLeft);
   const currentPriceCents = centsFromPx(fillWidth);
+
+  const fillPct = (fillWidth / BAR_TRACK_WIDTH) * 100;
+  const liqPct = (liqWidth / BAR_TRACK_WIDTH) * 100;
+  const entryPct = (entryLeft / BAR_TRACK_WIDTH) * 100;
 
   const anchorTip = (kind: Exclude<TipKind, null>, el: HTMLElement) => {
     const rect = el.getBoundingClientRect();
@@ -267,8 +318,12 @@ function PositionBar({
   return (
     <div
       ref={barRef}
-      className="relative shrink-0"
-      style={{ width: BAR_TRACK_WIDTH, height: BAR_TRACK_HEIGHT }}
+      className={fluid ? "relative w-full" : "relative shrink-0"}
+      style={
+        fluid
+          ? { height: BAR_TRACK_HEIGHT }
+          : { width: BAR_TRACK_WIDTH, height: BAR_TRACK_HEIGHT }
+      }
       onMouseLeave={hideTip}
     >
       <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-lg">
@@ -282,7 +337,7 @@ function PositionBar({
         <div
           className="absolute left-0 top-0 h-full rounded-lg"
           style={{
-            width: fillWidth,
+            width: `${fillPct}%`,
             backgroundColor: fillColor,
             transition: "width 700ms ease-out, background-color 150ms ease-out",
           }}
@@ -300,7 +355,7 @@ function PositionBar({
       <div
         className="absolute top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center"
         style={{
-          left: entryLeft,
+          left: `${entryPct}%`,
           width: Math.max(ENTRY_MARKER_WIDTH, 12),
           height: BAR_TRACK_HEIGHT,
         }}
@@ -321,13 +376,14 @@ function PositionBar({
       {/* Red liquidation hit target */}
       <div
         className="absolute top-1/2 z-10 flex -translate-y-1/2 cursor-pointer items-center"
-        style={{ left: 6, width: liqWidth, height: BAR_TRACK_HEIGHT }}
+        style={{ left: LIQ_INSET, width: `${liqPct}%`, height: BAR_TRACK_HEIGHT }}
         aria-label={`Liquidation at ${liquidationCents}¢`}
         onMouseEnter={(e) => anchorTip("liq", e.currentTarget)}
       >
         <div
-          className="pointer-events-none h-[7px] w-full rounded transition-colors duration-150 ease-out"
+          className="pointer-events-none w-full rounded transition-colors duration-150 ease-out"
           style={{
+            height: LIQ_LINE_HEIGHT,
             backgroundColor: tip.kind === "liq" ? LIQ_HOVER : LIQ_COLOR,
           }}
         />
@@ -347,11 +403,77 @@ function PositionRowItem({
   row,
   cashOut,
   fillWidth,
+  mobile = false,
 }: {
   row: PositionRow;
   cashOut: number;
   fillWidth: number;
+  mobile?: boolean;
 }) {
+  const sideBadge = (
+    <>
+      <span
+        className={`inline-flex items-center justify-center rounded-xl px-[10px] py-1 text-xs font-semibold leading-[1.25] text-white ${
+          row.side === "YES" ? "bg-[#214a2a]" : "bg-[#7a0f1c]"
+        }`}
+      >
+        {row.side}
+      </span>
+      <span className="inline-flex items-center justify-center rounded-full bg-white/10 px-[10px] py-1 text-xs font-semibold leading-[1.25] text-white">
+        {row.leverage}
+      </span>
+    </>
+  );
+
+  const cashOutButton = (
+    <button
+      type="button"
+      className={`flex h-10 items-center justify-center overflow-hidden rounded-full border-2 border-white/10 px-3 text-center text-sm font-semibold leading-[1.25] text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.04] active:scale-[0.97] ${
+        mobile ? "w-full" : "ml-auto min-w-[161px] shrink-0"
+      }`}
+    >
+      <span className="inline-flex items-baseline">
+        <span>Cash Out&nbsp;$</span>
+        <NumberFlow
+          value={cashOut}
+          trend={0}
+          format={{ useGrouping: true }}
+          className="tabular-nums text-inherit"
+        />
+      </span>
+    </button>
+  );
+
+  if (mobile) {
+    return (
+      <div className="flex w-full flex-col gap-3 rounded-2xl bg-white/[0.06] p-4">
+        <div className="flex w-full items-start justify-between gap-3">
+          <p className="text-base font-semibold leading-none text-white">{row.title}</p>
+          <div className="flex shrink-0 items-center gap-2">{sideBadge}</div>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-semibold leading-[1.25] text-white">
+            <span>{row.from} → </span>
+            <span className="text-[#5dd978]">${formatUsd(row.to)}</span>
+          </p>
+          <p className="text-xs font-normal leading-[1.25] text-white/60">
+            {row.sharesLabel}
+          </p>
+        </div>
+
+        <PositionBar
+          fillWidth={fillWidth}
+          liqWidth={row.liqWidth}
+          entryLeft={row.entryLeft}
+          fluid
+        />
+
+        {cashOutButton}
+      </div>
+    );
+  }
+
   return (
     <div className="flex w-full items-center gap-6">
       <div className="flex w-40 shrink-0 flex-col gap-1">
@@ -360,18 +482,7 @@ function PositionRowItem({
         </p>
       </div>
 
-      <div className="flex w-[100px] shrink-0 items-center gap-2">
-        <span
-          className={`inline-flex items-center justify-center rounded-xl px-[10px] py-1 text-xs font-semibold leading-[1.25] text-white ${
-            row.side === "YES" ? "bg-[#214a2a]" : "bg-[#7a0f1c]"
-          }`}
-        >
-          {row.side}
-        </span>
-        <span className="inline-flex items-center justify-center rounded-full bg-white/10 px-[10px] py-1 text-xs font-semibold leading-[1.25] text-white">
-          {row.leverage}
-        </span>
-      </div>
+      <div className="flex w-[100px] shrink-0 items-center gap-2">{sideBadge}</div>
 
       <div className="flex w-[140px] shrink-0 flex-col gap-1">
         <p className="text-sm font-semibold leading-[1.25] text-white">
@@ -389,25 +500,70 @@ function PositionRowItem({
         entryLeft={row.entryLeft}
       />
 
-      <button
-        type="button"
-        className="ml-auto flex h-10 min-w-[161px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white/10 px-3 text-center text-sm font-semibold leading-[1.25] text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.04] active:scale-[0.97]"
-      >
-        <span className="inline-flex items-baseline">
-          <span>Cash Out&nbsp;$</span>
-          <NumberFlow
-            value={cashOut}
-            trend={0}
-            format={{ useGrouping: true }}
-            className="tabular-nums text-inherit"
-          />
-        </span>
-      </button>
+      {cashOutButton}
     </div>
   );
 }
 
-function OpenOrderRowItem({ row }: { row: OpenOrderRow }) {
+function OpenOrderRowItem({
+  row,
+  mobile = false,
+}: {
+  row: OpenOrderRow;
+  mobile?: boolean;
+}) {
+  const sideBadge = (
+    <>
+      <span
+        className={`inline-flex items-center justify-center rounded-xl px-[10px] py-1 text-xs font-semibold leading-[1.25] text-white ${
+          row.side === "YES" ? "bg-[#214a2a]" : "bg-[#7a0f1c]"
+        }`}
+      >
+        {row.side}
+      </span>
+      <span className="inline-flex items-center justify-center rounded-full bg-white/10 px-[10px] py-1 text-xs font-semibold leading-[1.25] text-white">
+        {row.leverage}
+      </span>
+    </>
+  );
+
+  const cancelButton = (
+    <button
+      type="button"
+      className={`flex h-10 items-center justify-center overflow-hidden rounded-full border-2 border-white/10 px-3 text-center text-sm font-semibold leading-[1.25] text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.04] active:scale-[0.97] ${
+        mobile ? "w-full" : "ml-auto min-w-[161px] shrink-0"
+      }`}
+    >
+      Cancel order
+    </button>
+  );
+
+  if (mobile) {
+    return (
+      <div className="flex w-full flex-col gap-3 rounded-2xl bg-white/[0.06] p-4">
+        <div className="flex w-full items-start justify-between gap-3">
+          <p className="text-base font-semibold leading-none text-white">{row.title}</p>
+          <div className="flex shrink-0 items-center gap-2">{sideBadge}</div>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-semibold leading-[1.25] text-white">
+            {row.orderLabel}
+          </p>
+          <p className="text-xs font-normal leading-[1.25] text-white/60">
+            {row.totalLabel} in total
+          </p>
+        </div>
+
+        <p className="text-sm font-semibold leading-[1.25] text-white">
+          {row.filledLabel}
+        </p>
+
+        {cancelButton}
+      </div>
+    );
+  }
+
   return (
     <div className="flex w-full items-center gap-6">
       <div className="flex w-40 shrink-0 flex-col gap-1">
@@ -416,18 +572,7 @@ function OpenOrderRowItem({ row }: { row: OpenOrderRow }) {
         </p>
       </div>
 
-      <div className="flex w-[100px] shrink-0 items-center gap-2">
-        <span
-          className={`inline-flex items-center justify-center rounded-xl px-[10px] py-1 text-xs font-semibold leading-[1.25] text-white ${
-            row.side === "YES" ? "bg-[#214a2a]" : "bg-[#7a0f1c]"
-          }`}
-        >
-          {row.side}
-        </span>
-        <span className="inline-flex items-center justify-center rounded-full bg-white/10 px-[10px] py-1 text-xs font-semibold leading-[1.25] text-white">
-          {row.leverage}
-        </span>
-      </div>
+      <div className="flex w-[100px] shrink-0 items-center gap-2">{sideBadge}</div>
 
       <div className="flex w-[160px] shrink-0 flex-col gap-1">
         <p className="text-sm font-semibold leading-[1.25] text-white">
@@ -442,22 +587,21 @@ function OpenOrderRowItem({ row }: { row: OpenOrderRow }) {
         {row.filledLabel}
       </p>
 
-      <button
-        type="button"
-        className="ml-auto flex h-10 min-w-[161px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white/10 px-3 text-center text-sm font-semibold leading-[1.25] text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.04] active:scale-[0.97]"
-      >
-        Cancel order
-      </button>
+      {cancelButton}
     </div>
   );
 }
 
 export default function Positions() {
   const [activeTab, setActiveTab] = useState<TabId>("positions");
+  const [viewMode, setViewMode] = useState<ViewMode>("desktop");
   const [sims, setSims] = useState<RowSim[]>(initialSims);
   const [indicator, setIndicator] = useState({ left: 0, width: 0 });
   const positionsTabRef = useRef<HTMLButtonElement>(null);
   const openOrdersTabRef = useRef<HTMLButtonElement>(null);
+  const isMobile = viewMode === "mobile";
+  const positionRows = isMobile ? POSITION_ROWS.slice(0, 2) : POSITION_ROWS;
+  const openOrderRows = isMobile ? OPEN_ORDER_ROWS.slice(0, 2) : OPEN_ORDER_ROWS;
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -493,56 +637,76 @@ export default function Positions() {
     updateIndicator();
     window.addEventListener("resize", updateIndicator);
     return () => window.removeEventListener("resize", updateIndicator);
-  }, [activeTab]);
+  }, [activeTab, viewMode]);
 
   return (
-    <div className="relative flex w-full max-w-[852px] flex-col items-start overflow-x-auto px-4 md:px-0">
-      <div className="flex min-w-[820px] w-full flex-col gap-6">
+    <div
+      className={`relative flex w-full flex-col items-start px-4 md:px-0 ${
+        isMobile ? "max-w-[390px]" : "max-w-[820px]"
+      }`}
+    >
+      <div className="flex w-full flex-col gap-6">
         {/* Tabs */}
         <div className="flex w-full flex-col gap-4">
-          <div
-            className="flex items-center gap-4"
-            role="tablist"
-            aria-label="Positions views"
-          >
-            <button
-              ref={positionsTabRef}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "positions"}
-              className="flex items-center gap-1.5"
-              onClick={() => setActiveTab("positions")}
+          <div className="flex w-full items-center gap-4">
+            <div
+              className="flex items-center gap-4"
+              role="tablist"
+              aria-label="Positions views"
             >
-              <span
-                className={`text-base font-semibold leading-[1.25] ${
-                  activeTab === "positions" ? "text-white" : "text-white/40"
-                }`}
+              <button
+                ref={positionsTabRef}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "positions"}
+                className="flex items-center gap-1.5"
+                onClick={() => setActiveTab("positions")}
               >
-                Positions
-              </span>
-              <span className="rounded-md bg-white/[0.06] px-1.5 py-1 text-xs font-semibold leading-[1.25] text-white">
-                6
-              </span>
-            </button>
+                <span
+                  className={`text-base font-semibold leading-[1.25] ${
+                    activeTab === "positions" ? "text-white" : "text-white/40"
+                  }`}
+                >
+                  Positions
+                </span>
+                <span className="rounded-md bg-white/[0.06] px-1.5 py-1 text-xs font-semibold leading-[1.25] text-white">
+                  {positionRows.length}
+                </span>
+              </button>
+
+              <button
+                ref={openOrdersTabRef}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "open-orders"}
+                className="flex items-center gap-1.5"
+                onClick={() => setActiveTab("open-orders")}
+              >
+                <span
+                  className={`text-base font-semibold leading-[1.25] ${
+                    activeTab === "open-orders" ? "text-white" : "text-white/40"
+                  }`}
+                >
+                  Open Orders
+                </span>
+                <span className="rounded-md bg-white/[0.06] px-1.5 py-1 text-xs font-semibold leading-[1.25] text-white">
+                  {openOrderRows.length}
+                </span>
+              </button>
+            </div>
 
             <button
-              ref={openOrdersTabRef}
               type="button"
-              role="tab"
-              aria-selected={activeTab === "open-orders"}
-              className="flex items-center gap-1.5"
-              onClick={() => setActiveTab("open-orders")}
+              className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/[0.06] hover:text-white"
+              aria-label={
+                isMobile ? "Switch to desktop layout" : "Switch to mobile layout"
+              }
+              aria-pressed={isMobile}
+              onClick={() =>
+                setViewMode((mode) => (mode === "desktop" ? "mobile" : "desktop"))
+              }
             >
-              <span
-                className={`text-base font-semibold leading-[1.25] ${
-                  activeTab === "open-orders" ? "text-white" : "text-white/40"
-                }`}
-              >
-                Open Orders
-              </span>
-              <span className="rounded-md bg-white/[0.06] px-1.5 py-1 text-xs font-semibold leading-[1.25] text-white">
-                4
-              </span>
+              {isMobile ? <PhoneIcon /> : <LaptopIcon />}
             </button>
           </div>
 
@@ -556,26 +720,27 @@ export default function Positions() {
 
         {/* List */}
         {activeTab === "positions" ? (
-          <div className="flex w-full max-w-[820px] flex-col gap-3" role="tabpanel">
-            {POSITION_ROWS.map((row, index) => (
+          <div className="flex w-full flex-col gap-3" role="tabpanel">
+            {positionRows.map((row, index) => (
               <div key={row.id} className="flex w-full flex-col gap-3">
                 <PositionRowItem
                   row={row}
                   cashOut={sims[index].cashOut}
                   fillWidth={sims[index].fillWidth}
+                  mobile={isMobile}
                 />
-                {index < POSITION_ROWS.length - 1 && (
+                {!isMobile && index < positionRows.length - 1 && (
                   <div className="h-px w-full bg-white/10" aria-hidden />
                 )}
               </div>
             ))}
           </div>
         ) : (
-          <div className="flex w-full max-w-[820px] flex-col gap-3" role="tabpanel">
-            {OPEN_ORDER_ROWS.map((row, index) => (
+          <div className="flex w-full flex-col gap-3" role="tabpanel">
+            {openOrderRows.map((row, index) => (
               <div key={row.id} className="flex w-full flex-col gap-3">
-                <OpenOrderRowItem row={row} />
-                {index < OPEN_ORDER_ROWS.length - 1 && (
+                <OpenOrderRowItem row={row} mobile={isMobile} />
+                {!isMobile && index < openOrderRows.length - 1 && (
                   <div className="h-px w-full bg-white/10" aria-hidden />
                 )}
               </div>
