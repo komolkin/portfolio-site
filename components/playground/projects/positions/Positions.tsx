@@ -279,6 +279,71 @@ function BarTooltip({
   );
 }
 
+function HoverTooltip({
+  visible,
+  x,
+  y,
+  children,
+}: {
+  visible: boolean;
+  x: number;
+  y: number;
+  children: string;
+}) {
+  const [shown, setShown] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [moveReady, setMoveReady] = useState(false);
+  const [hasContent, setHasContent] = useState(false);
+  const wasVisibleRef = useRef(false);
+
+  useEffect(() => {
+    if (visible) {
+      if (!wasVisibleRef.current) {
+        setMoveReady(false);
+        setPos({ x, y });
+        setHasContent(true);
+        wasVisibleRef.current = true;
+        const id = window.requestAnimationFrame(() => {
+          setShown(true);
+          window.requestAnimationFrame(() => setMoveReady(true));
+        });
+        return () => window.cancelAnimationFrame(id);
+      }
+
+      setMoveReady(true);
+      setPos({ x, y });
+      setShown(true);
+      return;
+    }
+
+    wasVisibleRef.current = false;
+    setShown(false);
+    setMoveReady(false);
+  }, [visible, x, y]);
+
+  if (!hasContent) return null;
+
+  return (
+    <div
+      role="tooltip"
+      className="pointer-events-none fixed z-[9999] whitespace-nowrap rounded-md bg-black/80 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg backdrop-blur-md"
+      style={{
+        left: pos.x,
+        top: pos.y - 6,
+        opacity: shown ? 1 : 0,
+        transform: shown
+          ? "translate(-50%, -100%) translateY(0px)"
+          : "translate(-50%, -100%) translateY(10px)",
+        transition: moveReady
+          ? "opacity 180ms ease-out, transform 180ms ease-out, left 200ms ease-out, top 200ms ease-out"
+          : "opacity 180ms ease-out, transform 180ms ease-out",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function PositionBar({
   fillWidth,
   liqWidth,
@@ -452,6 +517,48 @@ function PositionRowItem({
   mobile?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [sharesTip, setSharesTip] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+  }>({ visible: false, x: 0, y: 0 });
+
+  const showSharesTip = (el: HTMLElement) => {
+    const rect = el.getBoundingClientRect();
+    setSharesTip({
+      visible: true,
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+    });
+  };
+
+  const hideSharesTip = () => {
+    setSharesTip((prev) => ({ ...prev, visible: false }));
+  };
+
+  const sharesTipTargetRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (!sharesTip.visible || !sharesTipTargetRef.current) return;
+
+    const sync = () => {
+      const el = sharesTipTargetRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setSharesTip((prev) =>
+        prev.visible
+          ? { ...prev, x: rect.left + rect.width / 2, y: rect.top }
+          : prev,
+      );
+    };
+
+    window.addEventListener("scroll", sync, true);
+    window.addEventListener("resize", sync);
+    return () => {
+      window.removeEventListener("scroll", sync, true);
+      window.removeEventListener("resize", sync);
+    };
+  }, [sharesTip.visible]);
 
   const sideBadge = (
     <>
@@ -558,16 +665,25 @@ function PositionRowItem({
         </p>
       </div>
 
-      <div className="flex w-[100px] shrink-0 items-center gap-2">{sideBadge}</div>
+      <div className="flex w-[120px] shrink-0 items-center gap-2">{sideBadge}</div>
 
-      <div className="flex w-[180px] shrink-0 flex-col gap-1">
-        <p className="text-sm font-normal leading-[1.25] text-white">
+      <div className="flex w-[150px] shrink-0 flex-col gap-1">
+        <p
+          ref={sharesTipTargetRef}
+          className="w-fit cursor-pointer text-sm font-normal leading-[1.25] text-white"
+          onMouseEnter={(e) => showSharesTip(e.currentTarget)}
+          onMouseLeave={hideSharesTip}
+        >
           <span>{row.from} → </span>
           <span className="text-[#5dd978]">${formatUsd(row.to)}</span>
         </p>
-        <p className="text-xs font-normal leading-[1.25] text-white/60">
+        <HoverTooltip
+          visible={sharesTip.visible}
+          x={sharesTip.x}
+          y={sharesTip.y}
+        >
           {row.sharesLabel}
-        </p>
+        </HoverTooltip>
       </div>
 
       <PositionBar
@@ -588,6 +704,48 @@ function OpenOrderRowItem({
   row: OpenOrderRow;
   mobile?: boolean;
 }) {
+  const [totalTip, setTotalTip] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+  }>({ visible: false, x: 0, y: 0 });
+  const totalTipTargetRef = useRef<HTMLParagraphElement>(null);
+
+  const showTotalTip = (el: HTMLElement) => {
+    const rect = el.getBoundingClientRect();
+    setTotalTip({
+      visible: true,
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+    });
+  };
+
+  const hideTotalTip = () => {
+    setTotalTip((prev) => ({ ...prev, visible: false }));
+  };
+
+  useEffect(() => {
+    if (!totalTip.visible || !totalTipTargetRef.current) return;
+
+    const sync = () => {
+      const el = totalTipTargetRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setTotalTip((prev) =>
+        prev.visible
+          ? { ...prev, x: rect.left + rect.width / 2, y: rect.top }
+          : prev,
+      );
+    };
+
+    window.addEventListener("scroll", sync, true);
+    window.addEventListener("resize", sync);
+    return () => {
+      window.removeEventListener("scroll", sync, true);
+      window.removeEventListener("resize", sync);
+    };
+  }, [totalTip.visible]);
+
   const sideBadge = (
     <>
       <span
@@ -663,15 +821,24 @@ function OpenOrderRowItem({
         </p>
       </div>
 
-      <div className="flex w-[100px] shrink-0 items-center gap-2">{sideBadge}</div>
+      <div className="flex w-[120px] shrink-0 items-center gap-2">{sideBadge}</div>
 
-      <div className="flex w-[180px] shrink-0 flex-col gap-1">
-        <p className="text-sm font-normal leading-[1.25] text-white">
+      <div className="flex w-[200px] shrink-0 flex-col gap-1">
+        <p
+          ref={totalTipTargetRef}
+          className="w-fit cursor-pointer text-sm font-normal leading-[1.25] text-white"
+          onMouseEnter={(e) => showTotalTip(e.currentTarget)}
+          onMouseLeave={hideTotalTip}
+        >
           {row.orderLabel}
         </p>
-        <p className="text-xs font-normal leading-[1.25] text-white/60">
-          {row.totalLabel} in total
-        </p>
+        <HoverTooltip
+          visible={totalTip.visible}
+          x={totalTip.x}
+          y={totalTip.y}
+        >
+          {`${row.totalLabel} in total`}
+        </HoverTooltip>
       </div>
 
       <p className="w-[140px] shrink-0 text-sm font-normal leading-[1.25] text-white">
