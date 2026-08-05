@@ -36,6 +36,11 @@ const SIM_TICK_MS = 1600;
 const FILL_MAX = BAR_TRACK_WIDTH - 4;
 /** Full track width maps to 100¢ */
 const TRACK_CENTS = 100;
+/** Shared desktop row columns so Positions / Open Orders match overall width */
+const DESKTOP_ROW_POSITIONS =
+  "grid w-full items-center gap-6 [grid-template-columns:160px_120px_150px_minmax(147px,1fr)_120px]";
+const DESKTOP_ROW_ORDERS =
+  "grid w-full items-center gap-6 [grid-template-columns:160px_120px_200px_minmax(100px,1fr)_120px]";
 
 type TabId = "positions" | "open-orders";
 type ViewMode = "desktop" | "mobile";
@@ -580,7 +585,7 @@ function PositionRowItem({
       type="button"
       aria-label={`Cash out $${formatUsd(cashOut)}`}
       className={`flex h-10 items-center justify-center gap-1.5 overflow-hidden rounded-full border-2 border-white/10 px-3 text-sm font-semibold leading-[1.25] text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.04] active:scale-[0.97] ${
-        mobile ? "shrink-0" : "ml-auto min-w-[120px] shrink-0"
+        mobile ? "shrink-0" : "w-full"
       }`}
       onClick={(e) => e.stopPropagation()}
     >
@@ -658,16 +663,16 @@ function PositionRowItem({
   }
 
   return (
-    <div className="flex w-full items-center gap-6">
-      <div className="flex w-40 shrink-0 flex-col gap-1">
-        <p className="whitespace-nowrap text-base font-semibold leading-none text-white">
+    <div className={DESKTOP_ROW_POSITIONS}>
+      <div className="flex min-w-0 flex-col gap-1">
+        <p className="truncate text-base font-semibold leading-none text-white">
           {row.title}
         </p>
       </div>
 
-      <div className="flex w-[120px] shrink-0 items-center gap-2">{sideBadge}</div>
+      <div className="flex items-center gap-2">{sideBadge}</div>
 
-      <div className="flex w-[150px] shrink-0 flex-col gap-1">
+      <div className="min-w-0">
         <p
           ref={sharesTipTargetRef}
           className="w-fit cursor-pointer text-sm font-normal leading-[1.25] text-white"
@@ -768,7 +773,7 @@ function OpenOrderRowItem({
       className={`flex items-center justify-center overflow-hidden rounded-full border-2 border-white/10 text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.04] active:scale-[0.97] ${
         mobile
           ? "size-10 shrink-0"
-          : "ml-auto h-10 min-w-[120px] shrink-0 gap-1.5 px-3 text-sm font-semibold leading-[1.25]"
+          : "h-10 w-full gap-1.5 px-3 text-sm font-semibold leading-[1.25]"
       }`}
     >
       {mobile ? (
@@ -814,16 +819,16 @@ function OpenOrderRowItem({
   }
 
   return (
-    <div className="flex w-full items-center gap-6">
-      <div className="flex w-40 shrink-0 flex-col gap-1">
-        <p className="whitespace-nowrap text-base font-semibold leading-none text-white">
+    <div className={DESKTOP_ROW_ORDERS}>
+      <div className="flex min-w-0 flex-col gap-1">
+        <p className="truncate text-base font-semibold leading-none text-white">
           {row.title}
         </p>
       </div>
 
-      <div className="flex w-[120px] shrink-0 items-center gap-2">{sideBadge}</div>
+      <div className="flex items-center gap-2">{sideBadge}</div>
 
-      <div className="flex w-[200px] shrink-0 flex-col gap-1">
+      <div className="min-w-0">
         <p
           ref={totalTipTargetRef}
           className="w-fit cursor-pointer text-sm font-normal leading-[1.25] text-white"
@@ -841,7 +846,7 @@ function OpenOrderRowItem({
         </HoverTooltip>
       </div>
 
-      <p className="w-[140px] shrink-0 text-sm font-normal leading-[1.25] text-white">
+      <p className="text-sm font-normal leading-[1.25] text-white">
         {row.filledAmount} filled
       </p>
 
