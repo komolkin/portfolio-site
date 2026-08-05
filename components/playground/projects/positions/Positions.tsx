@@ -506,7 +506,7 @@ function PositionRowItem({
               <span className="inline-flex items-center justify-center rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold leading-[1.25] text-white">
                 {row.leverage}
               </span>
-              <p className="text-xs font-semibold leading-[1.25] text-white">
+              <p className="ml-1.5 text-xs font-semibold leading-[1.25] text-white">
                 <span>{row.from} → </span>
                 <span className="text-[#5dd978]">${formatUsd(row.to)}</span>
               </p>
@@ -619,7 +619,7 @@ function OpenOrderRowItem({
               <span className="inline-flex items-center justify-center rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold leading-[1.25] text-white">
                 {row.leverage}
               </span>
-              <p className="text-xs font-semibold leading-[1.25] text-white">
+              <p className="ml-1.5 text-xs font-semibold leading-[1.25] text-white">
                 {row.orderLabel}
               </p>
             </div>
