@@ -412,9 +412,6 @@ function OpenOrderRowItem({ row }: { row: OpenOrderRow }) {
         <p className="whitespace-nowrap text-base font-semibold leading-none text-white">
           {row.title}
         </p>
-        <p className="text-xs font-normal leading-[1.25] text-white/60">
-          {row.totalLabel} in total
-        </p>
       </div>
 
       <div className="flex w-[100px] shrink-0 items-center gap-2">
@@ -430,9 +427,14 @@ function OpenOrderRowItem({ row }: { row: OpenOrderRow }) {
         </span>
       </div>
 
-      <p className="w-[160px] shrink-0 text-sm font-semibold leading-[1.25] text-white">
-        {row.orderLabel}
-      </p>
+      <div className="flex w-[160px] shrink-0 flex-col gap-1">
+        <p className="text-sm font-semibold leading-[1.25] text-white">
+          {row.orderLabel}
+        </p>
+        <p className="text-xs font-normal leading-[1.25] text-white/60">
+          {row.totalLabel} in total
+        </p>
+      </div>
 
       <p className="w-[140px] shrink-0 text-sm font-semibold leading-[1.25] text-white">
         {row.filledLabel}
