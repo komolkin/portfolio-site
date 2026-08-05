@@ -13,14 +13,10 @@ export type PositionRow = {
   cashOutBase: number;
   /** Starting green fill width inside the 147px track */
   fillWidthBase: number;
-  /** Red liquidation block width (static) */
+  /** Red liquidation block width (static) — ¢ = width / track × 100 */
   liqWidth: number;
-  /** Liquidation price in cents (tooltip) */
-  liquidationCents: number;
-  /** Entry marker left offset (px) inside the 147px track */
+  /** Entry marker left offset (px) — ¢ = left / track × 100 */
   entryLeft: number;
-  /** Entry price in cents (tooltip) */
-  entryCents: number;
 };
 
 export const POSITION_ROWS: PositionRow[] = [
@@ -35,9 +31,7 @@ export const POSITION_ROWS: PositionRow[] = [
     cashOutBase: 12_500,
     fillWidthBase: 72,
     liqWidth: 38,
-    liquidationCents: 30,
     entryLeft: 55,
-    entryCents: 40,
   },
   {
     id: "2",
@@ -50,9 +44,7 @@ export const POSITION_ROWS: PositionRow[] = [
     cashOutBase: 2_500,
     fillWidthBase: 121,
     liqWidth: 22,
-    liquidationCents: 22,
     entryLeft: 64,
-    entryCents: 45,
   },
   {
     id: "3",
@@ -65,9 +57,7 @@ export const POSITION_ROWS: PositionRow[] = [
     cashOutBase: 500,
     fillWidthBase: 121,
     liqWidth: 34,
-    liquidationCents: 28,
     entryLeft: 70,
-    entryCents: 38,
   },
   {
     id: "4",
@@ -80,9 +70,7 @@ export const POSITION_ROWS: PositionRow[] = [
     cashOutBase: 500,
     fillWidthBase: 121,
     liqWidth: 34,
-    liquidationCents: 18,
     entryLeft: 58,
-    entryCents: 42,
   },
   {
     id: "5",
@@ -95,9 +83,7 @@ export const POSITION_ROWS: PositionRow[] = [
     cashOutBase: 500,
     fillWidthBase: 56,
     liqWidth: 23,
-    liquidationCents: 35,
     entryLeft: 48,
-    entryCents: 50,
   },
   {
     id: "6",
@@ -110,8 +96,6 @@ export const POSITION_ROWS: PositionRow[] = [
     cashOutBase: 500,
     fillWidthBase: 98,
     liqWidth: 55,
-    liquidationCents: 42,
     entryLeft: 78,
-    entryCents: 48,
   },
 ];

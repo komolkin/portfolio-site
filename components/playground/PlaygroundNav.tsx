@@ -122,7 +122,7 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
 
   const mobileNav = (
     <div
-      className="pointer-events-none fixed inset-0 z-[999] md:hidden"
+      className="pointer-events-none fixed inset-0 z-[999] min-[1200px]:hidden"
       aria-hidden={!mobileNavVisible && !open}
     >
       {/* Trigger */}
@@ -215,7 +215,7 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
   return (
     <>
       <nav
-        className="absolute left-6 top-1/2 z-10 hidden -translate-y-1/2 md:left-8 md:block lg:left-10"
+        className="absolute left-6 top-1/2 z-10 hidden -translate-y-1/2 min-[1200px]:left-8 min-[1200px]:block lg:left-10"
         aria-label="Playground projects"
       >
         <ul className={listClass} style={{ minWidth: "10rem" }}>

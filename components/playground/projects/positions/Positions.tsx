@@ -26,35 +26,29 @@ const BAR_TRACK_HEIGHT = 17;
 const SIM_TICK_MS = 1600;
 /** Progress fill stays clear of the track edge */
 const FILL_MAX = BAR_TRACK_WIDTH - 4;
+/** Full track width maps to 100¢ */
+const TRACK_CENTS = 100;
 
 type TabId = "positions" | "open-orders";
 
 type RowSim = {
   cashOut: number;
   fillWidth: number;
-  currentPriceCents: number;
 };
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
 
-/** Map fill width → current price (¢), always above liquidation. */
-function priceFromFill(fillWidth: number, liquidationCents: number): number {
-  const t = clamp(fillWidth / FILL_MAX, 0, 1);
-  const min = liquidationCents + 2;
-  const max = 95;
-  const base = min + t * (max - min);
-  // Small jitter so the value feels live even on tiny fill moves
-  const jitter = (Math.random() * 2 - 1) * 2;
-  return Math.round(clamp(base + jitter, min, max));
+/** Map a px position/width on the track to cents (0–100). */
+function centsFromPx(px: number): number {
+  return Math.round(clamp((px / BAR_TRACK_WIDTH) * TRACK_CENTS, 0, TRACK_CENTS));
 }
 
 function initialSims(): RowSim[] {
   return POSITION_ROWS.map((row) => ({
     cashOut: row.cashOutBase,
     fillWidth: row.fillWidthBase,
-    currentPriceCents: priceFromFill(row.fillWidthBase, row.liquidationCents),
   }));
 }
 
@@ -198,17 +192,11 @@ function BarTooltip({
 function PositionBar({
   fillWidth,
   liqWidth,
-  liquidationCents,
-  currentPriceCents,
   entryLeft,
-  entryCents,
 }: {
   fillWidth: number;
   liqWidth: number;
-  liquidationCents: number;
-  currentPriceCents: number;
   entryLeft: number;
-  entryCents: number;
 }) {
   const barRef = useRef<HTMLDivElement>(null);
   const [tip, setTip] = useState<BarTooltipState>({
@@ -216,6 +204,11 @@ function PositionBar({
     x: 0,
     y: 0,
   });
+
+  // Track width = 100¢: liq from red width, entry from marker x, current from fill width
+  const liquidationCents = centsFromPx(liqWidth);
+  const entryCents = centsFromPx(entryLeft);
+  const currentPriceCents = centsFromPx(fillWidth);
 
   const anchorTip = (kind: Exclude<TipKind, null>, el: HTMLElement) => {
     const rect = el.getBoundingClientRect();
@@ -349,12 +342,10 @@ function PositionRowItem({
   row,
   cashOut,
   fillWidth,
-  currentPriceCents,
 }: {
   row: PositionRow;
   cashOut: number;
   fillWidth: number;
-  currentPriceCents: number;
 }) {
   return (
     <div className="flex w-full items-center gap-6">
@@ -388,10 +379,7 @@ function PositionRowItem({
       <PositionBar
         fillWidth={fillWidth}
         liqWidth={row.liqWidth}
-        liquidationCents={row.liquidationCents}
-        currentPriceCents={currentPriceCents}
         entryLeft={row.entryLeft}
-        entryCents={row.entryCents}
       />
 
       <button
@@ -429,7 +417,6 @@ export default function Positions() {
           return {
             cashOut: nextCashOut(row.cashOutBase, sim.cashOut),
             fillWidth,
-            currentPriceCents: priceFromFill(fillWidth, row.liquidationCents),
           };
         }),
       );
@@ -504,7 +491,6 @@ export default function Positions() {
                   row={row}
                   cashOut={sims[index].cashOut}
                   fillWidth={sims[index].fillWidth}
-                  currentPriceCents={sims[index].currentPriceCents}
                 />
                 {index < POSITION_ROWS.length - 1 && (
                   <div className="h-px w-full bg-white/10" aria-hidden />
