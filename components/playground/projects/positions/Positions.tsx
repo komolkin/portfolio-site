@@ -470,36 +470,20 @@ function PositionRowItem({
     <button
       type="button"
       aria-label={`Cash out $${formatUsd(cashOut)}`}
-      className={`flex items-center justify-center overflow-hidden rounded-full border-2 border-white/10 text-sm font-semibold leading-[1.25] text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.04] active:scale-[0.97] ${
-        mobile
-          ? "h-10 shrink-0 gap-1.5 px-3"
-          : "ml-auto h-10 min-w-[161px] shrink-0 px-3 text-center"
+      className={`flex h-10 items-center justify-center gap-1.5 overflow-hidden rounded-full border-2 border-white/10 px-3 text-sm font-semibold leading-[1.25] text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.04] active:scale-[0.97] ${
+        mobile ? "shrink-0" : "ml-auto min-w-[120px] shrink-0"
       }`}
     >
-      {mobile ? (
-        <span className="inline-flex items-center gap-1.5">
-          <CashOutIcon />
-          <span className="inline-flex items-baseline">
-            <span>$</span>
-            <NumberFlow
-              value={cashOut}
-              trend={0}
-              format={{ useGrouping: true }}
-              className="tabular-nums text-inherit"
-            />
-          </span>
-        </span>
-      ) : (
-        <span className="inline-flex items-baseline">
-          <span>Cash Out&nbsp;$</span>
-          <NumberFlow
-            value={cashOut}
-            trend={0}
-            format={{ useGrouping: true }}
-            className="tabular-nums text-inherit"
-          />
-        </span>
-      )}
+      <CashOutIcon />
+      <span className="inline-flex items-baseline">
+        <span>$</span>
+        <NumberFlow
+          value={cashOut}
+          trend={0}
+          format={{ useGrouping: true }}
+          className="tabular-nums text-inherit"
+        />
+      </span>
     </button>
   );
 
@@ -602,10 +586,17 @@ function OpenOrderRowItem({
       className={`flex items-center justify-center overflow-hidden rounded-full border-2 border-white/10 text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.04] active:scale-[0.97] ${
         mobile
           ? "size-10 shrink-0"
-          : "ml-auto h-10 min-w-[161px] shrink-0 px-3 text-center text-sm font-semibold leading-[1.25]"
+          : "ml-auto h-10 min-w-[120px] shrink-0 gap-1.5 px-3 text-sm font-semibold leading-[1.25]"
       }`}
     >
-      {mobile ? <CancelIcon /> : "Cancel order"}
+      {mobile ? (
+        <CancelIcon />
+      ) : (
+        <>
+          <CancelIcon />
+          <span>Cancel</span>
+        </>
+      )}
     </button>
   );
 
