@@ -536,7 +536,7 @@ function PositionRowItem({
 
       <div className="flex w-[100px] shrink-0 items-center gap-2">{sideBadge}</div>
 
-      <div className="flex w-[140px] shrink-0 flex-col gap-1">
+      <div className="flex w-[180px] shrink-0 flex-col gap-1">
         <p className="text-sm font-semibold leading-[1.25] text-white">
           <span>{row.from} → </span>
           <span className="text-[#5dd978]">${formatUsd(row.to)}</span>
@@ -641,7 +641,7 @@ function OpenOrderRowItem({
 
       <div className="flex w-[100px] shrink-0 items-center gap-2">{sideBadge}</div>
 
-      <div className="flex w-[160px] shrink-0 flex-col gap-1">
+      <div className="flex w-[180px] shrink-0 flex-col gap-1">
         <p className="text-sm font-semibold leading-[1.25] text-white">
           {row.orderLabel}
         </p>
@@ -667,8 +667,8 @@ export default function Positions() {
   const positionsTabRef = useRef<HTMLButtonElement>(null);
   const openOrdersTabRef = useRef<HTMLButtonElement>(null);
   const isMobile = viewMode === "mobile";
-  const positionRows = isMobile ? POSITION_ROWS.slice(0, 2) : POSITION_ROWS;
-  const openOrderRows = isMobile ? OPEN_ORDER_ROWS.slice(0, 2) : OPEN_ORDER_ROWS;
+  const positionRows = isMobile ? POSITION_ROWS.slice(0, 3) : POSITION_ROWS;
+  const openOrderRows = isMobile ? OPEN_ORDER_ROWS.slice(0, 3) : OPEN_ORDER_ROWS;
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -787,7 +787,10 @@ export default function Positions() {
 
         {/* List */}
         {activeTab === "positions" ? (
-          <div className="flex w-full flex-col gap-3" role="tabpanel">
+          <div
+            className={`flex w-full flex-col ${isMobile ? "gap-2" : "gap-3"}`}
+            role="tabpanel"
+          >
             {positionRows.map((row, index) => (
               <div key={row.id} className="flex w-full flex-col gap-3">
                 <PositionRowItem
@@ -803,7 +806,10 @@ export default function Positions() {
             ))}
           </div>
         ) : (
-          <div className="flex w-full flex-col gap-3" role="tabpanel">
+          <div
+            className={`flex w-full flex-col ${isMobile ? "gap-2" : "gap-3"}`}
+            role="tabpanel"
+          >
             {openOrderRows.map((row, index) => (
               <div key={row.id} className="flex w-full flex-col gap-3">
                 <OpenOrderRowItem row={row} mobile={isMobile} />
