@@ -354,12 +354,15 @@ function PositionBar({
   liqWidth,
   entryLeft,
   fluid = false,
+  tooltips = true,
 }: {
   fillWidth: number;
   liqWidth: number;
   entryLeft: number;
   /** Stretch track to full container width (mobile) */
   fluid?: boolean;
+  /** Hover tooltips for price / entry / liquidation */
+  tooltips?: boolean;
 }) {
   const barRef = useRef<HTMLDivElement>(null);
   const [tip, setTip] = useState<BarTooltipState>({
@@ -378,6 +381,7 @@ function PositionBar({
   const entryPct = (entryLeft / BAR_TRACK_WIDTH) * 100;
 
   const anchorTip = (kind: Exclude<TipKind, null>, el: HTMLElement) => {
+    if (!tooltips) return;
     const rect = el.getBoundingClientRect();
     setTip({
       kind,
@@ -391,6 +395,7 @@ function PositionBar({
   };
 
   const showPriceTip = () => {
+    if (!tooltips) return;
     const bar = barRef.current;
     if (!bar) return;
     anchorTip("price", bar);
@@ -407,7 +412,7 @@ function PositionBar({
 
   // Keep anchored tooltip centered if the page scrolls while visible
   useEffect(() => {
-    if (tip.kind !== "price" || !barRef.current) return;
+    if (!tooltips || tip.kind !== "price" || !barRef.current) return;
 
     const sync = () => {
       const rect = barRef.current!.getBoundingClientRect();
@@ -424,7 +429,7 @@ function PositionBar({
       window.removeEventListener("scroll", sync, true);
       window.removeEventListener("resize", sync);
     };
-  }, [tip.kind]);
+  }, [tip.kind, tooltips]);
 
   return (
     <div
@@ -435,7 +440,7 @@ function PositionBar({
           ? { height: BAR_TRACK_HEIGHT }
           : { width: BAR_TRACK_WIDTH, height: BAR_TRACK_HEIGHT }
       }
-      onMouseLeave={hideTip}
+      onMouseLeave={tooltips ? hideTip : undefined}
     >
       <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-lg">
         <div
@@ -455,57 +460,108 @@ function PositionBar({
         />
       </div>
 
-      {/* Full track — current price (parent mouseLeave dismisses all tips) */}
-      <div
-        className="absolute inset-0 z-[5] cursor-pointer"
-        aria-label={`Current price ${currentPriceCents}¢`}
-        onMouseEnter={showPriceTip}
-      />
+      {tooltips && (
+        <>
+          {/* Full track — current price (parent mouseLeave dismisses all tips) */}
+          <div
+            className="absolute inset-0 z-[5] cursor-pointer"
+            aria-label={`Current price ${currentPriceCents}¢`}
+            onMouseEnter={showPriceTip}
+          />
 
-      {/* Entry marker — solid vertical tick */}
-      <div
-        className="absolute top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center"
-        style={{
-          left: `${entryPct}%`,
-          width: Math.max(ENTRY_MARKER_WIDTH, 12),
-          height: BAR_TRACK_HEIGHT,
-        }}
-        aria-label={`Entry at ${entryCents}¢`}
-        onMouseEnter={(e) => anchorTip("entry", e.currentTarget)}
-      >
-        <div
-          className="pointer-events-none rounded-sm transition-colors duration-150 ease-out"
-          style={{
-            width: ENTRY_MARKER_WIDTH,
-            height: ENTRY_MARKER_HEIGHT,
-            backgroundColor:
-              tip.kind === "entry" ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.6)",
-          }}
-        />
-      </div>
+          {/* Entry marker — solid vertical tick */}
+          <div
+            className="absolute top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center"
+            style={{
+              left: `${entryPct}%`,
+              width: Math.max(ENTRY_MARKER_WIDTH, 12),
+              height: BAR_TRACK_HEIGHT,
+            }}
+            aria-label={`Entry at ${entryCents}¢`}
+            onMouseEnter={(e) => anchorTip("entry", e.currentTarget)}
+          >
+            <div
+              className="pointer-events-none rounded-sm transition-colors duration-150 ease-out"
+              style={{
+                width: ENTRY_MARKER_WIDTH,
+                height: ENTRY_MARKER_HEIGHT,
+                backgroundColor:
+                  tip.kind === "entry"
+                    ? "rgba(255,255,255,0.95)"
+                    : "rgba(255,255,255,0.6)",
+              }}
+            />
+          </div>
 
-      {/* Red liquidation hit target */}
-      <div
-        className="absolute top-1/2 z-10 flex -translate-y-1/2 cursor-pointer items-center"
-        style={{ left: LIQ_INSET, width: `${liqPct}%`, height: BAR_TRACK_HEIGHT }}
-        aria-label={`Liquidation at ${liquidationCents}¢`}
-        onMouseEnter={(e) => anchorTip("liq", e.currentTarget)}
-      >
-        <div
-          className="pointer-events-none w-full rounded transition-colors duration-150 ease-out"
-          style={{
-            height: LIQ_LINE_HEIGHT,
-            backgroundColor: tip.kind === "liq" ? LIQ_HOVER : LIQ_COLOR,
-          }}
-        />
-      </div>
+          {/* Red liquidation hit target */}
+          <div
+            className="absolute top-1/2 z-10 flex -translate-y-1/2 cursor-pointer items-center"
+            style={{
+              left: LIQ_INSET,
+              width: `${liqPct}%`,
+              height: BAR_TRACK_HEIGHT,
+            }}
+            aria-label={`Liquidation at ${liquidationCents}¢`}
+            onMouseEnter={(e) => anchorTip("liq", e.currentTarget)}
+          >
+            <div
+              className="pointer-events-none w-full rounded transition-colors duration-150 ease-out"
+              style={{
+                height: LIQ_LINE_HEIGHT,
+                backgroundColor: tip.kind === "liq" ? LIQ_HOVER : LIQ_COLOR,
+              }}
+            />
+          </div>
 
-      <BarTooltip
-        tip={tip}
-        currentPriceCents={currentPriceCents}
-        liquidationCents={liquidationCents}
-        entryCents={entryCents}
-      />
+          <BarTooltip
+            tip={tip}
+            currentPriceCents={currentPriceCents}
+            liquidationCents={liquidationCents}
+            entryCents={entryCents}
+          />
+        </>
+      )}
+
+      {!tooltips && (
+        <>
+          {/* Non-interactive markers for mobile */}
+          <div
+            className="pointer-events-none absolute top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+            style={{
+              left: `${entryPct}%`,
+              width: Math.max(ENTRY_MARKER_WIDTH, 12),
+              height: BAR_TRACK_HEIGHT,
+            }}
+            aria-hidden
+          >
+            <div
+              className="rounded-sm"
+              style={{
+                width: ENTRY_MARKER_WIDTH,
+                height: ENTRY_MARKER_HEIGHT,
+                backgroundColor: "rgba(255,255,255,0.6)",
+              }}
+            />
+          </div>
+          <div
+            className="pointer-events-none absolute top-1/2 z-10 flex -translate-y-1/2 items-center"
+            style={{
+              left: LIQ_INSET,
+              width: `${liqPct}%`,
+              height: BAR_TRACK_HEIGHT,
+            }}
+            aria-hidden
+          >
+            <div
+              className="w-full rounded"
+              style={{
+                height: LIQ_LINE_HEIGHT,
+                backgroundColor: LIQ_COLOR,
+              }}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -696,6 +752,7 @@ function PositionRowItem({
                 liqWidth={row.liqWidth}
                 entryLeft={row.entryLeft}
                 fluid
+                tooltips={false}
               />
             </div>
           </div>
