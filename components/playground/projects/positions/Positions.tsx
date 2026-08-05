@@ -358,9 +358,6 @@ function PositionRowItem({
         <p className="whitespace-nowrap text-base font-semibold leading-none text-white">
           {row.title}
         </p>
-        <p className="w-[140px] text-xs font-normal leading-[1.25] text-white/60">
-          {row.sharesLabel}
-        </p>
       </div>
 
       <div className="flex w-[100px] shrink-0 items-center gap-2">
@@ -376,10 +373,15 @@ function PositionRowItem({
         </span>
       </div>
 
-      <p className="w-[140px] shrink-0 text-sm font-semibold leading-[1.25] text-white">
-        <span>{row.from} → </span>
-        <span className="text-[#5dd978]">${formatUsd(row.to)}</span>
-      </p>
+      <div className="flex w-[140px] shrink-0 flex-col gap-1">
+        <p className="text-sm font-semibold leading-[1.25] text-white">
+          <span>{row.from} → </span>
+          <span className="text-[#5dd978]">${formatUsd(row.to)}</span>
+        </p>
+        <p className="text-xs font-normal leading-[1.25] text-white/60">
+          {row.sharesLabel}
+        </p>
+      </div>
 
       <PositionBar
         fillWidth={fillWidth}
