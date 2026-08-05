@@ -650,12 +650,54 @@ function PositionRowItem({
           aria-hidden={!expanded}
         >
           <div className="min-h-0 overflow-hidden">
-            <PositionBar
-              fillWidth={fillWidth}
-              liqWidth={row.liqWidth}
-              entryLeft={row.entryLeft}
-              fluid
-            />
+            <div className="flex flex-col gap-3">
+              <div className="flex w-full items-start gap-2">
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <p className="text-xs font-normal leading-[1.25] text-white/60">
+                    Shares
+                  </p>
+                  <p className="text-sm font-semibold leading-[1.25] text-white tabular-nums">
+                    {row.sharesLabel.replace(/\s*shares?/i, "")}
+                  </p>
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <p className="text-xs font-normal leading-[1.25] text-white/60">
+                    Entry
+                  </p>
+                  <p className="text-sm font-semibold leading-[1.25] text-white tabular-nums">
+                    {centsFromPx(row.entryLeft)}¢
+                  </p>
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <p className="text-xs font-normal leading-[1.25] text-white/60">
+                    Liquidation
+                  </p>
+                  <p className="text-sm font-semibold leading-[1.25] text-white tabular-nums">
+                    {centsFromPx(row.liqWidth)}¢
+                  </p>
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <p className="text-xs font-normal leading-[1.25] text-white/60">
+                    Current
+                  </p>
+                  <p className="text-sm font-semibold leading-[1.25] text-white tabular-nums">
+                    <NumberFlow
+                      value={centsFromPx(fillWidth)}
+                      trend={0}
+                      suffix="¢"
+                      className="tabular-nums text-inherit"
+                    />
+                  </p>
+                </div>
+              </div>
+
+              <PositionBar
+                fillWidth={fillWidth}
+                liqWidth={row.liqWidth}
+                entryLeft={row.entryLeft}
+                fluid
+              />
+            </div>
           </div>
         </div>
       </div>
