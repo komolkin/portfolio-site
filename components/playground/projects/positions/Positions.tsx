@@ -1,7 +1,7 @@
 "use client";
 
 import NumberFlow from "@number-flow/react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   OPEN_ORDER_ROWS,
   POSITION_ROWS,
@@ -1127,10 +1127,6 @@ export default function Positions() {
       : false,
   );
   const [sims, setSims] = useState<RowSim[]>(initialSims);
-  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
-  const positionsTabRef = useRef<HTMLButtonElement>(null);
-  const openOrdersTabRef = useRef<HTMLButtonElement>(null);
-  const indicatorTrackRef = useRef<HTMLDivElement>(null);
   const isMobile = isNarrowViewport || viewMode === "mobile";
   const showViewSwitcher = !isNarrowViewport;
   const positionRows = isMobile ? POSITION_ROWS.slice(0, 3) : POSITION_ROWS;
@@ -1165,27 +1161,6 @@ export default function Positions() {
     return () => window.clearInterval(id);
   }, []);
 
-  useLayoutEffect(() => {
-    const updateIndicator = () => {
-      const tab =
-        activeTab === "positions"
-          ? positionsTabRef.current
-          : openOrdersTabRef.current;
-      const track = indicatorTrackRef.current;
-      if (!tab || !track) return;
-      const tabRect = tab.getBoundingClientRect();
-      const trackRect = track.getBoundingClientRect();
-      setIndicator({
-        left: tabRect.left - trackRect.left,
-        width: tabRect.width,
-      });
-    };
-
-    updateIndicator();
-    window.addEventListener("resize", updateIndicator);
-    return () => window.removeEventListener("resize", updateIndicator);
-  }, [activeTab, viewMode, isNarrowViewport]);
-
   return (
     <div
       className={`relative flex w-full flex-col items-start px-4 md:px-0 ${
@@ -1194,81 +1169,70 @@ export default function Positions() {
     >
       <div className="flex w-full flex-col gap-6">
         {/* Tabs */}
-        <div className="flex w-full flex-col gap-1.5">
-          <div className="flex w-full items-center gap-4">
-            <div
-              className="flex items-center gap-4"
-              role="tablist"
-              aria-label="Positions views"
+        <div className="flex w-full items-center gap-4">
+          <div
+            className="flex items-center gap-6"
+            role="tablist"
+            aria-label="Positions views"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "positions"}
+              className={`text-xl font-semibold leading-[1.25] transition-colors ${
+                activeTab === "positions" ? "text-white" : "text-white/40"
+              }`}
+              onClick={() => setActiveTab("positions")}
             >
-              <button
-                ref={positionsTabRef}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "positions"}
-                className="flex items-center gap-1.5"
-                onClick={() => setActiveTab("positions")}
+              Positions
+              <sup
+                className={`relative -top-2 ml-1 text-xs font-semibold leading-none ${
+                  activeTab === "positions" ? "text-white" : "text-white/40"
+                }`}
               >
-                <span
-                  className={`text-base font-semibold leading-[1.25] ${
-                    activeTab === "positions" ? "text-white" : "text-white/40"
-                  }`}
-                >
-                  Positions
-                </span>
-                <span className="rounded-md bg-white/[0.06] px-1.5 py-1 text-xs font-semibold leading-[1.25] text-white">
-                  {positionRows.length}
-                </span>
-              </button>
+                {positionRows.length}
+              </sup>
+            </button>
 
-              <button
-                ref={openOrdersTabRef}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "open-orders"}
-                className="flex items-center gap-1.5"
-                onClick={() => setActiveTab("open-orders")}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "open-orders"}
+              className={`text-xl font-semibold leading-[1.25] transition-colors ${
+                activeTab === "open-orders" ? "text-white" : "text-white/40"
+              }`}
+              onClick={() => setActiveTab("open-orders")}
+            >
+              Open Orders
+              <sup
+                className={`relative -top-2 ml-1 text-xs font-semibold leading-none ${
+                  activeTab === "open-orders" ? "text-white" : "text-white/40"
+                }`}
               >
-                <span
-                  className={`text-base font-semibold leading-[1.25] ${
-                    activeTab === "open-orders" ? "text-white" : "text-white/40"
-                  }`}
-                >
-                  Open Orders
-                </span>
-                <span className="rounded-md bg-white/[0.06] px-1.5 py-1 text-xs font-semibold leading-[1.25] text-white">
-                  {openOrderRows.length}
-                </span>
-              </button>
-            </div>
-
-            {showViewSwitcher && (
-              <button
-                type="button"
-                className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/[0.06] hover:text-white"
-                aria-label={
-                  isMobile
-                    ? "Switch to desktop layout"
-                    : "Switch to mobile layout"
-                }
-                aria-pressed={isMobile}
-                onClick={() =>
-                  setViewMode((mode) =>
-                    mode === "desktop" ? "mobile" : "desktop",
-                  )
-                }
-              >
-                {isMobile ? <PhoneIcon /> : <LaptopIcon />}
-              </button>
-            )}
+                {openOrderRows.length}
+              </sup>
+            </button>
           </div>
 
-          <div ref={indicatorTrackRef} className="relative h-px w-full">
-            <div
-              className="absolute top-0 h-px bg-white transition-[left,width] duration-200 ease-out"
-              style={{ left: indicator.left, width: indicator.width }}
-            />
-          </div>
+          {showViewSwitcher && (
+            <button
+              type="button"
+              className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/[0.06] hover:text-white"
+              aria-label={
+                isMobile
+                  ? "Switch to desktop layout"
+                  : "Switch to mobile layout"
+              }
+              aria-pressed={isMobile}
+              onClick={() =>
+                setViewMode((mode) =>
+                  mode === "desktop" ? "mobile" : "desktop",
+                )
+              }
+            >
+              {isMobile ? <PhoneIcon /> : <LaptopIcon />}
+            </button>
+          )}
         </div>
 
         {/* List */}
