@@ -122,7 +122,7 @@ export const OPEN_ORDER_ROWS: OpenOrderRow[] = [
     orderLabel: "Buy 16 shares at 34¢",
     side: "YES",
     leverage: "3×",
-    filledShares: 0,
+    filledShares: 6,
     totalShares: 16,
     totalLabel: "$5.44",
   },

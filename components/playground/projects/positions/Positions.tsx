@@ -28,8 +28,10 @@ const ENTRY_MARKER_HEIGHT = 7;
 
 const BAR_TRACK_WIDTH = 147;
 const BAR_TRACK_HEIGHT = 17;
+const BAR_TRACK_HEIGHT_MOBILE = 12;
 /** Red liq line height; left inset matches top/bottom padding in the track */
 const LIQ_LINE_HEIGHT = 7;
+const LIQ_LINE_HEIGHT_MOBILE = 5;
 const LIQ_INSET = (BAR_TRACK_HEIGHT - LIQ_LINE_HEIGHT) / 2;
 const SIM_TICK_MS = 1600;
 /** Progress fill stays clear of the track edge */
@@ -39,7 +41,9 @@ const TRACK_CENTS = 100;
 /** Open-order filled progress — Figma node 12146:81922 */
 const FILLED_BAR_WIDTH = 91;
 const FILLED_BAR_HEIGHT = 17;
+const FILLED_BAR_HEIGHT_MOBILE = 12;
 const FILLED_FILL_HEIGHT = 7;
+const FILLED_FILL_HEIGHT_MOBILE = 5;
 const FILLED_FILL_INSET = 6;
 /** Shared desktop row columns so Positions / Open Orders match overall width */
 const DESKTOP_ROW_POSITIONS =
@@ -361,19 +365,26 @@ function HoverTooltip({
 function FilledProgressBar({
   filledShares,
   totalShares,
+  fluid = false,
+  tooltips = true,
 }: {
   filledShares: number;
   totalShares: number;
+  /** Stretch track to full container width (mobile) */
+  fluid?: boolean;
+  /** Hover tooltip with filled label */
+  tooltips?: boolean;
 }) {
   const barRef = useRef<HTMLDivElement>(null);
   const [tip, setTip] = useState({ visible: false, x: 0, y: 0 });
   const pct =
     totalShares > 0 ? clamp(filledShares / totalShares, 0, 1) : 0;
   const innerMax = FILLED_BAR_WIDTH - FILLED_FILL_INSET * 2;
-  const fillWidth = Math.round(innerMax * pct);
+  const fillWidthPx = Math.round(innerMax * pct);
   const label = `${filledShares} of ${totalShares} filled`;
 
   const showTip = () => {
+    if (!tooltips) return;
     const el = barRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -389,7 +400,7 @@ function FilledProgressBar({
   };
 
   useEffect(() => {
-    if (!tip.visible || !barRef.current) return;
+    if (!tooltips || !tip.visible || !barRef.current) return;
 
     const sync = () => {
       const el = barRef.current;
@@ -408,30 +419,45 @@ function FilledProgressBar({
       window.removeEventListener("scroll", sync, true);
       window.removeEventListener("resize", sync);
     };
-  }, [tip.visible]);
+  }, [tip.visible, tooltips]);
+
+  const fillHeight = fluid ? FILLED_FILL_HEIGHT_MOBILE : FILLED_FILL_HEIGHT;
+  const trackHeight = fluid ? FILLED_BAR_HEIGHT_MOBILE : FILLED_BAR_HEIGHT;
 
   return (
     <div
       ref={barRef}
-      className="relative cursor-pointer rounded-lg bg-white/[0.04] transition-colors duration-150 ease-out hover:bg-white/[0.08]"
-      style={{ width: FILLED_BAR_WIDTH, height: FILLED_BAR_HEIGHT }}
+      className={`relative rounded-lg bg-white/[0.04] transition-colors duration-150 ease-out ${
+        tooltips
+          ? "cursor-pointer hover:bg-white/[0.08]"
+          : "pointer-events-none"
+      }`}
+      style={
+        fluid
+          ? { width: "100%", height: trackHeight }
+          : { width: FILLED_BAR_WIDTH, height: trackHeight }
+      }
       aria-label={label}
       onMouseEnter={showTip}
       onMouseLeave={hideTip}
     >
-      {fillWidth > 0 && (
+      {pct > 0 && (
         <div
           className="absolute top-1/2 -translate-y-1/2 rounded bg-white"
           style={{
             left: FILLED_FILL_INSET,
-            width: fillWidth,
-            height: FILLED_FILL_HEIGHT,
+            width: fluid
+              ? `calc((100% - ${FILLED_FILL_INSET * 2}px) * ${pct})`
+              : fillWidthPx,
+            height: fillHeight,
           }}
         />
       )}
-      <HoverTooltip visible={tip.visible} x={tip.x} y={tip.y}>
-        {label}
-      </HoverTooltip>
+      {tooltips && (
+        <HoverTooltip visible={tip.visible} x={tip.x} y={tip.y}>
+          {label}
+        </HoverTooltip>
+      )}
     </div>
   );
 }
@@ -497,6 +523,15 @@ function PositionBar({
       ? BAR_FILL_HOVER
       : BAR_FILL_COLOR;
 
+  const trackHeight = fluid ? BAR_TRACK_HEIGHT_MOBILE : BAR_TRACK_HEIGHT;
+  const liqLineHeight = fluid ? LIQ_LINE_HEIGHT_MOBILE : LIQ_LINE_HEIGHT;
+  const entryMarkerHeight = fluid
+    ? Math.max(4, ENTRY_MARKER_HEIGHT - 2)
+    : ENTRY_MARKER_HEIGHT;
+  const liqInset = fluid
+    ? (trackHeight - liqLineHeight) / 2
+    : LIQ_INSET;
+
   // Keep anchored tooltip centered if the page scrolls while visible
   useEffect(() => {
     if (!tooltips || tip.kind !== "price" || !barRef.current) return;
@@ -524,8 +559,8 @@ function PositionBar({
       className={fluid ? "relative w-full" : "relative shrink-0"}
       style={
         fluid
-          ? { height: BAR_TRACK_HEIGHT }
-          : { width: BAR_TRACK_WIDTH, height: BAR_TRACK_HEIGHT }
+          ? { height: trackHeight }
+          : { width: BAR_TRACK_WIDTH, height: trackHeight }
       }
       onMouseLeave={tooltips ? hideTip : undefined}
     >
@@ -562,7 +597,7 @@ function PositionBar({
             style={{
               left: `${entryPct}%`,
               width: Math.max(ENTRY_MARKER_WIDTH, 12),
-              height: BAR_TRACK_HEIGHT,
+              height: trackHeight,
             }}
             aria-label={`Entry at ${entryCents}¢`}
             onMouseEnter={(e) => anchorTip("entry", e.currentTarget)}
@@ -571,7 +606,7 @@ function PositionBar({
               className="pointer-events-none rounded-sm transition-colors duration-150 ease-out"
               style={{
                 width: ENTRY_MARKER_WIDTH,
-                height: ENTRY_MARKER_HEIGHT,
+                height: entryMarkerHeight,
                 backgroundColor:
                   tip.kind === "entry"
                     ? "rgba(255,255,255,0.95)"
@@ -584,9 +619,9 @@ function PositionBar({
           <div
             className="absolute top-1/2 z-10 flex -translate-y-1/2 cursor-pointer items-center"
             style={{
-              left: LIQ_INSET,
+              left: liqInset,
               width: `${liqPct}%`,
-              height: BAR_TRACK_HEIGHT,
+              height: trackHeight,
             }}
             aria-label={`Liquidation at ${liquidationCents}¢`}
             onMouseEnter={(e) => anchorTip("liq", e.currentTarget)}
@@ -594,7 +629,7 @@ function PositionBar({
             <div
               className="pointer-events-none w-full rounded transition-colors duration-150 ease-out"
               style={{
-                height: LIQ_LINE_HEIGHT,
+                height: liqLineHeight,
                 backgroundColor: tip.kind === "liq" ? LIQ_HOVER : LIQ_COLOR,
               }}
             />
@@ -617,7 +652,7 @@ function PositionBar({
             style={{
               left: `${entryPct}%`,
               width: Math.max(ENTRY_MARKER_WIDTH, 12),
-              height: BAR_TRACK_HEIGHT,
+              height: trackHeight,
             }}
             aria-hidden
           >
@@ -625,7 +660,7 @@ function PositionBar({
               className="rounded-sm"
               style={{
                 width: ENTRY_MARKER_WIDTH,
-                height: ENTRY_MARKER_HEIGHT,
+                height: entryMarkerHeight,
                 backgroundColor: "rgba(255,255,255,0.6)",
               }}
             />
@@ -633,16 +668,16 @@ function PositionBar({
           <div
             className="pointer-events-none absolute top-1/2 z-10 flex -translate-y-1/2 items-center"
             style={{
-              left: LIQ_INSET,
+              left: liqInset,
               width: `${liqPct}%`,
-              height: BAR_TRACK_HEIGHT,
+              height: trackHeight,
             }}
             aria-hidden
           >
             <div
               className="w-full rounded"
               style={{
-                height: LIQ_LINE_HEIGHT,
+                height: liqLineHeight,
                 backgroundColor: LIQ_COLOR,
               }}
             />
@@ -793,56 +828,56 @@ function PositionRowItem({
           aria-hidden={!expanded}
         >
           <div className="min-h-0 overflow-hidden">
-            <div className="flex flex-col gap-3">
-              <div className="flex w-full items-start gap-2">
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <p className="text-xs font-normal leading-[1.25] text-white/60">
-                    Shares
-                  </p>
-                  <p className="text-sm font-semibold leading-[1.25] text-white tabular-nums">
-                    {row.sharesLabel.replace(/\s*shares?/i, "")}
-                  </p>
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <p className="text-xs font-normal leading-[1.25] text-white/60">
-                    Entry
-                  </p>
-                  <p className="text-sm font-semibold leading-[1.25] text-white tabular-nums">
-                    {centsFromPx(row.entryLeft)}¢
-                  </p>
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <p className="text-xs font-normal leading-[1.25] text-white/60">
-                    Liquidation
-                  </p>
-                  <p className="text-sm font-semibold leading-[1.25] text-white tabular-nums">
-                    {centsFromPx(row.liqWidth)}¢
-                  </p>
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <p className="text-xs font-normal leading-[1.25] text-white/60">
-                    Current
-                  </p>
-                  <p className="text-sm font-semibold leading-[1.25] text-white tabular-nums">
-                    <NumberFlow
-                      value={centsFromPx(fillWidth)}
-                      trend={0}
-                      suffix="¢"
-                      className="tabular-nums text-inherit"
-                    />
-                  </p>
-                </div>
+            <div className="flex w-full items-start gap-2">
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <p className="text-xs font-normal leading-[1.25] text-white/60">
+                  Shares
+                </p>
+                <p className="text-sm font-semibold leading-[1.25] text-white tabular-nums">
+                  {row.sharesLabel.replace(/\s*shares?/i, "")}
+                </p>
               </div>
-
-              <PositionBar
-                fillWidth={fillWidth}
-                liqWidth={row.liqWidth}
-                entryLeft={row.entryLeft}
-                fluid
-                tooltips={false}
-              />
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <p className="text-xs font-normal leading-[1.25] text-white/60">
+                  Entry
+                </p>
+                <p className="text-sm font-semibold leading-[1.25] text-white tabular-nums">
+                  {centsFromPx(row.entryLeft)}¢
+                </p>
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <p className="text-xs font-normal leading-[1.25] text-white/60">
+                  Liquidation
+                </p>
+                <p className="text-sm font-semibold leading-[1.25] text-white tabular-nums">
+                  {centsFromPx(row.liqWidth)}¢
+                </p>
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <p className="text-xs font-normal leading-[1.25] text-white/60">
+                  Current
+                </p>
+                <p className="text-sm font-semibold leading-[1.25] text-white tabular-nums">
+                  <NumberFlow
+                    value={centsFromPx(fillWidth)}
+                    trend={0}
+                    suffix="¢"
+                    className="tabular-nums text-inherit"
+                  />
+                </p>
+              </div>
             </div>
           </div>
+        </div>
+
+        <div className="mt-3">
+          <PositionBar
+            fillWidth={fillWidth}
+            liqWidth={row.liqWidth}
+            entryLeft={row.entryLeft}
+            fluid
+            tooltips={false}
+          />
         </div>
       </div>
     );
@@ -895,6 +930,7 @@ function OpenOrderRowItem({
   row: OpenOrderRow;
   mobile?: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const [totalTip, setTotalTip] = useState<{
     visible: boolean;
     x: number;
@@ -961,6 +997,7 @@ function OpenOrderRowItem({
           ? "size-10 shrink-0"
           : "h-10 w-full gap-1.5 px-3 text-sm font-semibold leading-[1.25]"
       }`}
+      onClick={(e) => e.stopPropagation()}
     >
       {mobile ? (
         <CancelIcon />
@@ -975,7 +1012,19 @@ function OpenOrderRowItem({
 
   if (mobile) {
     return (
-      <div className="flex w-full cursor-pointer flex-col gap-3 rounded-2xl bg-white/[0.06] p-4 transition-colors duration-150 ease-out hover:bg-white/[0.1]">
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        className="flex w-full cursor-pointer flex-col rounded-2xl bg-white/[0.06] p-4 transition-[colors,transform] duration-150 ease-out hover:bg-white/[0.1] active:scale-[0.98]"
+        onClick={() => setExpanded((prev) => !prev)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setExpanded((prev) => !prev);
+          }
+        }}
+      >
         <div className="flex w-full items-center justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-2">
             <p className="text-base font-semibold leading-none text-white">
@@ -999,6 +1048,33 @@ function OpenOrderRowItem({
           </div>
 
           {cancelButton}
+        </div>
+
+        <div
+          className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+            expanded ? "mt-3 grid-rows-[1fr]" : "grid-rows-[0fr]"
+          }`}
+          aria-hidden={!expanded}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-normal leading-[1.25] text-white/60">
+                Filled
+              </p>
+              <p className="text-sm font-semibold leading-[1.25] text-white tabular-nums">
+                {row.filledShares} of {row.totalShares}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <FilledProgressBar
+            filledShares={row.filledShares}
+            totalShares={row.totalShares}
+            fluid
+            tooltips={false}
+          />
         </div>
       </div>
     );
