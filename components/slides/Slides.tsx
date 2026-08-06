@@ -102,8 +102,8 @@ export default function Slides() {
 
   return (
     <div ref={containerRef} className="slides-scroll h-full">
-      <PlaygroundSlide />
       <TopSlide />
+      <PlaygroundSlide />
     </div>
   );
 }
