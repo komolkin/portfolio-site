@@ -44,7 +44,6 @@ const FILLED_BAR_HEIGHT = 17;
 const FILLED_BAR_HEIGHT_MOBILE = 12;
 const FILLED_FILL_HEIGHT = 7;
 const FILLED_FILL_HEIGHT_MOBILE = 5;
-const FILLED_FILL_INSET = 6;
 /** Shared desktop row columns so Positions / Open Orders match overall width */
 const DESKTOP_ROW_POSITIONS =
   "grid w-full items-center gap-6 [grid-template-columns:160px_120px_150px_minmax(147px,1fr)_120px]";
@@ -379,8 +378,13 @@ function FilledProgressBar({
   const [tip, setTip] = useState({ visible: false, x: 0, y: 0 });
   const pct =
     totalShares > 0 ? clamp(filledShares / totalShares, 0, 1) : 0;
-  const innerMax = FILLED_BAR_WIDTH - FILLED_FILL_INSET * 2;
-  const fillWidthPx = Math.round(innerMax * pct);
+  const fillHeight = fluid ? FILLED_FILL_HEIGHT_MOBILE : FILLED_FILL_HEIGHT;
+  const trackHeight = fluid ? FILLED_BAR_HEIGHT_MOBILE : FILLED_BAR_HEIGHT;
+  /** Left inset matches top/bottom padding around the fill pill */
+  const fillInset = (trackHeight - fillHeight) / 2;
+  const fillWidthPx = fluid
+    ? undefined
+    : Math.round((FILLED_BAR_WIDTH - fillInset * 2) * pct);
   const label = `${filledShares} of ${totalShares} filled`;
 
   const showTip = () => {
@@ -421,9 +425,6 @@ function FilledProgressBar({
     };
   }, [tip.visible, tooltips]);
 
-  const fillHeight = fluid ? FILLED_FILL_HEIGHT_MOBILE : FILLED_FILL_HEIGHT;
-  const trackHeight = fluid ? FILLED_BAR_HEIGHT_MOBILE : FILLED_BAR_HEIGHT;
-
   return (
     <div
       ref={barRef}
@@ -445,9 +446,9 @@ function FilledProgressBar({
         <div
           className="absolute top-1/2 -translate-y-1/2 rounded bg-white"
           style={{
-            left: FILLED_FILL_INSET,
+            left: fillInset,
             width: fluid
-              ? `calc((100% - ${FILLED_FILL_INSET * 2}px) * ${pct})`
+              ? `calc((100% - ${fillInset * 2}px) * ${pct})`
               : fillWidthPx,
             height: fillHeight,
           }}
