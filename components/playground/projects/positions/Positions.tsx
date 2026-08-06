@@ -1179,7 +1179,7 @@ export default function Positions() {
               type="button"
               role="tab"
               aria-selected={activeTab === "positions"}
-              className={`text-xl font-semibold leading-[1.25] transition-colors ${
+              className={`text-2xl font-semibold leading-[1.25] transition-colors ${
                 activeTab === "positions" ? "text-white" : "text-white/40"
               }`}
               onClick={() => setActiveTab("positions")}
@@ -1198,7 +1198,7 @@ export default function Positions() {
               type="button"
               role="tab"
               aria-selected={activeTab === "open-orders"}
-              className={`text-xl font-semibold leading-[1.25] transition-colors ${
+              className={`text-2xl font-semibold leading-[1.25] transition-colors ${
                 activeTab === "open-orders" ? "text-white" : "text-white/40"
               }`}
               onClick={() => setActiveTab("open-orders")}
