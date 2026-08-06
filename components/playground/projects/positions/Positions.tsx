@@ -45,6 +45,9 @@ const DESKTOP_ROW_ORDERS =
 type TabId = "positions" | "open-orders";
 type ViewMode = "desktop" | "mobile";
 
+/** Match site mobile breakpoint — force mobile layout and hide switcher */
+const MOBILE_VIEWPORT_QUERY = "(max-width: 767px)";
+
 type RowSim = {
   cashOut: number;
   fillWidth: number;
@@ -957,14 +960,28 @@ function OpenOrderRowItem({
 export default function Positions() {
   const [activeTab, setActiveTab] = useState<TabId>("positions");
   const [viewMode, setViewMode] = useState<ViewMode>("desktop");
+  const [isNarrowViewport, setIsNarrowViewport] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia(MOBILE_VIEWPORT_QUERY).matches
+      : false,
+  );
   const [sims, setSims] = useState<RowSim[]>(initialSims);
   const [indicator, setIndicator] = useState({ left: 0, width: 0 });
   const positionsTabRef = useRef<HTMLButtonElement>(null);
   const openOrdersTabRef = useRef<HTMLButtonElement>(null);
   const indicatorTrackRef = useRef<HTMLDivElement>(null);
-  const isMobile = viewMode === "mobile";
+  const isMobile = isNarrowViewport || viewMode === "mobile";
+  const showViewSwitcher = !isNarrowViewport;
   const positionRows = isMobile ? POSITION_ROWS.slice(0, 3) : POSITION_ROWS;
   const openOrderRows = isMobile ? OPEN_ORDER_ROWS.slice(0, 3) : OPEN_ORDER_ROWS;
+
+  useEffect(() => {
+    const media = window.matchMedia(MOBILE_VIEWPORT_QUERY);
+    const update = () => setIsNarrowViewport(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -1006,7 +1023,7 @@ export default function Positions() {
     updateIndicator();
     window.addEventListener("resize", updateIndicator);
     return () => window.removeEventListener("resize", updateIndicator);
-  }, [activeTab, viewMode]);
+  }, [activeTab, viewMode, isNarrowViewport]);
 
   return (
     <div
@@ -1064,19 +1081,25 @@ export default function Positions() {
               </button>
             </div>
 
-            <button
-              type="button"
-              className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/[0.06] hover:text-white"
-              aria-label={
-                isMobile ? "Switch to desktop layout" : "Switch to mobile layout"
-              }
-              aria-pressed={isMobile}
-              onClick={() =>
-                setViewMode((mode) => (mode === "desktop" ? "mobile" : "desktop"))
-              }
-            >
-              {isMobile ? <PhoneIcon /> : <LaptopIcon />}
-            </button>
+            {showViewSwitcher && (
+              <button
+                type="button"
+                className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/[0.06] hover:text-white"
+                aria-label={
+                  isMobile
+                    ? "Switch to desktop layout"
+                    : "Switch to mobile layout"
+                }
+                aria-pressed={isMobile}
+                onClick={() =>
+                  setViewMode((mode) =>
+                    mode === "desktop" ? "mobile" : "desktop",
+                  )
+                }
+              >
+                {isMobile ? <PhoneIcon /> : <LaptopIcon />}
+              </button>
+            )}
           </div>
 
           <div ref={indicatorTrackRef} className="relative h-px w-full">
