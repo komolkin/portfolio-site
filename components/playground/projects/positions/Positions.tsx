@@ -1,7 +1,7 @@
 "use client";
 
 import NumberFlow from "@number-flow/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   OPEN_ORDER_ROWS,
   POSITION_ROWS,
@@ -43,52 +43,11 @@ const DESKTOP_ROW_ORDERS =
   "grid w-full items-center gap-6 [grid-template-columns:160px_120px_200px_minmax(100px,1fr)_120px]";
 
 type TabId = "positions" | "open-orders";
-type ViewMode = "desktop" | "mobile";
 
 type RowSim = {
   cashOut: number;
   fillWidth: number;
 };
-
-function LaptopIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <rect x="3" y="4" width="18" height="12" rx="2" />
-      <path d="M2 20h20" />
-    </svg>
-  );
-}
-
-function PhoneIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <rect x="7" y="2" width="10" height="20" rx="2" />
-      <path d="M11 18h2" />
-    </svg>
-  );
-}
 
 function CashOutIcon({ className }: { className?: string }) {
   return (
@@ -956,14 +915,13 @@ function OpenOrderRowItem({
 
 export default function Positions() {
   const [activeTab, setActiveTab] = useState<TabId>("positions");
-  const [viewMode, setViewMode] = useState<ViewMode>("desktop");
   const [sims, setSims] = useState<RowSim[]>(initialSims);
   const [indicator, setIndicator] = useState({ left: 0, width: 0 });
   const positionsTabRef = useRef<HTMLButtonElement>(null);
   const openOrdersTabRef = useRef<HTMLButtonElement>(null);
-  const isMobile = viewMode === "mobile";
-  const positionRows = isMobile ? POSITION_ROWS.slice(0, 3) : POSITION_ROWS;
-  const openOrderRows = isMobile ? OPEN_ORDER_ROWS.slice(0, 3) : OPEN_ORDER_ROWS;
+  const indicatorTrackRef = useRef<HTMLDivElement>(null);
+  const positionRows = POSITION_ROWS.slice(0, 3);
+  const openOrderRows = OPEN_ORDER_ROWS.slice(0, 3);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -986,93 +944,79 @@ export default function Positions() {
     return () => window.clearInterval(id);
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const updateIndicator = () => {
       const tab =
         activeTab === "positions"
           ? positionsTabRef.current
           : openOrdersTabRef.current;
-      if (!tab) return;
-      setIndicator({ left: tab.offsetLeft, width: tab.offsetWidth });
+      const track = indicatorTrackRef.current;
+      if (!tab || !track) return;
+      const tabRect = tab.getBoundingClientRect();
+      const trackRect = track.getBoundingClientRect();
+      setIndicator({
+        left: tabRect.left - trackRect.left,
+        width: tabRect.width,
+      });
     };
 
     updateIndicator();
     window.addEventListener("resize", updateIndicator);
     return () => window.removeEventListener("resize", updateIndicator);
-  }, [activeTab, viewMode]);
+  }, [activeTab]);
 
   return (
-    <div
-      className={`relative flex w-full flex-col items-start px-4 md:px-0 ${
-        isMobile ? "max-w-[390px]" : "max-w-[820px]"
-      }`}
-    >
+    <div className="relative flex w-full max-w-[390px] flex-col items-start px-4 md:px-0">
       <div className="flex w-full flex-col gap-6">
         {/* Tabs */}
         <div className="flex w-full flex-col gap-1.5">
-          <div className="flex w-full items-center gap-4">
-            <div
-              className="flex items-center gap-4"
-              role="tablist"
-              aria-label="Positions views"
+          <div
+            className="flex items-center gap-4"
+            role="tablist"
+            aria-label="Positions views"
+          >
+            <button
+              ref={positionsTabRef}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "positions"}
+              className="flex items-center gap-1.5"
+              onClick={() => setActiveTab("positions")}
             >
-              <button
-                ref={positionsTabRef}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "positions"}
-                className="flex items-center gap-1.5"
-                onClick={() => setActiveTab("positions")}
+              <span
+                className={`text-base font-semibold leading-[1.25] ${
+                  activeTab === "positions" ? "text-white" : "text-white/40"
+                }`}
               >
-                <span
-                  className={`text-base font-semibold leading-[1.25] ${
-                    activeTab === "positions" ? "text-white" : "text-white/40"
-                  }`}
-                >
-                  Positions
-                </span>
-                <span className="rounded-md bg-white/[0.06] px-1.5 py-1 text-xs font-semibold leading-[1.25] text-white">
-                  {positionRows.length}
-                </span>
-              </button>
-
-              <button
-                ref={openOrdersTabRef}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "open-orders"}
-                className="flex items-center gap-1.5"
-                onClick={() => setActiveTab("open-orders")}
-              >
-                <span
-                  className={`text-base font-semibold leading-[1.25] ${
-                    activeTab === "open-orders" ? "text-white" : "text-white/40"
-                  }`}
-                >
-                  Open Orders
-                </span>
-                <span className="rounded-md bg-white/[0.06] px-1.5 py-1 text-xs font-semibold leading-[1.25] text-white">
-                  {openOrderRows.length}
-                </span>
-              </button>
-            </div>
+                Positions
+              </span>
+              <span className="rounded-md bg-white/[0.06] px-1.5 py-1 text-xs font-semibold leading-[1.25] text-white">
+                {positionRows.length}
+              </span>
+            </button>
 
             <button
+              ref={openOrdersTabRef}
               type="button"
-              className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/[0.06] hover:text-white"
-              aria-label={
-                isMobile ? "Switch to desktop layout" : "Switch to mobile layout"
-              }
-              aria-pressed={isMobile}
-              onClick={() =>
-                setViewMode((mode) => (mode === "desktop" ? "mobile" : "desktop"))
-              }
+              role="tab"
+              aria-selected={activeTab === "open-orders"}
+              className="flex items-center gap-1.5"
+              onClick={() => setActiveTab("open-orders")}
             >
-              {isMobile ? <PhoneIcon /> : <LaptopIcon />}
+              <span
+                className={`text-base font-semibold leading-[1.25] ${
+                  activeTab === "open-orders" ? "text-white" : "text-white/40"
+                }`}
+              >
+                Open Orders
+              </span>
+              <span className="rounded-md bg-white/[0.06] px-1.5 py-1 text-xs font-semibold leading-[1.25] text-white">
+                {openOrderRows.length}
+              </span>
             </button>
           </div>
 
-          <div className="relative h-px w-full">
+          <div ref={indicatorTrackRef} className="relative h-px w-full">
             <div
               className="absolute top-0 h-px bg-white transition-[left,width] duration-200 ease-out"
               style={{ left: indicator.left, width: indicator.width }}
@@ -1082,35 +1026,23 @@ export default function Positions() {
 
         {/* List */}
         {activeTab === "positions" ? (
-          <div
-            className={`flex w-full flex-col ${isMobile ? "gap-2" : "gap-3"}`}
-            role="tabpanel"
-          >
+          <div className="flex w-full flex-col gap-2" role="tabpanel">
             {positionRows.map((row, index) => (
               <div key={row.id} className="flex w-full flex-col gap-3">
                 <PositionRowItem
                   row={row}
                   cashOut={sims[index].cashOut}
                   fillWidth={sims[index].fillWidth}
-                  mobile={isMobile}
+                  mobile
                 />
-                {!isMobile && index < positionRows.length - 1 && (
-                  <div className="h-px w-full bg-white/10" aria-hidden />
-                )}
               </div>
             ))}
           </div>
         ) : (
-          <div
-            className={`flex w-full flex-col ${isMobile ? "gap-2" : "gap-3"}`}
-            role="tabpanel"
-          >
-            {openOrderRows.map((row, index) => (
+          <div className="flex w-full flex-col gap-2" role="tabpanel">
+            {openOrderRows.map((row) => (
               <div key={row.id} className="flex w-full flex-col gap-3">
-                <OpenOrderRowItem row={row} mobile={isMobile} />
-                {!isMobile && index < openOrderRows.length - 1 && (
-                  <div className="h-px w-full bg-white/10" aria-hidden />
-                )}
+                <OpenOrderRowItem row={row} mobile />
               </div>
             ))}
           </div>
