@@ -7,6 +7,7 @@ import ContributionGraph, {
   getContributionGraphSize,
 } from "@/components/widgets/ContributionGraph";
 import WeatherIcon from "@/components/widgets/WeatherIcon";
+import AnalogueClock from "@/components/widgets/AnalogueClock";
 import {
   StreamingWords,
   assignFreshWordDelays,
@@ -34,7 +35,7 @@ interface SpotifyData {
   playedAt?: string;
 }
 
-type HoverPreview = "track" | "commits" | "weather" | null;
+type HoverPreview = "track" | "commits" | "weather" | "time" | null;
 
 type TitleSegment =
   | {
@@ -81,6 +82,11 @@ export default function TopSlide() {
   const { bpm } = useHeartRate();
   const [parisHours, setParisHours] = useState(0);
   const [parisMinutes, setParisMinutes] = useState(0);
+  const [clockHands, setClockHands] = useState({
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
   const [parisTemperature, setParisTemperature] = useState<number | null>(null);
   const [parisWeatherCode, setParisWeatherCode] = useState<number | null>(null);
   const [spotifyData, setSpotifyData] = useState<SpotifyData | null>(null);
@@ -95,6 +101,7 @@ export default function TopSlide() {
   const [touchArmedPreview, setTouchArmedPreview] = useState<HoverPreview>(null);
   const trackLinkRef = useRef<HTMLAnchorElement>(null);
   const commitsLinkRef = useRef<HTMLAnchorElement>(null);
+  const timeLinkRef = useRef<HTMLSpanElement>(null);
   const parisLinkRef = useRef<HTMLSpanElement>(null);
   const spotifyInitialFetchDoneRef = useRef(false);
   const animatedWordKeysRef = useRef(new Set<string>());
@@ -104,6 +111,7 @@ export default function TopSlide() {
     hoverPreview === "commits" && contributionWeeks !== null && cursorPosition.y > 0;
   const showWeatherPreview =
     hoverPreview === "weather" && parisTemperature !== null && cursorPosition.y > 0;
+  const showTimePreview = hoverPreview === "time" && cursorPosition.y > 0;
   const commitsPopupSize = contributionWeeks
     ? getCommitsPopupSize(contributionWeeks.length)
     : { width: 0, height: 0 };
@@ -116,12 +124,38 @@ export default function TopSlide() {
       const parisDate = getTimeInTimezone("Europe/Paris");
       setParisHours(parisDate.getHours());
       setParisMinutes(parisDate.getMinutes());
+      if (!showTimePreview) {
+        setClockHands({
+          hours: parisDate.getHours(),
+          minutes: parisDate.getMinutes(),
+          seconds: parisDate.getSeconds(),
+        });
+      }
     };
 
     updateTime();
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [showTimePreview]);
+
+  // Smooth second hand while the analogue clock preview is open
+  useEffect(() => {
+    if (!showTimePreview) return;
+
+    let frameId = 0;
+    const tick = () => {
+      const parisDate = getTimeInTimezone("Europe/Paris");
+      setClockHands({
+        hours: parisDate.getHours(),
+        minutes: parisDate.getMinutes(),
+        seconds: parisDate.getSeconds() + parisDate.getMilliseconds() / 1000,
+      });
+      frameId = requestAnimationFrame(tick);
+    };
+
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
+  }, [showTimePreview]);
 
   // Fetch Paris weather
   useEffect(() => {
@@ -259,9 +293,11 @@ export default function TopSlide() {
           ? trackLinkRef.current
           : touchArmedPreview === "commits"
             ? commitsLinkRef.current
-            : touchArmedPreview === "weather"
-              ? parisLinkRef.current
-              : null;
+            : touchArmedPreview === "time"
+              ? timeLinkRef.current
+              : touchArmedPreview === "weather"
+                ? parisLinkRef.current
+                : null;
       if (activeTarget && target && activeTarget.contains(target)) return;
 
       setTouchArmedPreview(null);
@@ -299,7 +335,7 @@ export default function TopSlide() {
 
     setTouchArmedPreview(null);
     setHoverPreview(null);
-    if (preview === "weather") {
+    if (preview === "weather" || preview === "time") {
       e.preventDefault();
     }
   };
@@ -445,33 +481,44 @@ export default function TopSlide() {
           {word}{" "}
         </span>
       ));
-      tailWords.push({
-        key: "commits-time",
-        delayIndex: delayIndex.current++,
-        content: (
-          <>
-            <span className="inline-flex items-baseline font-mono">
-              <NumberFlow
-                value={parisHours}
-                format={{ minimumIntegerDigits: 2 }}
-                style={{ ["--number-flow-mask-height" as string]: "0em" }}
-              />
-              <span>:</span>
-              <NumberFlow
-                value={parisMinutes}
-                format={{ minimumIntegerDigits: 2 }}
-                style={{ ["--number-flow-mask-height" as string]: "0em" }}
-              />
-            </span>{" "}
-          </>
-        ),
+      segments.push({ key: "commits-tail", type: "words", words: tailWords });
+
+      segments.push({
+        key: "paris-time",
+        type: "hover",
+        preview: "time",
+        words: [
+          {
+            key: "commits-time",
+            delayIndex: delayIndex.current++,
+            content: (
+              <>
+                <span className="inline-flex items-baseline font-mono">
+                  <NumberFlow
+                    value={parisHours}
+                    format={{ minimumIntegerDigits: 2 }}
+                    style={{ ["--number-flow-mask-height" as string]: "0em" }}
+                  />
+                  <span>:</span>
+                  <NumberFlow
+                    value={parisMinutes}
+                    format={{ minimumIntegerDigits: 2 }}
+                    style={{ ["--number-flow-mask-height" as string]: "0em" }}
+                  />
+                </span>{" "}
+              </>
+            ),
+          },
+        ],
       });
-      pushTextWords(tailWords, "commits-now-in", "now in", delayIndex, (word) => (
+
+      const nowInWords: StreamingWord[] = [];
+      pushTextWords(nowInWords, "commits-now-in", "now in", delayIndex, (word) => (
         <span className="opacity-40">
           {word}{" "}
         </span>
       ));
-      segments.push({ key: "commits-tail", type: "words", words: tailWords });
+      segments.push({ key: "commits-now-in", type: "words", words: nowInWords });
 
       segments.push({
         key: "paris-weather",
@@ -576,6 +623,29 @@ export default function TopSlide() {
         </div>
       </div>
 
+      <div
+        className={`pointer-events-none fixed z-[100] flex-shrink-0 ${
+          showTimePreview ? "visible" : "invisible"
+        }`}
+        style={{
+          width: TRACK_POPUP_SIZE,
+          height: TRACK_POPUP_SIZE,
+          left: cursorPosition.x,
+          top: Math.max(16, cursorPosition.y - TRACK_POPUP_SIZE - 16),
+          transform: "translateX(-50%)",
+        }}
+        aria-hidden={!showTimePreview}
+      >
+        <div className="flex size-full items-center justify-center rounded-lg bg-white/10 p-[10px] shadow-2xl backdrop-blur-md">
+          <AnalogueClock
+            hours={clockHands.hours}
+            minutes={clockHands.minutes}
+            seconds={clockHands.seconds}
+            className="size-full text-foreground"
+          />
+        </div>
+      </div>
+
       {/* Main Content */}
       <div className="flex-1 flex items-center px-6 md:px-8 lg:px-10">
         <h1 className="text-pretty text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-[1.15] max-w-2xl xl:max-w-4xl">
@@ -584,7 +654,13 @@ export default function TopSlide() {
               return (
                 <span
                   key={segment.key}
-                  ref={segment.preview === "weather" ? parisLinkRef : undefined}
+                  ref={
+                    segment.preview === "weather"
+                      ? parisLinkRef
+                      : segment.preview === "time"
+                        ? timeLinkRef
+                        : undefined
+                  }
                   role="presentation"
                   className="hover:text-muted-foreground transition-colors cursor-pointer"
                   onMouseEnter={() => {
