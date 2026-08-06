@@ -1,6 +1,6 @@
 export const PROJECTS = [
-  { id: "hot-topics", label: "Hot Topics" },
   { id: "positions", label: "Positions" },
+  { id: "hot-topics", label: "Hot Topics" },
   { id: "smart-leverage", label: "Smart Leverage" },
   { id: "thinking", label: "Thinking" },
   { id: "mcp", label: "MCP" },

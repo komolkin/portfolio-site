@@ -786,7 +786,7 @@ function PositionRowItem({
         role="button"
         tabIndex={0}
         aria-expanded={expanded}
-        className="flex w-full cursor-pointer flex-col rounded-2xl bg-white/[0.06] p-4 transition-[colors,transform] duration-150 ease-out hover:bg-white/[0.1] active:scale-[0.98]"
+        className="flex w-full cursor-pointer flex-col rounded-2xl bg-white/[0.06] p-4 transition-[background-color,transform] duration-300 ease-out hover:bg-white/[0.1] active:scale-[0.98]"
         onClick={() => setExpanded((prev) => !prev)}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -1016,7 +1016,7 @@ function OpenOrderRowItem({
         role="button"
         tabIndex={0}
         aria-expanded={expanded}
-        className="flex w-full cursor-pointer flex-col rounded-2xl bg-white/[0.06] p-4 transition-[colors,transform] duration-150 ease-out hover:bg-white/[0.1] active:scale-[0.98]"
+        className="flex w-full cursor-pointer flex-col rounded-2xl bg-white/[0.06] p-4 transition-[background-color,transform] duration-300 ease-out hover:bg-white/[0.1] active:scale-[0.98]"
         onClick={() => setExpanded((prev) => !prev)}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
