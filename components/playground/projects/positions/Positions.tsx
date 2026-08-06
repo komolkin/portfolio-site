@@ -1186,7 +1186,7 @@ export default function Positions() {
             >
               Positions
               <sup
-                className={`relative -top-2 ml-1 text-xs font-semibold leading-none ${
+                className={`relative -top-3 ml-1 text-xs font-semibold leading-none ${
                   activeTab === "positions" ? "text-white" : "text-white/40"
                 }`}
               >
@@ -1205,7 +1205,7 @@ export default function Positions() {
             >
               Open Orders
               <sup
-                className={`relative -top-2 ml-1 text-xs font-semibold leading-none ${
+                className={`relative -top-3 ml-1 text-xs font-semibold leading-none ${
                   activeTab === "open-orders" ? "text-white" : "text-white/40"
                 }`}
               >
