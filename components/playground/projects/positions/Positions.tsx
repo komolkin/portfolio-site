@@ -956,7 +956,7 @@ function OpenOrderRowItem({
 
 export default function Positions() {
   const [activeTab, setActiveTab] = useState<TabId>("positions");
-  const [viewMode, setViewMode] = useState<ViewMode>("desktop");
+  const [viewMode, setViewMode] = useState<ViewMode>("mobile");
   const [sims, setSims] = useState<RowSim[]>(initialSims);
   const [indicator, setIndicator] = useState({ left: 0, width: 0 });
   const positionsTabRef = useRef<HTMLButtonElement>(null);
