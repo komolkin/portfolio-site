@@ -36,6 +36,11 @@ const SIM_TICK_MS = 1600;
 const FILL_MAX = BAR_TRACK_WIDTH - 4;
 /** Full track width maps to 100¢ */
 const TRACK_CENTS = 100;
+/** Open-order filled progress — Figma node 12146:81922 */
+const FILLED_BAR_WIDTH = 91;
+const FILLED_BAR_HEIGHT = 17;
+const FILLED_FILL_HEIGHT = 7;
+const FILLED_FILL_INSET = 6;
 /** Shared desktop row columns so Positions / Open Orders match overall width */
 const DESKTOP_ROW_POSITIONS =
   "grid w-full items-center gap-6 [grid-template-columns:160px_120px_150px_minmax(147px,1fr)_120px]";
@@ -348,6 +353,85 @@ function HoverTooltip({
       }}
     >
       {children}
+    </div>
+  );
+}
+
+/** Open-order fill progress — Figma https://www.figma.com/design/XSjBMcMS96jS8ntZIpMukQ/Ilya?node-id=12146-81922 */
+function FilledProgressBar({
+  filledShares,
+  totalShares,
+}: {
+  filledShares: number;
+  totalShares: number;
+}) {
+  const barRef = useRef<HTMLDivElement>(null);
+  const [tip, setTip] = useState({ visible: false, x: 0, y: 0 });
+  const pct =
+    totalShares > 0 ? clamp(filledShares / totalShares, 0, 1) : 0;
+  const innerMax = FILLED_BAR_WIDTH - FILLED_FILL_INSET * 2;
+  const fillWidth = Math.round(innerMax * pct);
+  const label = `${filledShares} of ${totalShares} filled`;
+
+  const showTip = () => {
+    const el = barRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    setTip({
+      visible: true,
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+    });
+  };
+
+  const hideTip = () => {
+    setTip((prev) => ({ ...prev, visible: false }));
+  };
+
+  useEffect(() => {
+    if (!tip.visible || !barRef.current) return;
+
+    const sync = () => {
+      const el = barRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setTip((prev) =>
+        prev.visible
+          ? { ...prev, x: rect.left + rect.width / 2, y: rect.top }
+          : prev,
+      );
+    };
+
+    window.addEventListener("scroll", sync, true);
+    window.addEventListener("resize", sync);
+    return () => {
+      window.removeEventListener("scroll", sync, true);
+      window.removeEventListener("resize", sync);
+    };
+  }, [tip.visible]);
+
+  return (
+    <div
+      ref={barRef}
+      className="relative cursor-pointer rounded-lg bg-white/[0.04] transition-colors duration-150 ease-out hover:bg-white/[0.08]"
+      style={{ width: FILLED_BAR_WIDTH, height: FILLED_BAR_HEIGHT }}
+      aria-label={label}
+      onMouseEnter={showTip}
+      onMouseLeave={hideTip}
+    >
+      {fillWidth > 0 && (
+        <div
+          className="absolute top-1/2 -translate-y-1/2 rounded bg-white"
+          style={{
+            left: FILLED_FILL_INSET,
+            width: fillWidth,
+            height: FILLED_FILL_HEIGHT,
+          }}
+        />
+      )}
+      <HoverTooltip visible={tip.visible} x={tip.x} y={tip.y}>
+        {label}
+      </HoverTooltip>
     </div>
   );
 }
@@ -948,9 +1032,10 @@ function OpenOrderRowItem({
         </HoverTooltip>
       </div>
 
-      <p className="text-sm font-normal leading-[1.25] text-white">
-        {row.filledAmount} filled
-      </p>
+      <FilledProgressBar
+        filledShares={row.filledShares}
+        totalShares={row.totalShares}
+      />
 
       {cancelButton}
     </div>
