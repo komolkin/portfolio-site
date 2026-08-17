@@ -24,6 +24,7 @@ import Mcp from "@/components/playground/projects/mcp/Mcp";
 import Thinking from "@/components/playground/projects/thinking/Thinking";
 import AiCam from "@/components/playground/projects/ai-cam/AiCam";
 import Worm from "@/components/playground/projects/worm/Worm";
+import Api from "@/components/playground/projects/api/Api";
 
 export default function PlaygroundSlide() {
   const pathname = usePathname();
@@ -104,6 +105,7 @@ export default function PlaygroundSlide() {
             {activeProject === "thinking" && <Thinking />}
             {activeProject === "ai-cam" && <AiCam />}
             {activeProject === "worm" && <Worm />}
+            {activeProject === "api" && <Api />}
           </motion.div>
         </AnimatePresence>
       </main>
