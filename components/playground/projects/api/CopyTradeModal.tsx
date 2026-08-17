@@ -156,7 +156,11 @@ export default function CopyTradeModal({
   onSave: (trade: CopyTrade) => void;
   onStop: (wallet: string) => void;
   onViewProfile: () => void;
-  onOpenMarket?: (slug: string, title: string) => void;
+  onOpenMarket?: (
+    slug: string,
+    title: string,
+    preview?: { image?: string | null; price?: number; outcome?: string },
+  ) => void;
 }) {
   const [step, setStep] = useState<Step>(existing ? "manage" : "form");
   const [stepDir, setStepDir] = useState<1 | -1>(1);
@@ -363,7 +367,6 @@ export default function CopyTradeModal({
   const copiedEntries = copyRelationshipEntries(copied);
   const copiedPnl = copyRelationshipPnl(copied);
   const copiedCount = copiedEntries.length;
-  const stacked = Boolean(existing) && step !== "success";
   const ariaLabel =
     step === "risk"
       ? "Risk management"
@@ -387,14 +390,12 @@ export default function CopyTradeModal({
         aria-modal="true"
         aria-labelledby="copytrade-title"
         aria-label={ariaLabel}
-        className={`absolute inset-x-0 bottom-0 flex max-h-[94%] flex-col overflow-hidden rounded-t-[1.75rem] bg-black shadow-[0_-12px_40px_rgba(0,0,0,0.45)] ${
-          stacked ? "h-[88%]" : ""
-        }`}
+        className="absolute inset-x-0 bottom-0 flex max-h-[94%] flex-col overflow-hidden rounded-t-[1.75rem] bg-black shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
         style={{
           transform: open ? `translateY(${drawerOffset}px)` : "translateY(100%)",
           transition: isDragging
             ? "none"
-            : "transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), height 0.42s cubic-bezier(0.32, 0.72, 0, 1)",
+            : "transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)",
         }}
       >
         <div
@@ -410,29 +411,10 @@ export default function CopyTradeModal({
           />
         </div>
 
-        <div
-          className={
-            stacked
-              ? "flex h-full min-h-0 flex-1 flex-col px-5 pb-5"
-              : "min-h-0 overflow-y-auto overscroll-contain px-5 pb-5"
-          }
-        >
-          <SheetPager step={step} direction={stepDir} fill={stacked}>
+        <div className="min-h-0 overflow-y-auto overscroll-contain px-5 pb-5">
+          <SheetPager step={step} direction={stepDir}>
           {step === "form" && (
-            <div
-              className={
-                stacked
-                  ? "flex h-full min-h-0 flex-col"
-                  : "flex flex-col gap-3"
-              }
-            >
-              <div
-                className={
-                  stacked
-                    ? "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain"
-                    : "contents"
-                }
-              >
+            <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3">
                 {existing ? (
                   <button
@@ -611,9 +593,7 @@ export default function CopyTradeModal({
                 </div>
               </div>
 
-              </div>
-
-              <div className={stacked ? "shrink-0 pt-3" : "pt-1"}>
+              <div className="pt-1">
                 <button
                   type="button"
                   onClick={existing ? saveEdits : confirmCopy}
@@ -629,20 +609,7 @@ export default function CopyTradeModal({
           )}
 
           {step === "risk" && (
-            <div
-              className={
-                stacked
-                  ? "flex h-full min-h-0 flex-col"
-                  : "flex flex-col gap-4"
-              }
-            >
-              <div
-                className={
-                  stacked
-                    ? "flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain"
-                    : "contents"
-                }
-              >
+            <div className="flex flex-col gap-4">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -788,14 +755,11 @@ export default function CopyTradeModal({
                   })}
                 </div>
               </section>
-              </div>
 
               <button
                 type="button"
                 onClick={() => goTo("form", -1)}
-                className={`w-full rounded-full bg-white py-3.5 text-[15px] font-semibold text-black transition-colors hover:bg-white/90 ${
-                  stacked ? "mt-3 shrink-0" : ""
-                }`}
+                className="w-full rounded-full bg-white py-3.5 text-[15px] font-semibold text-black transition-colors hover:bg-white/90"
               >
                 Done
               </button>
@@ -886,8 +850,8 @@ export default function CopyTradeModal({
           )}
 
           {step === "manage" && live && (
-            <div className="flex h-full min-h-0 flex-col">
-              <div className="flex shrink-0 items-center gap-3">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
                 <UserAvatar
                   seed={wallet}
                   label={displayName}
@@ -918,7 +882,7 @@ export default function CopyTradeModal({
                 </button>
               </div>
 
-              <div className="mt-3 flex shrink-0 items-center gap-3 rounded-[16px] bg-white/[0.08] px-3.5 py-2.5">
+              <div className="flex items-center gap-3 rounded-[16px] bg-white/[0.08] px-3.5 py-2.5">
                 <div className="min-w-0 flex-1">
                   <p
                     className={`text-[20px] font-semibold tabular-nums ${
@@ -949,13 +913,13 @@ export default function CopyTradeModal({
                   }
                 />
               </div>
-              <p className="mt-1.5 shrink-0 truncate text-[12px] text-white/40">
+              <p className="truncate text-[12px] text-white/40">
                 {live.copyExits ? "Exits copied" : "You manage exits"}
                 {" · "}
                 {riskSummary(live.maxDailyUsd, live.maxOpenPositions)}
               </p>
 
-              <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              <div className="max-h-[240px] overflow-y-auto overscroll-contain">
                 {copiedEntries.length === 0 ? (
                   <p className="py-3 text-[13px] text-white/45">
                     Waiting for their next trade
@@ -1021,7 +985,11 @@ export default function CopyTradeModal({
                             }
                             onClick={() => {
                               if (!slug && !item.trade.marketTitle) return;
-                              onOpenMarket?.(slug, item.trade.marketTitle);
+                              onOpenMarket?.(slug, item.trade.marketTitle, {
+                                image: image ?? null,
+                                price: item.trade.price,
+                                outcome: item.trade.outcome,
+                              });
                               closeSheet();
                             }}
                           />

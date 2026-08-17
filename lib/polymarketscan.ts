@@ -667,25 +667,49 @@ export async function getMarketData(options: {
 
   const promise = (async () => {
     try {
+      const titleOf = (market: PolymarketMarketData | null) =>
+        market?.title.trim().toLowerCase() ?? "";
+      const queryTitle = query?.trim().toLowerCase() ?? "";
+      const titleClose = (market: PolymarketMarketData | null) => {
+        if (!queryTitle || !market) return false;
+        const title = titleOf(market);
+        const group = (market.groupItemTitle ?? "").trim().toLowerCase();
+        return (
+          title === queryTitle ||
+          title.includes(queryTitle) ||
+          queryTitle.includes(title) ||
+          (group.length > 0 &&
+            (queryTitle.includes(group) || group.includes(queryTitle)))
+        );
+      };
+
+      const [fromSlug, fromId, fromQuery] = await Promise.all([
+        slug
+          ? fetchMarketDetail({ slug }).then(async (market) => {
+              if (market) return market;
+              if (/^\d+$/.test(slug)) return fetchMarketDetail({ id: slug });
+              return null;
+            })
+          : Promise.resolve(null),
+        !slug && id ? fetchMarketDetail({ id }) : Promise.resolve(null),
+        query
+          ? searchMarket(query)
+          : slug
+            ? searchMarket(slug.replace(/-/g, " "))
+            : Promise.resolve(null),
+      ]);
+
+      const candidates = [fromQuery, fromSlug, fromId].filter(
+        (market): market is PolymarketMarketData => market !== null,
+      );
       let market: PolymarketMarketData | null = null;
-
-      if (slug) {
-        market = await fetchMarketDetail({ slug });
-        if (!market && /^\d+$/.test(slug)) {
-          market = await fetchMarketDetail({ id: slug });
-        }
-      }
-
-      if (!market && id) {
-        market = await fetchMarketDetail({ id });
-      }
-
-      if (!market && query) {
-        market = await searchMarket(query);
-      }
-
-      if (!market && slug) {
-        market = await searchMarket(slug.replace(/-/g, " "));
+      if (queryTitle) {
+        market =
+          candidates.find((item) => titleOf(item) === queryTitle) ??
+          candidates.find(titleClose) ??
+          null;
+      } else {
+        market = fromSlug ?? fromId ?? fromQuery;
       }
 
       if (!market) return getCached<PolymarketMarketData>(key);

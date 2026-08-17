@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { useReducedMotion } from "framer-motion";
 
+const MAX_TILES = 18;
 const GOLDEN = Math.PI * (3 - Math.sqrt(5));
 const FALLBACKS = [
   "#3B6B8C",
@@ -15,16 +16,14 @@ const FALLBACKS = [
   "#3A6A5A",
 ];
 
-function spherePoints(count: number) {
+function sphereAngles(count: number) {
   const n = Math.max(count, 1);
   return Array.from({ length: n }, (_, i) => {
     const y = 1 - (i / Math.max(n - 1, 1)) * 2;
-    const r = Math.sqrt(Math.max(0, 1 - y * y));
-    const theta = GOLDEN * i;
+    const phi = Math.acos(Math.min(1, Math.max(-1, y)));
     return {
-      x: Math.cos(theta) * r,
-      y,
-      z: Math.sin(theta) * r,
+      rotateY: GOLDEN * i,
+      rotateX: phi - Math.PI / 2,
     };
   });
 }
@@ -60,7 +59,7 @@ function easeOutBack(t: number): number {
 export default function MarketSphere({ images }: { images: string[] }) {
   const reduceMotion = useReducedMotion();
   const rootRef = useRef<HTMLDivElement>(null);
-  const nodesRef = useRef<Array<HTMLDivElement | null>>([]);
+  const groupRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({
     active: false,
     lastX: 0,
@@ -84,31 +83,41 @@ export default function MarketSphere({ images }: { images: string[] }) {
         src: normalized,
         color: FALLBACKS[unique.length % FALLBACKS.length]!,
       });
-      if (unique.length >= 28) break;
+      if (unique.length >= MAX_TILES) break;
     }
     return unique;
   }, [images]);
 
-  const points = useMemo(() => spherePoints(tiles.length), [tiles.length]);
+  const angles = useMemo(() => sphereAngles(tiles.length), [tiles.length]);
 
   useEffect(() => {
     const root = rootRef.current;
-    if (!root || tiles.length === 0) return;
+    const group = groupRef.current;
+    if (!root || !group || tiles.length === 0) return;
     const drag = dragRef.current;
     let frame = 0;
     const born = performance.now();
-    let width = root.clientWidth;
-    let height = root.clientHeight;
-    const resize = new ResizeObserver(() => {
-      width = root.clientWidth;
-      height = root.clientHeight;
-    });
+    let radius = Math.min(root.clientWidth, root.clientHeight) * 0.56;
+    let exploded = reduceMotion;
+
+    const applySize = () => {
+      radius = Math.min(root.clientWidth, root.clientHeight) * 0.56;
+      const size = Math.max(48, Math.min(72, radius * 0.42));
+      root.style.setProperty("--sphere-size", `${size}px`);
+      if (exploded) {
+        group.style.setProperty("--sphere-r", `${radius}px`);
+      }
+    };
+    applySize();
+
+    const resize = new ResizeObserver(applySize);
     resize.observe(root);
-    const count = tiles.length;
 
     const project = (now: number) => {
-      const radius = Math.min(width, height) * 0.56;
-      const size = Math.max(48, Math.min(72, radius * 0.42));
+      if (document.hidden) {
+        frame = 0;
+        return;
+      }
       const elapsed = (now - born) / 1000;
 
       if (!drag.active) {
@@ -119,40 +128,28 @@ export default function MarketSphere({ images }: { images: string[] }) {
         drag.rotX += (0.28 + Math.sin(elapsed * 0.26) * 0.16 - drag.rotX) * 0.02;
       }
 
-      const cosY = Math.cos(drag.rotY);
-      const sinY = Math.sin(drag.rotY);
-      const cosX = Math.cos(drag.rotX);
-      const sinX = Math.sin(drag.rotX);
+      group.style.transform = `rotateX(${drag.rotX}rad) rotateY(${drag.rotY}rad)`;
 
-      points.forEach((point, i) => {
-        const node = nodesRef.current[i];
-        if (!node) return;
-        const delay = (i / Math.max(count, 1)) * 0.18;
-        const local = reduceMotion
-          ? 1
-          : easeOutBack(Math.min(1, Math.max(0, (elapsed - delay) / 0.9)));
-        const x1 = point.x * cosY - point.z * sinY;
-        const z1 = point.x * sinY + point.z * cosY;
-        const y2 = point.y * cosX - z1 * sinX;
-        const z2 = point.y * sinX + z1 * cosX;
-        const depth = (z2 + 1) / 2;
-        const scale =
-          (0.58 + depth * 0.58) * (0.18 + 0.82 * Math.min(local, 1.08));
-        const x = x1 * radius * local;
-        const y = y2 * radius * local;
-        node.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
-        node.style.opacity = String(0.28 + depth * 0.72);
-        node.style.zIndex = String(Math.round(depth * 100));
-        node.style.width = `${size}px`;
-        node.style.height = `${size}px`;
-        node.style.marginLeft = `${-size / 2}px`;
-        node.style.marginTop = `${-size / 2}px`;
-      });
+      if (!exploded) {
+        const t = easeOutBack(Math.min(1, elapsed / 1.15));
+        group.style.setProperty("--sphere-r", `${radius * t}px`);
+        if (elapsed >= 1.15) exploded = true;
+      }
 
       frame = window.requestAnimationFrame(project);
     };
 
     frame = window.requestAnimationFrame(project);
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        window.cancelAnimationFrame(frame);
+        frame = 0;
+        return;
+      }
+      if (!frame) frame = window.requestAnimationFrame(project);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
 
     const onPointerDown = (e: PointerEvent) => {
       drag.active = true;
@@ -187,19 +184,21 @@ export default function MarketSphere({ images }: { images: string[] }) {
 
     return () => {
       window.cancelAnimationFrame(frame);
+      document.removeEventListener("visibilitychange", onVisibility);
       resize.disconnect();
       root.removeEventListener("pointerdown", onPointerDown);
       root.removeEventListener("pointermove", onPointerMove);
       root.removeEventListener("pointerup", onPointerUp);
       root.removeEventListener("pointercancel", onPointerUp);
     };
-  }, [points, reduceMotion, tiles.length]);
+  }, [reduceMotion, tiles.length]);
 
   return (
     <div
       ref={rootRef}
       className="relative h-full w-full overflow-visible touch-none select-none"
       aria-hidden
+      style={{ perspective: "900px" }}
     >
       <div
         className="pointer-events-none absolute left-1/2 top-1/2 h-[86%] w-[86%] -translate-x-1/2 -translate-y-1/2 rounded-full"
@@ -208,37 +207,50 @@ export default function MarketSphere({ images }: { images: string[] }) {
             "radial-gradient(circle, rgba(90,140,180,0.22) 0%, rgba(20,40,55,0.1) 42%, transparent 70%)",
         }}
       />
-      {tiles.map((tile, i) => (
-        <div
-          key={tile.src}
-          ref={(el) => {
-            nodesRef.current[i] = el;
-          }}
-          className="absolute left-1/2 top-1/2 overflow-hidden rounded-[8px] bg-white/10"
-          style={{
-            width: 56,
-            height: 56,
-            marginLeft: -28,
-            marginTop: -28,
-            backgroundColor: tile.color,
-            transform: "translate3d(0,0,0) scale(0.2)",
-            opacity: 0,
-            willChange: "transform, opacity",
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={tile.src}
-            alt=""
-            draggable={false}
-            className="h-full w-full object-cover"
-            onError={(e) => {
-              const tileEl = e.currentTarget.parentElement;
-              if (tileEl) tileEl.style.visibility = "hidden";
-            }}
-          />
-        </div>
-      ))}
+      <div
+        ref={groupRef}
+        className="absolute left-1/2 top-1/2 h-0 w-0"
+        style={
+          {
+            transformStyle: "preserve-3d",
+            willChange: "transform",
+            "--sphere-r": reduceMotion ? "140px" : "0px",
+          } as CSSProperties
+        }
+      >
+        {tiles.map((tile, i) => {
+          const angle = angles[i]!;
+          return (
+            <div
+              key={tile.src}
+              className="absolute overflow-hidden rounded-[8px] bg-white/10"
+              style={{
+                width: "var(--sphere-size, 56px)",
+                height: "var(--sphere-size, 56px)",
+                marginLeft: "calc(var(--sphere-size, 56px) / -2)",
+                marginTop: "calc(var(--sphere-size, 56px) / -2)",
+                backgroundColor: tile.color,
+                transform: `rotateY(${angle.rotateY}rad) rotateX(${angle.rotateX}rad) translateZ(var(--sphere-r))`,
+                backfaceVisibility: "hidden",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={tile.src}
+                alt=""
+                draggable={false}
+                decoding="async"
+                loading={i < 8 ? "eager" : "lazy"}
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  const tileEl = e.currentTarget.parentElement;
+                  if (tileEl) tileEl.style.visibility = "hidden";
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

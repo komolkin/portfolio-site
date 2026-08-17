@@ -376,6 +376,116 @@ function hashString(value: string): number {
   return Math.abs(hash);
 }
 
+function titlesClose(a: string, b: string): boolean {
+  const left = a.trim().toLowerCase();
+  const right = b.trim().toLowerCase();
+  if (!left || !right) return false;
+  return left === right || left.includes(right) || right.includes(left);
+}
+
+function marketMatchesOpen(
+  market: PolymarketMarketData,
+  slug: string | null,
+  title: string | null,
+): boolean {
+  const requestedSlug = slug?.trim().toLowerCase() || "";
+  const marketSlug = (market.slug || "").toLowerCase();
+  const marketId = (market.marketId || "").toLowerCase();
+  const eventSlug = (market.eventSlug || "").toLowerCase();
+  const slugHit =
+    Boolean(requestedSlug) &&
+    (marketSlug === requestedSlug ||
+      marketId === requestedSlug ||
+      eventSlug === requestedSlug);
+  if (title) {
+    const titleHit =
+      titlesClose(market.title, title) ||
+      titlesClose(market.groupItemTitle ?? "", title);
+    if (titleHit) return true;
+    if (slugHit && eventSlug === requestedSlug && eventSlug !== marketSlug) {
+      return false;
+    }
+  }
+  return slugHit;
+}
+
+function findLocalMarket(
+  markets: PolymarketMarketData[],
+  slug: string,
+  title?: string,
+): PolymarketMarketData | undefined {
+  const requestedSlug = slug.trim().toLowerCase();
+  const requestedTitle = title?.trim().toLowerCase() ?? "";
+  if (requestedSlug) {
+    const exact = markets.find(
+      (market) =>
+        market.slug.toLowerCase() === requestedSlug ||
+        market.marketId.toLowerCase() === requestedSlug,
+    );
+    if (exact) {
+      if (!requestedTitle || titlesClose(exact.title, requestedTitle)) return exact;
+    }
+  }
+  if (requestedTitle) {
+    return markets.find(
+      (market) => market.title.trim().toLowerCase() === requestedTitle,
+    );
+  }
+  return undefined;
+}
+
+function optimisticMarketFromOpen(
+  slug: string,
+  title: string,
+  preview?: { image?: string | null; price?: number; outcome?: string },
+): PolymarketMarketData {
+  const identity = slug || title;
+  const price = Math.max(0.01, Math.min(0.99, preview?.price ?? 0.5));
+  const outcome = (preview?.outcome ?? "Yes").trim() || "Yes";
+  const lower = outcome.toLowerCase();
+  const isNoLike = lower === "no" || lower === "down";
+  const yesPrice = isNoLike ? 1 - price : price;
+  const noPrice = 1 - yesPrice;
+  const matchup = title.split(/\s+vs\.?\s+/i).map((part) => part.trim());
+  const other =
+    lower === "yes"
+      ? "No"
+      : lower === "no"
+        ? "Yes"
+        : lower === "up"
+          ? "Down"
+          : lower === "down"
+            ? "Up"
+            : matchup.length === 2
+              ? (matchup.find((part) => part.toLowerCase() !== lower) ?? "No")
+              : "No";
+  const yesLabel = isNoLike ? other : outcome;
+  const noLabel = isNoLike ? outcome : other;
+  return {
+    marketId: identity,
+    title,
+    slug: identity,
+    category: null,
+    yesPrice,
+    noPrice,
+    volumeUsd: 0,
+    volume24h: 0,
+    liquidityUsd: 0,
+    image: preview?.image ?? null,
+    closesAt: null,
+    isResolved: false,
+    price24hChange: null,
+    groupItemTitle:
+      lower !== "yes" && lower !== "no" && lower !== "up" && lower !== "down"
+        ? outcome
+        : null,
+    outcomes: [
+      { label: yesLabel, price: yesPrice, marketId: identity, slug: identity },
+      { label: noLabel, price: noPrice, marketId: identity, slug: identity },
+    ],
+  };
+}
+
 function marketFromFeedTrade(
   trade: PolymarketTradeWithPnl,
   cached: PolymarketMarketData | undefined,
@@ -782,7 +892,6 @@ function BalanceFlow({
           trend={0}
           format={{
             minimumIntegerDigits: 2,
-            maximumIntegerDigits: 2,
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
             useGrouping: false,
@@ -2132,7 +2241,11 @@ function ProfilePositionRow({
   onOpen,
 }: {
   position: PolymarketWalletPosition;
-  onOpen: (slug: string, title: string) => void;
+  onOpen: (
+    slug: string,
+    title: string,
+    preview?: { image?: string | null; price?: number; outcome?: string },
+  ) => void;
 }) {
   return (
     <ActivityRow
@@ -2170,7 +2283,13 @@ function ProfilePositionRow({
           </p>
         </div>
       }
-      onClick={() => onOpen(position.marketSlug ?? "", position.marketTitle)}
+      onClick={() =>
+        onOpen(position.marketSlug ?? "", position.marketTitle, {
+          image: position.image,
+          price: position.markPrice,
+          outcome: position.outcome,
+        })
+      }
     />
   );
 }
@@ -2182,7 +2301,11 @@ function ProfileHistoryRow({
 }: {
   trade: PolymarketWalletTrade;
   marketImage?: string;
-  onOpen: (slug: string, title: string) => void;
+  onOpen: (
+    slug: string,
+    title: string,
+    preview?: { image?: string | null; price?: number; outcome?: string },
+  ) => void;
 }) {
   const isBuy = trade.side.toUpperCase() === "BUY";
   const timeAgo = formatTimeAgo(trade.timestamp);
@@ -2215,7 +2338,13 @@ function ProfileHistoryRow({
           {formatUsd(trade.size * trade.price)}
         </span>
       }
-      onClick={() => onOpen(trade.marketSlug ?? "", trade.marketTitle)}
+      onClick={() =>
+        onOpen(trade.marketSlug ?? "", trade.marketTitle, {
+          image: marketImage,
+          price: trade.price,
+          outcome: trade.outcome,
+        })
+      }
     />
   );
 }
@@ -3357,24 +3486,32 @@ export default function Api() {
 
     const controller = new AbortController();
     const slug = selectedMarketSlug;
-    const id = selectedMarket?.marketId ?? null;
-    const title = selectedMarket?.title ?? null;
+    const requestedTitle = selectedMarket?.title ?? null;
+    const looksLikeSlug = Boolean(slug) && !/\s/.test(slug);
 
     const load = async () => {
       setMarketStatus((prev) => (prev === "ready" ? prev : "loading"));
       try {
         const params = new URLSearchParams();
-        if (slug) params.set("slug", slug);
-        if (id) params.set("id", id);
-        if (title) params.set("q", title);
+        if (looksLikeSlug) params.set("slug", slug);
+        if (requestedTitle) params.set("q", requestedTitle);
         const res = await fetch(`/api/polymarketscan/market?${params}`, {
+          cache: "no-store",
           signal: controller.signal,
         });
         if (!res.ok) throw new Error("fetch failed");
         const data = (await res.json()) as PolymarketMarketData;
         if (controller.signal.aborted) return;
-        setSelectedMarket(data);
-        setSelectedMarketSlug(data.slug || slug);
+        if (!marketMatchesOpen(data, slug, requestedTitle)) return;
+        setSelectedMarket((current) =>
+          current
+            ? {
+                ...data,
+                image: data.image || current.image,
+                title: requestedTitle || data.title,
+              }
+            : data,
+        );
         setMarketStatus("ready");
       } catch (error) {
         if (controller.signal.aborted) return;
@@ -3404,19 +3541,18 @@ export default function Api() {
     setMarketDetailTab("trades");
     const controller = new AbortController();
     const slug = selectedMarketSlug;
-    const id = selectedMarket?.marketId ?? null;
-    const title = selectedMarket?.title ?? null;
+    const requestedTitle = selectedMarket?.title ?? null;
+    const looksLikeSlug = Boolean(slug) && !/\s/.test(slug);
 
     const load = async () => {
       setMarketActivityStatus("loading");
       try {
         const params = new URLSearchParams();
-        if (slug) params.set("slug", slug);
-        if (id) params.set("id", id);
-        if (title) params.set("q", title);
+        if (looksLikeSlug) params.set("slug", slug);
+        if (requestedTitle) params.set("q", requestedTitle);
         const res = await fetch(
           `/api/polymarketscan/market/activity?${params}`,
-          { signal: controller.signal },
+          { cache: "no-store", signal: controller.signal },
         );
         if (!res.ok) throw new Error("fetch failed");
         const data = (await res.json()) as PolymarketMarketActivity;
@@ -3731,31 +3867,36 @@ export default function Api() {
   ]);
 
   const openMarket = (market: PolymarketMarketData) => {
+    setSelectedWallet(null);
+    setWalletLabel(null);
     setSelectedMarket(market);
     setSelectedMarketSlug(market.slug || market.marketId);
     setMarketStatus("ready");
   };
 
-  const openMarketBySlug = (slug: string, title?: string) => {
+  const openMarketBySlug = (
+    slug: string,
+    title?: string,
+    preview?: { image?: string | null; price?: number; outcome?: string },
+  ) => {
     if (!slug && !title) return;
+    const local = findLocalMarket(
+      [...liveMarkets, ...trendingMarkets, ...searchResults],
+      slug,
+      title,
+    );
+    if (local) {
+      openMarket(
+        preview?.image && !local.image
+          ? { ...local, image: preview.image }
+          : local,
+      );
+      return;
+    }
+    setSelectedWallet(null);
+    setWalletLabel(null);
     setSelectedMarket(
-      title
-        ? {
-            marketId: slug || title,
-            title,
-            slug: slug || title,
-            category: null,
-            yesPrice: 0.5,
-            noPrice: 0.5,
-            volumeUsd: 0,
-            volume24h: 0,
-            liquidityUsd: 0,
-            image: null,
-            closesAt: null,
-            isResolved: false,
-            price24hChange: null,
-          }
-        : null,
+      title ? optimisticMarketFromOpen(slug, title, preview) : null,
     );
     setSelectedMarketSlug(slug || title || null);
     setMarketStatus(title ? "ready" : "loading");
@@ -5179,8 +5320,19 @@ export default function Api() {
                     onChange={setMarketDetailTab}
                     tabs={
                       [
-                        { id: "trades", label: "Trades" },
-                        { id: "traders", label: "Traders" },
+                        {
+                          id: "trades",
+                          label: "Trades",
+                          count:
+                            marketFeedTrades.length > 0
+                              ? marketFeedTrades.length
+                              : undefined,
+                        },
+                        {
+                          id: "traders",
+                          label: "Traders",
+                          count: marketActivity?.traders.length || undefined,
+                        },
                         { id: "rules", label: "Rules" },
                       ] as const
                     }
