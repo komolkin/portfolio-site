@@ -471,6 +471,7 @@ function normalizeMarket(raw: AgentMarketRaw): PolymarketMarketData | null {
       ? raw.event_slug.trim()
       : null;
   const slug = typeof raw.slug === "string" ? raw.slug : raw.market_id;
+  const marketId = raw.market_id;
   const sides = getMarketOddsSides({
     title: raw.title,
     yesPrice: raw.yes_price,
@@ -481,7 +482,7 @@ function normalizeMarket(raw: AgentMarketRaw): PolymarketMarketData | null {
           {
             label: groupItemTitle,
             price: raw.yes_price,
-            marketId: raw.market_id,
+            marketId,
             slug,
           },
         ]
@@ -490,12 +491,12 @@ function normalizeMarket(raw: AgentMarketRaw): PolymarketMarketData | null {
   const outcomes: PolymarketMarketOutcome[] = sides.map((side) => ({
     label: side.label,
     price: side.price,
-    marketId: raw.market_id,
+    marketId,
     slug,
   }));
 
   return {
-    marketId: raw.market_id,
+    marketId,
     title: raw.title,
     slug: typeof raw.slug === "string" ? raw.slug : raw.market_id,
     category: raw.category ?? null,

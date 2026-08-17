@@ -166,7 +166,7 @@ export default function FollowListSheet({
             <ul className="divide-y divide-white/[0.06]">
               {people.map((person) => {
                 const own =
-                  Boolean(ownWallet) &&
+                  ownWallet != null &&
                   person.wallet.toLowerCase() === ownWallet.toLowerCase();
                 const name = handleFor(person);
                 return (
