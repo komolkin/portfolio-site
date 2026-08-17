@@ -5322,7 +5322,7 @@ export default function Api() {
                       [
                         {
                           id: "trades",
-                          label: "Trades",
+                          label: "Takes",
                           count:
                             marketFeedTrades.length > 0
                               ? marketFeedTrades.length
@@ -5360,7 +5360,7 @@ export default function Api() {
                     (marketActivityStatus === "ready" ||
                       marketFeedTrades.length > 0) &&
                     marketFeedTrades.length === 0 && (
-                      <p className="mt-2 text-sm text-white/55">No recent trades.</p>
+                      <p className="mt-2 text-sm text-white/55">No recent takes.</p>
                     )}
 
                   {marketDetailTab === "trades" &&
