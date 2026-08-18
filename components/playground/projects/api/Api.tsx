@@ -3792,8 +3792,20 @@ export default function Api() {
         ? (profileUsername ??
           demoProfile?.displayName ??
           (demoProfile?.wallet ? shortWallet(demoProfile.wallet) : null))
-        : section === "feed" && !showingDrillDown
-          ? "Feed"
+        : section === "explore" && !showingDrillDown
+          ? demoProfileStatus === "loading"
+            ? "—"
+            : formatUsd(
+                (demoProfile?.portfolioValue ?? PROFILE_BALANCE) +
+                  extraDepositUsd +
+                  userTrades.reduce((sum, item) => {
+                    if (!item.copiedFrom || item.cashedOut) return sum;
+                    if (item.trade.side.toUpperCase() === "SELL") return sum;
+                    return sum + item.position.pnlUsd;
+                  }, 0),
+              )
+          : section === "feed" && !showingDrillDown
+            ? "Feed"
           : section === "leaderboard" && !showingDrillDown
             ? "Leaderboard"
             : null;
@@ -4525,6 +4537,7 @@ export default function Api() {
         aria-label="Open profile"
       >
         <p
+          ref={stickyTitleRef as React.RefObject<HTMLParagraphElement>}
           className={`text-[42px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSansCondensed.className}`}
         >
           {demoProfileStatus === "loading" ? (
