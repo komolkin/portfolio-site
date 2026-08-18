@@ -1991,10 +1991,29 @@ function isFutureClose(closesAt: string | null): boolean {
   return ms > Date.now();
 }
 
+function isPoliticsMarket(market: PolymarketMarketData): boolean {
+  const category = (market.category ?? "").trim().toLowerCase();
+  if (
+    category === "politics" ||
+    category === "geopolitics" ||
+    category === "election" ||
+    category === "elections"
+  ) {
+    return true;
+  }
+
+  const text =
+    `${market.title} ${market.eventTitle ?? ""} ${market.slug} ${market.eventSlug ?? ""}`.toLowerCase();
+  return /\b(election|electoral|presidential|congress|senate|parliament|democrat|republican|white house|prime minister|impeach|trump|biden|kamala|putin|netanyahu|xi jinping|zelensky)\b/.test(
+    text,
+  );
+}
+
 function isTrendingMarketCandidate(market: PolymarketMarketData): boolean {
   if (!market.image) return false;
   if (market.isResolved) return false;
   if (!isFutureClose(market.closesAt)) return false;
+  if (isPoliticsMarket(market)) return false;
   return true;
 }
 
@@ -2063,7 +2082,7 @@ export async function getTrendingMarkets(
   limit = 10,
 ): Promise<PolymarketMarketData[]> {
   const capped = Math.min(Math.max(limit, 1), 48);
-  const key = `trending-all-v4:${capped}`;
+  const key = `trending-all-v5:${capped}`;
   const cached = getCached<PolymarketMarketData[]>(key);
   if (cached) return cached;
 

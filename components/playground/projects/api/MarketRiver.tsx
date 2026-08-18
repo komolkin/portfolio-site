@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 
-const MAX_POOL = 32;
-const VISIBLE = 12;
+const MAX_POOL = 48;
+const VISIBLE = 30;
 const SWAP_MS = 2200;
 const FADE_MS = 480;
 
@@ -93,7 +93,7 @@ export default function MarketRiver({ images }: { images: string[] }) {
   const paused = reduceMotion !== false;
   const [slots, setSlots] = useState<string[]>([]);
   const lastIndex = useRef(-1);
-  const columns = slots.length <= 4 ? 2 : slots.length <= 9 ? 3 : 4;
+  const columns = 6;
 
   useEffect(() => {
     setSlots((prev) => {
@@ -148,7 +148,7 @@ export default function MarketRiver({ images }: { images: string[] }) {
   return (
     <div className="absolute inset-0 overflow-hidden" aria-hidden>
       <div
-        className="market-river-grid absolute left-1/2 top-1/2 w-[170%] will-change-transform"
+        className="market-river-grid absolute left-1/2 top-1/2 w-[155%] will-change-transform"
         style={{
           transform: "translate3d(-50%, -50%, 0) rotate(-10deg)",
           animationName: paused ? "none" : "market-grid-drift",
@@ -159,7 +159,7 @@ export default function MarketRiver({ images }: { images: string[] }) {
         }}
       >
         <div
-          className="grid gap-2"
+          className="grid gap-1.5"
           style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
         >
           {slots.map((src, i) => (
