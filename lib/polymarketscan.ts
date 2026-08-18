@@ -1991,20 +1991,13 @@ function isFutureClose(closesAt: string | null): boolean {
   return ms > Date.now();
 }
 
-function isPoliticsMarket(market: PolymarketMarketData): boolean {
+function isCryptoMarket(market: PolymarketMarketData): boolean {
   const category = (market.category ?? "").trim().toLowerCase();
-  if (
-    category === "politics" ||
-    category === "geopolitics" ||
-    category === "election" ||
-    category === "elections"
-  ) {
-    return true;
-  }
+  if (category === "crypto" || category === "cryptocurrency") return true;
 
   const text =
     `${market.title} ${market.eventTitle ?? ""} ${market.slug} ${market.eventSlug ?? ""}`.toLowerCase();
-  return /\b(election|electoral|presidential|congress|senate|parliament|democrat|republican|white house|prime minister|impeach|trump|biden|kamala|putin|netanyahu|xi jinping|zelensky)\b/.test(
+  return /\b(bitcoin|ethereum|solana|crypto|btc\b|eth\b|sol\b|xrp\b|doge|dogecoin|hyperliquid|binance|coinbase|blockchain)\b/.test(
     text,
   );
 }
@@ -2013,8 +2006,7 @@ function isTrendingMarketCandidate(market: PolymarketMarketData): boolean {
   if (!market.image) return false;
   if (market.isResolved) return false;
   if (!isFutureClose(market.closesAt)) return false;
-  if (isPoliticsMarket(market)) return false;
-  return true;
+  return isSportsMarketData(market) || isCryptoMarket(market);
 }
 
 function aggregateWhaleMarketActivity(
@@ -2074,15 +2066,15 @@ function aggregateWhaleMarketActivity(
 }
 
 /**
- * Explore Trending — markets with recent whale flow that have images.
+ * Explore Trending — sports and crypto markets with recent whale flow.
  * `volume_24h` list sort is often stale, so we fill with newly created open
- * markets that still have images.
+ * sports/crypto markets that still have images.
  */
 export async function getTrendingMarkets(
   limit = 10,
 ): Promise<PolymarketMarketData[]> {
   const capped = Math.min(Math.max(limit, 1), 48);
-  const key = `trending-all-v5:${capped}`;
+  const key = `trending-sports-crypto-v1:${capped}`;
   const cached = getCached<PolymarketMarketData[]>(key);
   if (cached) return cached;
 
@@ -2095,7 +2087,7 @@ export async function getTrendingMarkets(
     try {
       const since = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
 
-      const [cachedTrades, whaleRes, listedSports, listedCrypto, listedAll] =
+      const [cachedTrades, whaleRes, listedSports, listedCrypto] =
         await Promise.all([
           supabaseRest<
             Array<{
@@ -2123,7 +2115,6 @@ export async function getTrendingMarkets(
             sort: "created_at",
             category: "Crypto",
           }),
-          fetchMarketsList({ limit: 50, sort: "created_at" }),
         ]);
 
       let trades = Array.isArray(cachedTrades) ? cachedTrades : [];
@@ -2174,9 +2165,7 @@ export async function getTrendingMarkets(
         if (trending.length >= capped) break;
       }
 
-      const listed = collapseEventMarkets(
-        [...listedSports, ...listedCrypto, ...listedAll],
-      );
+      const listed = collapseEventMarkets([...listedSports, ...listedCrypto]);
       for (const market of listed) {
         pushMarket(market);
         if (trending.length >= capped) break;
