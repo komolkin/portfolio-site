@@ -165,32 +165,6 @@ async function setupDatabase() {
     `;
     console.log("✅ Public read policy created for snippets!");
 
-    // Worm game leaderboard
-    await sql`
-      CREATE TABLE IF NOT EXISTS worm_scores (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        username TEXT NOT NULL UNIQUE,
-        score INTEGER NOT NULL DEFAULT 0,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      )
-    `;
-    console.log("✅ Table 'worm_scores' created!");
-
-    await sql`ALTER TABLE worm_scores ENABLE ROW LEVEL SECURITY`;
-    await sql`
-      DO $$
-      BEGIN
-        DROP POLICY IF EXISTS "Allow public read" ON worm_scores;
-        CREATE POLICY "Allow public read" ON worm_scores FOR SELECT USING (true);
-        DROP POLICY IF EXISTS "Allow public insert" ON worm_scores;
-        CREATE POLICY "Allow public insert" ON worm_scores FOR INSERT TO anon, authenticated WITH CHECK (true);
-        DROP POLICY IF EXISTS "Allow public update" ON worm_scores;
-        CREATE POLICY "Allow public update" ON worm_scores FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
-      END $$
-    `;
-    console.log("✅ Public read/write policies created for worm_scores!");
-
     // Latest Spotify track — kept until a new song starts playing
     await sql`
       CREATE TABLE IF NOT EXISTS spotify_last_track (
