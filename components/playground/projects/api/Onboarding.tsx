@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { PolymarketLeaderboardWallet } from "@/lib/polymarketscan";
 import { FollowButton } from "./FeedPositionSheet";
-import MarketSphere from "./MarketSphere";
+import MarketRiver from "./MarketRiver";
 import UserAvatar from "./UserAvatar";
 
 type OnboardingStep = "welcome" | "username" | "follow";
@@ -75,6 +75,31 @@ function WalletIcon() {
   );
 }
 
+function ProgressiveBlur({ edge }: { edge: "top" | "bottom" }) {
+  const to = edge === "top" ? "to bottom" : "to top";
+  return (
+    <div
+      className={`pointer-events-none absolute inset-x-0 z-[2] h-[46%] ${
+        edge === "top" ? "top-0" : "bottom-0"
+      }`}
+      aria-hidden
+    >
+      {[24, 14, 8, 4, 1].map((blur, i) => (
+        <div
+          key={blur}
+          className="absolute inset-0"
+          style={{
+            backdropFilter: `blur(${blur}px)`,
+            WebkitBackdropFilter: `blur(${blur}px)`,
+            maskImage: `linear-gradient(${to}, black 0%, black ${10 + i * 8}%, transparent ${38 + i * 14}%)`,
+            WebkitMaskImage: `linear-gradient(${to}, black 0%, black ${10 + i * 8}%, transparent ${38 + i * 14}%)`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function Onboarding({
   traders,
   tradersStatus,
@@ -112,20 +137,28 @@ export default function Onboarding({
 
   return (
     <div
-      className="absolute inset-0 z-40 flex flex-col overflow-visible bg-black px-5 pt-6 pb-5"
+      className="absolute inset-0 z-40 flex flex-col overflow-hidden bg-black px-5 pt-6 pb-5"
       role="dialog"
       aria-modal="true"
       aria-label="Get started"
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[48%]"
-        style={{
-          background:
-            "radial-gradient(ellipse 110% 90% at 50% -8%, rgba(58, 86, 104, 0.58) 0%, rgba(34, 53, 68, 0.28) 38%, transparent 72%)",
-        }}
-      />
-      <div className="relative z-[1] flex min-h-0 flex-1 flex-col overflow-visible">
+      {step === "welcome" ? (
+        <>
+          <MarketRiver images={marketImages} />
+          <ProgressiveBlur edge="top" />
+          <ProgressiveBlur edge="bottom" />
+        </>
+      ) : (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[48%]"
+          style={{
+            background:
+              "radial-gradient(ellipse 110% 90% at 50% -8%, rgba(58, 86, 104, 0.58) 0%, rgba(34, 53, 68, 0.28) 38%, transparent 72%)",
+          }}
+        />
+      )}
+      <div className="relative z-[3] flex min-h-0 flex-1 flex-col">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex gap-1.5" aria-hidden>
           {(["welcome", "username", "follow"] as const).map((id) => (
@@ -140,20 +173,21 @@ export default function Onboarding({
         <button
           type="button"
           onClick={skip}
-          className="text-[12px] font-semibold text-white/45 hover:text-white/80"
+          className={`text-[12px] font-semibold hover:text-white/80 ${
+            step === "welcome" ? "text-white/70" : "text-white/45"
+          }`}
         >
           Skip
         </button>
       </div>
 
       {step === "welcome" && (
-        <div className="relative flex min-h-0 flex-1 flex-col overflow-visible">
-          <h1 className="relative z-10 shrink-0 text-[28px] font-semibold leading-tight tracking-[-0.03em] [text-shadow:0_2px_18px_rgba(0,0,0,0.55)]">
-            Copy traders, track markets, and see what&apos;s moving — all in
-            one feed.
-          </h1>
-          <div className="absolute inset-0 z-0 overflow-visible">
-            <MarketSphere images={marketImages} />
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          <div className="relative z-10 mt-4 shrink-0">
+            <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em] [text-shadow:0_2px_24px_rgba(0,0,0,0.75)]">
+              Copy traders, track markets, and see what&apos;s moving — all in
+              one feed.
+            </h1>
           </div>
           <div className="relative z-10 mt-auto flex shrink-0 flex-col gap-2.5">
             <button

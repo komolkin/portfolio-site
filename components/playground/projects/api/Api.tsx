@@ -4136,6 +4136,8 @@ export default function Api() {
     add("/playground/api/lakers-celtics.jpg");
     for (const market of [...liveMarkets, ...trendingMarkets]) {
       add(market.image);
+      for (const team of market.teams ?? []) add(team.logo);
+      for (const outcome of market.outcomes ?? []) add(outcome.logo);
     }
     for (const trade of trades) {
       add(trade.marketImage);
