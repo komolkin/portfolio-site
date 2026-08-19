@@ -8,11 +8,11 @@ export type HotTopic = {
 
 export const HOT_TOPICS: HotTopic[] = [
   {
-    id: "lebanon",
+    id: "xai",
     rank: 1,
-    name: "Lebanon",
+    name: "xAI",
     value: "$86K",
-    image: "/playground/hot-topics/lebanon-bg.jpg",
+    image: "/playground/hot-topics/xai-bg.jpg",
   },
   {
     id: "stocks",
@@ -29,17 +29,17 @@ export const HOT_TOPICS: HotTopic[] = [
     image: "/playground/hot-topics/ufc-bg.png",
   },
   {
-    id: "airdrops",
+    id: "f1",
     rank: 4,
-    name: "Airdrops",
+    name: "F1",
     value: "$43K",
-    image: "/playground/hot-topics/airdrops-bg.jpg",
+    image: "/playground/hot-topics/f1-bg.jpg",
   },
   {
-    id: "core-cpi",
+    id: "computing",
     rank: 5,
-    name: "Core CPI",
+    name: "Computing",
     value: "$38K",
-    image: "/playground/hot-topics/core-cpi-bg.jpg",
+    image: "/playground/hot-topics/computing-bg.jpg",
   },
 ];

@@ -18,7 +18,7 @@ const FADE_OVERLAY = "/playground/hot-topics/fade-overlay.png";
 
 export default function HotTopics() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  // First topic (Lebanon) is selected by default; hover overrides.
+  // First topic (xAI) is selected by default; hover overrides.
   const activeIndex = hoveredIndex ?? 0;
 
   const displayWidth = CARD_WIDTH * DISPLAY_SCALE;
