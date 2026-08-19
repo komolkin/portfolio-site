@@ -6170,8 +6170,8 @@ export default function Api() {
               !cashOutItem &&
               !copyTradeTarget &&
               !depositOpen && (
-                <div className="absolute inset-x-0 top-3.5 flex justify-center">
-                  <div className="flex h-10 items-center gap-1.5">
+                <div className="absolute inset-x-0 top-3.5 flex justify-center px-16">
+                  <div className="flex h-10 min-w-0 max-w-full items-center gap-1.5">
                     {(() => {
                       const photo = selectedMarket?.image;
                       const league =
@@ -6186,16 +6186,14 @@ export default function Api() {
                           alt=""
                           className={
                             photo
-                              ? "h-5 w-5 rounded-full object-cover"
-                              : "h-5 w-5 object-contain"
+                              ? "h-5 w-5 shrink-0 rounded-full object-cover"
+                              : "h-5 w-5 shrink-0 object-contain"
                           }
                         />
                       ) : null;
                     })()}
-                    <p className="text-[15px] font-semibold tracking-[-0.02em]">
-                      {selectedMarket?.liveGame?.league ??
-                        selectedMarket?.category ??
-                        "Sports"}
+                    <p className="min-w-0 truncate text-[15px] font-semibold tracking-[-0.02em]">
+                      {selectedMarket?.title ?? "Market"}
                     </p>
                   </div>
                 </div>
