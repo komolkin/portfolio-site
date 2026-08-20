@@ -110,7 +110,7 @@ export default function HeaderNav() {
       ref={navRef}
       className="relative flex items-center"
       animate={{
-        x: activeTab === "playground" ? 8 : 0,
+        x: activeTab === "playground" ? -8 : 0,
       }}
       transition={{
         type: "spring",
