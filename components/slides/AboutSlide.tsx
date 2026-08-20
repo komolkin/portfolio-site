@@ -34,6 +34,7 @@ export default function AboutSlide() {
           Currently he is not open for new work, but if you have any exciting
           and challenging projects —{" "}
           <button
+            data-sfx="press"
             data-cal-namespace="30min"
             data-cal-link="komolkin/30min"
             data-cal-config='{"layout":"month_view"}'

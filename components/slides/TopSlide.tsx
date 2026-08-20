@@ -662,6 +662,7 @@ export default function TopSlide() {
                         : undefined
                   }
                   role="presentation"
+                  data-sfx-hover="tick"
                   className="hover:text-muted-foreground transition-colors cursor-pointer"
                   onMouseEnter={() => {
                     if (!isMobileViewport()) setHoverPreview(segment.preview);
@@ -690,6 +691,8 @@ export default function TopSlide() {
                   rel="noopener noreferrer"
                   ref={isTrackLink ? trackLinkRef : isCommitsLink ? commitsLinkRef : undefined}
                   className="hover:text-muted-foreground transition-colors"
+                  data-sfx="click"
+                  data-sfx-hover="tick"
                   onMouseEnter={
                     isTrackLink || isCommitsLink
                       ? () => {

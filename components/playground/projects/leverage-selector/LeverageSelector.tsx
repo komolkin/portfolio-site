@@ -1523,6 +1523,7 @@ export default function LeverageSelector() {
           {/* CTA */}
           <button
             type="button"
+            data-sfx={canPlaceOrder ? "press" : undefined}
             onClick={() => {
               if (!canPlaceOrder) return;
               startTransition(() => setScreen("placing"));

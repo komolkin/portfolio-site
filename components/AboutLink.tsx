@@ -14,6 +14,7 @@ export default function AboutLink() {
   return (
     <WidgetChrome>
       <button
+        data-sfx="click"
         onClick={handleClick}
         className="hover:opacity-80 transition-opacity block px-4 py-2"
       >

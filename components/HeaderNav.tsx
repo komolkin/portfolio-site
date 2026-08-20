@@ -140,6 +140,8 @@ export default function HeaderNav() {
           ref={(el) => {
             if (el) tabRefs.current.set(tab.id, el);
           }}
+          data-sfx="click"
+          data-sfx-hover="tick"
           onClick={() => scrollTo(tab.id)}
           className={`relative z-10 px-2.5 py-1 text-sm transition-colors ${
             activeTab === tab.id

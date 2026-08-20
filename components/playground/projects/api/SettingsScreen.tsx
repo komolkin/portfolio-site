@@ -37,6 +37,7 @@ function Toggle({
       role="switch"
       aria-checked={checked}
       aria-label={label}
+      data-sfx="click"
       onClick={() => onChange(!checked)}
       className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
         checked ? "bg-[#00D54B]" : "bg-white/15"
@@ -67,6 +68,7 @@ function SettingsRow({
   return (
     <Tag
       type={onClick ? "button" : undefined}
+      data-sfx={onClick ? "click" : undefined}
       onClick={onClick}
       className={`flex w-full items-center gap-3 px-3.5 py-3 text-left ${
         onClick ? "transition-colors hover:bg-white/[0.04]" : ""
@@ -165,6 +167,7 @@ export default function SettingsScreen({
             <div className="flex gap-2">
               <button
                 type="button"
+                data-sfx="click"
                 onClick={() => {
                   setDraftUsername(username ?? "");
                   setEditingUsername(false);
@@ -176,6 +179,7 @@ export default function SettingsScreen({
               <button
                 type="button"
                 disabled={!usernameValid}
+                data-sfx="press"
                 onClick={saveUsername}
                 className="flex-1 rounded-full bg-white py-2.5 text-[13px] font-semibold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
               >

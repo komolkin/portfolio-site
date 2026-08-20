@@ -13,6 +13,7 @@ export default function BookingButton() {
 
   return (
     <button
+      data-sfx="press"
       data-cal-namespace="30min"
       data-cal-link="komolkin/30min"
       data-cal-config='{"layout":"month_view"}'

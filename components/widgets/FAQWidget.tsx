@@ -42,6 +42,7 @@ export default function FAQWidget() {
             className="bg-muted/50 rounded-md overflow-hidden transition-colors hover:bg-muted"
           >
             <button
+              data-sfx="click"
               onClick={(e) => {
                 e.stopPropagation(); // Prevent drag start if clicking here triggers it, though Draggable handles this via pointerDown logic usually
                 toggleQuestion(index);

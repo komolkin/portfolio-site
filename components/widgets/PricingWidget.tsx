@@ -100,6 +100,8 @@ export default function PricingWidget() {
         {(Object.keys(PLANS) as Plan[]).map((plan) => (
           <button
             key={plan}
+            data-sfx="click"
+            data-sfx-hover="tick"
             onClick={() => setActivePlan(plan)}
             onPointerDown={(e) => e.stopPropagation()}
             className={`
@@ -151,6 +153,7 @@ export default function PricingWidget() {
 
       <a
         href={`#${activePlan}`}
+        data-sfx="press"
         className="block w-full py-2 px-4 bg-foreground text-background text-center text-xs font-medium rounded-sm hover:bg-foreground/90 transition-colors"
         onPointerDown={(e) => e.stopPropagation()}
       >

@@ -1432,6 +1432,7 @@ export default function BinaryMarket({ compactToWin = false }: BinaryMarketProps
         {/* CTA */}
         <button
           type="button"
+          data-sfx={canPlaceOrder ? "press" : undefined}
           onClick={() => {
             if (!canPlaceOrder) return;
             startTransition(() => setScreen("placing"));

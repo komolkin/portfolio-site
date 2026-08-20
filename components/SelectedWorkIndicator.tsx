@@ -27,6 +27,8 @@ export default function SelectedWorkIndicator() {
 
   return (
     <button
+      data-sfx="click"
+      data-sfx-hover="tick"
       onClick={handleClick}
       className={`fixed bottom-6 left-6 md:bottom-8 md:left-8 lg:bottom-10 lg:left-10 z-50 
                  flex items-center gap-2 text-sm text-foreground/80 hover:text-foreground 

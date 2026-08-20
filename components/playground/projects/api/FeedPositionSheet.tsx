@@ -295,6 +295,7 @@ export function FollowButton({
     <button
       type="button"
       aria-pressed={following}
+      data-sfx="click"
       onClick={(e) => {
         e.stopPropagation();
         onClick();

@@ -6270,6 +6270,7 @@ export default function Api() {
                     key={side.side}
                     type="button"
                     disabled={!demoProfile?.wallet}
+                    data-sfx="press"
                     onClick={() => openTradeFlow(selectedMarket, side.label)}
                     className={`min-w-0 flex-1 overflow-hidden px-3 ${
                       side.side === "yes" ? ui.pillYes : ui.pillNo
@@ -6291,6 +6292,7 @@ export default function Api() {
               <button
                 type="button"
                 disabled={!demoProfile?.wallet}
+                data-sfx="press"
                 onClick={() => openTradeFlow(selectedMarket)}
                 className={`pointer-events-auto w-full ${ui.pillPrimary}`}
               >

@@ -101,6 +101,8 @@ export default function SlideDotsIndicator() {
       {Array.from({ length: totalSlides }).map((_, index) => (
         <button
           key={index}
+          data-sfx="tick"
+          data-sfx-hover="tick"
           onClick={() => handleDotClick(index)}
           aria-label={`Go to slide ${index + 1}`}
           className="w-2 h-2 flex items-center justify-center cursor-pointer"

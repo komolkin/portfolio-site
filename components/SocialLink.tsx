@@ -21,6 +21,8 @@ export default function SocialLink({ text, href }: SocialLinkProps) {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
+          data-sfx="click"
+          data-sfx-hover="tick"
           className="hover:opacity-80 transition-opacity block"
         >
           {content}

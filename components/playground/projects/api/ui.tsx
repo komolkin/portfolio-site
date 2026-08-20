@@ -43,6 +43,8 @@ export function ChipTabs<T extends string>({
             type="button"
             role="tab"
             aria-selected={isActive}
+            data-sfx="click"
+            data-sfx-hover="tick"
             onClick={() => onChange(tab.id)}
             className={`inline-flex items-baseline gap-0.5 px-0 pb-1 text-[20px] font-semibold tracking-[-0.03em] ${
               isActive
@@ -83,6 +85,7 @@ export function BlurBackButton({
       type="button"
       onClick={onClick}
       aria-label={label}
+      data-sfx="click"
       className={iconTapBtn}
     >
       <svg
@@ -113,6 +116,7 @@ export function BlurShareButton({
       type="button"
       onClick={onClick}
       aria-label="Share"
+      data-sfx="click"
       className={iconTapBtn}
     >
       <svg viewBox="0 0 16 16" fill="none" className={iconGlyph} aria-hidden>
@@ -158,7 +162,7 @@ export function ActivityRow({
 
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} className={className}>
+      <button type="button" data-sfx="click" onClick={onClick} className={className}>
         {body}
       </button>
     );

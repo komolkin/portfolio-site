@@ -135,6 +135,7 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
       >
         <button
           type="button"
+          data-sfx="click"
           onClick={() => {
             setDrawerOffset(0);
             setOpen(true);
@@ -192,6 +193,8 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
                 <Link
                   href={`/${index1}`}
                   scroll={false}
+                  data-sfx="click"
+                  data-sfx-hover="tick"
                   onClick={closeDrawer}
                   className={`flex items-center justify-between rounded-xl px-4 py-3.5 text-[17px] transition-colors ${
                     isActive
@@ -227,6 +230,8 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
                 <Link
                   href={`/${index1}`}
                   scroll={false}
+                  data-sfx="click"
+                  data-sfx-hover="tick"
                   className={`relative block w-full text-left text-sm transition-colors duration-150 py-1.5 pl-4 pr-5 ${
                     isActive
                       ? "text-foreground font-medium"
