@@ -740,6 +740,8 @@ export default function TopSlide() {
               href="https://x.com/dappdesigner"
               target="_blank"
               rel="noopener noreferrer"
+              data-sfx="click"
+              data-sfx-hover="tick"
               className="hover:text-muted-foreground transition-colors"
             >
               X
@@ -749,6 +751,8 @@ export default function TopSlide() {
               href="https://www.instagram.com/komolkin/"
               target="_blank"
               rel="noopener noreferrer"
+              data-sfx="click"
+              data-sfx-hover="tick"
               className="hover:text-muted-foreground transition-colors"
             >
               Instagram
@@ -758,6 +762,8 @@ export default function TopSlide() {
               href="https://github.com/komolkin"
               target="_blank"
               rel="noopener noreferrer"
+              data-sfx="click"
+              data-sfx-hover="tick"
               className="hover:text-muted-foreground transition-colors"
             >
               GitHub
