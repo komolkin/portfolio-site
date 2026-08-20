@@ -1,9 +1,9 @@
 export const PROJECTS = [
+  { id: "mcp", label: "MCP" },
   { id: "positions", label: "Positions" },
   { id: "hot-topics", label: "Hot Topics" },
   { id: "smart-leverage", label: "Smart Leverage" },
   { id: "thinking", label: "Thinking" },
-  { id: "mcp", label: "MCP" },
   { id: "ball", label: "Ball" },
   { id: "position-1", label: "Position" },
   { id: "position-7", label: "Controller" },
