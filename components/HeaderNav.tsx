@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
 const tabs = [
@@ -9,6 +10,8 @@ const tabs = [
 ];
 
 export default function HeaderNav() {
+  const pathname = usePathname();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("top");
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -39,6 +42,22 @@ export default function HeaderNav() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [activeTab]);
+
+  // About → `/`; entering Playground from About → `/1` (first project)
+  useEffect(() => {
+    if (!pathname) return;
+
+    if (activeTab === "top") {
+      if (pathname !== "/") {
+        router.replace("/", { scroll: false });
+      }
+      return;
+    }
+
+    if (activeTab === "playground" && pathname === "/") {
+      router.replace("/1", { scroll: false });
+    }
+  }, [activeTab, pathname, router]);
 
   // Detect which section is in view
   useEffect(() => {
@@ -78,7 +97,7 @@ export default function HeaderNav() {
   const scrollTo = (id: string) => {
     // Set scrolling flag to prevent observer from updating during scroll
     isScrollingRef.current = true;
-    
+
     // Clear any existing timeout
     if (scrollTimeoutRef.current) {
       clearTimeout(scrollTimeoutRef.current);
