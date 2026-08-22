@@ -118,8 +118,6 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
     setDrawerOffset(0);
   };
 
-  const listClass = "flex flex-col rounded-lg bg-black/40 py-1 backdrop-blur-md";
-
   const mobileNav = (
     <div
       className="pointer-events-none fixed inset-0 z-[999] min-[1200px]:hidden"
@@ -218,10 +216,10 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
   return (
     <>
       <nav
-        className="absolute left-6 top-1/2 z-10 hidden -translate-y-1/2 min-[1200px]:left-8 min-[1200px]:block lg:left-10"
+        className="absolute left-6 top-1/2 z-10 hidden -translate-y-1/2 md:left-8 min-[1200px]:block lg:left-10"
         aria-label="Playground projects"
       >
-        <ul className={listClass} style={{ minWidth: "10rem" }}>
+        <ul className="group/projects flex flex-col" style={{ minWidth: "10rem" }}>
           {PROJECTS.map(({ id, label }, i) => {
             const index1 = i + 1;
             const isActive = activeProject === id;
@@ -232,10 +230,8 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
                   scroll={false}
                   data-sfx="click"
                   data-sfx-hover="tick"
-                  className={`relative block w-full text-left text-sm transition-colors duration-150 py-1.5 pl-4 pr-5 ${
-                    isActive
-                      ? "text-foreground font-medium"
-                      : "text-muted-foreground hover:text-foreground"
+                  className={`relative block w-full py-0.5 text-left text-xl text-foreground transition-[opacity,padding] duration-300 ease-out group-hover/projects:opacity-40 hover:!opacity-100 ${
+                    isActive ? "pl-4 opacity-100" : "pl-0 opacity-40"
                   }`}
                 >
                   {label}

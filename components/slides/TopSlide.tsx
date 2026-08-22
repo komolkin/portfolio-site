@@ -53,6 +53,11 @@ type TitleSegment =
     }
   | {
       key: string;
+      type: "emphasis";
+      words: StreamingWord[];
+    }
+  | {
+      key: string;
       type: "words";
       words: StreamingWord[];
     };
@@ -461,27 +466,37 @@ export default function TopSlide() {
           {word}{" "}
         </span>
       ));
-      tailWords.push({
+      segments.push({ key: "commits-tail", type: "words", words: tailWords });
+
+      segments.push({
         key: "commits-bpm",
-        delayIndex: delayIndex.current++,
-        content: (
-          <span className="whitespace-nowrap">
-            <span className="font-mono">
-              <NumberFlow
-                value={bpm}
-                style={{ ["--number-flow-mask-height" as string]: "0em" }}
-              />
-            </span>{" "}
-            BPM{" "}
-          </span>
-        ),
+        type: "emphasis",
+        words: [
+          {
+            key: "commits-bpm",
+            delayIndex: delayIndex.current++,
+            content: (
+              <span className="whitespace-nowrap">
+                <span className="font-mono">
+                  <NumberFlow
+                    value={bpm}
+                    style={{ ["--number-flow-mask-height" as string]: "0em" }}
+                  />
+                </span>{" "}
+                BPM{" "}
+              </span>
+            ),
+          },
+        ],
       });
-      pushTextWords(tailWords, "commits-and", "and it's", delayIndex, (word) => (
+
+      const andItsWords: StreamingWord[] = [];
+      pushTextWords(andItsWords, "commits-and", "and it's", delayIndex, (word) => (
         <span className="opacity-40">
           {word}{" "}
         </span>
       ));
-      segments.push({ key: "commits-tail", type: "words", words: tailWords });
+      segments.push({ key: "commits-and", type: "words", words: andItsWords });
 
       segments.push({
         key: "paris-time",
@@ -653,7 +668,7 @@ export default function TopSlide() {
 
       {/* Main Content */}
       <div className="flex-1 flex items-center px-6 md:px-8 lg:px-10">
-        <h1 className="text-pretty text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-[1.15] max-w-2xl xl:max-w-4xl">
+        <h1 className="text-pretty text-2xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-[1.15] max-w-2xl xl:max-w-4xl [&:has([data-focus]:hover)_:is([data-focus],[data-fade])]:opacity-40">
           {animatedTitleSegments.map((segment) => {
             if (segment.type === "hover") {
               return (
@@ -667,8 +682,9 @@ export default function TopSlide() {
                         : undefined
                   }
                   role="presentation"
+                  data-focus
                   data-sfx-hover="tick"
-                  className="hover:text-muted-foreground transition-colors cursor-pointer"
+                  className="cursor-pointer transition-opacity duration-300 ease-out hover:!opacity-100"
                   onMouseEnter={() => {
                     if (!isMobileViewport()) setHoverPreview(segment.preview);
                   }}
@@ -695,7 +711,8 @@ export default function TopSlide() {
                   target="_blank"
                   rel="noopener noreferrer"
                   ref={isTrackLink ? trackLinkRef : isCommitsLink ? commitsLinkRef : undefined}
-                  className="hover:text-muted-foreground transition-colors"
+                  data-focus
+                  className="transition-opacity duration-300 ease-out hover:!opacity-100"
                   data-sfx="click"
                   data-sfx-hover="tick"
                   onMouseEnter={
@@ -725,6 +742,21 @@ export default function TopSlide() {
               );
             }
 
+            if (segment.type === "emphasis") {
+              return (
+                <span
+                  key={segment.key}
+                  data-fade
+                  className="transition-opacity duration-300 ease-out"
+                >
+                  <StreamingWords
+                    words={segment.words}
+                    animatedWordKeysRef={animatedWordKeysRef}
+                  />
+                </span>
+              );
+            }
+
             return (
               <StreamingWords
                 key={segment.key}
@@ -740,36 +772,40 @@ export default function TopSlide() {
       <div className="shrink-0 px-6 md:px-8 lg:px-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:pb-8 lg:pb-10">
         <div className="space-y-1">
           <div className="text-sm text-muted-foreground">Quick Links</div>
-          <div className="text-sm text-foreground">
+          <div className="group/quick text-sm text-foreground">
             <a
               href="https://x.com/dappdesigner"
               target="_blank"
               rel="noopener noreferrer"
               data-sfx="click"
               data-sfx-hover="tick"
-              className="hover:text-muted-foreground transition-colors"
+              className="opacity-100 transition-opacity duration-300 ease-out group-hover/quick:opacity-40 hover:!opacity-100"
             >
               X
             </a>
-            ,{" "}
+            <span className="pointer-events-none transition-opacity duration-300 ease-out group-hover/quick:opacity-40">
+              ,{" "}
+            </span>
             <a
               href="https://www.instagram.com/komolkin/"
               target="_blank"
               rel="noopener noreferrer"
               data-sfx="click"
               data-sfx-hover="tick"
-              className="hover:text-muted-foreground transition-colors"
+              className="opacity-100 transition-opacity duration-300 ease-out group-hover/quick:opacity-40 hover:!opacity-100"
             >
               Instagram
             </a>
-            ,{" "}
+            <span className="pointer-events-none transition-opacity duration-300 ease-out group-hover/quick:opacity-40">
+              ,{" "}
+            </span>
             <a
               href="https://github.com/komolkin"
               target="_blank"
               rel="noopener noreferrer"
               data-sfx="click"
               data-sfx-hover="tick"
-              className="hover:text-muted-foreground transition-colors"
+              className="opacity-100 transition-opacity duration-300 ease-out group-hover/quick:opacity-40 hover:!opacity-100"
             >
               GitHub
             </a>
