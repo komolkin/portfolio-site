@@ -116,7 +116,6 @@ export default function TopSlide() {
   const commitsPopupSize = contributionWeeks
     ? getCommitsPopupSize(contributionWeeks.length)
     : { width: 0, height: 0 };
-  const previewWidth = showCommitsPreview ? commitsPopupSize.width : TRACK_POPUP_SIZE;
   const previewHeight = showCommitsPreview ? commitsPopupSize.height : TRACK_POPUP_SIZE;
 
   // Update Paris time every second
@@ -548,29 +547,32 @@ export default function TopSlide() {
   return (
     <div id="top" data-section="top" className="slide w-full h-[100dvh] md:h-screen relative flex flex-col">
       {/* Hover Preview Popup */}
-      {showTrackPreview && artwork ? (
+      {artwork ? (
         <div
-          className="pointer-events-none fixed z-[100] flex-shrink-0"
+          className={`pointer-events-none fixed z-[100] flex-shrink-0 ${
+            showTrackPreview ? "visible" : "invisible"
+          }`}
           style={{
-            width: previewWidth,
-            height: previewHeight,
+            width: TRACK_POPUP_SIZE,
+            height: TRACK_POPUP_SIZE,
             left: cursorPosition.x,
-            top: Math.max(16, cursorPosition.y - previewHeight - 16),
+            top: Math.max(16, cursorPosition.y - TRACK_POPUP_SIZE - 16),
             transform: "translateX(-50%)",
           }}
           aria-hidden={!showTrackPreview}
         >
-          <img
-            src={artwork}
-            alt={
-              spotifyData?.track ? `${spotifyData.track.title} album cover` : "Spotify album cover"
-            }
-            className="h-full w-full object-cover rounded-lg shadow-2xl"
-            style={{
-              minWidth: TRACK_POPUP_SIZE,
-              minHeight: TRACK_POPUP_SIZE,
-            }}
-          />
+          <HoverGlass flush>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={artwork}
+              alt={
+                spotifyData?.track
+                  ? `${spotifyData.track.title} album cover`
+                  : "Spotify album cover"
+              }
+              className="size-full object-cover"
+            />
+          </HoverGlass>
         </div>
       ) : null}
 

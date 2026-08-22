@@ -29,7 +29,6 @@ export default function WeatherIcon({ condition, className }: WeatherIconProps) 
       return (
         <svg {...iconProps} className={className}>
           <path d="M13 4.5a4 4 0 0 0-4 4.2 3.5 3.5 0 0 0-1.5 6.8h9.5a3 3 0 0 0 0-6 3.5 3.5 0 0 0-4-5z" />
-          <path d="M18 5.5h.01M16.5 3.5h.01" />
         </svg>
       );
     case "cloudy":
