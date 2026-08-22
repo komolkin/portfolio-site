@@ -11,6 +11,9 @@ export default function AboutSlide() {
     })();
   }, []);
 
+  const aboutTextClass =
+    "text-pretty text-3xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl";
+
   return (
     <div
       id="about"
@@ -18,19 +21,19 @@ export default function AboutSlide() {
       className="slide w-full min-h-screen flex flex-col relative"
     >
       <div className="w-full px-6 md:px-8 lg:px-10 pt-20 lg:pt-24">
-        <p className="text-4xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl">
+        <p className={aboutTextClass}>
           Ilya approaches aesthetics not just as a visual discipline but as an
           ethical category — a way design shapes contemporary culture,
           influences behavior, and defines how ideas are understood. His work is
           rooted in constant research and experimentation, searching for
           innovative ways to craft visual language and user behavior.
         </p>
-        <p className="text-4xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
+        <p className={`${aboutTextClass} pt-6`}>
           Previously he was a Senior Product Designer at Yandex Media Labs,
           helped multiple projects to move from zero to one and beyond.
         </p>
         {/* <AboutTimeAndMusic /> */}
-        <p className="text-4xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
+        <p className={`${aboutTextClass} pt-6`}>
           Currently he is not open for new work, but if you have any exciting
           and challenging projects —{" "}
           <button
@@ -44,7 +47,7 @@ export default function AboutSlide() {
           </button>
           .
         </p>
-        <p className="text-4xl md:text-[36px] font-normal text-foreground leading-[1.2] max-w-4xl pt-6">
+        <p className={`${aboutTextClass} pt-6`}>
           Worked with: Mattel, Lamborghini, VeeFriends, Ubisoft, Diesel, Paris
           Saint-German, Ledger, Cryptoys.
         </p>

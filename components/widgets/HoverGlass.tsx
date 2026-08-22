@@ -48,6 +48,33 @@ function usePrefersReducedTransparency() {
   return reduced;
 }
 
+function FrostedFallback({
+  children,
+  className,
+  solid = false,
+}: {
+  children: ReactNode;
+  className?: string;
+  solid?: boolean;
+}) {
+  return (
+    <div
+      className={`relative h-full w-full overflow-hidden rounded-lg shadow-lg ${className ?? ""}`}
+      style={
+        solid
+          ? { background: "#1c1c1e" }
+          : {
+              background: "rgba(255, 255, 255, 0.12)",
+              backdropFilter: "blur(14px) saturate(140%)",
+              WebkitBackdropFilter: "blur(14px) saturate(140%)",
+            }
+      }
+    >
+      {children}
+    </div>
+  );
+}
+
 /**
  * iOS-style liquid glass chrome for cursor hover previews.
  * Chromium gets real SVG refraction; Safari/Firefox get frosted glass.
@@ -58,7 +85,12 @@ export default function HoverGlass({
   contentClassName,
   flush = false,
 }: HoverGlassProps) {
+  const [mounted, setMounted] = useState(false);
   const reducedTransparency = usePrefersReducedTransparency();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const content = flush ? (
     <div className={`relative size-full overflow-hidden rounded-lg ${contentClassName ?? ""}`}>
@@ -69,13 +101,11 @@ export default function HoverGlass({
     <div className={contentClassName}>{children}</div>
   );
 
-  if (reducedTransparency) {
+  if (!mounted || reducedTransparency) {
     return (
-      <div
-        className={`relative h-full w-full overflow-hidden rounded-lg bg-[#1c1c1e] shadow-lg ${className ?? ""}`}
-      >
+      <FrostedFallback className={className} solid={reducedTransparency}>
         {content}
-      </div>
+      </FrostedFallback>
     );
   }
 
