@@ -16,13 +16,16 @@ const HeartRateContext = createContext<HeartRateContextType | undefined>(
   undefined
 );
 
+const BPM_MIN = 63;
+const BPM_MAX = 72;
+
 export function HeartRateProvider({ children }: { children: ReactNode }) {
-  const [bpm, setBpm] = useState(72);
+  const [bpm, setBpm] = useState(BPM_MAX);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      // Random BPM between 66-79
-      setBpm(66 + Math.floor(Math.random() * 14));
+      // Random BPM between 63-72
+      setBpm(BPM_MIN + Math.floor(Math.random() * (BPM_MAX - BPM_MIN + 1)));
     }, 60_000);
 
     return () => clearInterval(interval);
