@@ -30,6 +30,7 @@
     "postgres": "^3.4.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "simple-liquid-glass": "^4.1.0",
     "three": "^0.169.0",
     "zod": "^4.2.1"
   },

@@ -8,6 +8,7 @@ import ContributionGraph, {
 } from "@/components/widgets/ContributionGraph";
 import WeatherIcon from "@/components/widgets/WeatherIcon";
 import AnalogueClock from "@/components/widgets/AnalogueClock";
+import HoverGlass from "@/components/widgets/HoverGlass";
 import {
   StreamingWords,
   assignFreshWordDelays,
@@ -574,8 +575,8 @@ export default function TopSlide() {
       ) : null}
 
       {/*
-        Keep backdrop-blur at full opacity — fading opacity on a blurred layer
-        makes the browser recompute the blur each frame (stepped / laggy).
+        Keep glass at full opacity — fading opacity on a backdrop-filter layer
+        makes the browser recompute the effect each frame (stepped / laggy).
       */}
       {contributionWeeks ? (
         <div
@@ -583,15 +584,17 @@ export default function TopSlide() {
             showCommitsPreview ? "visible" : "invisible"
           }`}
           style={{
+            width: commitsPopupSize.width,
+            height: commitsPopupSize.height,
             left: cursorPosition.x,
             top: Math.max(16, cursorPosition.y - previewHeight - 16),
             transform: "translateX(-50%)",
           }}
           aria-hidden={!showCommitsPreview}
         >
-          <div className="inline-flex rounded-lg bg-white/10 p-[10px] shadow-2xl backdrop-blur-md">
+          <HoverGlass contentClassName="flex size-full items-center justify-center p-[10px]">
             <ContributionGraph weeks={contributionWeeks} />
-          </div>
+          </HoverGlass>
         </div>
       ) : null}
 
@@ -608,7 +611,7 @@ export default function TopSlide() {
         }}
         aria-hidden={!showWeatherPreview}
       >
-        <div className="flex size-full flex-col justify-between rounded-lg bg-white/10 p-[10px] shadow-2xl backdrop-blur-md">
+        <HoverGlass contentClassName="flex size-full flex-col justify-between p-[10px]">
           {parisWeatherCode !== null ? (
             <WeatherIcon
               condition={getWeatherCondition(parisWeatherCode)}
@@ -620,7 +623,7 @@ export default function TopSlide() {
           <span className="font-mono text-3xl tabular-nums text-foreground leading-none">
             {parisTemperature}°C
           </span>
-        </div>
+        </HoverGlass>
       </div>
 
       <div
@@ -636,14 +639,14 @@ export default function TopSlide() {
         }}
         aria-hidden={!showTimePreview}
       >
-        <div className="flex size-full items-center justify-center rounded-lg bg-white/10 p-[10px] shadow-2xl backdrop-blur-md">
+        <HoverGlass contentClassName="flex size-full items-center justify-center p-[10px]">
           <AnalogueClock
             hours={clockHands.hours}
             minutes={clockHands.minutes}
             seconds={clockHands.seconds}
             className="size-full text-foreground"
           />
-        </div>
+        </HoverGlass>
       </div>
 
       {/* Main Content */}
