@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
@@ -8,6 +8,8 @@ const tabs = [
   { id: "top", label: "About" },
   { id: "playground", label: "Playground" },
 ];
+
+const SCROLL_SETTLE_MS = 180;
 
 export default function HeaderNav() {
   const pathname = usePathname();
@@ -18,6 +20,12 @@ export default function HeaderNav() {
   const navRef = useRef<HTMLDivElement>(null);
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const routeSettleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const activeTabRef = useRef(activeTab);
+  const pathnameRef = useRef(pathname);
+
+  activeTabRef.current = activeTab;
+  pathnameRef.current = pathname;
 
   const updateIndicator = (tabId: string) => {
     const tabEl = tabRefs.current.get(tabId);
@@ -43,21 +51,49 @@ export default function HeaderNav() {
     return () => window.removeEventListener("resize", handleResize);
   }, [activeTab]);
 
-  // About → `/`; entering Playground from About → `/1` (first project)
-  useEffect(() => {
-    if (!pathname) return;
+  const syncRouteForTab = useCallback(
+    (tab: string) => {
+      const path = pathnameRef.current;
+      if (!path) return;
 
-    if (activeTab === "top") {
-      if (pathname !== "/") {
-        router.replace("/", { scroll: false });
+      if (tab === "top") {
+        if (path !== "/") {
+          router.replace("/", { scroll: false });
+        }
+        return;
       }
-      return;
-    }
 
-    if (activeTab === "playground" && pathname === "/") {
-      router.replace("/1", { scroll: false });
+      if (tab === "playground" && path === "/") {
+        router.replace("/1", { scroll: false });
+      }
+    },
+    [router],
+  );
+
+  // Delay About ↔ Playground URL updates until scroll has settled
+  const scheduleRouteSync = useCallback(() => {
+    if (routeSettleTimeoutRef.current) {
+      clearTimeout(routeSettleTimeoutRef.current);
     }
-  }, [activeTab, pathname, router]);
+    routeSettleTimeoutRef.current = setTimeout(() => {
+      if (isScrollingRef.current) return;
+      syncRouteForTab(activeTabRef.current);
+    }, SCROLL_SETTLE_MS);
+  }, [syncRouteForTab]);
+
+  useEffect(() => {
+    const scroller = document.querySelector(".slides-scroll");
+    if (!scroller) return;
+
+    scheduleRouteSync();
+    scroller.addEventListener("scroll", scheduleRouteSync, { passive: true });
+    return () => {
+      scroller.removeEventListener("scroll", scheduleRouteSync);
+      if (routeSettleTimeoutRef.current) {
+        clearTimeout(routeSettleTimeoutRef.current);
+      }
+    };
+  }, [activeTab, scheduleRouteSync]);
 
   // Detect which section is in view
   useEffect(() => {
@@ -102,6 +138,9 @@ export default function HeaderNav() {
     if (scrollTimeoutRef.current) {
       clearTimeout(scrollTimeoutRef.current);
     }
+    if (routeSettleTimeoutRef.current) {
+      clearTimeout(routeSettleTimeoutRef.current);
+    }
 
     setActiveTab(id);
     const element = document.getElementById(id);
@@ -109,9 +148,10 @@ export default function HeaderNav() {
       element.scrollIntoView({ behavior: "smooth" });
     }
 
-    // Re-enable observer after scroll animation completes
+    // Re-enable observer + sync URL after scroll animation completes
     scrollTimeoutRef.current = setTimeout(() => {
       isScrollingRef.current = false;
+      syncRouteForTab(id);
     }, 800);
   };
 
@@ -120,6 +160,9 @@ export default function HeaderNav() {
     return () => {
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
+      }
+      if (routeSettleTimeoutRef.current) {
+        clearTimeout(routeSettleTimeoutRef.current);
       }
     };
   }, []);

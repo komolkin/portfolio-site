@@ -43,12 +43,19 @@ export default function PlaygroundSlide() {
     }
   }, [deepLink, routeIndex]);
 
-  // `/5` etc. should land on the playground slide (first)
+  // `/5` etc. should land on the playground slide (first).
+  // Skip if already in view — e.g. user scrolled here and URL updated after settle.
   useLayoutEffect(() => {
     if (!pathname || !isPlaygroundDeepLink(pathname)) return;
 
     const playground = document.getElementById("playground");
     if (!playground) return;
+
+    const rect = playground.getBoundingClientRect();
+    const viewport = window.innerHeight || 1;
+    const alreadyInView =
+      rect.top < viewport * 0.55 && rect.bottom > viewport * 0.45;
+    if (alreadyInView) return;
 
     playground.scrollIntoView({ behavior: "auto", block: "start" });
   }, [pathname]);
