@@ -1121,7 +1121,7 @@ function OpenOrderRowItem({
 
 export default function Positions() {
   const [activeTab, setActiveTab] = useState<TabId>("positions");
-  const [viewMode, setViewMode] = useState<ViewMode>("desktop");
+  const [viewMode, setViewMode] = useState<ViewMode>("mobile");
   const [isNarrowViewport, setIsNarrowViewport] = useState(() =>
     typeof window !== "undefined"
       ? window.matchMedia(MOBILE_VIEWPORT_QUERY).matches
