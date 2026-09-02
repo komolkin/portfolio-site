@@ -22,6 +22,7 @@ import {
   readLastSpotifyTrack,
   writeLastSpotifyTrack,
 } from "@/lib/spotify-last-track";
+import { playTick } from "@/lib/sfx";
 
 interface SpotifyTrack {
   title: string;
@@ -84,6 +85,39 @@ function isMobileViewport(): boolean {
   return window.matchMedia("(max-width: 767px)").matches;
 }
 
+/** Slightly larger than the glyph box so hover feels easy without spilling into neighbors. */
+function findTitleFocusElement(
+  root: HTMLElement,
+  x: number,
+  y: number,
+): HTMLElement | null {
+  let best: { el: HTMLElement; dist: number } | null = null;
+
+  for (const node of root.querySelectorAll("[data-title-focus]")) {
+    if (!(node instanceof HTMLElement)) continue;
+    for (const rect of node.getClientRects()) {
+      if (rect.width === 0 || rect.height === 0) continue;
+      const padY = Math.max(2, rect.height * 0.06);
+      const padX = 1;
+      if (
+        x < rect.left - padX ||
+        x > rect.right + padX ||
+        y < rect.top - padY ||
+        y > rect.bottom + padY
+      ) {
+        continue;
+      }
+
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dist = (x - cx) ** 2 + (y - cy) ** 2;
+      if (!best || dist < best.dist) best = { el: node, dist };
+    }
+  }
+
+  return best?.el ?? null;
+}
+
 export default function TopSlide() {
   const { bpm } = useHeartRate();
   const [parisHours, setParisHours] = useState(0);
@@ -103,6 +137,8 @@ export default function TopSlide() {
   );
   const [hoverPreview, setHoverPreview] = useState<HoverPreview>(null);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  /** Which full-white title link is focused; cleared when leaving that link. */
+  const [titleFocusKey, setTitleFocusKey] = useState<string | null>(null);
   /** Mobile only: which preview link is armed for a second-tap navigation. */
   const [touchArmedPreview, setTouchArmedPreview] = useState<HoverPreview>(null);
   const trackLinkRef = useRef<HTMLAnchorElement>(null);
@@ -111,6 +147,8 @@ export default function TopSlide() {
   const parisLinkRef = useRef<HTMLSpanElement>(null);
   const spotifyInitialFetchDoneRef = useRef(false);
   const animatedWordKeysRef = useRef(new Set<string>());
+  const titleFocusKeyRef = useRef<string | null>(null);
+  const titleFocusClearRef = useRef<number | null>(null);
   const artwork = spotifyData?.track?.artwork ?? "";
   const showTrackPreview = hoverPreview === "track" && Boolean(artwork) && cursorPosition.y > 0;
   const showCommitsPreview =
@@ -313,15 +351,81 @@ export default function TopSlide() {
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [touchArmedPreview]);
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    setCursorPosition({ x: e.clientX, y: e.clientY });
-  };
-
   const clearHoverPreview = () => {
     // Don't clear an armed mobile preview via mouseleave
     if (isMobileViewport() && touchArmedPreview) return;
     setHoverPreview(null);
   };
+
+  const cancelTitleFocusClear = () => {
+    if (titleFocusClearRef.current !== null) {
+      window.clearTimeout(titleFocusClearRef.current);
+      titleFocusClearRef.current = null;
+    }
+  };
+
+  const focusTitleLink = (key: string) => {
+    cancelTitleFocusClear();
+    if (titleFocusKeyRef.current === key) return;
+    titleFocusKeyRef.current = key;
+    playTick();
+    setTitleFocusKey(key);
+  };
+
+  /** Clear after leaving a link; short delay only bridges moving into another link. */
+  const scheduleTitleFocusClear = () => {
+    if (titleFocusKeyRef.current === null) return;
+    cancelTitleFocusClear();
+    titleFocusClearRef.current = window.setTimeout(() => {
+      titleFocusKeyRef.current = null;
+      setTitleFocusKey(null);
+      titleFocusClearRef.current = null;
+      clearHoverPreview();
+    }, 40);
+  };
+
+  useEffect(() => {
+    return () => cancelTitleFocusClear();
+  }, []);
+
+  const applyTitleFocusElement = (focusEl: HTMLElement) => {
+    const key = focusEl.dataset.titleFocus;
+    if (!key) return;
+
+    focusTitleLink(key);
+
+    if (isMobileViewport()) return;
+
+    const preview = focusEl.dataset.titlePreview;
+    if (
+      preview === "track" ||
+      preview === "commits" ||
+      preview === "weather" ||
+      preview === "time"
+    ) {
+      setHoverPreview(preview);
+    } else {
+      clearHoverPreview();
+    }
+  };
+
+  const handleTitlePointerMove = (e: React.PointerEvent<HTMLHeadingElement>) => {
+    const { clientX: x, clientY: y } = e;
+    setCursorPosition({ x, y });
+
+    const focusEl = findTitleFocusElement(e.currentTarget, x, y);
+    if (focusEl) applyTitleFocusElement(focusEl);
+    else scheduleTitleFocusClear();
+  };
+
+  const handleTitlePointerLeave = () => {
+    scheduleTitleFocusClear();
+  };
+
+  const titleLinkOpacity = (key: string) =>
+    titleFocusKey !== null && titleFocusKey !== key
+      ? "opacity-40"
+      : "opacity-100";
 
   /** Mobile only: first tap = preview; links navigate on second tap. */
   const handlePreviewClick = (
@@ -668,7 +772,11 @@ export default function TopSlide() {
 
       {/* Main Content */}
       <div className="flex-1 flex items-center px-6 md:px-8 lg:px-10">
-        <h1 className="text-pretty text-2xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-[1.15] max-w-2xl xl:max-w-4xl [&:has([data-focus]:hover)_:is([data-focus],[data-fade])]:opacity-40">
+        <h1
+          className="text-pretty text-2xl md:text-4xl lg:text-5xl xl:text-6xl font-normal text-foreground leading-[1.15] max-w-2xl xl:max-w-4xl"
+          onPointerMove={handleTitlePointerMove}
+          onPointerLeave={handleTitlePointerLeave}
+        >
           {animatedTitleSegments.map((segment) => {
             if (segment.type === "hover") {
               return (
@@ -682,14 +790,9 @@ export default function TopSlide() {
                         : undefined
                   }
                   role="presentation"
-                  data-focus
-                  data-sfx-hover="tick"
-                  className="cursor-pointer transition-opacity duration-300 ease-out hover:!opacity-100"
-                  onMouseEnter={() => {
-                    if (!isMobileViewport()) setHoverPreview(segment.preview);
-                  }}
-                  onMouseLeave={clearHoverPreview}
-                  onMouseMove={handleMouseMove}
+                  data-title-focus={segment.key}
+                  data-title-preview={segment.preview}
+                  className={`cursor-pointer transition-opacity duration-300 ease-out ${titleLinkOpacity(segment.key)}`}
                   onClick={(e) => handlePreviewClick(e, segment.preview)}
                 >
                   <StreamingWords
@@ -703,6 +806,11 @@ export default function TopSlide() {
             if (segment.type === "link") {
               const isTrackLink = segment.key.startsWith("track-");
               const isCommitsLink = segment.key === "commits-link";
+              const preview = isTrackLink
+                ? "track"
+                : isCommitsLink
+                  ? "commits"
+                  : undefined;
 
               return (
                 <a
@@ -711,21 +819,10 @@ export default function TopSlide() {
                   target="_blank"
                   rel="noopener noreferrer"
                   ref={isTrackLink ? trackLinkRef : isCommitsLink ? commitsLinkRef : undefined}
-                  data-focus
-                  className="transition-opacity duration-300 ease-out hover:!opacity-100"
+                  data-title-focus={segment.key}
+                  data-title-preview={preview}
+                  className={`transition-opacity duration-300 ease-out ${titleLinkOpacity(segment.key)}`}
                   data-sfx="click"
-                  data-sfx-hover="tick"
-                  onMouseEnter={
-                    isTrackLink || isCommitsLink
-                      ? () => {
-                          if (!isMobileViewport()) {
-                            setHoverPreview(isTrackLink ? "track" : "commits");
-                          }
-                        }
-                      : undefined
-                  }
-                  onMouseLeave={isTrackLink || isCommitsLink ? clearHoverPreview : undefined}
-                  onMouseMove={isTrackLink || isCommitsLink ? handleMouseMove : undefined}
                   onClick={
                     isTrackLink
                       ? (e) => handlePreviewClick(e, "track")
@@ -746,8 +843,9 @@ export default function TopSlide() {
               return (
                 <span
                   key={segment.key}
-                  data-fade
-                  className="transition-opacity duration-300 ease-out"
+                  className={`transition-opacity duration-300 ease-out ${
+                    titleFocusKey !== null ? "opacity-40" : "opacity-100"
+                  }`}
                 >
                   <StreamingWords
                     words={segment.words}

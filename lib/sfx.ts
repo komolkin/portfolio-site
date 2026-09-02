@@ -60,8 +60,7 @@ export function subscribeSoundEnabled(fn: () => void) {
 function canPlay() {
   if (!getSoundEnabled()) return false;
   if (win()?.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
-  const ua = typeof navigator === "undefined" ? undefined : navigator.userActivation;
-  return ua ? ua.hasBeenActive : true;
+  return true;
 }
 
 function getCtx() {
@@ -91,8 +90,26 @@ export function initSfx() {
   };
   if (typeof w.requestIdleCallback === "function") w.requestIdleCallback(boot, { timeout: 3000 });
   else w.setTimeout(boot, 1500);
-  for (const ev of ["pointerdown", "touchstart", "keydown"] as const) {
-    w.addEventListener(ev, unlock, { once: true, capture: true, passive: true });
+
+  // Retry until the context is running — a one-shot listener can fire before
+  // the browser will allow resume and then never try again.
+  const events = ["pointerdown", "pointerup", "touchstart", "keydown", "click"] as const;
+  const removeUnlockListeners = () => {
+    for (const ev of events) w.removeEventListener(ev, tryUnlock, true);
+  };
+  const tryUnlock = () => {
+    const c = getCtx();
+    if (!c) return;
+    if (c.state === "running") {
+      removeUnlockListeners();
+      return;
+    }
+    void c.resume().then(() => {
+      if (c.state === "running") removeUnlockListeners();
+    });
+  };
+  for (const ev of events) {
+    w.addEventListener(ev, tryUnlock, { capture: true, passive: true });
   }
 }
 
@@ -131,6 +148,7 @@ function envelope(g: GainNode, t: number, attack: number, decay: number, peak: n
 
 export function playPreset(preset: Preset) {
   if (!canPlay()) return;
+  unlock();
   void (async () => {
     try {
       const c = await runningCtx();
