@@ -14,6 +14,7 @@ export const PROJECTS = [
   { id: "worm", label: "Worm" },
   { id: "ai-cam", label: "Selfie" },
   { id: "api", label: "API" },
+  { id: "buttony", label: "Buttony" },
 ] as const;
 
 export type ProjectId = (typeof PROJECTS)[number]["id"];

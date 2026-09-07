@@ -25,6 +25,7 @@ import Thinking from "@/components/playground/projects/thinking/Thinking";
 import AiCam from "@/components/playground/projects/ai-cam/AiCam";
 import Worm from "@/components/playground/projects/worm/Worm";
 import Api from "@/components/playground/projects/api/Api";
+import Buttony from "@/components/playground/projects/buttony/Buttony";
 
 export default function PlaygroundSlide() {
   const pathname = usePathname();
@@ -66,7 +67,8 @@ export default function PlaygroundSlide() {
     activeProject === "thinking" ||
     activeProject === "resolved-card" ||
     activeProject === "hot-topics" ||
-    activeProject === "positions"
+    activeProject === "positions" ||
+    activeProject === "buttony"
       ? "h-full [zoom:1]"
       : activeProject.startsWith("position-")
         ? "[zoom:0.6]"
@@ -113,6 +115,7 @@ export default function PlaygroundSlide() {
             {activeProject === "ai-cam" && <AiCam />}
             {activeProject === "worm" && <Worm />}
             {activeProject === "api" && <Api />}
+            {activeProject === "buttony" && <Buttony />}
           </motion.div>
         </AnimatePresence>
       </main>
