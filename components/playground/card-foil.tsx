@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 
 const GLITTER = "/playground/foil/glitter.png";
-const GLITTER_2 = "/playground/foil/glitter-2.png";
 const GLASS_BORDER_COLOR = "rgba(255, 255, 255, 0.48)";
 
 export const FOIL_POINTER_STYLE = {
@@ -218,11 +217,9 @@ export function GlassBorder({ radius }: { radius: number }) {
 /**
  * Cursor-reactive glitter holofoil.
  *
- * Realism comes from lighting, not sliding: flake textures act as masks and a
- * pointer-centered radial "light" paints through them, so flakes near the
- * cursor flare while distant ones stay faint. Two independent flake
- * populations drift in opposite directions, which makes flakes twinkle in and
- * out as the pointer moves instead of the whole sheet translating.
+ * The confetti flake sheet is a single static mask. Only the shine moves:
+ * a pointer-centered radial light paints through the flakes, so nearby
+ * specks flare while the texture itself never translates.
  */
 export function GlitterFoil() {
   const flakeLight = `
@@ -237,7 +234,7 @@ export function GlitterFoil() {
 
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      {/* Soft anisotropic sheen — the brushed-foil base under the flakes */}
+      {/* Soft anisotropic sheen — the brushed-foil shine under the flakes */}
       <div
         className="absolute inset-0"
         style={{
@@ -259,7 +256,7 @@ export function GlitterFoil() {
           transition: "opacity 200ms ease",
         }}
       />
-      {/* Flake population A — lit by the pointer, drifts with it */}
+      {/* Single static confetti foil — light moves, flakes stay put */}
       <div
         className="absolute inset-0"
         style={{
@@ -268,30 +265,10 @@ export function GlitterFoil() {
           maskImage: `url(${GLITTER})`,
           WebkitMaskSize: "170px 170px",
           maskSize: "170px 170px",
-          WebkitMaskPosition:
-            "calc(50% + (var(--from-left) - 0.5) * 22px) calc(50% + (var(--from-top) - 0.5) * 22px)",
-          maskPosition:
-            "calc(50% + (var(--from-left) - 0.5) * 22px) calc(50% + (var(--from-top) - 0.5) * 22px)",
+          WebkitMaskPosition: "50% 50%",
+          maskPosition: "50% 50%",
           mixBlendMode: "screen",
-          opacity: "calc(0.34 + var(--hov) * 0.36)",
-          transition: "opacity 200ms ease",
-        }}
-      />
-      {/* Flake population B — counter-drifts so flakes twinkle on movement */}
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage: flakeLight,
-          WebkitMaskImage: `url(${GLITTER_2})`,
-          maskImage: `url(${GLITTER_2})`,
-          WebkitMaskSize: "230px 230px",
-          maskSize: "230px 230px",
-          WebkitMaskPosition:
-            "calc(50% - (var(--from-left) - 0.5) * 34px) calc(50% - (var(--from-top) - 0.5) * 34px)",
-          maskPosition:
-            "calc(50% - (var(--from-left) - 0.5) * 34px) calc(50% - (var(--from-top) - 0.5) * 34px)",
-          mixBlendMode: "screen",
-          opacity: "calc(0.26 + var(--hov) * 0.3)",
+          opacity: "calc(0.42 + var(--hov) * 0.4)",
           transition: "opacity 200ms ease",
         }}
       />
