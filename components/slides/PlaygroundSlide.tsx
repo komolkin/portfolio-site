@@ -27,6 +27,7 @@ import Worm from "@/components/playground/projects/worm/Worm";
 import Api from "@/components/playground/projects/api/Api";
 import Buttony from "@/components/playground/projects/buttony/Buttony";
 import Leverage from "@/components/playground/projects/leverage/Leverage";
+import Spotlight from "@/components/playground/projects/spotlight/Spotlight";
 
 export default function PlaygroundSlide() {
   const pathname = usePathname();
@@ -70,7 +71,8 @@ export default function PlaygroundSlide() {
     activeProject === "hot-topics" ||
     activeProject === "positions" ||
     activeProject === "buttony" ||
-    activeProject === "leverage"
+    activeProject === "leverage" ||
+    activeProject === "spotlight"
       ? "h-full [zoom:1]"
       : activeProject.startsWith("position-")
         ? "[zoom:0.6]"
@@ -119,6 +121,7 @@ export default function PlaygroundSlide() {
             {activeProject === "api" && <Api />}
             {activeProject === "buttony" && <Buttony />}
             {activeProject === "leverage" && <Leverage />}
+            {activeProject === "spotlight" && <Spotlight />}
           </motion.div>
         </AnimatePresence>
       </main>
