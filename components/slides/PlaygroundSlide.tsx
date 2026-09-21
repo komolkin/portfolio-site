@@ -12,6 +12,7 @@ import {
 } from "@/components/playground/playground-route";
 import HotTopics from "@/components/playground/projects/hot-topics/HotTopics";
 import Positions from "@/components/playground/projects/positions/Positions";
+import Expandable from "@/components/playground/projects/expandable/Expandable";
 import ResolvedCard from "@/components/playground/projects/resolved-card/ResolvedCard";
 import LeverageSelector from "@/components/playground/projects/leverage-selector/LeverageSelector";
 import SmartLeverage from "@/components/playground/projects/smart-leverage/SmartLeverage";
@@ -69,6 +70,7 @@ export default function PlaygroundSlide() {
     activeProject === "resolved-card" ||
     activeProject === "hot-topics" ||
     activeProject === "positions" ||
+    activeProject === "expandable" ||
     activeProject === "buttony" ||
     activeProject === "leverage" ||
     activeProject === "spotlight"
@@ -105,6 +107,7 @@ export default function PlaygroundSlide() {
           >
             {activeProject === "hot-topics" && <HotTopics />}
             {activeProject === "positions" && <Positions />}
+            {activeProject === "expandable" && <Expandable />}
             {activeProject === "ball" && <Ball />}
             {activeProject === "resolved-card" && <ResolvedCard />}
             {activeProject === "smart-leverage" && <SmartLeverage />}
