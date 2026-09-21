@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "re
 import { createPortal } from "react-dom";
 import { instrumentSansCondensed } from "@/lib/fonts";
 import { EXPANDABLE_ROWS, type ExpandableRow, type PositionSide } from "./data";
+import ExpandableParticles from "./ExpandableParticles";
 
 /**
  * Expandable positions — Figma node 15646:41981
@@ -649,9 +650,12 @@ function ExpandedCard({
   fillCents: number;
 }) {
   const { cashOut, pnl } = positionValue(row, fillCents);
+  const arrows = pnl >= 0 ? "up" : "down";
 
   return (
-    <div className="group flex w-full flex-col gap-4 rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-[17px]">
+    <div className="group relative flex w-full flex-col gap-4 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-[17px]">
+      <ExpandableParticles direction={arrows} />
+      <div className="relative z-[1] flex w-full flex-col gap-4">
       <div className="flex w-full items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-[13px]">
           <div className="relative size-[68px] shrink-0 overflow-hidden rounded-lg">
@@ -697,6 +701,7 @@ function ExpandedCard({
         liqCents={row.liqCents}
         className="flex h-14 w-full items-center justify-center rounded-full text-base font-semibold leading-[1.25]"
       />
+      </div>
     </div>
   );
 }
@@ -762,10 +767,13 @@ function MobileCard({
   onToggle: () => void;
 }) {
   const { cashOut, pnl } = positionValue(row, fillCents);
+  const arrows = pnl >= 0 ? "up" : "down";
 
   if (expanded) {
     return (
-      <div className="group flex w-full flex-col gap-4 rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-[17px]">
+      <div className="group relative flex w-full flex-col gap-4 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-[17px]">
+        <ExpandableParticles direction={arrows} />
+        <div className="relative z-[1] flex w-full flex-col gap-4">
         <div className="flex w-full items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="relative size-12 shrink-0 overflow-hidden rounded-lg">
@@ -809,6 +817,7 @@ function MobileCard({
           liqCents={row.liqCents}
           className="flex h-12 w-full items-center justify-center rounded-full text-sm font-semibold"
         />
+        </div>
       </div>
     );
   }
