@@ -281,12 +281,41 @@ function IconButton({
   );
 }
 
+function GlowSwitch({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={checked ? "Pulse cash out glow on" : "Static cash out glow"}
+      onClick={() => onChange(!checked)}
+      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ease-out ${
+        checked ? "bg-[#3d3d3d]" : "bg-white/15"
+      }`}
+    >
+      <span
+        aria-hidden
+        className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out ${
+          checked ? "translate-x-5" : "translate-x-0"
+        }`}
+      />
+    </button>
+  );
+}
+
 function CashOutButton({
   cashOut,
   fillCents,
   entryCents,
   liqCents,
   compact = false,
+  pulse = true,
   className,
 }: {
   cashOut: number;
@@ -294,15 +323,29 @@ function CashOutButton({
   entryCents: number;
   liqCents: number;
   compact?: boolean;
+  pulse?: boolean;
   className: string;
 }) {
-  const glow = getCashOutGlow(fillCents, entryCents, liqCents);
-  const animation =
-    glow.mode === "liq"
+  const glow = pulse
+    ? getCashOutGlow(fillCents, entryCents, liqCents)
+    : {
+        mode: (fillCents >= entryCents ? "win" : "liq") as "win" | "liq",
+        strength: 0.72,
+        pulseMs: 0,
+      };
+  const animation = pulse
+    ? glow.mode === "liq"
       ? `expandable-cash-out-liq-pulse ${glow.pulseMs}ms ease-in-out infinite`
       : glow.mode === "win"
         ? `expandable-cash-out-win-blink ${glow.pulseMs}ms ease-in-out infinite`
-        : undefined;
+        : undefined
+    : undefined;
+  const glowClass =
+    !pulse && glow.mode === "liq"
+      ? "expandable-cash-out-glow expandable-cash-out-glow-static-liq"
+      : !pulse && glow.mode === "win"
+        ? "expandable-cash-out-glow expandable-cash-out-glow-static-win"
+        : "expandable-cash-out-glow";
 
   return (
     <button
@@ -315,7 +358,7 @@ function CashOutButton({
       {glow.mode !== "off" && (
         <span
           aria-hidden
-          className="expandable-cash-out-glow pointer-events-none absolute inset-0 rounded-[inherit] motion-reduce:opacity-60"
+          className={`${glowClass} pointer-events-none absolute inset-0 rounded-[inherit] motion-reduce:opacity-60`}
           style={{
             ["--cash-out-glow-strength" as string]: glow.strength,
             animation,
@@ -483,7 +526,6 @@ function ExpandedBar({
   entryCents: number;
   pnl: number;
 }) {
-  const barRef = useRef<HTMLDivElement>(null);
   const [tip, setTip] = useState<BarTooltipState>({ kind: null, x: 0, y: 0 });
   const belowEntry = fillCents < entryCents;
   const fillPct = clamp((fillCents / TRACK_CENTS) * 100, 0, 100);
@@ -492,13 +534,7 @@ function ExpandedBar({
   const priceCents = Math.round(fillCents);
   const pnlPositive = pnl >= 0;
 
-  const fillColor = belowEntry
-    ? tip.kind === "price"
-      ? BAR_FILL_BELOW_ENTRY_HOVER
-      : BAR_FILL_BELOW_ENTRY
-    : tip.kind === "price"
-      ? BAR_FILL_HOVER
-      : BAR_FILL_COLOR;
+  const fillColor = belowEntry ? BAR_FILL_BELOW_ENTRY : BAR_FILL_COLOR;
 
   const anchorTip = (kind: Exclude<TipKind, null>, el: HTMLElement) => {
     const rect = el.getBoundingClientRect();
@@ -509,36 +545,14 @@ function ExpandedBar({
     });
   };
 
-  useEffect(() => {
-    if (tip.kind !== "price" || !barRef.current) return;
-    const sync = () => {
-      const rect = barRef.current!.getBoundingClientRect();
-      setTip((prev) =>
-        prev.kind === "price"
-          ? { ...prev, x: rect.left + rect.width / 2, y: rect.top }
-          : prev,
-      );
-    };
-    window.addEventListener("scroll", sync, true);
-    window.addEventListener("resize", sync);
-    return () => {
-      window.removeEventListener("scroll", sync, true);
-      window.removeEventListener("resize", sync);
-    };
-  }, [tip.kind]);
-
   return (
     <div
-      ref={barRef}
       className="relative h-[100px] w-full overflow-hidden rounded-lg"
       onMouseLeave={() => setTip((prev) => ({ ...prev, kind: null }))}
     >
       <div
-        className="absolute inset-0 transition-colors duration-150 ease-out"
-        style={{
-          backgroundColor:
-            tip.kind === "price" ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)",
-        }}
+        className="absolute inset-0"
+        style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
       />
       <div
         className="absolute inset-y-0 left-0 rounded-lg"
@@ -546,15 +560,6 @@ function ExpandedBar({
           width: `${fillPct}%`,
           backgroundColor: fillColor,
           transition: "width 700ms ease-out, background-color 150ms ease-out",
-        }}
-      />
-
-      <div
-        className="absolute inset-0 z-[5] cursor-pointer"
-        aria-label={`Current price ${priceCents}¢`}
-        onMouseEnter={() => {
-          if (!barRef.current) return;
-          anchorTip("price", barRef.current);
         }}
       />
 
@@ -645,16 +650,18 @@ function ExpandedBar({
 function ExpandedCard({
   row,
   fillCents,
+  pulseGlow,
 }: {
   row: ExpandableRow;
   fillCents: number;
+  pulseGlow: boolean;
 }) {
   const { cashOut, pnl } = positionValue(row, fillCents);
   const arrows = pnl >= 0 ? "up" : "down";
 
   return (
     <div className="group relative flex w-full flex-col gap-4 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-[17px]">
-      <ExpandableParticles direction={arrows} />
+      {pulseGlow && <ExpandableParticles direction={arrows} />}
       <div className="relative z-[1] flex w-full flex-col gap-4">
       <div className="flex w-full items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-[13px]">
@@ -699,6 +706,7 @@ function ExpandedCard({
         fillCents={fillCents}
         entryCents={row.entryCents}
         liqCents={row.liqCents}
+        pulse={pulseGlow}
         className="flex h-14 w-full items-center justify-center rounded-full text-base font-semibold leading-[1.25]"
       />
       </div>
@@ -709,10 +717,12 @@ function ExpandedCard({
 function CompactRow({
   row,
   fillCents,
+  pulseGlow,
   onExpand,
 }: {
   row: ExpandableRow;
   fillCents: number;
+  pulseGlow: boolean;
   onExpand: () => void;
 }) {
   const { cashOut } = positionValue(row, fillCents);
@@ -745,6 +755,7 @@ function CompactRow({
           fillCents={fillCents}
           entryCents={row.entryCents}
           liqCents={row.liqCents}
+          pulse={pulseGlow}
           className="flex h-10 w-[100px] shrink-0 items-center justify-center rounded-full text-sm font-semibold leading-[1.25]"
         />
         <IconButton size={40} label="Share position" onClick={(e) => e.stopPropagation()}>
@@ -759,11 +770,13 @@ function MobileCard({
   row,
   fillCents,
   expanded,
+  pulseGlow,
   onToggle,
 }: {
   row: ExpandableRow;
   fillCents: number;
   expanded: boolean;
+  pulseGlow: boolean;
   onToggle: () => void;
 }) {
   const { cashOut, pnl } = positionValue(row, fillCents);
@@ -772,7 +785,7 @@ function MobileCard({
   if (expanded) {
     return (
       <div className="group relative flex w-full flex-col gap-4 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-[17px]">
-        <ExpandableParticles direction={arrows} />
+        {pulseGlow && <ExpandableParticles direction={arrows} />}
         <div className="relative z-[1] flex w-full flex-col gap-4">
         <div className="flex w-full items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -815,6 +828,7 @@ function MobileCard({
           fillCents={fillCents}
           entryCents={row.entryCents}
           liqCents={row.liqCents}
+          pulse={pulseGlow}
           className="flex h-12 w-full items-center justify-center rounded-full text-sm font-semibold"
         />
         </div>
@@ -844,6 +858,7 @@ function MobileCard({
           fillCents={fillCents}
           entryCents={row.entryCents}
           liqCents={row.liqCents}
+          pulse={pulseGlow}
           className="flex h-10 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold"
         />
         <IconButton size={40} label="Share position" onClick={(e) => e.stopPropagation()}>
@@ -856,6 +871,7 @@ function MobileCard({
 
 export default function Expandable() {
   const [expandedId, setExpandedId] = useState(EXPANDABLE_ROWS[0].id);
+  const [pulseGlow, setPulseGlow] = useState(true);
   const [sims, setSims] = useState<RowSim[]>(initialSims);
 
   useEffect(() => {
@@ -878,12 +894,15 @@ export default function Expandable() {
 
   return (
     <div className="relative flex w-full max-w-[857px] flex-col items-stretch gap-6 px-4 md:px-0">
-      <h2 className="text-2xl font-semibold leading-[1.25] text-white">
-        Positions
-        <sup className="relative -top-3 ml-1 text-xs font-semibold leading-none text-white">
-          {EXPANDABLE_ROWS.length}
-        </sup>
-      </h2>
+      <div className="flex w-full items-center justify-between gap-4">
+        <h2 className="text-2xl font-semibold leading-[1.25] text-white">
+          Positions
+          <sup className="relative -top-3 ml-1 text-xs font-semibold leading-none text-white">
+            {EXPANDABLE_ROWS.length}
+          </sup>
+        </h2>
+        <GlowSwitch checked={pulseGlow} onChange={setPulseGlow} />
+      </div>
 
       <div className="hidden w-full flex-col md:flex">
         {EXPANDABLE_ROWS.map((row, index) => {
@@ -903,6 +922,7 @@ export default function Expandable() {
                 <ExpandedCard
                   row={row}
                   fillCents={sims[index].fillCents}
+                  pulseGlow={pulseGlow}
                 />
               ) : (
                 <div className="w-full">
@@ -912,6 +932,7 @@ export default function Expandable() {
                   <CompactRow
                     row={row}
                     fillCents={sims[index].fillCents}
+                    pulseGlow={pulseGlow}
                     onExpand={() => expand(row.id)}
                   />
                 </div>
@@ -931,6 +952,7 @@ export default function Expandable() {
               row={row}
               fillCents={sims[index].fillCents}
               expanded={expandedId === row.id}
+              pulseGlow={pulseGlow}
               onToggle={() => expand(row.id)}
             />
           </div>
@@ -958,6 +980,18 @@ export default function Expandable() {
               inset 0 0 calc(16px + var(--cash-out-glow-strength) * 24px) rgba(93, 217, 120, calc(var(--cash-out-glow-strength) * 0.58)),
               inset 0 1px 0 rgba(140, 255, 170, calc(var(--cash-out-glow-strength) * 0.32));
           }
+        }
+
+        .expandable-cash-out-glow-static-win {
+          box-shadow:
+            inset 0 0 calc(16px + var(--cash-out-glow-strength) * 24px) rgba(93, 217, 120, calc(var(--cash-out-glow-strength) * 0.58)),
+            inset 0 1px 0 rgba(140, 255, 170, calc(var(--cash-out-glow-strength) * 0.32));
+        }
+
+        .expandable-cash-out-glow-static-liq {
+          box-shadow:
+            inset 0 0 calc(14px + var(--cash-out-glow-strength) * 22px) rgba(255, 77, 94, calc(var(--cash-out-glow-strength) * 0.62)),
+            inset 0 1px 0 rgba(255, 120, 130, calc(var(--cash-out-glow-strength) * 0.35));
         }
 
         @media (prefers-reduced-motion: reduce) {
