@@ -871,7 +871,7 @@ function MobileCard({
 
 export default function Expandable() {
   const [expandedId, setExpandedId] = useState(EXPANDABLE_ROWS[0].id);
-  const [pulseGlow, setPulseGlow] = useState(true);
+  const [pulseGlow, setPulseGlow] = useState(false);
   const [sims, setSims] = useState<RowSim[]>(initialSims);
 
   useEffect(() => {
