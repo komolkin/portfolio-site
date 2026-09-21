@@ -18,7 +18,6 @@ import SmartLeverage from "@/components/playground/projects/smart-leverage/Smart
 import BinaryCompact from "@/components/playground/projects/binary-compact/BinaryCompact";
 import Position1 from "@/components/playground/projects/position-1/Position1";
 import Position7 from "@/components/playground/projects/position-7/Position7";
-import PnlChart from "@/components/playground/projects/pnl-chart/PnlChart";
 import Ball from "@/components/playground/projects/ball/Ball";
 import Mcp from "@/components/playground/projects/mcp/Mcp";
 import Thinking from "@/components/playground/projects/thinking/Thinking";
@@ -111,7 +110,6 @@ export default function PlaygroundSlide() {
             {activeProject === "smart-leverage" && <SmartLeverage />}
             {activeProject === "leverage-selector" && <LeverageSelector />}
             {activeProject === "binary-compact" && <BinaryCompact />}
-            {activeProject === "pnl-chart" && <PnlChart />}
             {activeProject === "position-1" && <Position1 />}
             {activeProject === "position-7" && <Position7 />}
             {activeProject === "mcp" && <Mcp />}
