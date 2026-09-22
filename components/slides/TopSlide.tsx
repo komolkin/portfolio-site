@@ -64,7 +64,58 @@ type TitleSegment =
     };
 
 const TRACK_POPUP_SIZE = 120;
+const TRACK_COVER_MASK_INSET = 8;
 const COMMITS_GRAPH_PADDING = 10;
+
+function TrackCover({
+  src,
+  alt,
+  spinning,
+}: {
+  src: string;
+  alt: string;
+  spinning: boolean;
+}) {
+  return (
+    <div className="relative size-full">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={alt} className="size-full object-cover" />
+      {/* Circle-masked copy; rotates only while listening. */}
+      <div
+        className={`absolute ${
+          spinning
+            ? "animate-[spin_12s_linear_infinite] motion-reduce:animate-none"
+            : ""
+        }`}
+        style={{ inset: TRACK_COVER_MASK_INSET }}
+      >
+        <div className="relative size-full overflow-hidden rounded-full">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt=""
+            className="absolute max-w-none object-cover"
+            style={{
+              width: TRACK_POPUP_SIZE,
+              height: TRACK_POPUP_SIZE,
+              left: -TRACK_COVER_MASK_INSET,
+              top: -TRACK_COVER_MASK_INSET,
+            }}
+          />
+        </div>
+      </div>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute rounded-full ring-1 ring-inset ring-white/35"
+        style={{ inset: TRACK_COVER_MASK_INSET }}
+      />
+      <div
+        aria-hidden
+        className="absolute left-1/2 top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#c8c8c8]"
+      />
+    </div>
+  );
+}
 
 function getCommitsPopupSize(weekCount: number) {
   const graph = getContributionGraphSize(weekCount);
@@ -681,15 +732,14 @@ export default function TopSlide() {
           aria-hidden={!showTrackPreview}
         >
           <HoverGlass flush>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <TrackCover
               src={artwork}
               alt={
                 spotifyData?.track
                   ? `${spotifyData.track.title} album cover`
                   : "Spotify album cover"
               }
-              className="size-full object-cover"
+              spinning={Boolean(showTrackPreview && spotifyData?.isPlaying)}
             />
           </HoverGlass>
         </div>

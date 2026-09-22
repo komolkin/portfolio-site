@@ -246,12 +246,26 @@ function LeverageBadge({ leverage }: { leverage: string }) {
   );
 }
 
-function StakeLabel({ stake, entryCents }: { stake: number; entryCents: number }) {
+function StakeLabel({
+  stake,
+  entryCents,
+  toWin,
+}: {
+  stake: number;
+  entryCents: number;
+  toWin?: number;
+}) {
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-normal leading-[1.25]">
       <span className="text-white">${formatUsd(stake)}</span>
       <span className="text-white/60">at</span>
       <span className="text-white">{entryCents}¢</span>
+      {toWin != null && (
+        <>
+          <span className="text-white/60">to win</span>
+          <span className="text-[#5dd978]">${formatUsd(toWin)}</span>
+        </>
+      )}
     </span>
   );
 }
@@ -295,14 +309,14 @@ function GlowSwitch({
       aria-checked={checked}
       aria-label={checked ? "Pulse cash out glow on" : "Static cash out glow"}
       onClick={() => onChange(!checked)}
-      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ease-out ${
+      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ease-out ${
         checked ? "bg-[#3d3d3d]" : "bg-white/15"
       }`}
     >
       <span
         aria-hidden
-        className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out ${
-          checked ? "translate-x-5" : "translate-x-0"
+        className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out ${
+          checked ? "translate-x-4" : "translate-x-0"
         }`}
       />
     </button>
@@ -316,6 +330,7 @@ function CashOutButton({
   liqCents,
   compact = false,
   pulse = true,
+  pnl,
   className,
 }: {
   cashOut: number;
@@ -324,6 +339,7 @@ function CashOutButton({
   liqCents: number;
   compact?: boolean;
   pulse?: boolean;
+  pnl?: number;
   className: string;
 }) {
   const glow = pulse
@@ -374,6 +390,23 @@ function CashOutButton({
           className="tabular-nums text-inherit"
           style={{ ["--number-flow-mask-height" as string]: "0em" }}
         />
+        {pnl != null && (
+          <span
+            className={`ml-1.5 inline-flex items-baseline font-semibold ${
+              pnl >= 0 ? "text-[#5dd978]" : "text-[#ff4d5e]"
+            }`}
+          >
+            <span>({pnl >= 0 ? "+$" : "-$"}</span>
+            <NumberFlow
+              value={Math.abs(pnl)}
+              trend={0}
+              format={{ useGrouping: true }}
+              className="tabular-nums text-inherit"
+              style={{ ["--number-flow-mask-height" as string]: "0em" }}
+            />
+            <span>)</span>
+          </span>
+        )}
       </span>
     </button>
   );
@@ -519,12 +552,10 @@ function ExpandedBar({
   fillCents,
   liqCents,
   entryCents,
-  pnl,
 }: {
   fillCents: number;
   liqCents: number;
   entryCents: number;
-  pnl: number;
 }) {
   const [tip, setTip] = useState<BarTooltipState>({ kind: null, x: 0, y: 0 });
   const belowEntry = fillCents < entryCents;
@@ -532,7 +563,6 @@ function ExpandedBar({
   const liqPct = clampLiqPct(liqCents, entryCents);
   const entryPct = clamp((entryCents / TRACK_CENTS) * 100, 0, 100);
   const priceCents = Math.round(fillCents);
-  const pnlPositive = pnl >= 0;
 
   const fillColor = belowEntry ? BAR_FILL_BELOW_ENTRY : BAR_FILL_COLOR;
 
@@ -564,39 +594,19 @@ function ExpandedBar({
       />
 
       <div
-        className="pointer-events-none absolute top-1 z-20 flex w-max max-w-none -translate-x-full flex-col items-end pr-2 text-right"
+        className={`pointer-events-none absolute top-1 z-20 w-max max-w-none -translate-x-full pr-2 text-right text-[40px] font-semibold leading-[1.25] whitespace-nowrap text-white ${instrumentSansCondensed.className}`}
         style={{
           left: `max(4.5rem, ${fillPct}%)`,
           transition: "left 700ms ease-out",
         }}
       >
-        <div
-          className={`whitespace-nowrap text-[40px] font-semibold leading-[1.25] text-white ${instrumentSansCondensed.className}`}
-        >
-          <NumberFlow
-            value={priceCents}
-            trend={0}
-            suffix="¢"
-            className="tabular-nums text-inherit"
-            style={{ ["--number-flow-mask-height" as string]: "0em" }}
-          />
-        </div>
-        <p
-          className={`text-xs font-semibold leading-[1.25] tabular-nums ${
-            pnlPositive ? "text-[#5dd978]" : "text-[#ff4d5e]"
-          }`}
-        >
-          <span className="inline-flex items-baseline">
-            <span>{pnlPositive ? "+$" : "-$"}</span>
-            <NumberFlow
-              value={Math.abs(pnl)}
-              trend={0}
-              format={{ useGrouping: true }}
-              className="tabular-nums text-inherit"
-              style={{ ["--number-flow-mask-height" as string]: "0em" }}
-            />
-          </span>
-        </p>
+        <NumberFlow
+          value={priceCents}
+          trend={0}
+          suffix="¢"
+          className="tabular-nums text-inherit"
+          style={{ ["--number-flow-mask-height" as string]: "0em" }}
+        />
       </div>
 
       <div
@@ -657,6 +667,7 @@ function ExpandedCard({
   pulseGlow: boolean;
 }) {
   const { cashOut, pnl } = positionValue(row, fillCents);
+  const toWin = positionValue(row, TRACK_CENTS).cashOut;
   const arrows = pnl >= 0 ? "up" : "down";
 
   return (
@@ -682,7 +693,11 @@ function ExpandedCard({
             <div className="flex flex-wrap items-center gap-2">
               <SideBadge side={row.side} />
               <LeverageBadge leverage={row.leverage} />
-              <StakeLabel stake={row.stake} entryCents={row.entryCents} />
+              <StakeLabel
+                stake={row.stake}
+                entryCents={row.entryCents}
+                toWin={toWin}
+              />
             </div>
           </div>
         </div>
@@ -698,7 +713,6 @@ function ExpandedCard({
         fillCents={fillCents}
         liqCents={row.liqCents}
         entryCents={row.entryCents}
-        pnl={pnl}
       />
 
       <CashOutButton
@@ -707,6 +721,7 @@ function ExpandedCard({
         entryCents={row.entryCents}
         liqCents={row.liqCents}
         pulse={pulseGlow}
+        pnl={pnl}
         className="flex h-14 w-full items-center justify-center rounded-full text-base font-semibold leading-[1.25]"
       />
       </div>
@@ -780,6 +795,7 @@ function MobileCard({
   onToggle: () => void;
 }) {
   const { cashOut, pnl } = positionValue(row, fillCents);
+  const toWin = positionValue(row, TRACK_CENTS).cashOut;
   const arrows = pnl >= 0 ? "up" : "down";
 
   if (expanded) {
@@ -806,6 +822,11 @@ function MobileCard({
               <div className="flex flex-wrap items-center gap-1.5">
                 <SideBadge side={row.side} />
                 <LeverageBadge leverage={row.leverage} />
+                <StakeLabel
+                  stake={row.stake}
+                  entryCents={row.entryCents}
+                  toWin={toWin}
+                />
               </div>
             </div>
           </div>
@@ -820,7 +841,6 @@ function MobileCard({
           fillCents={fillCents}
           liqCents={row.liqCents}
           entryCents={row.entryCents}
-          pnl={pnl}
         />
 
         <CashOutButton
@@ -829,6 +849,7 @@ function MobileCard({
           entryCents={row.entryCents}
           liqCents={row.liqCents}
           pulse={pulseGlow}
+          pnl={pnl}
           className="flex h-12 w-full items-center justify-center rounded-full text-sm font-semibold"
         />
         </div>
