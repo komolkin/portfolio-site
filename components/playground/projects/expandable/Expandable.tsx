@@ -9,17 +9,15 @@ import { EXPANDABLE_ROWS, type ExpandableRow, type PositionSide } from "./data";
 import ExpandableParticles from "./ExpandableParticles";
 
 /**
- * Expandable positions — Figma node 15646:41981
- * https://www.figma.com/design/XSjBMcMS96jS8ntZIpMukQ/Ilya?node-id=15646-41981
+ * Expandable positions — expanded card Figma node 16140:45831
+ * https://www.figma.com/design/XSjBMcMS96jS8ntZIpMukQ/Ilya?node-id=16140-45831
  */
-const IMG_THUMB = "/playground/expandable/thumbnail.png";
-const IMG_SHARE_20 = "/playground/expandable/share-20.svg";
+const IMG_FLAG = "/playground/expandable/flag.png";
 const IMG_SHARE_16 = "/playground/expandable/share-16.svg";
+const IMG_SHARE_24 = "/playground/expandable/share-24.svg";
 
 const BAR_FILL_COLOR = "#106F25";
-const BAR_FILL_HOVER = "#159a35";
 const BAR_FILL_BELOW_ENTRY = "#7a0f1c";
-const BAR_FILL_BELOW_ENTRY_HOVER = "#9a1424";
 const LIQ_COLOR = "#ff4d5e";
 const LIQ_HOVER = "#ff7a87";
 const LIQ_GLOW_RANGE = 18;
@@ -34,9 +32,6 @@ const SIM_TICK_MS = 1600;
 const FILL_MIN_CENTS = 8;
 const FILL_MAX_CENTS = 92;
 const TRACK_CENTS = 100;
-
-const DESKTOP_ROW =
-  "grid w-full items-center gap-6 [grid-template-columns:160px_100px_120px_minmax(148px,1fr)_max-content]";
 
 type RowSim = {
   fillCents: number;
@@ -134,6 +129,42 @@ function tipLabel(kind: Exclude<TipKind, null>): string {
   return "Entry at";
 }
 
+const GRADIENT_BORDER_WHITE =
+  "linear-gradient(315deg, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.08) 35%, rgba(255,255,255,0) 55%, rgba(255,255,255,0.18) 100%) border-box";
+const GRADIENT_BORDER_YES =
+  "linear-gradient(315deg, rgba(93,217,120,0.35) 0%, rgba(93,217,120,0.08) 35%, rgba(255,255,255,0) 55%, rgba(93,217,120,0.2) 100%) border-box";
+const GRADIENT_BORDER_NO =
+  "linear-gradient(315deg, rgba(255,120,130,0.35) 0%, rgba(255,77,94,0.08) 35%, rgba(255,255,255,0) 55%, rgba(255,77,94,0.2) 100%) border-box";
+
+function GradientBorder({
+  tone = "white",
+}: {
+  tone?: "white" | "yes" | "no";
+}) {
+  const background =
+    tone === "yes"
+      ? GRADIENT_BORDER_YES
+      : tone === "no"
+        ? GRADIENT_BORDER_NO
+        : GRADIENT_BORDER_WHITE;
+
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute inset-0 z-[2] rounded-[inherit]"
+      style={{
+        background,
+        mask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
+        WebkitMask:
+          "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
+        maskComposite: "exclude",
+        WebkitMaskComposite: "xor",
+        border: "1px solid transparent",
+      }}
+    />
+  );
+}
+
 function BarTooltip({
   tip,
   currentPriceCents,
@@ -226,59 +257,143 @@ function SideBadge({
   side: PositionSide;
   compact?: boolean;
 }) {
-  const yesClass = compact ? "bg-[#106f25]" : "bg-[#214a2a]";
+  const isYes = side === "YES";
+  const fill = isYes
+    ? compact
+      ? "linear-gradient(180deg, #147a2a 0%, #0c4f1c 100%)"
+      : "linear-gradient(180deg, #2a5a35 0%, #1a3222 100%)"
+    : "linear-gradient(180deg, #94202c 0%, #5a1018 100%)";
+
   return (
-    <span
-      className={`inline-flex items-center justify-center rounded-xl px-[10px] py-1 text-xs font-semibold leading-[1.25] text-white ${
-        side === "YES" ? yesClass : "bg-[#7a0f1c]"
-      }`}
-    >
-      {side}
+    <span className="relative inline-flex overflow-hidden rounded-xl">
+      <span aria-hidden className="absolute inset-0" style={{ background: fill }} />
+      <GradientBorder tone={isYes ? "yes" : "no"} />
+      <span className="relative inline-flex items-center justify-center px-[10px] py-1 text-xs font-semibold leading-[1.25] text-white">
+        {side}
+      </span>
     </span>
   );
 }
 
 function LeverageBadge({ leverage }: { leverage: string }) {
   return (
-    <span className="inline-flex items-center justify-center rounded-full bg-white/10 px-[10px] py-1 text-xs font-semibold leading-[1.25] text-white">
-      {leverage}
+    <span className="relative inline-flex overflow-hidden rounded-full">
+      <span
+        aria-hidden
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.08) 100%)",
+        }}
+      />
+      <GradientBorder />
+      <span className="relative inline-flex items-center justify-center px-[10px] py-1 text-xs font-semibold leading-[1.25] text-white">
+        {leverage}
+      </span>
     </span>
   );
 }
 
-function StakeLabel({
-  stake,
-  entryCents,
-  toWin,
+function TitleBadge({
+  label,
+  tone = "neutral",
 }: {
-  stake: number;
-  entryCents: number;
-  toWin?: number;
+  label: string;
+  tone?: "neutral" | "lime";
 }) {
+  if (tone === "lime") {
+    return (
+      <span className="inline-flex items-center justify-center rounded-full border border-[#bfff00] bg-[rgba(191,255,0,0.1)] px-[10px] py-1 text-xs font-semibold leading-[1.25] text-[#bfff00]">
+        {label}
+      </span>
+    );
+  }
+
+  return (
+    <span className="relative inline-flex overflow-hidden rounded-full">
+      <span
+        aria-hidden
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.08) 100%)",
+        }}
+      />
+      <span className="relative inline-flex items-center justify-center px-[10px] py-1 text-xs font-semibold leading-[1.25] text-white">
+        {label}
+      </span>
+    </span>
+  );
+}
+
+function StakeLabel({ stake, toWin }: { stake: number; toWin: number }) {
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-normal leading-[1.25]">
       <span className="text-white">${formatUsd(stake)}</span>
-      <span className="text-white/60">at</span>
-      <span className="text-white">{entryCents}¢</span>
-      {toWin != null && (
-        <>
-          <span className="text-white/60">to win</span>
-          <span className="text-[#5dd978]">${formatUsd(toWin)}</span>
-        </>
-      )}
+      <span className="text-white/60">→</span>
+      <span className="text-white">${formatUsd(toWin)}</span>
     </span>
+  );
+}
+
+function ValueAmount({
+  cashOut,
+  pnl,
+  size = "lg",
+}: {
+  cashOut: number;
+  pnl: number;
+  size?: "lg" | "sm";
+}) {
+  const positive = pnl >= 0;
+  const isSm = size === "sm";
+  return (
+    <div className="flex w-[120px] shrink-0 flex-col items-end text-right leading-[1.25]">
+      <p
+        className={`font-semibold tabular-nums text-white ${
+          instrumentSansCondensed.className
+        } ${isSm ? "text-[32px]" : "text-[40px]"}`}
+      >
+        <span className="inline-flex items-baseline justify-end">
+          <span>$</span>
+          <NumberFlow
+            value={cashOut}
+            trend={0}
+            format={{ useGrouping: true }}
+            className="tabular-nums text-inherit"
+            style={{ ["--number-flow-mask-height" as string]: "0em" }}
+          />
+        </span>
+      </p>
+      <p
+        className={`text-sm font-normal tabular-nums ${
+          positive ? "text-[#5dd978]" : "text-[#ff4d5e]"
+        }`}
+      >
+        <span className="inline-flex items-baseline justify-end">
+          <span>{positive ? "+$" : "-$"}</span>
+          <NumberFlow
+            value={Math.abs(pnl)}
+            trend={0}
+            format={{ useGrouping: true }}
+            className="tabular-nums text-inherit"
+            style={{ ["--number-flow-mask-height" as string]: "0em" }}
+          />
+        </span>
+      </p>
+    </div>
   );
 }
 
 function IconButton({
-  size,
   label,
   onClick,
+  size = 40,
   children,
 }: {
-  size: 40 | 56;
   label: string;
   onClick?: (e: MouseEvent<HTMLButtonElement>) => void;
+  size?: 40 | 60;
   children: ReactNode;
 }) {
   return (
@@ -286,11 +401,20 @@ function IconButton({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.04] active:scale-[0.97] ${
-        size === 56 ? "size-14" : "size-10"
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full text-white transition-[transform,background-color] duration-150 ease-out hover:bg-white/[0.06] active:scale-[0.97] ${
+        size === 60 ? "size-[60px]" : "size-10"
       }`}
     >
-      {children}
+      <span
+        aria-hidden
+        className="absolute inset-0 rounded-[inherit]"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.04) 100%)",
+        }}
+      />
+      <GradientBorder />
+      <span className="relative z-[1]">{children}</span>
     </button>
   );
 }
@@ -324,31 +448,23 @@ function GlowSwitch({
 }
 
 function CashOutButton({
-  cashOut,
   fillCents,
   entryCents,
   liqCents,
-  compact = false,
   pulse = true,
-  pnl,
-  className,
+  amount,
+  className = "flex h-10 w-[100px] shrink-0 items-center justify-center rounded-full text-sm font-semibold leading-[1.25]",
 }: {
-  cashOut: number;
   fillCents: number;
   entryCents: number;
   liqCents: number;
-  compact?: boolean;
   pulse?: boolean;
-  pnl?: number;
-  className: string;
+  amount?: number;
+  className?: string;
 }) {
   const glow = pulse
     ? getCashOutGlow(fillCents, entryCents, liqCents)
-    : {
-        mode: (fillCents >= entryCents ? "win" : "liq") as "win" | "liq",
-        strength: 0.72,
-        pulseMs: 0,
-      };
+    : { mode: "off" as const, strength: 0, pulseMs: 0 };
   const animation = pulse
     ? glow.mode === "liq"
       ? `expandable-cash-out-liq-pulse ${glow.pulseMs}ms ease-in-out infinite`
@@ -356,57 +472,37 @@ function CashOutButton({
         ? `expandable-cash-out-win-blink ${glow.pulseMs}ms ease-in-out infinite`
         : undefined
     : undefined;
-  const glowClass =
-    !pulse && glow.mode === "liq"
-      ? "expandable-cash-out-glow expandable-cash-out-glow-static-liq"
-      : !pulse && glow.mode === "win"
-        ? "expandable-cash-out-glow expandable-cash-out-glow-static-win"
-        : "expandable-cash-out-glow";
+  const glowClass = "expandable-cash-out-glow";
 
   return (
     <button
       type="button"
       data-cash-out
-      aria-label={`Cash out $${formatUsd(cashOut)}`}
-      className={`relative isolate overflow-hidden border border-white/10 text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.04] active:scale-[0.99] ${className}`}
+      aria-label="Cash out"
+      className={`relative isolate overflow-hidden text-white transition-[transform,background-color] duration-150 ease-out hover:brightness-110 active:scale-[0.99] ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
+      <span
+        aria-hidden
+        className="absolute inset-0 rounded-[inherit]"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%)",
+        }}
+      />
+      <GradientBorder />
       {glow.mode !== "off" && (
         <span
           aria-hidden
-          className={`${glowClass} pointer-events-none absolute inset-0 rounded-[inherit] motion-reduce:opacity-60`}
+          className={`${glowClass} pointer-events-none absolute inset-0 z-[1] rounded-[inherit] motion-reduce:opacity-60`}
           style={{
             ["--cash-out-glow-strength" as string]: glow.strength,
             animation,
           }}
         />
       )}
-      <span className="relative z-[1] inline-flex items-baseline [font-feature-settings:'lnum'_1,'tnum'_1]">
-        {compact ? <span>$</span> : <span>Cash Out&nbsp;$</span>}
-        <NumberFlow
-          value={cashOut}
-          trend={0}
-          format={{ useGrouping: true }}
-          className="tabular-nums text-inherit"
-          style={{ ["--number-flow-mask-height" as string]: "0em" }}
-        />
-        {pnl != null && (
-          <span
-            className={`ml-1.5 inline-flex items-baseline font-semibold ${
-              pnl >= 0 ? "text-[#5dd978]" : "text-[#ff4d5e]"
-            }`}
-          >
-            <span>({pnl >= 0 ? "+$" : "-$"}</span>
-            <NumberFlow
-              value={Math.abs(pnl)}
-              trend={0}
-              format={{ useGrouping: true }}
-              className="tabular-nums text-inherit"
-              style={{ ["--number-flow-mask-height" as string]: "0em" }}
-            />
-            <span>)</span>
-          </span>
-        )}
+      <span className="relative z-[3]">
+        {amount != null ? `Cash Out $${formatUsd(amount)}` : "Cash Out"}
       </span>
     </button>
   );
@@ -416,134 +512,55 @@ function CompactBar({
   fillCents,
   liqCents,
   entryCents,
+  showLiq = true,
 }: {
   fillCents: number;
   liqCents: number;
   entryCents: number;
+  showLiq?: boolean;
 }) {
-  const barRef = useRef<HTMLDivElement>(null);
-  const [tip, setTip] = useState<BarTooltipState>({ kind: null, x: 0, y: 0 });
   const belowEntry = fillCents < entryCents;
   const fillPct = clamp((fillCents / TRACK_CENTS) * 100, 0, 100);
   const liqPct = clampLiqPct(liqCents, entryCents);
   const entryPct = clamp((entryCents / TRACK_CENTS) * 100, 0, 100);
-  const liqInset = (COMPACT_TRACK_HEIGHT - COMPACT_LIQ_HEIGHT) / 2;
-
-  const fillColor = belowEntry
-    ? tip.kind === "price"
-      ? BAR_FILL_BELOW_ENTRY_HOVER
-      : BAR_FILL_BELOW_ENTRY
-    : tip.kind === "price"
-      ? BAR_FILL_HOVER
-      : BAR_FILL_COLOR;
-
-  const anchorTip = (kind: Exclude<TipKind, null>, el: HTMLElement) => {
-    const rect = el.getBoundingClientRect();
-    setTip({
-      kind,
-      x: rect.left + rect.width / 2,
-      y: rect.top,
-    });
-  };
-
-  useEffect(() => {
-    if (tip.kind !== "price" || !barRef.current) return;
-    const sync = () => {
-      const rect = barRef.current!.getBoundingClientRect();
-      setTip((prev) =>
-        prev.kind === "price"
-          ? { ...prev, x: rect.left + rect.width / 2, y: rect.top }
-          : prev,
-      );
-    };
-    window.addEventListener("scroll", sync, true);
-    window.addEventListener("resize", sync);
-    return () => {
-      window.removeEventListener("scroll", sync, true);
-      window.removeEventListener("resize", sync);
-    };
-  }, [tip.kind]);
+  const fillColor = belowEntry ? BAR_FILL_BELOW_ENTRY : BAR_FILL_COLOR;
 
   return (
-    <div
-      ref={barRef}
-      className="relative w-full shrink-0"
-      style={{ height: COMPACT_TRACK_HEIGHT }}
-      onMouseLeave={() => setTip((prev) => ({ ...prev, kind: null }))}
-    >
+    <div className="relative w-full min-w-0 flex-1" style={{ height: COMPACT_TRACK_HEIGHT }}>
       <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-lg">
         <div
-          className="absolute inset-0 rounded-lg transition-colors duration-150 ease-out"
-          style={{
-            backgroundColor:
-              tip.kind === "price" ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)",
-          }}
+          className="absolute inset-0 rounded-lg"
+          style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
         />
         <div
           className="absolute left-0 top-0 h-full rounded-lg"
           style={{
             width: `${fillPct}%`,
             backgroundColor: fillColor,
-            transition: "width 700ms ease-out, background-color 150ms ease-out",
+            transition: "width 700ms ease-out",
           }}
         />
       </div>
-
       <div
-        className="absolute inset-0 z-[5] cursor-pointer"
-        aria-label={`Current price ${Math.round(fillCents)}¢`}
-        onMouseEnter={() => {
-          if (!barRef.current) return;
-          anchorTip("price", barRef.current);
-        }}
-      />
-
-      <div
-        className="absolute top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center"
+        className="pointer-events-none absolute top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-sm"
         style={{
           left: `${entryPct}%`,
-          width: Math.max(COMPACT_ENTRY_W, 12),
-          height: COMPACT_TRACK_HEIGHT,
+          width: COMPACT_ENTRY_W,
+          height: COMPACT_ENTRY_H,
+          backgroundColor: "rgba(255,255,255,0.2)",
         }}
-        aria-label={`Entry at ${entryCents}¢`}
-        onMouseEnter={(e) => anchorTip("entry", e.currentTarget)}
-      >
-        <div
-          className="pointer-events-none rounded-sm transition-colors duration-150 ease-out"
-          style={{
-            width: COMPACT_ENTRY_W,
-            height: COMPACT_ENTRY_H,
-            backgroundColor:
-              tip.kind === "entry" ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.24)",
-          }}
-        />
-      </div>
-
-      <div
-        className="absolute top-1/2 z-10 flex -translate-y-1/2 cursor-pointer items-center"
-        style={{
-          left: liqInset,
-          width: `${liqPct}%`,
-          height: COMPACT_TRACK_HEIGHT,
-        }}
-        aria-label={`Liquidation at ${liqCents}¢`}
-        onMouseEnter={(e) => anchorTip("liq", e.currentTarget)}
-      >
-        <div
-          className="pointer-events-none w-full rounded transition-colors duration-150 ease-out"
-          style={{
-            height: COMPACT_LIQ_HEIGHT,
-            backgroundColor: tip.kind === "liq" ? LIQ_HOVER : LIQ_COLOR,
-          }}
-        />
-      </div>
-
-      <BarTooltip
-        tip={tip}
-        currentPriceCents={Math.round(fillCents)}
-        liquidationCents={liqCents}
-        entryCents={entryCents}
       />
+      {showLiq ? (
+        <div
+          className="pointer-events-none absolute top-1/2 z-10 -translate-y-1/2 rounded"
+          style={{
+            left: 6,
+            width: `calc(${liqPct}% - 6px)`,
+            height: COMPACT_LIQ_HEIGHT,
+            backgroundColor: LIQ_COLOR,
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -552,10 +569,12 @@ function ExpandedBar({
   fillCents,
   liqCents,
   entryCents,
+  showLiq = true,
 }: {
   fillCents: number;
   liqCents: number;
   entryCents: number;
+  showLiq?: boolean;
 }) {
   const [tip, setTip] = useState<BarTooltipState>({ kind: null, x: 0, y: 0 });
   const belowEntry = fillCents < entryCents;
@@ -577,7 +596,7 @@ function ExpandedBar({
 
   return (
     <div
-      className="relative h-[100px] w-full overflow-hidden rounded-lg"
+      className="relative h-[100px] w-full overflow-hidden rounded-xl"
       onMouseLeave={() => setTip((prev) => ({ ...prev, kind: null }))}
     >
       <div
@@ -585,7 +604,7 @@ function ExpandedBar({
         style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
       />
       <div
-        className="absolute inset-y-0 left-0 rounded-lg"
+        className="absolute inset-y-0 left-0 rounded-xl"
         style={{
           width: `${fillPct}%`,
           backgroundColor: fillColor,
@@ -609,42 +628,47 @@ function ExpandedBar({
         />
       </div>
 
-      <div
-        className="absolute top-1/2 z-10 flex h-[88px] -translate-y-1/2 cursor-pointer items-center"
-        style={{
-          left: 6,
-          width: `calc(${liqPct}% - 6px)`,
-        }}
-        aria-label={`Liquidation at ${liqCents}¢`}
-        onMouseEnter={(e) => anchorTip("liq", e.currentTarget)}
-      >
+      {showLiq ? (
         <div
-          className="pointer-events-none h-full w-full rounded transition-colors duration-150 ease-out"
-          style={{
-            backgroundColor: tip.kind === "liq" ? LIQ_HOVER : LIQ_COLOR,
-          }}
-        />
-        <span className="pointer-events-none absolute bottom-[6px] left-1.5 text-[10px] font-semibold leading-[1.25] text-white/60 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-          Liq.
-        </span>
-      </div>
+          className="absolute top-2.5 z-10 flex cursor-pointer items-end gap-1.5"
+          style={{ left: `${liqPct}%` }}
+          aria-label={`Liquidation at ${liqCents}¢`}
+          onMouseEnter={(e) => anchorTip("liq", e.currentTarget)}
+        >
+          <div
+            className="h-[82px] w-[3px] shrink-0 rounded-lg transition-colors duration-150 ease-out"
+            style={{
+              backgroundColor: tip.kind === "liq" ? LIQ_HOVER : LIQ_COLOR,
+            }}
+          />
+          <div className="flex flex-col items-start leading-[1.25]">
+            <span className="text-[10px] font-semibold text-white/60">Liq.</span>
+            <span className="text-xl font-semibold tracking-[0.4px] text-white">
+              {liqCents}¢
+            </span>
+          </div>
+        </div>
+      ) : null}
 
       <div
-        className="absolute top-1/2 z-10 flex h-[88px] w-4 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center"
+        className="absolute top-2.5 z-10 flex cursor-pointer items-end gap-1.5"
         style={{ left: `${entryPct}%` }}
         aria-label={`Entry at ${entryCents}¢`}
         onMouseEnter={(e) => anchorTip("entry", e.currentTarget)}
       >
         <div
-          className="pointer-events-none h-full w-[3px] rounded-sm transition-colors duration-150 ease-out"
+          className="h-[82px] w-[3px] shrink-0 rounded-sm transition-colors duration-150 ease-out"
           style={{
             backgroundColor:
-              tip.kind === "entry" ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.24)",
+              tip.kind === "entry" ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.2)",
           }}
         />
-        <span className="pointer-events-none absolute bottom-[5px] left-3 text-[10px] font-semibold leading-[1.25] text-white/60 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-          Entry
-        </span>
+        <div className="flex flex-col items-start leading-[1.25]">
+          <span className="text-[10px] font-semibold text-white/60">Entry</span>
+          <span className="text-xl font-semibold tracking-[0.4px] text-white">
+            {entryCents}¢
+          </span>
+        </div>
       </div>
 
       <BarTooltip
@@ -653,6 +677,22 @@ function ExpandedBar({
         liquidationCents={liqCents}
         entryCents={entryCents}
       />
+    </div>
+  );
+}
+
+function ExpandedCardShell({
+  children,
+  particles,
+}: {
+  children: ReactNode;
+  particles?: ReactNode;
+}) {
+  return (
+    <div className="group relative flex w-full flex-col gap-4 overflow-hidden rounded-3xl bg-white/[0.04] p-4 backdrop-blur-[17px]">
+      <GradientBorder />
+      {particles}
+      <div className="relative z-[1] flex w-full flex-col gap-4">{children}</div>
     </div>
   );
 }
@@ -669,42 +709,75 @@ function ExpandedCard({
   const { cashOut, pnl } = positionValue(row, fillCents);
   const toWin = positionValue(row, TRACK_CENTS).cashOut;
   const arrows = pnl >= 0 ? "up" : "down";
+  const pnlPositive = pnl >= 0;
 
   return (
-    <div className="group relative flex w-full flex-col gap-4 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-[17px]">
-      {pulseGlow && <ExpandableParticles direction={arrows} />}
-      <div className="relative z-[1] flex w-full flex-col gap-4">
+    <ExpandedCardShell
+      particles={pulseGlow ? <ExpandableParticles direction={arrows} /> : null}
+    >
       <div className="flex w-full items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-[13px]">
-          <div className="relative size-[68px] shrink-0 overflow-hidden rounded-lg">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="relative h-[51px] w-[68px] shrink-0 overflow-hidden rounded-[7px]">
             <img
               alt=""
-              className="pointer-events-none size-full object-cover"
-              src={IMG_THUMB}
+              className="pointer-events-none absolute inset-0 size-full object-cover"
+              src={IMG_FLAG}
               width={68}
-              height={68}
+              height={51}
               draggable={false}
             />
           </div>
-          <div className="flex min-w-0 flex-col items-start justify-center gap-2">
-            <p className="truncate text-xl font-semibold leading-[1.25] tracking-[0.4px] text-white">
-              {row.title}
-            </p>
+          <div className="flex min-w-0 flex-col items-start justify-center gap-1.5">
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="truncate text-xl font-semibold leading-[1.25] tracking-[0.4px] text-white">
+                {row.title}
+              </p>
+              {row.badge ? <TitleBadge label={row.badge} tone="lime" /> : null}
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <SideBadge side={row.side} />
-              <LeverageBadge leverage={row.leverage} />
-              <StakeLabel
-                stake={row.stake}
-                entryCents={row.entryCents}
-                toWin={toWin}
-              />
+              {row.showLeverage !== false ? (
+                <LeverageBadge leverage={row.leverage} />
+              ) : null}
+              <StakeLabel stake={row.stake} toWin={toWin} />
             </div>
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-2.5">
-          <IconButton size={56} label="Share position" onClick={(e) => e.stopPropagation()}>
-            <img src={IMG_SHARE_20} alt="" width={20} height={20} className="pointer-events-none" />
+        <div className="flex shrink-0 items-center gap-6">
+          <div className="flex w-[120px] shrink-0 flex-col items-end text-right">
+            <span className="-mb-1 text-sm font-normal leading-[1.25] text-white/60">
+              PnL
+            </span>
+            <p
+              className={`text-[40px] font-semibold leading-[1.25] tabular-nums ${
+                instrumentSansCondensed.className
+              } ${pnlPositive ? "text-[#5dd978]" : "text-[#ff4d5e]"}`}
+            >
+              <span className="inline-flex items-baseline justify-end">
+                <span>{pnlPositive ? "+$" : "-$"}</span>
+                <NumberFlow
+                  value={Math.abs(pnl)}
+                  trend={0}
+                  format={{ useGrouping: true }}
+                  className="tabular-nums text-inherit"
+                  style={{ ["--number-flow-mask-height" as string]: "0em" }}
+                />
+              </span>
+            </p>
+          </div>
+          <IconButton
+            size={60}
+            label="Share position"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={IMG_SHARE_24}
+              alt=""
+              width={24}
+              height={24}
+              className="pointer-events-none"
+            />
           </IconButton>
         </div>
       </div>
@@ -713,19 +786,18 @@ function ExpandedCard({
         fillCents={fillCents}
         liqCents={row.liqCents}
         entryCents={row.entryCents}
+        showLiq={row.showLiq !== false}
       />
 
       <CashOutButton
-        cashOut={cashOut}
         fillCents={fillCents}
         entryCents={row.entryCents}
         liqCents={row.liqCents}
         pulse={pulseGlow}
-        pnl={pnl}
+        amount={cashOut}
         className="flex h-14 w-full items-center justify-center rounded-full text-base font-semibold leading-[1.25]"
       />
-      </div>
-    </div>
+    </ExpandedCardShell>
   );
 }
 
@@ -740,42 +812,53 @@ function CompactRow({
   pulseGlow: boolean;
   onExpand: () => void;
 }) {
-  const { cashOut } = positionValue(row, fillCents);
+  const { cashOut, pnl } = positionValue(row, fillCents);
+  const toWin = positionValue(row, TRACK_CENTS).cashOut;
+
   return (
     <div
-      className={`${DESKTOP_ROW} cursor-pointer rounded-2xl px-4 py-2 transition-[background-color,transform] duration-150 ease-out hover:bg-white/[0.06] active:scale-[0.99]`}
+      className="flex w-full cursor-pointer items-center gap-6 rounded-2xl px-4 py-3.5 transition-[background-color,transform] duration-150 ease-out hover:bg-white/[0.06] active:scale-[0.99]"
       onClick={onExpand}
     >
-      <p className="min-w-0 truncate text-base font-semibold leading-[1.25] text-white">
-        {row.title}
-      </p>
-
-      <div className="flex items-center gap-2">
-        <SideBadge side={row.side} compact />
-        <LeverageBadge leverage={row.leverage} />
+      <div className="flex w-[240px] shrink-0 flex-col items-start justify-center gap-1.5">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <p className="truncate text-xl font-semibold leading-[1.25] tracking-[0.4px] text-white">
+            {row.title}
+          </p>
+          {row.badge ? <TitleBadge label={row.badge} /> : null}
+        </div>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <SideBadge side={row.side} compact />
+          {row.showLeverage !== false ? (
+            <LeverageBadge leverage={row.leverage} />
+          ) : null}
+          <StakeLabel stake={row.stake} toWin={toWin} />
+        </div>
       </div>
-
-      <StakeLabel stake={row.stake} entryCents={row.entryCents} />
 
       <CompactBar
         fillCents={fillCents}
         liqCents={row.liqCents}
         entryCents={row.entryCents}
+        showLiq={row.showLiq !== false}
       />
 
-      <div className="flex items-center justify-end gap-2">
-        <CashOutButton
-          compact
-          cashOut={cashOut}
-          fillCents={fillCents}
-          entryCents={row.entryCents}
-          liqCents={row.liqCents}
-          pulse={pulseGlow}
-          className="flex h-10 w-[100px] shrink-0 items-center justify-center rounded-full text-sm font-semibold leading-[1.25]"
-        />
-        <IconButton size={40} label="Share position" onClick={(e) => e.stopPropagation()}>
-          <img src={IMG_SHARE_16} alt="" width={16} height={16} />
-        </IconButton>
+      <div className="flex shrink-0 items-center gap-6">
+        <ValueAmount cashOut={cashOut} pnl={pnl} size="sm" />
+        <div className="flex items-center gap-2.5">
+          <CashOutButton
+            fillCents={fillCents}
+            entryCents={row.entryCents}
+            liqCents={row.liqCents}
+            pulse={pulseGlow}
+          />
+          <IconButton
+            label="Share position"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img src={IMG_SHARE_16} alt="" width={16} height={16} />
+          </IconButton>
+        </div>
       </div>
     </div>
   );
@@ -796,95 +879,57 @@ function MobileCard({
 }) {
   const { cashOut, pnl } = positionValue(row, fillCents);
   const toWin = positionValue(row, TRACK_CENTS).cashOut;
-  const arrows = pnl >= 0 ? "up" : "down";
 
   if (expanded) {
     return (
-      <div className="group relative flex w-full flex-col gap-4 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-[17px]">
-        {pulseGlow && <ExpandableParticles direction={arrows} />}
-        <div className="relative z-[1] flex w-full flex-col gap-4">
-        <div className="flex w-full items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="relative size-12 shrink-0 overflow-hidden rounded-lg">
-              <img
-                alt=""
-                className="pointer-events-none size-full object-cover"
-                src={IMG_THUMB}
-                width={48}
-                height={48}
-                draggable={false}
-              />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <p className="truncate text-base font-semibold leading-[1.25] text-white">
-                {row.title}
-              </p>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <SideBadge side={row.side} />
-                <LeverageBadge leverage={row.leverage} />
-                <StakeLabel
-                  stake={row.stake}
-                  entryCents={row.entryCents}
-                  toWin={toWin}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <IconButton size={40} label="Share position" onClick={(e) => e.stopPropagation()}>
-              <img src={IMG_SHARE_16} alt="" width={16} height={16} />
-            </IconButton>
-          </div>
-        </div>
-
-        <ExpandedBar
-          fillCents={fillCents}
-          liqCents={row.liqCents}
-          entryCents={row.entryCents}
-        />
-
-        <CashOutButton
-          cashOut={cashOut}
-          fillCents={fillCents}
-          entryCents={row.entryCents}
-          liqCents={row.liqCents}
-          pulse={pulseGlow}
-          pnl={pnl}
-          className="flex h-12 w-full items-center justify-center rounded-full text-sm font-semibold"
-        />
-        </div>
-      </div>
+      <ExpandedCard row={row} fillCents={fillCents} pulseGlow={pulseGlow} />
     );
   }
 
   return (
     <div
-      className="-mx-2 flex w-full cursor-pointer items-center gap-3 rounded-2xl px-2 py-2 transition-[background-color,transform] duration-150 ease-out hover:bg-white/[0.06] active:scale-[0.99]"
+      className="-mx-2 flex w-full cursor-pointer flex-col gap-2.5 rounded-2xl px-2 py-3.5 transition-[background-color,transform] duration-150 ease-out hover:bg-white/[0.06] active:scale-[0.99]"
       onClick={onToggle}
     >
-      <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5 text-left">
-        <p className="truncate text-base font-semibold leading-[1.25] text-white">
-          {row.title}
-        </p>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <SideBadge side={row.side} compact />
-          <LeverageBadge leverage={row.leverage} />
-          <StakeLabel stake={row.stake} entryCents={row.entryCents} />
+      <div className="flex w-full items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-1 flex-col items-start gap-1 text-left">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <p className="truncate text-sm font-semibold leading-[1.25] text-white">
+              {row.title}
+            </p>
+            {row.badge ? <TitleBadge label={row.badge} /> : null}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <SideBadge side={row.side} compact />
+            {row.showLeverage !== false ? (
+              <LeverageBadge leverage={row.leverage} />
+            ) : null}
+            <StakeLabel stake={row.stake} toWin={toWin} />
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <ValueAmount cashOut={cashOut} pnl={pnl} size="sm" />
+          <IconButton
+            label="Share position"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img src={IMG_SHARE_16} alt="" width={16} height={16} />
+          </IconButton>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex w-full items-center gap-2.5">
+        <CompactBar
+          fillCents={fillCents}
+          liqCents={row.liqCents}
+          entryCents={row.entryCents}
+          showLiq={row.showLiq !== false}
+        />
         <CashOutButton
-          compact
-          cashOut={cashOut}
           fillCents={fillCents}
           entryCents={row.entryCents}
           liqCents={row.liqCents}
           pulse={pulseGlow}
-          className="flex h-10 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold"
         />
-        <IconButton size={40} label="Share position" onClick={(e) => e.stopPropagation()}>
-          <img src={IMG_SHARE_16} alt="" width={16} height={16} />
-        </IconButton>
       </div>
     </div>
   );

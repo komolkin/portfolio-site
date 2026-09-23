@@ -13,6 +13,12 @@ export type ExpandableRow = {
   liqCents: number;
   /** Starting current price in cents */
   fillCentsBase: number;
+  /** Optional badge shown next to the title (e.g. Copied) */
+  badge?: string;
+  /** When false, hide the leverage pill (default true) */
+  showLeverage?: boolean;
+  /** When false, hide the red liq segment on the progress bar (default true) */
+  showLiq?: boolean;
 };
 
 export const EXPANDABLE_ROWS: ExpandableRow[] = [
@@ -22,8 +28,8 @@ export const EXPANDABLE_ROWS: ExpandableRow[] = [
     side: "YES",
     leverage: "3×",
     stake: 1_000,
-    entryCents: 20,
-    liqCents: 8,
+    entryCents: 50,
+    liqCents: 10,
     fillCentsBase: 50,
   },
   {
@@ -35,6 +41,9 @@ export const EXPANDABLE_ROWS: ExpandableRow[] = [
     entryCents: 20,
     liqCents: 12,
     fillCentsBase: 76,
+    badge: "Copied",
+    showLeverage: false,
+    showLiq: false,
   },
   {
     id: "3",
@@ -44,7 +53,7 @@ export const EXPANDABLE_ROWS: ExpandableRow[] = [
     stake: 300,
     entryCents: 20,
     liqCents: 15,
-    fillCentsBase: 99,
+    fillCentsBase: 16,
   },
   {
     id: "4",
@@ -52,8 +61,8 @@ export const EXPANDABLE_ROWS: ExpandableRow[] = [
     side: "NO",
     leverage: "3×",
     stake: 300,
-    entryCents: 93,
-    liqCents: 90,
-    fillCentsBase: 96,
+    entryCents: 40,
+    liqCents: 16,
+    fillCentsBase: 55,
   },
 ];
