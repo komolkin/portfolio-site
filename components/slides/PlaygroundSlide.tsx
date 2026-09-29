@@ -29,6 +29,7 @@ import Buttony from "@/components/playground/projects/buttony/Buttony";
 import Leverage from "@/components/playground/projects/leverage/Leverage";
 import Spotlight from "@/components/playground/projects/spotlight/Spotlight";
 import Bubbly from "@/components/playground/projects/bubbly/Bubbly";
+import LivePreview from "@/components/playground/projects/live-preview/LivePreview";
 
 export default function PlaygroundSlide() {
   const pathname = usePathname();
@@ -75,7 +76,8 @@ export default function PlaygroundSlide() {
     activeProject === "buttony" ||
     activeProject === "leverage" ||
     activeProject === "spotlight" ||
-    activeProject === "bubbly"
+    activeProject === "bubbly" ||
+    activeProject === "live-preview"
       ? "h-full [zoom:1]"
       : activeProject.startsWith("position-")
         ? "[zoom:0.6]"
@@ -126,6 +128,7 @@ export default function PlaygroundSlide() {
             {activeProject === "leverage" && <Leverage />}
             {activeProject === "spotlight" && <Spotlight />}
             {activeProject === "bubbly" && <Bubbly />}
+            {activeProject === "live-preview" && <LivePreview />}
           </motion.div>
         </AnimatePresence>
       </main>

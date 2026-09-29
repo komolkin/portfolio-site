@@ -4,6 +4,7 @@ import { Providers } from "./providers";
 import SelectionColor from "@/components/SelectionColor";
 import { AgentationToolbar } from "@/components/AgentationToolbar";
 import { Analytics } from "@vercel/analytics/next";
+import { instrumentSans } from "@/lib/fonts";
 
 export const metadata: Metadata = {
   title: "Ilya Komolkin",
@@ -17,8 +18,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={instrumentSans.variable}
+    >
+      <body className={`${instrumentSans.className} font-sans`}>
         <Providers>
           {children}
           <SelectionColor />

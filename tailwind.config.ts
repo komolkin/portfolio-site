@@ -7,6 +7,13 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: [
+          "var(--font-instrument-sans)",
+          "system-ui",
+          "sans-serif",
+        ],
+      },
       fontSize: {
         sm: ["0.9375rem", { lineHeight: "1.4" }], // 15px
       },
