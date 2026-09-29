@@ -239,7 +239,7 @@ export default function LivePreview() {
               percent={leftPct}
             />
 
-            <div className="flex h-[72px] w-[100px] shrink-0 flex-col items-center justify-center gap-0.5">
+            <div className="flex h-[80px] w-[100px] shrink-0 flex-col items-center justify-center gap-1.5">
               <p className="text-xs font-semibold leading-[1.25] text-white/60">
                 ATP
               </p>
@@ -266,11 +266,11 @@ export default function LivePreview() {
                     />
                   </div>
                   {isEnded ? (
-                    <p className="pt-1 text-xs font-semibold leading-[1.25] text-white/60">
+                    <p className="pt-1.5 text-xs font-semibold leading-[1.25] text-white/60">
                       Full Time
                     </p>
                   ) : (
-                    <div className="flex items-center justify-center gap-2 pt-1 pr-1">
+                    <div className="flex items-center justify-center gap-2 pt-1.5 pr-1">
                       <span
                         aria-hidden
                         className="size-1 shrink-0 animate-pulse rounded-full bg-[#ff4d5e]"
@@ -308,7 +308,7 @@ export default function LivePreview() {
                   )}
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center gap-0.5 whitespace-nowrap">
+                <div className="flex flex-col items-center justify-center gap-1.5 whitespace-nowrap">
                   {countdown ? (
                     <p className="inline-flex items-baseline text-sm font-semibold leading-[1.25] text-white tabular-nums">
                       <span className="mr-1">in</span>
