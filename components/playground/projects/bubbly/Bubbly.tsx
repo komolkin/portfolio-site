@@ -234,13 +234,12 @@ export default function Bubbly() {
                 />
               ))}
             </div>
-          </div>
-
-          <div className="pointer-events-none absolute left-2 top-[52.75px] z-20 flex h-[41px] flex-col items-start justify-end leading-[1.25]">
-            <span className="text-[10px] font-semibold text-white/60">Liq.</span>
-            <span className="text-xl font-semibold tracking-[0.4px] text-white">
-              {LIQ_LABEL}¢
-            </span>
+            <div className="absolute right-2 top-[47.75px] z-20 flex h-[41px] flex-col items-end justify-end text-right leading-[1.25]">
+              <span className="text-[10px] font-semibold text-white/60">Liq.</span>
+              <span className="text-xl font-semibold tracking-[0.4px] text-white">
+                {LIQ_LABEL}¢
+              </span>
+            </div>
           </div>
 
           <div

@@ -4,6 +4,7 @@ import NumberFlow from "@number-flow/react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import {
+  CardEffectAura,
   CardEffectSelect,
   CardEffectSurface,
   type CardEffectId,
@@ -54,8 +55,9 @@ export default function Leverage() {
 
         <div className="relative">
           {isMagic ? <MagicSparkles pad={22} /> : null}
+          <CardEffectAura effect={effect} />
           <article
-            className={`group relative isolate flex cursor-pointer overflow-hidden rounded-2xl bg-white/[0.04] p-5 transition-[background-color,transform,box-shadow] duration-150 ease-out hover:bg-white/[0.07] active:scale-[0.99] ${
+            className={`group relative z-[1] flex cursor-pointer overflow-hidden rounded-2xl bg-white/[0.04] p-5 transition-[background-color,transform,box-shadow] duration-150 ease-out hover:bg-white/[0.07] active:scale-[0.99] ${
               usesGlassRim
                 ? "shadow-[inset_0px_0px_4px_0px_rgba(255,255,255,0.25)] hover:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.38)]"
                 : ""
@@ -84,10 +86,8 @@ export default function Leverage() {
                     Will we achieve Artificial General Intelligence (AGI) by
                     December 31, 2026?
                   </p>
-                  <p className="flex items-start gap-1.5 whitespace-nowrap text-sm font-normal leading-[1.25] text-white/40">
-                    <span>$6m Vol.</span>
-                    <span aria-hidden>⋅</span>
-                    <span>3x leverage</span>
+                  <p className="whitespace-nowrap text-sm font-normal leading-[1.25] text-white/40">
+                    $6m Vol.
                   </p>
                 </div>
               </div>

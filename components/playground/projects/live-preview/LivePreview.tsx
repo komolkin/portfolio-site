@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { MagicSparkles } from "@/components/playground/card-foil";
 import {
   CARD_EFFECT_SELECT_CLASS,
+  CardEffectAura,
   CardEffectSelect,
   CardEffectSurface,
   type CardEffectId,
@@ -223,8 +224,9 @@ export default function LivePreview() {
 
       <div className="relative">
         {isMagic ? <MagicSparkles pad={22} /> : null}
+        <CardEffectAura effect={effect} />
         <article
-          className={`group relative flex h-[122px] w-[310px] cursor-pointer flex-col justify-center overflow-hidden rounded-2xl bg-white/[0.04] px-4 transition-[background-color,transform,box-shadow] duration-150 ease-out hover:bg-white/[0.07] active:scale-[0.99] ${
+          className={`group relative z-[1] flex h-[122px] w-[310px] cursor-pointer flex-col justify-center overflow-hidden rounded-2xl bg-white/[0.04] px-4 transition-[background-color,transform,box-shadow] duration-150 ease-out hover:bg-white/[0.07] active:scale-[0.99] ${
             usesGlassRim
               ? "shadow-[inset_0px_0px_4px_0px_rgba(255,255,255,0.25)] hover:shadow-[inset_0px_0px_6px_0px_rgba(255,255,255,0.38)]"
               : ""
@@ -239,7 +241,11 @@ export default function LivePreview() {
               percent={leftPct}
             />
 
-            <div className="flex h-[80px] w-[100px] shrink-0 flex-col items-center justify-center gap-1.5">
+            <div
+              className={`flex h-[80px] w-[100px] shrink-0 flex-col items-center justify-center ${
+                isLive ? "gap-0.5" : "gap-1.5"
+              }`}
+            >
               <p className="text-xs font-semibold leading-[1.25] text-white/60">
                 ATP
               </p>
@@ -270,7 +276,7 @@ export default function LivePreview() {
                       Full Time
                     </p>
                   ) : (
-                    <div className="flex items-center justify-center gap-2 pt-1.5 pr-1">
+                    <div className="flex items-center justify-center gap-2 pr-1">
                       <span
                         aria-hidden
                         className="size-1 shrink-0 animate-pulse rounded-full bg-[#ff4d5e]"

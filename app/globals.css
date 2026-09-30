@@ -29,6 +29,7 @@ html,
 body {
   height: 100%;
   overflow: hidden;
+  background-color: #141414;
 }
 
 #__next {
@@ -37,7 +38,12 @@ body {
 
 body {
   @apply font-sans text-foreground antialiased;
-  background: linear-gradient(
+  background-color: #141414;
+}
+
+/* Gradient + grid only when explicitly enabled */
+html[data-bg="gradient"] body {
+  background-image: linear-gradient(
     180deg,
     var(--bg-gradient-top) 0%,
     var(--bg-gradient-mid) 45%,
@@ -56,16 +62,16 @@ body::after {
   background-repeat: repeat;
   pointer-events: none;
   z-index: 0;
+  opacity: 0;
+  transition: opacity 200ms ease;
 }
 
-/* Dim base grid covering the whole viewport */
-body::before {
+html[data-bg="gradient"] body::before {
   background-color: transparent;
   opacity: 0.25;
 }
 
-/* Bright grid revealed only inside cluster regions via mask */
-body::after {
+html[data-bg="gradient"] body::after {
   opacity: 0.7;
   -webkit-mask-image:
     radial-gradient(ellipse 22% 22% at 4% 88%, #000, transparent 75%),
@@ -227,19 +233,15 @@ body > * {
   }
 }
 
-@keyframes live-preview-shiny-sheen {
-  to {
-    transform: translateX(-50%);
-  }
-}
-
 @keyframes live-preview-shiny-glow {
   0%,
   100% {
-    transform: translate(-18%, -12%) scale(1);
+    transform: translate(-22%, -16%) scale(1);
+    opacity: 0.55;
   }
   50% {
-    transform: translate(14%, 10%) scale(1.08);
+    transform: translate(18%, 12%) scale(1.12);
+    opacity: 1;
   }
 }
 
@@ -249,39 +251,85 @@ body > * {
   }
 }
 
-.live-preview-shiny-sheen {
-  animation: live-preview-shiny-sheen 12s linear infinite;
-  will-change: transform;
-}
-
-.live-preview-shiny-sheen-band {
-  background: linear-gradient(
-    115deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.01) 28%,
-    rgba(255, 255, 255, 0.045) 42%,
-    rgba(255, 255, 255, 0.09) 50%,
-    rgba(255, 255, 255, 0.04) 58%,
-    rgba(255, 255, 255, 0.01) 72%,
-    transparent 100%
-  );
-  mix-blend-mode: screen;
+.live-preview-shiny-ambient {
+  background:
+    radial-gradient(
+      120% 90% at 12% 0%,
+      rgba(255, 255, 255, 0.14) 0%,
+      rgba(210, 225, 255, 0.05) 28%,
+      transparent 58%
+    ),
+    radial-gradient(
+      90% 70% at 88% 100%,
+      rgba(180, 200, 230, 0.08) 0%,
+      transparent 55%
+    ),
+    linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 42%,
+      rgba(255, 255, 255, 0.03) 100%
+    );
 }
 
 .live-preview-shiny-glow {
   background: radial-gradient(
-    55% 65% at 50% 50%,
-    rgba(255, 255, 255, 0.07) 0%,
-    rgba(255, 255, 255, 0.025) 45%,
+    48% 55% at 50% 45%,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(200, 220, 255, 0.05) 38%,
+    transparent 70%
+  );
+  animation: live-preview-shiny-glow 9s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes live-preview-magic-card-aura {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.04);
+  }
+}
+
+.live-preview-magic-card-aura {
+  background: radial-gradient(
+    48% 52% at 50% 50%,
+    rgba(255, 255, 255, 0.26) 0%,
+    rgba(210, 225, 255, 0.12) 34%,
+    rgba(190, 210, 255, 0.04) 56%,
     transparent 72%
   );
-  mix-blend-mode: screen;
-  animation: live-preview-shiny-glow 10s ease-in-out infinite;
-  will-change: transform;
+  filter: blur(22px);
+  animation: live-preview-magic-card-aura 7.5s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.live-preview-shiny-rim {
+  padding: 1px;
 }
 
 .live-preview-shiny-border-spin {
-  animation: live-preview-shiny-border-spin 7.2s linear infinite;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    transparent 6%,
+    rgba(255, 255, 255, 0.04) 10%,
+    rgba(210, 225, 255, 0.22) 12.5%,
+    rgba(255, 255, 255, 0.72) 14%,
+    rgba(255, 255, 255, 0.2) 15.5%,
+    transparent 20%,
+    transparent 52%,
+    rgba(255, 255, 255, 0.03) 56%,
+    rgba(200, 220, 255, 0.14) 58%,
+    rgba(255, 255, 255, 0.32) 59.5%,
+    transparent 64%,
+    transparent 100%
+  );
+  animation: live-preview-shiny-border-spin 9.5s linear infinite;
   will-change: transform;
 }
 
@@ -291,6 +339,10 @@ body > * {
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
   -webkit-mask-composite: xor;
+}
+
+.live-preview-effect-border.live-preview-shiny-rim {
+  padding: 1px;
 }
 
 /* Frost */
@@ -331,11 +383,23 @@ body > * {
   0%,
   100% {
     filter: hue-rotate(0deg);
-    opacity: 0.7;
+    opacity: 0.55;
   }
   50% {
-    filter: hue-rotate(40deg);
-    opacity: 1;
+    filter: hue-rotate(28deg);
+    opacity: 0.85;
+  }
+}
+
+@keyframes live-preview-prism-caustic {
+  0%,
+  100% {
+    transform: translate(-10%, -6%) scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translate(10%, 8%) scale(1.06);
+    opacity: 0.6;
   }
 }
 
@@ -347,32 +411,78 @@ body > * {
 
 .live-preview-prism-wash {
   background: linear-gradient(
-    125deg,
-    rgba(120, 200, 255, 0.18) 0%,
-    transparent 32%,
-    rgba(255, 210, 150, 0.16) 52%,
-    transparent 72%,
-    rgba(160, 255, 210, 0.14) 100%
+    135deg,
+    rgba(140, 200, 255, 0.12) 0%,
+    transparent 28%,
+    rgba(200, 175, 255, 0.08) 45%,
+    transparent 58%,
+    rgba(255, 210, 165, 0.1) 72%,
+    transparent 88%,
+    rgba(160, 235, 210, 0.08) 100%
   );
-  mix-blend-mode: screen;
-  animation: live-preview-prism-wash 8s ease-in-out infinite;
+  mix-blend-mode: soft-light;
+  animation: live-preview-prism-wash 11s ease-in-out infinite;
+}
+
+.live-preview-prism-caustic {
+  background:
+    radial-gradient(
+      42% 48% at 28% 30%,
+      rgba(150, 205, 255, 0.1) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      38% 42% at 74% 68%,
+      rgba(255, 200, 155, 0.08) 0%,
+      transparent 70%
+    );
+  mix-blend-mode: soft-light;
+  filter: blur(14px);
+  animation: live-preview-prism-caustic 12s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.live-preview-prism-topline {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(180, 215, 255, 0.28) 35%,
+    rgba(255, 225, 195, 0.2) 55%,
+    rgba(175, 235, 215, 0.18) 70%,
+    transparent 100%
+  );
+  opacity: 0.55;
+}
+
+.live-preview-prism-rim {
+  padding: 1px;
 }
 
 .live-preview-prism-border-spin {
   background: conic-gradient(
     from 0deg,
     transparent 0%,
-    rgba(140, 210, 255, 0.2) 12%,
+    transparent 8%,
+    rgba(140, 200, 255, 0.06) 12%,
+    rgba(160, 210, 255, 0.32) 15%,
+    rgba(200, 175, 255, 0.14) 17%,
     transparent 22%,
-    rgba(255, 220, 170, 0.18) 38%,
     transparent 48%,
-    rgba(170, 255, 220, 0.16) 64%,
-    transparent 74%,
-    rgba(255, 255, 255, 0.22) 88%,
+    rgba(255, 210, 165, 0.05) 53%,
+    rgba(255, 220, 180, 0.24) 56%,
+    transparent 61%,
+    transparent 78%,
+    rgba(255, 255, 255, 0.08) 82%,
+    rgba(170, 230, 210, 0.2) 85%,
+    transparent 90%,
     transparent 100%
   );
-  animation: live-preview-prism-border-spin 10s linear infinite;
+  animation: live-preview-prism-border-spin 14s linear infinite;
   will-change: transform;
+}
+
+.live-preview-effect-border.live-preview-prism-rim {
+  padding: 1px;
 }
 
 /* Ember */
@@ -417,24 +527,31 @@ body > * {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .live-preview-shiny-sheen,
   .live-preview-shiny-glow,
   .live-preview-shiny-border-spin,
+  .live-preview-magic-card-aura,
   .live-preview-frost-mist,
   .live-preview-prism-wash,
+  .live-preview-prism-caustic,
   .live-preview-prism-border-spin,
   .live-preview-ember-glow,
   .live-preview-ember-edge {
     animation: none;
   }
 
-  .live-preview-shiny-sheen {
+  .live-preview-shiny-glow {
+    opacity: 0.45;
     transform: none;
-    opacity: 0.35;
   }
 
-  .live-preview-shiny-glow {
-    opacity: 0.3;
+  .live-preview-magic-card-aura {
+    opacity: 0.45;
+    transform: none;
+  }
+
+  .live-preview-prism-wash,
+  .live-preview-prism-caustic {
+    opacity: 0.4;
     transform: none;
   }
 

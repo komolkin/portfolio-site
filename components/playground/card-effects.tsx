@@ -16,6 +16,19 @@ const IMG_CHEVRON = "/playground/expandable/chevron-16.svg";
 export const CARD_EFFECT_SELECT_CLASS =
   "h-9 w-full cursor-pointer appearance-none rounded-full border border-white/10 bg-white/[0.06] py-0 pl-4 pr-9 text-sm font-medium text-white shadow-[inset_0_0_4px_rgba(255,255,255,0.18)] outline-none transition-[border-color,background-color] duration-150 hover:border-white/20 hover:bg-white/[0.08] focus-visible:border-white/30";
 
+/**
+ * Soft halo around the card for Magic. Sibling outside overflow-hidden
+ * (same pattern as MagicSparkles) — avoid negative z-index.
+ */
+export function CardEffectAura({ effect }: { effect: CardEffectId }) {
+  if (effect !== "magic") return null;
+  return (
+    <div aria-hidden className="pointer-events-none absolute -inset-10">
+      <div className="live-preview-magic-card-aura absolute inset-0 rounded-[2.5rem]" />
+    </div>
+  );
+}
+
 export function CardEffectSelect({
   value,
   onChange,
@@ -69,22 +82,12 @@ function ShinySurface() {
       aria-hidden
       className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
     >
-      <div className="live-preview-shiny-glow absolute -inset-[40%]" />
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="live-preview-shiny-sheen absolute inset-y-0 left-0 flex w-[200%]">
-          <div className="live-preview-shiny-sheen-band h-full w-1/2" />
-          <div className="live-preview-shiny-sheen-band h-full w-1/2" />
-        </div>
-      </div>
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-50" />
-      <div className="live-preview-effect-border absolute inset-0 overflow-hidden rounded-[inherit]">
-        <div
-          className="live-preview-shiny-border-spin absolute top-1/2 left-1/2 aspect-square w-[180%] -translate-x-1/2 -translate-y-1/2"
-          style={{
-            background:
-              "conic-gradient(from 0deg, transparent 0%, transparent 58%, rgba(255,255,255,0.03) 64%, rgba(255,255,255,0.32) 70%, rgba(255,255,255,0.1) 76%, transparent 82%, transparent 100%)",
-          }}
-        />
+      <div className="live-preview-shiny-ambient absolute inset-0" />
+      <div className="live-preview-shiny-glow absolute -inset-[45%]" />
+      <div className="absolute inset-x-[8%] top-0 h-px bg-gradient-to-r from-transparent via-white/45 to-transparent opacity-70" />
+      <div className="absolute inset-x-[18%] top-[1px] h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+      <div className="live-preview-effect-border live-preview-shiny-rim absolute inset-0 overflow-hidden rounded-[inherit]">
+        <div className="live-preview-shiny-border-spin absolute top-1/2 left-1/2 aspect-square w-[190%] -translate-x-1/2 -translate-y-1/2" />
       </div>
     </div>
   );
@@ -110,7 +113,9 @@ function PrismSurface() {
       className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
     >
       <div className="live-preview-prism-wash absolute inset-0" />
-      <div className="live-preview-effect-border absolute inset-0 overflow-hidden rounded-[inherit]">
+      <div className="live-preview-prism-caustic absolute -inset-[25%]" />
+      <div className="live-preview-prism-topline absolute inset-x-[12%] top-0 h-px" />
+      <div className="live-preview-effect-border live-preview-prism-rim absolute inset-0 overflow-hidden rounded-[inherit]">
         <div className="live-preview-prism-border-spin absolute top-1/2 left-1/2 aspect-square w-[190%] -translate-x-1/2 -translate-y-1/2" />
       </div>
     </div>

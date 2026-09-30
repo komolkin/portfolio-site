@@ -1,8 +1,8 @@
+import localFont from "next/font/local";
 import { Instrument_Sans } from "next/font/google";
 
 /**
- * Site-wide Instrument Sans (Google). Variable `wdth` axis covers condensed
- * numerals used in playground UIs (same look as the old local Condensed file).
+ * Site-wide Instrument Sans (Google).
  */
 export const instrumentSans = Instrument_Sans({
   subsets: ["latin", "latin-ext"],
@@ -11,7 +11,22 @@ export const instrumentSans = Instrument_Sans({
   axes: ["wdth"],
 });
 
-/** Condensed width (75) — for large numeric values in playground UIs. */
+/**
+ * Instrument Sans Condensed — local SemiBold for large numeric scores
+ * (matches Figma "Instrument Sans Condensed").
+ */
+const instrumentSansCondensedFont = localFont({
+  src: "../fonts/InstrumentSansCondensed-SemiBold.woff2",
+  weight: "600",
+  style: "normal",
+  display: "swap",
+  variable: "--font-instrument-sans-condensed",
+  declarations: [{ prop: "font-stretch", value: "condensed" }],
+});
+
+/** Condensed face + proportional (non-tabular) figures. */
 export const instrumentSansCondensed = {
-  className: "[font-variation-settings:'wdth'_75]",
+  className: `${instrumentSansCondensedFont.className} [font-variant-numeric:proportional-nums] [font-feature-settings:'pnum'_1,'tnum'_0]`,
+  variable: instrumentSansCondensedFont.variable,
+  style: instrumentSansCondensedFont.style,
 } as const;

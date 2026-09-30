@@ -10,23 +10,10 @@ interface PlaygroundNavProps {
 }
 
 const CLOSE_THRESHOLD = 72;
+const IMG_CHEVRON = "/playground/expandable/chevron-16.svg";
 
-function ChevronIcon() {
-  return (
-    <svg
-      className="h-4 w-4 shrink-0 text-muted-foreground"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      aria-hidden
-    >
-      <path
-        fillRule="evenodd"
-        d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
+const MOBILE_MENU_TRIGGER_CLASS =
+  "inline-flex h-9 max-w-full items-center justify-between gap-2 rounded-full border border-white/10 bg-white/[0.06] py-0 pl-4 pr-3 text-sm font-medium text-white shadow-[inset_0_0_4px_rgba(255,255,255,0.18)] outline-none transition-[border-color,background-color,transform] duration-150 hover:border-white/20 hover:bg-white/[0.08] focus-visible:border-white/30 active:scale-[0.97]";
 
 export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
   const [open, setOpen] = useState(false);
@@ -142,10 +129,17 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
           aria-haspopup="dialog"
           aria-controls="playground-project-drawer"
           tabIndex={mobileNavVisible && !open ? 0 : -1}
-          className="inline-flex max-w-full items-center justify-between gap-3 rounded-lg bg-black/40 px-4 py-2.5 text-left text-sm text-foreground backdrop-blur-md transition-transform active:scale-[0.95]"
+          className={MOBILE_MENU_TRIGGER_CLASS}
         >
-          <span className="whitespace-nowrap font-medium">{activeLabel}</span>
-          <ChevronIcon />
+          <span className="truncate">{activeLabel}</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={IMG_CHEVRON}
+            alt=""
+            aria-hidden
+            className="size-3.5 shrink-0 opacity-45"
+            draggable={false}
+          />
         </button>
       </div>
 
