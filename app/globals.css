@@ -29,6 +29,9 @@ html,
 body {
   height: 100%;
   overflow: hidden;
+}
+
+html {
   background-color: #141414;
 }
 
@@ -38,11 +41,16 @@ body {
 
 body {
   @apply font-sans text-foreground antialiased;
-  background-color: #141414;
+  background-color: transparent;
 }
 
-/* Gradient + grid only when explicitly enabled */
-html[data-bg="gradient"] body {
+/* Gradient layer — opacity-fades so toggles stay smooth (bg-image can't interpolate). */
+html::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
   background-image: linear-gradient(
     180deg,
     var(--bg-gradient-top) 0%,
@@ -50,6 +58,20 @@ html[data-bg="gradient"] body {
     var(--bg-gradient-bottom) 100%
   );
   background-attachment: fixed;
+  opacity: 0;
+  transition: opacity 480ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html[data-bg="gradient"]::before {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html::before,
+  body::before,
+  body::after {
+    transition: none;
+  }
 }
 
 body::before,
@@ -63,7 +85,7 @@ body::after {
   pointer-events: none;
   z-index: 0;
   opacity: 0;
-  transition: opacity 200ms ease;
+  transition: opacity 480ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html[data-bg="gradient"] body::before {
