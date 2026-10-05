@@ -29,7 +29,6 @@ const IMG_SHARE_ICON = "/playground/resolved-card/share-icon.svg";
 const CARD_WIDTH = 360;
 const CARD_HEIGHT = 468;
 const CARD_RADIUS = 24;
-const MOBILE_SCALE = 0.7;
 
 export default function ResolvedCard() {
   const [claimState, setClaimState] = useState<"idle" | "claiming" | "claimed">("idle");
@@ -139,189 +138,175 @@ export default function ResolvedCard() {
 
   return (
     <div className="relative flex h-full w-full items-center justify-center px-4">
-      <div className="flex flex-col items-center gap-6">
-        <div className="w-full" style={{ width: CARD_WIDTH }}>
-          <div
-            className="max-md:origin-top max-md:scale-[0.7]"
-            style={{ width: CARD_WIDTH }}
-          >
-            <CardEffectSelect value={effect} onChange={setEffect} />
-          </div>
+      <div className="flex flex-col items-center gap-6 [zoom:0.7] md:[zoom:1]">
+        <div style={{ width: CARD_WIDTH }}>
+          <CardEffectSelect value={effect} onChange={setEffect} />
         </div>
 
         <div
-          className="relative mb-6 shrink-0 md:mb-0"
+          className="relative"
           style={{
-            width: CARD_WIDTH * MOBILE_SCALE,
-            height: CARD_HEIGHT * MOBILE_SCALE,
+            width: CARD_WIDTH,
+            height: CARD_HEIGHT,
           }}
         >
+          {isMagic ? <MagicSparkles /> : null}
+          <CardEffectAura effect={effect} />
           <div
-            className="relative origin-top-left max-md:scale-[0.7] md:w-[360px]"
+            ref={cardRef}
+            onPointerMove={handlePointerMove}
+            onPointerLeave={handlePointerLeave}
+            className={`relative z-[1] isolate w-full overflow-hidden rounded-[24px] transition-[opacity,box-shadow] duration-300 ease-out ${
+              isVisible ? "opacity-100" : "opacity-0"
+            } ${
+              usesGlassRim
+                ? "shadow-[inset_0px_0px_4px_0px_rgba(255,255,255,0.25)]"
+                : "shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]"
+            }`}
             style={{
-              width: CARD_WIDTH,
-              minWidth: CARD_WIDTH,
-              maxWidth: CARD_WIDTH,
+              height: CARD_HEIGHT,
+              background: "#1d1d1d",
+              ...(isMagic ? FOIL_POINTER_STYLE : {}),
             }}
           >
-            {isMagic ? <MagicSparkles /> : null}
-            <CardEffectAura effect={effect} />
-            <div
-              ref={cardRef}
-              onPointerMove={handlePointerMove}
-              onPointerLeave={handlePointerLeave}
-              className={`relative z-[1] isolate w-full overflow-hidden rounded-[24px] transition-[opacity,box-shadow] duration-300 ease-out ${
-                isVisible ? "opacity-100" : "opacity-0"
-              } ${
-                usesGlassRim
-                  ? "shadow-[inset_0px_0px_4px_0px_rgba(255,255,255,0.25)]"
-                  : "shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]"
-              }`}
-              style={{
-                height: CARD_HEIGHT,
-                background: "#1d1d1d",
-                ...(isMagic ? FOIL_POINTER_STYLE : {}),
-              }}
-            >
-              <CardEffectSurface effect={effect} emberTone="green" />
-              {isMagic ? <GlitterFoil /> : null}
-              <div className="relative z-10 flex h-full flex-col gap-4 p-4">
-                <div className="flex flex-1 flex-col items-center justify-center pt-10 pb-4">
-                  <div className="flex flex-col items-center gap-6">
-                    <div className="relative h-[120px] w-[120px] shrink-0">
-                      <div className="absolute inset-0 rounded-xl">
-                        <img
-                          src={IMG_AVATAR}
-                          alt=""
-                          className="size-full rounded-xl object-cover"
-                        />
-                      </div>
-                      <div
-                        className="absolute left-[29px] top-[103px] h-[30px] w-[62px] overflow-hidden"
-                        aria-hidden
-                      >
-                        <img
-                          src={IMG_YES}
-                          alt="YES"
-                          className="absolute left-[-9.4%] top-[-32.89%] h-[169.74%] w-[119.39%] max-w-none"
-                        />
-                      </div>
+            <CardEffectSurface effect={effect} emberTone="green" />
+            {isMagic ? <GlitterFoil /> : null}
+            <div className="relative z-10 flex h-full flex-col gap-4 p-4">
+              <div className="flex flex-1 flex-col items-center justify-center pt-10 pb-4">
+                <div className="flex flex-col items-center gap-6">
+                  <div className="relative h-[120px] w-[120px] shrink-0">
+                    <div className="absolute inset-0 rounded-xl">
+                      <img
+                        src={IMG_AVATAR}
+                        alt=""
+                        className="size-full rounded-xl object-cover"
+                      />
                     </div>
-                    <div className="flex w-full flex-col items-center gap-1 text-center">
-                      <p className="text-base leading-[1.25] text-white/60">
-                        Best Actor winner at Oscars 2026?
-                      </p>
-                      <p className="text-2xl font-semibold leading-[1.25] text-white">
-                        Michael B. Jordan
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-auto flex w-full flex-col gap-[10px]">
-                  <div className="flex w-full flex-col gap-3 rounded-3xl bg-white/[0.04] p-4">
-                    <div className="flex items-center justify-between text-sm leading-[1.25]">
-                      <span className="text-white/60">Cost</span>
-                      <span className="text-white">$32.00</span>
-                    </div>
-                    <div className="h-px w-full bg-white/10" aria-hidden />
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="shrink-0 text-2xl font-semibold leading-none text-white/60">Won</span>
-                      <span className="min-w-0 text-right text-2xl font-normal leading-[1.25] text-[#5dd978] font-mono tabular-nums">
-                        $1,534.00
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex w-full items-center gap-[10px]">
-                    <button
-                      type="button"
-                      onClick={handleClaim}
-                      disabled={claimState !== "idle"}
-                      aria-busy={claimState === "claiming"}
-                      className="h-10 flex-1 shrink-0 overflow-hidden rounded-full border border-white/10 bg-transparent text-center text-sm font-semibold leading-[1.25] text-white transition-[transform,border-color,background-color,opacity] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95] disabled:cursor-not-allowed disabled:opacity-80"
-                    >
-                      <span className="relative inline-flex h-full w-full items-center justify-center">
-                        <span
-                          className={`absolute inset-0 inline-flex items-center justify-center gap-2 transition-all duration-200 ease-out ${
-                            claimState === "idle"
-                              ? "opacity-100 translate-y-0"
-                              : "opacity-0 translate-y-0.5"
-                          }`}
-                          aria-hidden={claimState !== "idle"}
-                        >
-                          <span>Claim</span>
-                        </span>
-
-                        <span
-                          className={`absolute inset-0 inline-flex items-center justify-center gap-2 transition-all duration-200 ease-out ${
-                            claimState === "claiming"
-                              ? "opacity-100 translate-y-0"
-                              : "opacity-0 translate-y-0.5"
-                          }`}
-                          aria-hidden={claimState !== "claiming"}
-                        >
-                          <span
-                            className="inline-block h-4 w-4 rounded-full border-2 border-white/25 border-t-white animate-spin"
-                            aria-hidden
-                          />
-                          <span>Claiming</span>
-                        </span>
-
-                        <span
-                          className={`absolute inset-0 inline-flex items-center justify-center gap-2 transition-all duration-200 ease-out ${
-                            claimState === "claimed"
-                              ? "opacity-100 translate-y-0"
-                              : "opacity-0 translate-y-0.5"
-                          }`}
-                          aria-hidden={claimState !== "claimed"}
-                        >
-                          <span
-                            className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-white"
-                            aria-hidden
-                          >
-                            <svg
-                              width="10"
-                              height="8"
-                              viewBox="0 0 12 9"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M1 4.5L4.25 7.75L11 1"
-                                stroke="#009D59"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          </span>
-                          <span>Claimed</span>
-                        </span>
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleShare}
-                      aria-label="Share"
-                      className="flex size-10 shrink-0 items-center justify-center rounded-full border border-white/10 text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
+                    <div
+                      className="absolute left-[29px] top-[103px] h-[30px] w-[62px] overflow-hidden"
+                      aria-hidden
                     >
                       <img
-                        src={IMG_SHARE_ICON}
-                        alt=""
-                        width={16}
-                        height={16}
-                        className="size-4"
-                        draggable={false}
-                        aria-hidden
+                        src={IMG_YES}
+                        alt="YES"
+                        className="absolute left-[-9.4%] top-[-32.89%] h-[169.74%] w-[119.39%] max-w-none"
                       />
-                    </button>
+                    </div>
+                  </div>
+                  <div className="flex w-full flex-col items-center gap-1 text-center">
+                    <p className="text-base leading-[1.25] text-white/60">
+                      Best Actor winner at Oscars 2026?
+                    </p>
+                    <p className="text-2xl font-semibold leading-[1.25] text-white">
+                      Michael B. Jordan
+                    </p>
                   </div>
                 </div>
               </div>
-              {(isMagic || effect === "default") && (
-                <GlassBorder radius={CARD_RADIUS} />
-              )}
+              <div className="mt-auto flex w-full flex-col gap-[10px]">
+                <div className="flex w-full flex-col gap-3 rounded-3xl bg-white/[0.04] p-4">
+                  <div className="flex items-center justify-between text-sm leading-[1.25]">
+                    <span className="text-white/60">Cost</span>
+                    <span className="text-white">$32.00</span>
+                  </div>
+                  <div className="h-px w-full bg-white/10" aria-hidden />
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="shrink-0 text-2xl font-semibold leading-none text-white/60">Won</span>
+                    <span className="min-w-0 text-right text-2xl font-normal leading-[1.25] text-[#5dd978] font-mono tabular-nums">
+                      $1,534.00
+                    </span>
+                  </div>
+                </div>
+                <div className="flex w-full items-center gap-[10px]">
+                  <button
+                    type="button"
+                    onClick={handleClaim}
+                    disabled={claimState !== "idle"}
+                    aria-busy={claimState === "claiming"}
+                    className="h-10 flex-1 shrink-0 overflow-hidden rounded-full border border-white/10 bg-transparent text-center text-sm font-semibold leading-[1.25] text-white transition-[transform,border-color,background-color,opacity] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95] disabled:cursor-not-allowed disabled:opacity-80"
+                  >
+                    <span className="relative inline-flex h-full w-full items-center justify-center">
+                      <span
+                        className={`absolute inset-0 inline-flex items-center justify-center gap-2 transition-all duration-200 ease-out ${
+                          claimState === "idle"
+                            ? "opacity-100 translate-y-0"
+                            : "opacity-0 translate-y-0.5"
+                        }`}
+                        aria-hidden={claimState !== "idle"}
+                      >
+                        <span>Claim</span>
+                      </span>
+
+                      <span
+                        className={`absolute inset-0 inline-flex items-center justify-center gap-2 transition-all duration-200 ease-out ${
+                          claimState === "claiming"
+                            ? "opacity-100 translate-y-0"
+                            : "opacity-0 translate-y-0.5"
+                        }`}
+                        aria-hidden={claimState !== "claiming"}
+                      >
+                        <span
+                          className="inline-block h-4 w-4 rounded-full border-2 border-white/25 border-t-white animate-spin"
+                          aria-hidden
+                        />
+                        <span>Claiming</span>
+                      </span>
+
+                      <span
+                        className={`absolute inset-0 inline-flex items-center justify-center gap-2 transition-all duration-200 ease-out ${
+                          claimState === "claimed"
+                            ? "opacity-100 translate-y-0"
+                            : "opacity-0 translate-y-0.5"
+                        }`}
+                        aria-hidden={claimState !== "claimed"}
+                      >
+                        <span
+                          className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-white"
+                          aria-hidden
+                        >
+                          <svg
+                            width="10"
+                            height="8"
+                            viewBox="0 0 12 9"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M1 4.5L4.25 7.75L11 1"
+                              stroke="#009D59"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </span>
+                        <span>Claimed</span>
+                      </span>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleShare}
+                    aria-label="Share"
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full border border-white/10 text-white transition-[transform,border-color,background-color] duration-150 ease-out hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.95]"
+                  >
+                    <img
+                      src={IMG_SHARE_ICON}
+                      alt=""
+                      width={16}
+                      height={16}
+                      className="size-4"
+                      draggable={false}
+                      aria-hidden
+                    />
+                  </button>
+                </div>
+              </div>
             </div>
+            {(isMagic || effect === "default") && (
+              <GlassBorder radius={CARD_RADIUS} />
+            )}
           </div>
         </div>
       </div>
