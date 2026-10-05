@@ -68,11 +68,18 @@ export function CardEffectSelect({
   );
 }
 
-export function CardEffectSurface({ effect }: { effect: CardEffectId }) {
+export function CardEffectSurface({
+  effect,
+  emberTone = "warm",
+}: {
+  effect: CardEffectId;
+  /** Resolved / win cards use a green ember; playground defaults stay warm. */
+  emberTone?: "warm" | "green";
+}) {
   if (effect === "shiny") return <ShinySurface />;
   if (effect === "frost") return <FrostSurface />;
   if (effect === "prism") return <PrismSurface />;
-  if (effect === "ember") return <EmberSurface />;
+  if (effect === "ember") return <EmberSurface tone={emberTone} />;
   return null;
 }
 
@@ -122,14 +129,23 @@ function PrismSurface() {
   );
 }
 
-function EmberSurface() {
+function EmberSurface({ tone = "warm" }: { tone?: "warm" | "green" }) {
+  const isGreen = tone === "green";
   return (
     <div
       aria-hidden
       className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
     >
-      <div className="live-preview-ember-glow absolute -inset-[35%]" />
-      <div className="live-preview-ember-edge absolute inset-0 rounded-[inherit]" />
+      <div
+        className={`absolute -inset-[35%] ${
+          isGreen ? "live-preview-ember-glow-green" : "live-preview-ember-glow"
+        }`}
+      />
+      <div
+        className={`absolute inset-0 rounded-[inherit] ${
+          isGreen ? "live-preview-ember-edge-green" : "live-preview-ember-edge"
+        }`}
+      />
     </div>
   );
 }
