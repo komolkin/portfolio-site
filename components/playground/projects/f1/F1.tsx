@@ -276,8 +276,8 @@ function DriverColumn({
       <div className="flex items-center gap-1.5">
         <div className="relative size-8 shrink-0">
           <div
-            className="absolute inset-0 overflow-hidden rounded-full border border-solid"
-            style={{ borderColor: ring }}
+            className="absolute inset-0 overflow-hidden rounded-full border-solid"
+            style={{ borderColor: ring, borderWidth: 1.5 }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
