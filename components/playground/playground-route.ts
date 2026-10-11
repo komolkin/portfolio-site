@@ -20,6 +20,7 @@ export const PROJECTS = [
   { id: "spotlight", label: "Spotlight" },
   { id: "bubbly", label: "Bubbly" },
   { id: "live-preview", label: "Live Preview" },
+  { id: "f1", label: "F1" },
 ] as const;
 
 export type ProjectId = (typeof PROJECTS)[number]["id"];

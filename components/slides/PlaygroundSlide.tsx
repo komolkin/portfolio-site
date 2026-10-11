@@ -31,6 +31,7 @@ import Leverage from "@/components/playground/projects/leverage/Leverage";
 import Spotlight from "@/components/playground/projects/spotlight/Spotlight";
 import Bubbly from "@/components/playground/projects/bubbly/Bubbly";
 import LivePreview from "@/components/playground/projects/live-preview/LivePreview";
+import F1 from "@/components/playground/projects/f1/F1";
 
 export default function PlaygroundSlide() {
   const pathname = usePathname();
@@ -79,7 +80,8 @@ export default function PlaygroundSlide() {
     activeProject === "leverage" ||
     activeProject === "spotlight" ||
     activeProject === "bubbly" ||
-    activeProject === "live-preview"
+    activeProject === "live-preview" ||
+    activeProject === "f1"
       ? "h-full [zoom:1]"
       : activeProject.startsWith("position-")
         ? "[zoom:0.6]"
@@ -132,6 +134,7 @@ export default function PlaygroundSlide() {
             {activeProject === "spotlight" && <Spotlight />}
             {activeProject === "bubbly" && <Bubbly />}
             {activeProject === "live-preview" && <LivePreview />}
+            {activeProject === "f1" && <F1 />}
           </motion.div>
         </AnimatePresence>
       </main>
