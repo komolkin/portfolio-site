@@ -6,6 +6,7 @@ export const PROJECTS = [
   { id: "smart-leverage", label: "Smart Leverage" },
   { id: "thinking", label: "Thinking" },
   { id: "ball", label: "Ball" },
+  { id: "draw", label: "Draw" },
   { id: "position-1", label: "Position" },
   { id: "position-7", label: "Controller" },
   { id: "binary-compact", label: "Binary" },

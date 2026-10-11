@@ -20,6 +20,7 @@ import BinaryCompact from "@/components/playground/projects/binary-compact/Binar
 import Position1 from "@/components/playground/projects/position-1/Position1";
 import Position7 from "@/components/playground/projects/position-7/Position7";
 import Ball from "@/components/playground/projects/ball/Ball";
+import Draw from "@/components/playground/projects/draw/Draw";
 import Mcp from "@/components/playground/projects/mcp/Mcp";
 import Thinking from "@/components/playground/projects/thinking/Thinking";
 import AiCam from "@/components/playground/projects/ai-cam/AiCam";
@@ -67,6 +68,7 @@ export default function PlaygroundSlide() {
 
   const zoomClass =
     activeProject === "ball" ||
+    activeProject === "draw" ||
     activeProject === "mcp" ||
     activeProject === "thinking" ||
     activeProject === "resolved-card" ||
@@ -113,6 +115,7 @@ export default function PlaygroundSlide() {
             {activeProject === "positions" && <Positions />}
             {activeProject === "expandable" && <Expandable />}
             {activeProject === "ball" && <Ball />}
+            {activeProject === "draw" && <Draw />}
             {activeProject === "resolved-card" && <ResolvedCard />}
             {activeProject === "smart-leverage" && <SmartLeverage />}
             {activeProject === "leverage-selector" && <LeverageSelector />}
