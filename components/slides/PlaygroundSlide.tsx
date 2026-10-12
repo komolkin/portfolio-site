@@ -24,7 +24,6 @@ import Draw from "@/components/playground/projects/draw/Draw";
 import Mcp from "@/components/playground/projects/mcp/Mcp";
 import Thinking from "@/components/playground/projects/thinking/Thinking";
 import AiCam from "@/components/playground/projects/ai-cam/AiCam";
-import Worm from "@/components/playground/projects/worm/Worm";
 import Api from "@/components/playground/projects/api/Api";
 import Buttony from "@/components/playground/projects/buttony/Buttony";
 import Leverage from "@/components/playground/projects/leverage/Leverage";
@@ -32,6 +31,7 @@ import Spotlight from "@/components/playground/projects/spotlight/Spotlight";
 import Bubbly from "@/components/playground/projects/bubbly/Bubbly";
 import LivePreview from "@/components/playground/projects/live-preview/LivePreview";
 import F1 from "@/components/playground/projects/f1/F1";
+import Ai from "@/components/playground/projects/ai/Ai";
 
 export default function PlaygroundSlide() {
   const pathname = usePathname();
@@ -81,7 +81,8 @@ export default function PlaygroundSlide() {
     activeProject === "spotlight" ||
     activeProject === "bubbly" ||
     activeProject === "live-preview" ||
-    activeProject === "f1"
+    activeProject === "f1" ||
+    activeProject === "ai"
       ? "h-full [zoom:1]"
       : activeProject.startsWith("position-")
         ? "[zoom:0.6]"
@@ -127,7 +128,6 @@ export default function PlaygroundSlide() {
             {activeProject === "mcp" && <Mcp />}
             {activeProject === "thinking" && <Thinking />}
             {activeProject === "ai-cam" && <AiCam />}
-            {activeProject === "worm" && <Worm />}
             {activeProject === "api" && <Api />}
             {activeProject === "buttony" && <Buttony />}
             {activeProject === "leverage" && <Leverage />}
@@ -135,6 +135,7 @@ export default function PlaygroundSlide() {
             {activeProject === "bubbly" && <Bubbly />}
             {activeProject === "live-preview" && <LivePreview />}
             {activeProject === "f1" && <F1 />}
+            {activeProject === "ai" && <Ai />}
           </motion.div>
         </AnimatePresence>
       </main>
