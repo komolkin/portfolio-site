@@ -6,6 +6,8 @@ const ALLOWED_HOSTS = [
   "polymarket.com",
   "a.espncdn.com",
   "upload.wikimedia.org",
+  "thumb.wikimedia.org",
+  "commons.wikimedia.org",
 ];
 
 function isAllowedHost(hostname: string): boolean {

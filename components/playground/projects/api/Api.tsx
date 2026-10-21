@@ -10,6 +10,7 @@ import {
 } from "react";
 import NumberFlow from "@number-flow/react";
 import { Liveline, type LivelinePoint } from "liveline";
+import { LiquidGlass } from "simple-liquid-glass";
 import type {
   PolymarketDemoProfile,
   PolymarketLeaderboardWallet,
@@ -27,6 +28,7 @@ import { sportsOutcomeAbbr } from "@/lib/polymarketscan";
 import { instrumentSansCondensed } from "@/lib/fonts";
 import FeedPositionSheet, { FollowButton } from "./FeedPositionSheet";
 import Onboarding from "./Onboarding";
+import PositionsSheet from "./PositionsSheet";
 import ReferralScreen from "./ReferralScreen";
 import SettingsScreen from "./SettingsScreen";
 import FollowListSheet, {
@@ -64,6 +66,8 @@ import {
   BlurBackButton,
   BlurShareButton,
   ChipTabs,
+  FilterDropdown,
+  SwipeablePages,
   ui,
 } from "./ui";
 import { hexToRgba, useImageAccent } from "./imageAccent";
@@ -80,10 +84,13 @@ const nfMaskStyle = {
   ["--number-flow-mask-height" as string]: "0em",
 } as const;
 
-type SectionId = "explore" | "search" | "feed" | "leaderboard" | "profile";
+type SectionId = "explore" | "search" | "feed" | "profile";
+type TabId = SectionId | "positions";
 type ProfileSubScreen = "referral" | "settings";
 type ListDetailTab = "trades" | "wallets";
-type LeaderboardTab = "all" | "friends" | "lists";
+type HomeTab = "markets" | "leaderboard";
+type LeaderboardTab = "traders" | "friends" | "lists";
+type LeaderboardPeriod = "24h" | "week" | "month";
 type MarketDetailTab = "trades" | "traders" | "rules";
 type ProfileTab = "positions" | "history" | "copying";
 type TrendingView = "masonry" | "list";
@@ -93,7 +100,11 @@ const MARKET_ENTER =
 const MARKET_ENTER_DELAYED =
   "motion-safe:animate-[api-market-enter_300ms_cubic-bezier(0.32,0.72,0,1)_70ms_both]";
 
-const PROFILE_BALANCE = 123_293.12;
+const IOS_STATUS_PAD = "pt-[52px]";
+const IOS_STATUS_BLEED = "-mt-[52px]";
+const IOS_CHROME_TOP = "top-12";
+
+const PROFILE_BALANCE = 1_347;
 const ONBOARDING_DONE_KEY = "playground-api-onboarded";
 const ONBOARDING_USERNAME_KEY = "playground-api-username";
 const ONBOARDING_FOLLOWS_KEY = "playground-api-follows";
@@ -233,12 +244,29 @@ function seedPnlHistory(endValue: number, salt = 0): LivelinePoint[] {
   return points;
 }
 
-const BOTTOM_TABS = [
-  { id: "explore", label: "Explore" },
+const BOTTOM_TABS: readonly { id: TabId; label: string }[] = [
+  { id: "explore", label: "Home" },
   { id: "search", label: "Search" },
+  { id: "positions", label: "Positions" },
   { id: "feed", label: "Feed" },
-  { id: "leaderboard", label: "Leaderboard" },
   { id: "profile", label: "Profile" },
+];
+
+const HOME_TABS = [
+  { id: "markets", label: "Markets" },
+  { id: "leaderboard", label: "Leaderboard" },
+] as const;
+
+const LEADERBOARD_SCOPE_OPTIONS = [
+  { id: "traders", label: "Top traders" },
+  { id: "friends", label: "Friends" },
+  { id: "lists", label: "Squads" },
+] as const;
+
+const LEADERBOARD_PERIOD_OPTIONS = [
+  { id: "24h", label: "24h" },
+  { id: "week", label: "Week" },
+  { id: "month", label: "Month" },
 ] as const;
 
 const DEMO_LIVE_MARKET_ID = "demo-live-lal-bos";
@@ -1100,6 +1128,8 @@ function MarketOddsPreview({ market }: { market: PolymarketMarketData }) {
 
 const TRENDING_IMAGE_HEIGHT = 136;
 
+const LUKA_FEATURE_CLIP = "/playground/api/clips/luka-doncic.mp4";
+
 const CLIP_POOLS = {
   baseball: [
     "/playground/api/clips/baseball.mp4",
@@ -1141,6 +1171,10 @@ function pickClip(kind: SportClipKind, seed: string): MarketClipRef {
 
 function sportClipForMarket(market: PolymarketMarketData): MarketClipRef | null {
   if (!isSportsMarket(market)) return null;
+  const seed = market.slug || market.marketId || market.title;
+  if (seed === DEMO_LIVE_MARKET_ID) {
+    return { src: LUKA_FEATURE_CLIP, startRatio: 0 };
+  }
   const haystack =
     `${market.title} ${market.category ?? ""} ${market.liveGame?.league ?? ""}`.toLowerCase();
   if (
@@ -1150,7 +1184,6 @@ function sportClipForMarket(market: PolymarketMarketData): MarketClipRef | null 
   ) {
     return null;
   }
-  const seed = market.slug || market.marketId || market.title;
   if (
     /\b(nba|wnba|lakers|celtics|pistons|knicks|bulls|spurs|heat|nets|jazz|dunk|basketball)\b/.test(
       haystack,
@@ -1199,57 +1232,6 @@ function MarketClip({ clip }: { clip: MarketClipRef }) {
   );
 }
 
-function TrendingViewIcons({
-  value,
-  onChange,
-}: {
-  value: TrendingView;
-  onChange: (view: TrendingView) => void;
-}) {
-  return (
-    <div
-      className="flex items-center gap-0.5"
-      role="group"
-      aria-label="Trending layout"
-    >
-      <button
-        type="button"
-        aria-label="Masonry grid"
-        aria-pressed={value === "masonry"}
-        onClick={() => onChange("masonry")}
-        className={`flex h-8 w-8 items-center justify-center rounded-full ${
-          value === "masonry" ? "text-white" : "text-white/35"
-        }`}
-      >
-        <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor" aria-hidden>
-          <rect x="1" y="1" width="6.2" height="8.2" rx="1.3" />
-          <rect x="8.8" y="1" width="6.2" height="5.2" rx="1.3" />
-          <rect x="1" y="10.4" width="6.2" height="4.6" rx="1.3" />
-          <rect x="8.8" y="7.4" width="6.2" height="7.6" rx="1.3" />
-        </svg>
-      </button>
-      <button
-        type="button"
-        aria-label="List view"
-        aria-pressed={value === "list"}
-        onClick={() => onChange("list")}
-        className={`flex h-8 w-8 items-center justify-center rounded-full ${
-          value === "list" ? "text-white" : "text-white/35"
-        }`}
-      >
-        <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor" aria-hidden>
-          <rect x="1" y="1.6" width="3.6" height="3.6" rx="0.9" />
-          <rect x="6.2" y="2.4" width="8.8" height="2" rx="1" />
-          <rect x="1" y="6.2" width="3.6" height="3.6" rx="0.9" />
-          <rect x="6.2" y="7" width="8.8" height="2" rx="1" />
-          <rect x="1" y="10.8" width="3.6" height="3.6" rx="0.9" />
-          <rect x="6.2" y="11.6" width="8.8" height="2" rx="1" />
-        </svg>
-      </button>
-    </div>
-  );
-}
-
 function TrendingMarketMedia({
   market,
   clip,
@@ -1258,10 +1240,11 @@ function TrendingMarketMedia({
   clip: MarketClipRef | null;
 }) {
   if (clip) return <MarketClip clip={clip} />;
-  if (market.image) {
+  const image = proxyImageSrc(market.image);
+  if (image) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={market.image} alt="" className="h-full w-full object-cover" />
+      <img src={image} alt="" className="h-full w-full object-cover" />
     );
   }
   return (
@@ -1282,7 +1265,6 @@ function TrendingMarketCard({
 }) {
   const accent = useImageAccent(market.image);
   const odds = previewOdds(market);
-  const clip = sportClipForMarket(market);
   const top = odds.shown[0];
 
   if (variant === "list") {
@@ -1322,8 +1304,12 @@ function TrendingMarketCard({
       className="w-full overflow-hidden rounded-[20px] text-left transition-[filter,background-color] duration-500 hover:brightness-110"
       style={{ backgroundColor: accent }}
     >
-      <div className="relative overflow-hidden" style={{ height: TRENDING_IMAGE_HEIGHT }}>
-        <TrendingMarketMedia market={market} clip={clip} />
+      <div
+        className="relative overflow-hidden"
+        style={{ height: TRENDING_IMAGE_HEIGHT }}
+      >
+        {/* Keep masonry tiles on still frames — video only on the featured live card. */}
+        <TrendingMarketMedia market={market} clip={null} />
         <div
           className="pointer-events-none absolute inset-x-0 bottom-0 h-10"
           style={{
@@ -1355,8 +1341,8 @@ function ListsPreviewRail({
   onOpen: (id: string) => void;
 }) {
   return (
-    <section aria-label="Watch lists">
-      <h3 className={`mb-2.5 ${ui.section}`}>Lists</h3>
+    <section aria-label="Squads">
+      <h3 className={`mb-2.5 ${ui.section}`}>Squads</h3>
 
       {status === "loading" && (
         <div
@@ -1373,11 +1359,11 @@ function ListsPreviewRail({
       )}
 
       {status === "error" && (
-        <p className="text-sm text-white/55">Couldn&apos;t load watch lists.</p>
+        <p className="text-sm text-white/55">Couldn&apos;t load squads.</p>
       )}
 
       {status === "ready" && lists.length === 0 && (
-        <p className="text-sm text-white/55">No popular watch lists.</p>
+        <p className="text-sm text-white/55">No popular squads.</p>
       )}
 
       {status === "ready" && lists.length > 0 && (
@@ -1525,6 +1511,18 @@ function seriesToPath(
     .join(" ");
 }
 
+function proxyImageSrc(src: string | null | undefined): string | null {
+  if (!src) return null;
+  if (src.startsWith("/") || src.startsWith("data:")) return src;
+  try {
+    const url = new URL(src.startsWith("//") ? `https:${src}` : src);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return src;
+    return `/api/image-proxy?url=${encodeURIComponent(url.toString())}`;
+  } catch {
+    return src;
+  }
+}
+
 function LiveTeamMark({
   logo,
   name,
@@ -1535,26 +1533,35 @@ function LiveTeamMark({
   logo?: string | null;
   name: string;
   abbr?: string | null;
-  size?: "md" | "lg" | "header";
+  size?: "sm" | "md" | "lg" | "header";
   portrait?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
   const label = (abbr ?? liveSideName(name)).slice(0, 3).toUpperCase();
   const face = portrait || /\.jpe?g(?:$|\?)/i.test(logo ?? "");
+  const src = proxyImageSrc(logo);
   const box =
     size === "header"
       ? "h-11 w-11 rounded-full text-[11px]"
       : size === "lg"
         ? "h-14 w-14 rounded-[10px] text-[12px]"
-        : "h-10 w-10 rounded-[8px] text-[10px]";
+        : size === "sm"
+          ? "h-7 w-7 rounded-full text-[9px]"
+          : "h-10 w-10 rounded-[8px] text-[10px]";
   const img =
     size === "header"
       ? "h-11 w-11"
       : size === "lg"
         ? "h-14 w-14"
-        : "h-10 w-10";
+        : size === "sm"
+          ? "h-7 w-7"
+          : "h-10 w-10";
+  const round =
+    size === "sm" || size === "header" || face
+      ? "rounded-full object-cover"
+      : "object-contain";
 
-  if (!logo || failed) {
+  if (!src || failed) {
     return (
       <span
         className={`flex items-center justify-center bg-white/10 font-semibold tracking-wide text-white/80 ${box}`}
@@ -1567,12 +1574,10 @@ function LiveTeamMark({
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={logo}
+      src={src}
       alt=""
       onError={() => setFailed(true)}
-      className={`${img} ${
-        face ? "rounded-full object-cover" : "object-contain"
-      }`}
+      className={`${img} ${round}`}
     />
   );
 }
@@ -1580,84 +1585,279 @@ function LiveTeamMark({
 function LiveGameCard({
   market,
   onOpen,
+  onTrade,
+  featured = false,
 }: {
   market: PolymarketMarketData;
   onOpen: (market: PolymarketMarketData) => void;
+  onTrade?: (market: PolymarketMarketData, outcome: string) => void;
+  featured?: boolean;
 }) {
   const { game, away, home, awayOdds, homeOdds } = resolveSportsSides(market);
   const accent = useImageAccent(
     market.image ?? away.logo ?? home.logo ?? null,
   );
+  const clip = sportClipForMarket(market);
   const isLive = game?.status === "live";
   const hasScore = away.score != null && home.score != null;
   const period = game ? formatLiveClock(game.clock, game.status) : "Sports";
+  const league = game?.league ?? market.category ?? "Sports";
+  const awayPrice = awayOdds?.price ?? market.yesPrice;
+  const homePrice = homeOdds?.price ?? market.noPrice;
+  const tradeOutcomes = (() => {
+    const listed = market.outcomes ?? [];
+    if (listed.length >= 2) return listed.slice(0, 3);
+    return [
+      { label: away.name, price: awayPrice, marketId: market.marketId, slug: market.slug },
+      { label: home.name, price: homePrice, marketId: market.marketId, slug: market.slug },
+    ];
+  })();
+
+  if (!featured) {
+    return (
+      <button
+        type="button"
+        onClick={() => onOpen(market)}
+        className="flex h-[124px] w-full flex-col justify-center overflow-hidden rounded-[20px] px-3 py-2.5 text-left transition-[filter,background-color] duration-500 hover:brightness-110"
+        style={{ backgroundColor: accent }}
+      >
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-1">
+          <div className="flex min-w-0 flex-col items-center">
+            <LiveTeamMark
+              logo={away.logo}
+              name={away.name}
+              abbr={away.abbr}
+              portrait={away.portrait}
+            />
+            <p className="mt-1.5 max-w-full truncate text-center text-[11px] font-semibold uppercase tracking-[0.06em]">
+              {liveSideName(away.name)}
+            </p>
+            <p className="mt-1 text-[15px] font-semibold tabular-nums leading-none text-[#E8C44A]">
+              <ChanceFlow price={awayPrice} />
+            </p>
+          </div>
+
+          <div className="flex flex-col items-center justify-center gap-1.5 px-3">
+            <div className="flex h-[14px] items-center justify-center">
+              {isLive ? (
+                <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#FF3B30]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#FF3B30]" />
+                  Live
+                </span>
+              ) : null}
+            </div>
+            <p
+              className={`text-[28px] font-semibold tabular-nums leading-none tracking-tight text-white ${instrumentSansCondensed.className}`}
+            >
+              {hasScore ? (
+                <LiveScoreFlow away={away.score!} home={home.score!} />
+              ) : (
+                <span className="text-white/40">vs</span>
+              )}
+            </p>
+            <p className="max-w-[108px] truncate text-center text-[11px] leading-none text-white/35">
+              {game ? (
+                <LivePeriodFlow clock={game.clock} status={game.status} />
+              ) : (
+                period
+              )}
+            </p>
+          </div>
+
+          <div className="flex min-w-0 flex-col items-center">
+            <LiveTeamMark
+              logo={home.logo}
+              name={home.name}
+              abbr={home.abbr}
+              portrait={home.portrait}
+            />
+            <p className="mt-1.5 max-w-full truncate text-center text-[11px] font-semibold uppercase tracking-[0.06em]">
+              {liveSideName(home.name)}
+            </p>
+            <p className="mt-1 text-[15px] font-semibold tabular-nums leading-none text-[#FF5C5C]">
+              <ChanceFlow price={homePrice} />
+            </p>
+          </div>
+        </div>
+      </button>
+    );
+  }
+
+  const poster = proxyImageSrc(market.image);
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${market.title}`}
       onClick={() => onOpen(market)}
-      className="flex h-[124px] w-full flex-col justify-center overflow-hidden rounded-[20px] px-3 py-2.5 text-left transition-[filter,background-color] duration-500 hover:brightness-110"
-      style={{ backgroundColor: accent }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen(market);
+        }
+      }}
+      className="relative h-[420px] w-full cursor-pointer overflow-hidden rounded-[24px] bg-black text-left"
     >
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-1">
-        <div className="flex min-w-0 flex-col items-center">
+      <div className="pointer-events-none absolute inset-0">
+        {clip ? (
+          <MarketClip clip={clip} />
+        ) : poster ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={poster}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover object-center"
+          />
+        ) : (
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: accent }}
+          />
+        )}
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/20 to-black/85"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-black via-black/55 to-transparent"
+        />
+      </div>
+
+      <div className="relative z-10 flex h-full flex-col px-4 pb-4 pt-3.5">
+        <div className="flex items-center justify-center gap-2">
+          <p className="text-[12px] font-semibold tracking-[0.04em] text-white/80">
+            {league}
+          </p>
+          <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold tabular-nums text-[#FF3B30]">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#FF3B30]" />
+            {isLive || game?.status === "live" ? (
+              game ? (
+                <LivePeriodFlow clock={game.clock} status={game.status} />
+              ) : (
+                "Live"
+              )
+            ) : game ? (
+              <LivePeriodFlow clock={game.clock} status={game.status} />
+            ) : (
+              period
+            )}
+          </span>
+        </div>
+
+        <div className="mt-3 flex items-center justify-center gap-2.5">
           <LiveTeamMark
             logo={away.logo}
             name={away.name}
             abbr={away.abbr}
             portrait={away.portrait}
+            size="header"
           />
-          <p className="mt-1.5 max-w-full truncate text-center text-[11px] font-semibold uppercase tracking-[0.06em]">
-            {liveSideName(away.name)}
-          </p>
-          <p className="mt-1 text-[15px] font-semibold tabular-nums leading-none text-[#E8C44A]">
-            <ChanceFlow price={awayOdds?.price ?? market.yesPrice} />
-          </p>
-        </div>
-
-        <div className="flex flex-col items-center justify-center gap-1.5 px-3">
-          <div className="flex h-[14px] items-center justify-center">
-            {isLive ? (
-              <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#FF3B30]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#FF3B30]" />
-                Live
-              </span>
-            ) : null}
-          </div>
           <p
-            className={`text-[28px] font-semibold tabular-nums leading-none tracking-tight text-white ${instrumentSansCondensed.className}`}
+            className={`inline-flex items-center gap-1.5 text-[40px] font-semibold tabular-nums leading-none tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)] ${instrumentSansCondensed.className}`}
           >
             {hasScore ? (
-              <LiveScoreFlow away={away.score!} home={home.score!} />
+              <>
+                <NumberFlow
+                  value={away.score!}
+                  trend={1}
+                  format={{ useGrouping: false }}
+                  style={nfMaskStyle}
+                />
+                <span className="text-[22px] font-semibold leading-none text-white/55">
+                  -
+                </span>
+                <NumberFlow
+                  value={home.score!}
+                  trend={1}
+                  format={{ useGrouping: false }}
+                  style={nfMaskStyle}
+                />
+              </>
             ) : (
-              <span className="text-white/40">vs</span>
+              <span className="text-white/50">-</span>
             )}
           </p>
-          <p className="max-w-[108px] truncate text-center text-[11px] leading-none text-white/35">
-            {game ? (
-              <LivePeriodFlow clock={game.clock} status={game.status} />
-            ) : (
-              period
-            )}
-          </p>
-        </div>
-
-        <div className="flex min-w-0 flex-col items-center">
           <LiveTeamMark
             logo={home.logo}
             name={home.name}
             abbr={home.abbr}
             portrait={home.portrait}
+            size="header"
           />
-          <p className="mt-1.5 max-w-full truncate text-center text-[11px] font-semibold uppercase tracking-[0.06em]">
-            {liveSideName(home.name)}
-          </p>
-          <p className="mt-1 text-[15px] font-semibold tabular-nums leading-none text-[#FF5C5C]">
-            <ChanceFlow price={homeOdds?.price ?? market.noPrice} />
-          </p>
+        </div>
+
+        <div className="mt-auto flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
+            {(
+              [
+                {
+                  side: away,
+                  price: awayPrice,
+                  bar: "#00D54B",
+                },
+                {
+                  side: home,
+                  price: homePrice,
+                  bar: "#FF375F",
+                },
+              ] as const
+            ).map((row) => (
+              <div key={row.side.name} className="min-w-0">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="min-w-0 truncate text-[14px] font-semibold text-white">
+                    {row.side.name}
+                  </p>
+                  <p className="shrink-0 text-[14px] font-semibold tabular-nums text-white">
+                    <ChanceFlow price={row.price} />
+                  </p>
+                </div>
+                <div className="mt-1.5 h-[5px] overflow-hidden rounded-full bg-white/20">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.max(4, Math.min(100, row.price * 100))}%`,
+                      backgroundColor: row.bar,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {onTrade ? (
+            <div className="flex gap-2">
+              {tradeOutcomes.map((outcome, index) => {
+                const isDraw = /draw/i.test(outcome.label);
+                const label =
+                  sportsOutcomeAbbr(market, outcome.label) ??
+                  (isDraw ? "Draw" : liveSideName(outcome.label));
+                const tone = isDraw
+                  ? "text-white"
+                  : nickMatch(outcome.label, away.name) || index === 0
+                    ? "text-[#C4B5FD]"
+                    : "text-[#E8C44A]";
+                return (
+                  <button
+                    key={`${outcome.marketId}-${outcome.label}`}
+                    type="button"
+                    data-sfx="press"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onTrade(market, outcome.label);
+                    }}
+                    className={`min-w-0 flex-1 rounded-full border border-white/20 bg-black/45 py-2.5 text-[14px] font-semibold backdrop-blur-md transition-colors hover:bg-black/60 ${tone}`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -2573,7 +2773,7 @@ function ProfileBalanceChart({
         <button
           type="button"
           onClick={onDeposit}
-          className="mt-4 w-full rounded-full bg-white py-3 text-[15px] font-semibold text-black transition-opacity hover:opacity-90"
+          className={`mt-4 w-full py-3 ${ui.pillSecondary}`}
         >
           Deposit
         </button>
@@ -2747,40 +2947,21 @@ function SettingsIcon({ className }: { className?: string }) {
   );
 }
 
-function ExploreTabIcon({ active }: { active: boolean }) {
+function HomeTabIcon({ active }: { active: boolean }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className="h-[28px] w-[28px]" aria-hidden>
       {active ? (
-        <>
-          <circle cx="12" cy="12" r="8.5" fill="currentColor" opacity="0.18" />
-          <circle
-            cx="12"
-            cy="12"
-            r="8.5"
-            stroke="currentColor"
-            strokeWidth="1.8"
-          />
-          <path
-            d="M14.8 9.2 10.6 10.6 9.2 14.8 13.4 13.4 14.8 9.2Z"
-            fill="currentColor"
-          />
-        </>
+        <path
+          d="M4.5 10.8 12 4.5l7.5 6.3V19a1.5 1.5 0 0 1-1.5 1.5h-4.2v-5.2h-3.6V20.5H6A1.5 1.5 0 0 1 4.5 19V10.8Z"
+          fill="currentColor"
+        />
       ) : (
-        <>
-          <circle
-            cx="12"
-            cy="12"
-            r="8.5"
-            stroke="currentColor"
-            strokeWidth="1.6"
-          />
-          <path
-            d="M14.8 9.2 10.6 10.6 9.2 14.8 13.4 13.4 14.8 9.2Z"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinejoin="round"
-          />
-        </>
+        <path
+          d="M5 11.1 12 5.2l7 5.9V19a1.2 1.2 0 0 1-1.2 1.2h-3.6v-5h-4.4v5H6.2A1.2 1.2 0 0 1 5 19v-7.9Z"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinejoin="round"
+        />
       )}
     </svg>
   );
@@ -2827,6 +3008,75 @@ function SearchTabIcon({ active }: { active: boolean }) {
   );
 }
 
+function PositionsTabCount({
+  count,
+  active,
+  pnlUsd,
+  investedUsd,
+}: {
+  count: number;
+  active: boolean;
+  pnlUsd: number;
+  investedUsd: number;
+}) {
+  const hasPositions = count > 0;
+  const mode =
+    !hasPositions || Math.abs(pnlUsd) < 0.01
+      ? "flat"
+      : pnlUsd > 0
+        ? "up"
+        : "down";
+  const roi =
+    investedUsd > 0 ? Math.abs(pnlUsd) / investedUsd : Math.abs(pnlUsd) > 0 ? 1 : 0;
+  const intensity = Math.min(1, 0.35 + roi * 1.4);
+  const glowBlur = mode === "flat" ? 0 : 10 + intensity * 22;
+  const glowColor = mode === "up" ? "#1f8f45" : "#d42e3e";
+  const blink =
+    mode === "up"
+      ? "api-positions-up-blink"
+      : mode === "down"
+        ? "api-positions-down-blink"
+        : undefined;
+  const blinkMs = Math.max(420, Math.round(900 - intensity * 480));
+
+  return (
+    <span
+      className={`relative isolate flex h-8 min-w-[36px] items-center justify-center overflow-hidden rounded-[10px] px-2.5 text-[15px] font-semibold tabular-nums ${
+        active ? "text-white" : "text-white/80"
+      }`}
+    >
+      <span
+        aria-hidden
+        className={`absolute inset-0 rounded-[inherit] ${
+          active ? "bg-white/20" : "bg-white/[0.12]"
+        }`}
+      />
+      {mode !== "flat" && (
+        <>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-[inherit] motion-reduce:transition-none"
+            style={{
+              boxShadow: `inset 0 0 ${glowBlur}px ${glowColor}`,
+              opacity: 0.55 + intensity * 0.45,
+              transition: "box-shadow 200ms ease-out, opacity 200ms ease-out",
+            }}
+          />
+          <span
+            aria-hidden
+            className={`${blink} pointer-events-none absolute inset-0 rounded-[inherit] motion-reduce:opacity-50`}
+            style={{
+              opacity: 0.4 + intensity * 0.6,
+              animationDuration: `${blinkMs}ms`,
+            }}
+          />
+        </>
+      )}
+      <span className="relative z-[1]">{count}</span>
+    </span>
+  );
+}
+
 function FeedTabIcon({ active }: { active: boolean }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className="h-[28px] w-[28px]" aria-hidden>
@@ -2863,24 +3113,127 @@ function FeedTabIcon({ active }: { active: boolean }) {
   );
 }
 
-function LeaderboardTabIcon({ active }: { active: boolean }) {
+const TAB_BAR_GLASS_BORDER = "rgba(255, 255, 255, 0.28)";
+const TAB_BAR_RADIUS = 32;
+
+function TabBarGlass({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  const [reducedTransparency, setReducedTransparency] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const media = window.matchMedia("(prefers-reduced-transparency: reduce)");
+    const update = () => setReducedTransparency(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  if (!mounted || reducedTransparency) {
+    return (
+      <div
+        className="relative w-full overflow-hidden rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
+        style={
+          reducedTransparency
+            ? { background: "rgba(12, 12, 14, 0.94)" }
+            : {
+                background: "rgba(0, 0, 0, 0.58)",
+                backdropFilter: "blur(18px) saturate(140%)",
+                WebkitBackdropFilter: "blur(18px) saturate(140%)",
+              }
+        }
+      >
+        {children}
+      </div>
+    );
+  }
+
   return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-[28px] w-[28px]" aria-hidden>
-      {active ? (
-        <>
-          <rect x="4" y="13" width="4" height="7" rx="1.2" fill="currentColor" />
-          <rect x="10" y="6" width="4" height="14" rx="1.2" fill="currentColor" />
-          <rect x="16" y="10" width="4" height="10" rx="1.2" fill="currentColor" />
-        </>
-      ) : (
-        <path
-          d="M6 20V13M12 20V6M18 20V10"
+    <LiquidGlass
+      mode="preset"
+      radius={TAB_BAR_RADIUS}
+      frost={0.4}
+      blur={4}
+      glassColor="rgba(0, 0, 0, 0.55)"
+      borderColor={TAB_BAR_GLASS_BORDER}
+      lens="rim"
+      quality="high"
+      className="w-full shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
+      style={{ width: "100%" }}
+    >
+      {children}
+    </LiquidGlass>
+  );
+}
+
+function IosStatusBar() {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const tick = () => setNow(new Date());
+    const id = window.setInterval(tick, 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const time = now.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-x-0 top-0 z-40 flex h-[44px] items-end justify-between px-7 pb-[6px] text-white"
+    >
+      <p className="min-w-[54px] text-[15px] font-semibold tabular-nums tracking-[-0.02em]">
+        {time}
+      </p>
+      <div className="flex items-center gap-[5px]">
+        <svg viewBox="0 0 18 12" className="h-[11px] w-[17px]" fill="currentColor">
+          <rect x="0" y="7" width="3" height="5" rx="0.6" />
+          <rect x="4.5" y="5" width="3" height="7" rx="0.6" />
+          <rect x="9" y="2.5" width="3" height="9.5" rx="0.6" />
+          <rect x="13.5" y="0" width="3" height="12" rx="0.6" opacity="0.35" />
+        </svg>
+        <svg
+          viewBox="0 0 16 12"
+          className="h-[11px] w-[15px]"
+          fill="none"
           stroke="currentColor"
-          strokeWidth="2.2"
+          strokeWidth="1.6"
           strokeLinecap="round"
-        />
-      )}
-    </svg>
+        >
+          <path d="M1.6 3.8c1.8-1.7 4.1-2.6 6.4-2.6s4.6.9 6.4 2.6" />
+          <path d="M3.7 6.2c1.2-1.15 2.75-1.75 4.3-1.75s3.1.6 4.3 1.75" />
+          <path d="M5.85 8.5c.6-.55 1.35-.85 2.15-.85s1.55.3 2.15.85" />
+          <circle
+            cx="8"
+            cy="10.55"
+            r="0.95"
+            fill="currentColor"
+            stroke="none"
+          />
+        </svg>
+        <svg viewBox="0 0 27 12" className="h-[12px] w-[27px]" fill="none">
+          <rect
+            x="0.5"
+            y="0.5"
+            width="23"
+            height="11"
+            rx="3.2"
+            stroke="currentColor"
+            strokeOpacity="0.45"
+          />
+          <rect x="2" y="2" width="18" height="8" rx="2" fill="currentColor" />
+          <path
+            d="M25 3.8v4.4a2 2 0 0 0 0-4.4Z"
+            fill="currentColor"
+            fillOpacity="0.45"
+          />
+        </svg>
+      </div>
+    </div>
   );
 }
 
@@ -2916,16 +3269,16 @@ function ProfileTabIcon({ active }: { active: boolean }) {
   );
 }
 
-function TabIcon({ id, active }: { id: SectionId; active: boolean }) {
+function TabIcon({ id, active }: { id: TabId; active: boolean }) {
   switch (id) {
     case "explore":
-      return <ExploreTabIcon active={active} />;
+      return <HomeTabIcon active={active} />;
     case "search":
       return <SearchTabIcon active={active} />;
+    case "positions":
+      return null;
     case "feed":
       return <FeedTabIcon active={active} />;
-    case "leaderboard":
-      return <LeaderboardTabIcon active={active} />;
     case "profile":
       return <ProfileTabIcon active={active} />;
   }
@@ -2937,6 +3290,8 @@ export default function Api() {
   const stickyNavRef = useRef<HTMLDivElement>(null);
   const stickyMarketFadeRef = useRef<HTMLDivElement>(null);
   const [section, setSection] = useState<SectionId>("explore");
+  const [positionsOpen, setPositionsOpen] = useState(false);
+  const [homeTab, setHomeTab] = useState<HomeTab>("markets");
   const [liveMarkets, setLiveMarkets] = useState<PolymarketMarketData[]>([]);
   const [trendingMarkets, setTrendingMarkets] = useState<
     PolymarketMarketData[]
@@ -2950,9 +3305,10 @@ export default function Api() {
   const [marketActivity, setMarketActivity] =
     useState<PolymarketMarketActivity | null>(null);
   const [leaderboardTab, setLeaderboardTab] =
-    useState<LeaderboardTab>("all");
+    useState<LeaderboardTab>("traders");
+  const [leaderboardPeriod, setLeaderboardPeriod] =
+    useState<LeaderboardPeriod>("24h");
   const [profileTab, setProfileTab] = useState<ProfileTab>("positions");
-  const [trendingView, setTrendingView] = useState<TrendingView>("masonry");
   const [walletProfileTab, setWalletProfileTab] =
     useState<ProfileTab>("positions");
   const [profileHistoryTrades, setProfileHistoryTrades] = useState<
@@ -3100,7 +3456,11 @@ export default function Api() {
         if (!res.ok) throw new Error("fetch failed");
         const data = (await res.json()) as PolymarketDemoProfile;
         if (controller.signal.aborted) return;
-        setDemoProfile(data);
+        setDemoProfile({
+          ...data,
+          portfolioValue: PROFILE_BALANCE,
+          history: seedPortfolioHistory(PROFILE_BALANCE),
+        });
         setDemoProfileStatus("ready");
       } catch (error) {
         if (controller.signal.aborted) return;
@@ -3595,9 +3955,7 @@ export default function Api() {
     ? sportClipForMarket(selectedMarket)
     : null;
   const showingListDetail =
-    (section === "explore" ||
-      section === "search" ||
-      section === "leaderboard") &&
+    (section === "explore" || section === "search") &&
     selectedListId !== null &&
     selectedWallet === null &&
     selectedMarketSlug === null;
@@ -3733,7 +4091,7 @@ export default function Api() {
     if (username) setProfileUsername(username);
   };
 
-  const handleSectionChange = (next: SectionId) => {
+  const handleSectionChange = (next: TabId) => {
     setSelectedWallet(null);
     setWalletLabel(null);
     setSelectedListId(null);
@@ -3742,6 +4100,11 @@ export default function Api() {
     setFeedPositionTrade(null);
     setProfileSubScreen(null);
     setCopyTradeTarget(null);
+    if (next === "positions") {
+      setPositionsOpen(true);
+      return;
+    }
+    setPositionsOpen(false);
     setSection(next);
   };
 
@@ -3776,6 +4139,7 @@ export default function Api() {
     return () => window.cancelAnimationFrame(id);
   }, [
     section,
+    homeTab,
     selectedMarketSlug,
     selectedWallet,
     selectedListId,
@@ -3796,7 +4160,7 @@ export default function Api() {
           ? demoProfileStatus === "loading"
             ? "—"
             : formatUsd(
-                (demoProfile?.portfolioValue ?? PROFILE_BALANCE) +
+                PROFILE_BALANCE +
                   extraDepositUsd +
                   userTrades.reduce((sum, item) => {
                     if (!item.copiedFrom || item.cashedOut) return sum;
@@ -3806,8 +4170,6 @@ export default function Api() {
               )
           : section === "feed" && !showingDrillDown
             ? "Feed"
-          : section === "leaderboard" && !showingDrillDown
-            ? "Leaderboard"
             : null;
 
   useEffect(() => {
@@ -4019,20 +4381,20 @@ export default function Api() {
     ? (listDetail?.name ?? "List")
     : selectedMarketSlug
       ? "Market"
-      : section === "leaderboard"
+      : section === "explore" && homeTab === "leaderboard"
         ? "Leaderboard"
         : "Back";
   const listBackLabel =
-    section === "leaderboard"
-      ? "Leaderboard"
-      : section === "search"
-        ? "Search"
-        : "Lists";
+    section === "search"
+      ? "Search"
+      : section === "explore" && homeTab === "leaderboard"
+        ? "Leaderboard"
+        : "Squads";
   const marketBackLabel = selectedListId
-    ? (listDetail?.name ?? "List")
+    ? (listDetail?.name ?? "Squad")
     : section === "feed"
       ? "Feed"
-      : section === "leaderboard"
+      : section === "explore" && homeTab === "leaderboard"
         ? "Leaderboard"
         : "Explore";
 
@@ -4057,16 +4419,13 @@ export default function Api() {
   );
 
   const profileBalance =
-    (demoProfile?.portfolioValue ?? PROFILE_BALANCE) +
-    extraDepositUsd +
-    copiedOpenPnl;
+    PROFILE_BALANCE + extraDepositUsd + copiedOpenPnl;
   const portfolioHistory = useMemo(() => {
-    const baseBalance = demoProfile?.portfolioValue ?? PROFILE_BALANCE;
     const base =
       demoProfile?.history && demoProfile.history.length >= 2
         ? demoProfile.history
-        : seedPortfolioHistory(baseBalance);
-    const endValue = baseBalance + extraDepositUsd + copiedOpenPnl;
+        : seedPortfolioHistory(PROFILE_BALANCE);
+    const endValue = PROFILE_BALANCE + extraDepositUsd + copiedOpenPnl;
     if (extraDepositUsd <= 0 && Math.abs(copiedOpenPnl) < 0.01) return base;
     return [
       ...base,
@@ -4326,6 +4685,18 @@ export default function Api() {
   }, [marketImageBySlug, profilePositions, userTrades]);
 
   const profilePositionCount = profilePositions.length;
+  const profilePositionsPnl = useMemo(
+    () => profilePositions.reduce((sum, position) => sum + position.pnlUsd, 0),
+    [profilePositions],
+  );
+  const profilePositionsInvested = useMemo(
+    () =>
+      profilePositions.reduce(
+        (sum, position) => sum + Math.max(0, position.valueUsd - position.pnlUsd),
+        0,
+      ),
+    [profilePositions],
+  );
 
   const marketUserPosition = useMemo(() => {
     if (!selectedMarket) return null;
@@ -4531,62 +4902,74 @@ export default function Api() {
   };
 
   const exploreHeader = (
-    <header className="mb-4 flex items-start justify-between gap-3">
-      <button
-        type="button"
-        onClick={() => handleSectionChange("profile")}
-        className="min-w-0 text-left"
-        aria-label="Open profile"
-      >
-        <p
-          ref={stickyTitleRef as React.RefObject<HTMLParagraphElement>}
-          className={`text-[42px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSansCondensed.className}`}
+    <header className="mb-4 pt-2">
+      <div className="flex items-start justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => handleSectionChange("profile")}
+          className="min-w-0 text-left"
+          aria-label="Open profile"
         >
-          {demoProfileStatus === "loading" ? (
-            "—"
-          ) : (
-            <BalanceFlow
-              value={profileBalance}
-              fractionClassName="text-white/40"
-            />
-          )}
-        </p>
-        {demoProfileStatus === "ready" &&
-          demoProfile &&
-          demoProfile.totalPnl !== null && (
-            <p
-              className={`mt-1.5 inline-flex items-baseline gap-1 text-[13px] font-semibold tabular-nums ${
-                demoProfile.totalPnl > 0
-                  ? "text-[#00D54B]"
-                  : demoProfile.totalPnl < 0
-                    ? "text-[#FF375F]"
-                    : "text-white/45"
-              }`}
-            >
-              <SignedUsdFlow value={demoProfile.totalPnl} />
-              {demoProfile.roiPercent !== null ? (
-                <span className="inline-flex items-baseline">
-                  (
-                  <SignedPercentFlow value={demoProfile.roiPercent} />)
-                </span>
-              ) : null}
-            </p>
-          )}
-      </button>
-      <button
-        type="button"
-        onClick={() => setDepositOpen(true)}
-        className="mt-1 shrink-0 rounded-full bg-white px-5 py-2.5 text-[14px] font-semibold text-black transition-opacity hover:opacity-90"
-      >
-        Deposit
-      </button>
+          <p
+            ref={stickyTitleRef as React.RefObject<HTMLParagraphElement>}
+            className={`text-[42px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSansCondensed.className}`}
+          >
+            {demoProfileStatus === "loading" ? (
+              "—"
+            ) : (
+              <BalanceFlow
+                value={profileBalance}
+                fractionClassName="text-white/40"
+              />
+            )}
+          </p>
+          {demoProfileStatus === "ready" &&
+            demoProfile &&
+            demoProfile.totalPnl !== null && (
+              <p
+                className={`mt-1.5 inline-flex items-baseline gap-1 text-[13px] font-semibold tabular-nums ${
+                  demoProfile.totalPnl > 0
+                    ? "text-[#00D54B]"
+                    : demoProfile.totalPnl < 0
+                      ? "text-[#FF375F]"
+                      : "text-white/45"
+                }`}
+              >
+                <SignedUsdFlow value={demoProfile.totalPnl} />
+                {demoProfile.roiPercent !== null ? (
+                  <span className="inline-flex items-baseline">
+                    (
+                    <SignedPercentFlow value={demoProfile.roiPercent} />)
+                  </span>
+                ) : null}
+              </p>
+            )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setDepositOpen(true)}
+          className="mt-1 shrink-0 rounded-full bg-white/[0.1] px-5 py-2.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
+        >
+          Deposit
+        </button>
+      </div>
+      <div className="mt-5">
+        <ChipTabs
+          ariaLabel="Home sections"
+          value={homeTab}
+          onChange={setHomeTab}
+          underline
+          fullWidth
+          tabs={HOME_TABS}
+        />
+      </div>
     </header>
   );
 
   return (
     <div className="relative flex h-full w-full items-center justify-center px-4">
       <article
-        className="relative flex h-[700px] w-full max-w-[360px] flex-col overflow-hidden rounded-[32px] bg-black text-white transition-[background-color] duration-100 motion-safe:[&_button]:origin-center motion-safe:[&_button]:transition-[transform,color,background-color,border-color,opacity] motion-safe:[&_button]:duration-150 motion-safe:[&_button]:ease-out motion-safe:[&_button:active]:scale-[0.96]"
+        className="relative flex h-[740px] w-full max-w-[360px] flex-col overflow-hidden rounded-[32px] bg-black text-white transition-[background-color] duration-100 motion-safe:[&_button]:origin-center motion-safe:[&_button]:transition-[transform,color,background-color,border-color,opacity] motion-safe:[&_button]:duration-150 motion-safe:[&_button]:ease-out motion-safe:[&_button:active]:scale-[0.96]"
         style={
           showingMarketDetail ? { backgroundColor: marketAccent } : undefined
         }
@@ -4594,17 +4977,19 @@ export default function Api() {
         aria-busy={
           (section === "explore" &&
             !showingDrillDown &&
+            homeTab === "markets" &&
             (marketsStatus === "loading" || listsStatus === "loading")) ||
-          (section === "feed" && tradesStatus === "loading") ||
+          (section === "explore" &&
+            !showingDrillDown &&
+            homeTab === "leaderboard" &&
+            leaderboardStatus === "loading") ||
           (showingListDetail && listDetailStatus === "loading") ||
           (showingWalletProfile && walletStatus === "loading") ||
           (showingMarketDetail && marketStatus === "loading") ||
           (section === "profile" &&
             !showingDrillDown &&
             demoProfileStatus === "loading") ||
-          (section === "leaderboard" &&
-            !showingDrillDown &&
-            leaderboardStatus === "loading")
+          (section === "feed" && tradesStatus === "loading")
         }
       >
         {!showingMarketDetail && (
@@ -4617,9 +5002,10 @@ export default function Api() {
             }}
           />
         )}
+        <IosStatusBar />
         <div
           ref={scrollRef}
-          className={`relative z-[1] h-full min-h-0 overflow-y-auto overscroll-contain px-5 pt-5 [scrollbar-gutter:stable] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+          className={`relative z-[1] h-full min-h-0 overflow-y-auto overscroll-contain px-5 ${IOS_STATUS_PAD} [scrollbar-gutter:stable] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
             showingMarketDetail && !showingWalletProfile
               ? "pb-24"
               : showingDrillDown || showingProfileSubScreen
@@ -4695,7 +5081,7 @@ export default function Api() {
           ) : showingListDetail ? (
             <header className="mb-4 pt-9">
               <h2 className={ui.title}>
-                {listDetail?.name ?? "Watch list"}
+                {listDetail?.name ?? "Squad"}
               </h2>
               <ListPnlChart
                 pnl={listDetail?.aggregatedPnl ?? null}
@@ -4707,7 +5093,7 @@ export default function Api() {
             sportsMarketView ? (
               <header
                 key={`market-header-${selectedMarketSlug}`}
-                className={`relative -mx-5 -mt-5 mb-3 overflow-hidden ${MARKET_ENTER}`}
+                className={`relative -mx-5 ${IOS_STATUS_BLEED} mb-3 overflow-hidden ${MARKET_ENTER}`}
               >
                 {marketClip || selectedMarket?.image ? (
                   <div className="relative h-[168px] overflow-hidden">
@@ -4739,7 +5125,7 @@ export default function Api() {
             ) : (
             <header
               key={`market-header-${selectedMarketSlug}`}
-              className={`relative -mx-5 -mt-5 mb-4 overflow-hidden ${MARKET_ENTER}`}
+              className={`relative -mx-5 ${IOS_STATUS_BLEED} mb-4 overflow-hidden ${MARKET_ENTER}`}
             >
               <div
                 className={`relative ${
@@ -4912,36 +5298,7 @@ export default function Api() {
                 </span>
               </button>
             </header>
-          ) : (
-            <header className="mb-4">
-              <h2
-                ref={stickyTitleRef as RefObject<HTMLHeadingElement>}
-                className={ui.title}
-              >
-                {section === "leaderboard"
-                  ? "Leaderboard"
-                  : section === "search"
-                    ? "Search"
-                    : "Profile"}
-              </h2>
-              {section === "leaderboard" && (
-                <div className="mt-4">
-                  <ChipTabs
-                    ariaLabel="Leaderboard type"
-                    value={leaderboardTab}
-                    onChange={setLeaderboardTab}
-                    tabs={
-                      [
-                        { id: "all", label: "All" },
-                        { id: "friends", label: "Friends" },
-                        { id: "lists", label: "Lists" },
-                      ] as const
-                    }
-                  />
-                </div>
-              )}
-            </header>
-          )}
+          ) : null}
 
           {section === "search" && !showingDrillDown && (
             <div className="flex flex-col gap-6">
@@ -4986,10 +5343,10 @@ export default function Api() {
                         className="w-full rounded-[20px] bg-white/[0.08] p-3.5 text-left transition-colors hover:bg-white/[0.1]"
                       >
                         <div className="flex items-start gap-3">
-                          {market.image ? (
+                          {proxyImageSrc(market.image) ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
-                              src={market.image}
+                              src={proxyImageSrc(market.image)!}
                               alt=""
                               className="h-12 w-12 shrink-0 rounded-2xl object-cover"
                             />
@@ -5027,169 +5384,387 @@ export default function Api() {
           )}
 
           {section === "explore" && !showingDrillDown && (
-            <div className="flex flex-col gap-6">
-              {copyTrades.length > 0 && (
-                <section aria-label="Copying">
-                  <button
-                    type="button"
-                    onClick={viewCopyTradesOnProfile}
-                    className={`mb-3 flex items-center gap-1 ${ui.section}`}
-                  >
-                    Copying
-                    <svg
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      className="h-4 w-4 text-white/35"
-                      aria-hidden
-                    >
-                      <path
-                        d="M6 4l4 4-4 4"
-                        stroke="currentColor"
-                        strokeWidth="1.75"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </button>
-                  <div className="-mx-5 overflow-x-auto overscroll-x-contain px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    <ul className="flex w-max flex-nowrap gap-2.5 pb-0.5">
-                      {copyTrades.map((trade) => (
-                        <li key={trade.wallet} className="w-[292px] shrink-0">
-                          <CopyTradeCard
-                            trade={trade}
-                            copied={copiedTradesForWallet(
-                              userTrades,
-                              trade.wallet,
-                            )}
-                            onManage={() =>
-                              openCopyTrade(trade.wallet, trade.displayName)
-                            }
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </section>
-              )}
-
-              <section aria-label="Live games">
-                <h3 className={`mb-3 ${ui.section}`}>Live Games</h3>
-
-                {marketsStatus === "loading" && (
-                  <div
-                    className="-mx-5 flex gap-2.5 overflow-hidden px-5 animate-pulse"
-                    aria-hidden
-                  >
-                    {Array.from({ length: 2 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-[124px] w-[292px] shrink-0 rounded-[20px] bg-white/10"
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {marketsStatus === "error" && (
-                  <p className="text-sm text-white/55">
-                    Couldn&apos;t load live markets.
-                  </p>
-                )}
-
-                {marketsStatus === "ready" && liveMarkets.length === 0 && (
-                  <p className="text-sm text-white/55">No live sports markets.</p>
-                )}
-
-                {marketsStatus === "ready" && liveMarkets.length > 0 && (
-                  <div className="-mx-5 overflow-x-auto overscroll-x-contain px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    <ul className="flex w-max gap-2.5 pb-0.5">
-                      {liveMarkets.map((market) => (
-                        <li key={market.marketId} className="w-[292px] shrink-0">
-                          <LiveGameCard market={market} onOpen={openMarket} />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </section>
-
-              <section aria-label="Trending markets">
-                <div className="mb-2.5 flex items-center justify-between gap-3">
-                  <h3 className={ui.section}>Trending</h3>
-                  <TrendingViewIcons
-                    value={trendingView}
-                    onChange={setTrendingView}
-                  />
-                </div>
-
-                {marketsStatus === "loading" && (
-                  <div
-                    className={
-                      trendingView === "list"
-                        ? "space-y-2.5 animate-pulse"
-                        : "columns-2 gap-2.5 animate-pulse"
-                    }
-                    aria-hidden
-                  >
-                    {trendingView === "list"
-                      ? Array.from({ length: 6 }).map((_, i) => (
+            <SwipeablePages
+              value={homeTab}
+              onChange={setHomeTab}
+              pages={[
+                {
+                  id: "markets" as const,
+                  content: (
+                    <div className="flex flex-col gap-6">
+                      <section aria-label="Live games">
+                        {marketsStatus === "loading" && (
                           <div
-                            key={i}
-                            className="h-[72px] rounded-[20px] bg-white/10"
+                            className="h-[420px] w-full animate-pulse rounded-[24px] bg-white/10"
+                            aria-hidden
                           />
-                        ))
-                      : [72, 108, 88, 124, 80, 96, 116, 76, 104, 92].map(
-                          (body, i) => (
-                            <div
-                              key={i}
-                              className="mb-2.5 break-inside-avoid overflow-hidden rounded-[20px] bg-white/10"
-                            >
-                              <div
-                                className="bg-white/[0.08]"
-                                style={{ height: TRENDING_IMAGE_HEIGHT }}
-                              />
-                              <div style={{ height: body }} />
-                            </div>
-                          ),
                         )}
-                  </div>
-                )}
 
-                {marketsStatus === "error" && (
-                  <p className="text-sm text-white/55">
-                    Couldn&apos;t load trending markets.
-                  </p>
-                )}
+                        {marketsStatus === "error" && (
+                          <p className="text-sm text-white/55">
+                            Couldn&apos;t load live markets.
+                          </p>
+                        )}
 
-                {marketsStatus === "ready" && trendingMarkets.length === 0 && (
-                  <p className="text-sm text-white/55">No trending markets.</p>
-                )}
+                        {marketsStatus === "ready" &&
+                          liveMarkets.length === 0 && (
+                            <p className="text-sm text-white/55">
+                              No live sports markets.
+                            </p>
+                          )}
 
-                {marketsStatus === "ready" && trendingMarkets.length > 0 && (
-                  <ul
-                    className={
-                      trendingView === "list"
-                        ? "flex flex-col gap-2.5"
-                        : "columns-2 gap-2.5"
-                    }
-                  >
-                    {trendingMarkets.map((market) => (
-                      <li
-                        key={market.marketId}
-                        className={
-                          trendingView === "list" ? undefined : "mb-2.5 break-inside-avoid"
-                        }
-                      >
-                        <TrendingMarketCard
-                          market={market}
-                          onOpen={openMarket}
-                          variant={trendingView}
+                        {marketsStatus === "ready" && liveMarkets[0] && (
+                          <LiveGameCard
+                            market={liveMarkets[0]}
+                            featured
+                            onOpen={openMarket}
+                            onTrade={openTradeFlow}
+                          />
+                        )}
+                      </section>
+
+                      <section aria-label="Trending markets">
+                        <h3 className={`mb-2.5 ${ui.section}`}>Trending</h3>
+
+                        {marketsStatus === "loading" && (
+                          <div
+                            className="columns-2 gap-2.5 animate-pulse"
+                            aria-hidden
+                          >
+                            {[72, 108, 88, 124, 80, 96, 116, 76, 104, 92].map(
+                              (body, i) => (
+                                <div
+                                  key={i}
+                                  className="mb-2.5 break-inside-avoid overflow-hidden rounded-[20px] bg-white/10"
+                                >
+                                  <div
+                                    className="bg-white/[0.08]"
+                                    style={{
+                                      height: TRENDING_IMAGE_HEIGHT,
+                                    }}
+                                  />
+                                  <div style={{ height: body }} />
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        )}
+
+                        {marketsStatus === "error" && (
+                          <p className="text-sm text-white/55">
+                            Couldn&apos;t load trending markets.
+                          </p>
+                        )}
+
+                        {marketsStatus === "ready" &&
+                          trendingMarkets.length === 0 && (
+                            <p className="text-sm text-white/55">
+                              No trending markets.
+                            </p>
+                          )}
+
+                        {marketsStatus === "ready" &&
+                          trendingMarkets.length > 0 && (
+                            <ul className="columns-2 gap-2.5">
+                              {trendingMarkets.map((market) => (
+                                <li
+                                  key={market.marketId}
+                                  className="mb-2.5 break-inside-avoid"
+                                >
+                                  <TrendingMarketCard
+                                    market={market}
+                                    onOpen={openMarket}
+                                    variant="masonry"
+                                  />
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                      </section>
+                    </div>
+                  ),
+                },
+                {
+                  id: "leaderboard" as const,
+                  content: (
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center gap-4">
+                        <FilterDropdown
+                          ariaLabel="Leaderboard scope"
+                          value={leaderboardTab}
+                          onChange={setLeaderboardTab}
+                          options={LEADERBOARD_SCOPE_OPTIONS}
                         />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            </div>
+                        <FilterDropdown
+                          ariaLabel="Leaderboard period"
+                          value={leaderboardPeriod}
+                          onChange={setLeaderboardPeriod}
+                          options={LEADERBOARD_PERIOD_OPTIONS}
+                        />
+                      </div>
+
+                      {leaderboardTab === "traders" && (
+                        <>
+                          {leaderboardStatus === "loading" && (
+                            <div
+                              className="space-y-2.5 animate-pulse"
+                              aria-hidden
+                            >
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <div
+                                  key={i}
+                                  className="h-[64px] rounded-xl bg-white/10"
+                                />
+                              ))}
+                            </div>
+                          )}
+                          {leaderboardStatus === "error" && (
+                            <p className="text-sm text-white/55">
+                              Couldn&apos;t load leaderboard. Try again in a
+                              moment.
+                            </p>
+                          )}
+                          {leaderboardStatus === "ready" &&
+                            leaderboardWallets.length === 0 && (
+                              <p className="text-sm text-white/55">
+                                No wallet leaderboard entries yet.
+                              </p>
+                            )}
+                          {leaderboardStatus === "ready" &&
+                            leaderboardWallets.length > 0 && (
+                              <ol className="divide-y divide-white/[0.06]">
+                                {leaderboardWallets.map((wallet, index) => {
+                                  const pnlPositive = wallet.totalPnl >= 0;
+                                  return (
+                                    <li key={wallet.wallet}>
+                                      <ActivityRow
+                                        leading={
+                                          <div className="flex items-center gap-2.5">
+                                            <span className="w-5 text-center text-[13px] font-semibold tabular-nums text-white/35">
+                                              {index + 1}
+                                            </span>
+                                            <UserAvatar
+                                              seed={wallet.wallet}
+                                              label={
+                                                wallet.displayName ??
+                                                wallet.wallet
+                                              }
+                                              className="h-11 w-11 text-[13px]"
+                                            />
+                                          </div>
+                                        }
+                                        title={
+                                          wallet.displayName ??
+                                          shortWallet(wallet.wallet)
+                                        }
+                                        subtitle={
+                                          wallet.displayName
+                                            ? shortWallet(wallet.wallet)
+                                            : wallet.winRate > 0
+                                              ? `${wallet.winRate.toFixed(0)}% win`
+                                              : "Trader"
+                                        }
+                                        trailing={
+                                          <span
+                                            className={`text-[16px] font-semibold tabular-nums ${
+                                              pnlPositive
+                                                ? "text-[#00D54B]"
+                                                : "text-[#FF375F]"
+                                            }`}
+                                          >
+                                            {formatSignedUsd(wallet.totalPnl)}
+                                          </span>
+                                        }
+                                        onClick={() =>
+                                          openWallet(
+                                            wallet.wallet,
+                                            wallet.displayName,
+                                          )
+                                        }
+                                      />
+                                    </li>
+                                  );
+                                })}
+                              </ol>
+                            )}
+                        </>
+                      )}
+
+                      {leaderboardTab === "friends" && (
+                        <>
+                          {followedWallets.size === 0 && (
+                            <p className="text-sm text-white/55">
+                              Follow traders to see their ranking here.
+                            </p>
+                          )}
+                          {followedWallets.size > 0 &&
+                            friendLeaderboard.length === 0 &&
+                            leaderboardStatus === "loading" && (
+                              <div
+                                className="space-y-2.5 animate-pulse"
+                                aria-hidden
+                              >
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <div
+                                    key={i}
+                                    className="h-[64px] rounded-xl bg-white/10"
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          {followedWallets.size > 0 &&
+                            friendLeaderboard.length === 0 &&
+                            leaderboardStatus !== "loading" && (
+                              <p className="text-sm text-white/55">
+                                None of the people you follow are on the
+                                leaderboard yet.
+                              </p>
+                            )}
+                          {friendLeaderboard.length > 0 && (
+                            <ol className="divide-y divide-white/[0.06]">
+                              {friendLeaderboard.map((wallet, index) => {
+                                const pnlPositive = wallet.totalPnl >= 0;
+                                return (
+                                  <li key={wallet.wallet}>
+                                    <ActivityRow
+                                      leading={
+                                        <div className="flex items-center gap-2.5">
+                                          <span className="w-5 text-center text-[13px] font-semibold tabular-nums text-white/35">
+                                            {index + 1}
+                                          </span>
+                                          <UserAvatar
+                                            seed={wallet.wallet}
+                                            label={
+                                              wallet.displayName ??
+                                              wallet.wallet
+                                            }
+                                            className="h-11 w-11 text-[13px]"
+                                          />
+                                        </div>
+                                      }
+                                      title={
+                                        wallet.displayName ??
+                                        shortWallet(wallet.wallet)
+                                      }
+                                      subtitle={
+                                        wallet.displayName
+                                          ? shortWallet(wallet.wallet)
+                                          : wallet.winRate > 0
+                                            ? `${wallet.winRate.toFixed(0)}% win`
+                                            : "Trader"
+                                      }
+                                      trailing={
+                                        <span
+                                          className={`text-[16px] font-semibold tabular-nums ${
+                                            pnlPositive
+                                              ? "text-[#00D54B]"
+                                              : "text-[#FF375F]"
+                                          }`}
+                                        >
+                                          {formatSignedUsd(wallet.totalPnl)}
+                                        </span>
+                                      }
+                                      onClick={() =>
+                                        openWallet(
+                                          wallet.wallet,
+                                          wallet.displayName,
+                                        )
+                                      }
+                                    />
+                                  </li>
+                                );
+                              })}
+                            </ol>
+                          )}
+                        </>
+                      )}
+
+                      {leaderboardTab === "lists" && (
+                        <>
+                          {leaderboardStatus === "loading" && (
+                            <div
+                              className="space-y-2.5 animate-pulse"
+                              aria-hidden
+                            >
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <div
+                                  key={i}
+                                  className="h-[64px] rounded-xl bg-white/10"
+                                />
+                              ))}
+                            </div>
+                          )}
+                          {leaderboardStatus === "error" && (
+                            <p className="text-sm text-white/55">
+                              Couldn&apos;t load leaderboard. Try again in a
+                              moment.
+                            </p>
+                          )}
+                          {leaderboardStatus === "ready" &&
+                            leaderboardLists.length === 0 && (
+                              <p className="text-sm text-white/55">
+                                No squad leaderboard entries yet.
+                              </p>
+                            )}
+                          {leaderboardStatus === "ready" &&
+                            leaderboardLists.length > 0 && (
+                              <ol className="divide-y divide-white/[0.06]">
+                                {[...leaderboardLists]
+                                  .sort(
+                                    (a, b) =>
+                                      b.aggregatedPnl - a.aggregatedPnl,
+                                  )
+                                  .map((list, index) => {
+                                    const pnlPositive =
+                                      list.aggregatedPnl >= 0;
+                                    return (
+                                      <li key={list.id}>
+                                        <ActivityRow
+                                          leading={
+                                            <div className="flex items-center gap-2.5">
+                                              <span className="w-5 text-center text-[13px] font-semibold tabular-nums text-white/35">
+                                                {index + 1}
+                                              </span>
+                                              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.1] text-[13px] font-semibold">
+                                                {list.name
+                                                  .slice(0, 1)
+                                                  .toUpperCase()}
+                                              </div>
+                                            </div>
+                                          }
+                                          title={list.name}
+                                          subtitle={`${list.walletCount} ${
+                                            list.walletCount === 1
+                                              ? "wallet"
+                                              : "wallets"
+                                          }`}
+                                          trailing={
+                                            <span
+                                              className={`text-[16px] font-semibold tabular-nums ${
+                                                pnlPositive
+                                                  ? "text-[#00D54B]"
+                                                  : "text-[#FF375F]"
+                                              }`}
+                                            >
+                                              {formatSignedUsd(
+                                                list.aggregatedPnl,
+                                              )}
+                                            </span>
+                                          }
+                                          onClick={() => openList(list.id)}
+                                        />
+                                      </li>
+                                    );
+                                  })}
+                              </ol>
+                            )}
+                        </>
+                      )}
+                    </div>
+                  ),
+                },
+              ]}
+            />
           )}
 
           {showingMarketDetail && (
@@ -5762,224 +6337,29 @@ export default function Api() {
               )}
               {(tradesStatus === "ready" || userFeedTrades.length > 0) &&
                 visibleFeedTrades.length > 0 && (
-                <ul className="flex flex-col">
-                  {visibleFeedTrades.map((trade) => (
-                    <li
-                      key={`${trade.txHash ?? trade.timestamp}-${trade.wallet}-${trade.outcome}`}
-                      className="border-b border-white/[0.06] py-5 first:pt-0 last:border-b-0"
-                    >
-                      <TradePost
-                        trade={trade}
-                        handle={resolveFeedHandle(trade.wallet)}
-                        caption={feedCaption(trade)}
-                        gifUrl={captionGifForTrade(trade)}
-                        marketImage={
-                          trade.marketSlug
-                            ? marketImageBySlug.get(trade.marketSlug)
-                            : undefined
-                        }
-                        onOpenWallet={(wallet) => openWallet(wallet, null)}
-                        onOpenTrade={() => setFeedPositionTrade(trade)}
-                        currentUser={commentAuthor}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
-
-          {section === "leaderboard" && !showingDrillDown && (
-            <>
-              {leaderboardStatus === "loading" &&
-                (leaderboardTab !== "friends" || followedWallets.size > 0) && (
-                <div className="space-y-2.5 animate-pulse" aria-hidden>
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="h-[64px] rounded-xl bg-white/10" />
-                  ))}
-                </div>
-              )}
-              {leaderboardStatus === "error" && leaderboardTab !== "friends" && (
-                <p className="text-sm text-white/55">
-                  Couldn&apos;t load leaderboard. Try again in a moment.
-                </p>
-              )}
-
-              {leaderboardStatus === "ready" &&
-                leaderboardTab === "all" &&
-                leaderboardWallets.length === 0 && (
-                  <p className="text-sm text-white/55">
-                    No wallet leaderboard entries yet.
-                  </p>
-                )}
-
-              {leaderboardStatus === "ready" &&
-                leaderboardTab === "all" &&
-                leaderboardWallets.length > 0 && (
-                  <ol className="divide-y divide-white/[0.06]">
-                    {leaderboardWallets.map((wallet, index) => {
-                      const pnlPositive = wallet.totalPnl >= 0;
-                      return (
-                        <li key={wallet.wallet}>
-                          <ActivityRow
-                            leading={
-                              <div className="flex items-center gap-2.5">
-                                <span className="w-5 text-center text-[13px] font-semibold tabular-nums text-white/35">
-                                  {index + 1}
-                                </span>
-                                <UserAvatar
-                                  seed={wallet.wallet}
-                                  label={wallet.displayName ?? wallet.wallet}
-                                  className="h-11 w-11 text-[13px]"
-                                />
-                              </div>
-                            }
-                            title={
-                              wallet.displayName ?? shortWallet(wallet.wallet)
-                            }
-                            subtitle={
-                              wallet.displayName
-                                ? shortWallet(wallet.wallet)
-                                : wallet.winRate > 0
-                                  ? `${wallet.winRate.toFixed(0)}% win`
-                                  : "Trader"
-                            }
-                            trailing={
-                              <span
-                                className={`text-[16px] font-semibold tabular-nums ${
-                                  pnlPositive
-                                    ? "text-[#00D54B]"
-                                    : "text-[#FF375F]"
-                                }`}
-                              >
-                                {formatSignedUsd(wallet.totalPnl)}
-                              </span>
-                            }
-                            onClick={() =>
-                              openWallet(wallet.wallet, wallet.displayName)
-                            }
-                          />
-                        </li>
-                      );
-                    })}
-                  </ol>
-                )}
-
-              {leaderboardTab === "friends" && followedWallets.size === 0 && (
-                <p className="text-sm text-white/55">
-                  Follow traders to see their ranking here.
-                </p>
-              )}
-
-              {leaderboardTab === "friends" &&
-                followedWallets.size > 0 &&
-                friendLeaderboard.length === 0 &&
-                leaderboardStatus !== "loading" && (
-                  <p className="text-sm text-white/55">
-                    None of the people you follow are on the leaderboard yet.
-                  </p>
-                )}
-
-              {leaderboardTab === "friends" && friendLeaderboard.length > 0 && (
-                <ol className="divide-y divide-white/[0.06]">
-                  {friendLeaderboard.map((wallet, index) => {
-                    const pnlPositive = wallet.totalPnl >= 0;
-                    return (
-                      <li key={wallet.wallet}>
-                        <ActivityRow
-                          leading={
-                            <div className="flex items-center gap-2.5">
-                              <span className="w-5 text-center text-[13px] font-semibold tabular-nums text-white/35">
-                                {index + 1}
-                              </span>
-                              <UserAvatar
-                                seed={wallet.wallet}
-                                label={wallet.displayName ?? wallet.wallet}
-                                className="h-11 w-11 text-[13px]"
-                              />
-                            </div>
+                  <ul className="flex flex-col">
+                    {visibleFeedTrades.map((trade) => (
+                      <li
+                        key={`${trade.txHash ?? trade.timestamp}-${trade.wallet}-${trade.outcome}`}
+                        className="border-b border-white/[0.06] py-5 first:pt-0 last:border-b-0"
+                      >
+                        <TradePost
+                          trade={trade}
+                          handle={resolveFeedHandle(trade.wallet)}
+                          caption={feedCaption(trade)}
+                          gifUrl={captionGifForTrade(trade)}
+                          marketImage={
+                            trade.marketSlug
+                              ? marketImageBySlug.get(trade.marketSlug)
+                              : undefined
                           }
-                          title={
-                            wallet.displayName ?? shortWallet(wallet.wallet)
-                          }
-                          subtitle={
-                            wallet.displayName
-                              ? shortWallet(wallet.wallet)
-                              : wallet.winRate > 0
-                                ? `${wallet.winRate.toFixed(0)}% win`
-                                : "Trader"
-                          }
-                          trailing={
-                            <span
-                              className={`text-[16px] font-semibold tabular-nums ${
-                                pnlPositive
-                                  ? "text-[#00D54B]"
-                                  : "text-[#FF375F]"
-                              }`}
-                            >
-                              {formatSignedUsd(wallet.totalPnl)}
-                            </span>
-                          }
-                          onClick={() =>
-                            openWallet(wallet.wallet, wallet.displayName)
-                          }
+                          onOpenWallet={(wallet) => openWallet(wallet, null)}
+                          onOpenTrade={() => setFeedPositionTrade(trade)}
+                          currentUser={commentAuthor}
                         />
                       </li>
-                    );
-                  })}
-                </ol>
-              )}
-
-              {leaderboardStatus === "ready" &&
-                leaderboardTab === "lists" &&
-                leaderboardLists.length === 0 && (
-                  <p className="text-sm text-white/55">
-                    No list leaderboard entries yet.
-                  </p>
-                )}
-
-              {leaderboardStatus === "ready" &&
-                leaderboardTab === "lists" &&
-                leaderboardLists.length > 0 && (
-                  <ol className="divide-y divide-white/[0.06]">
-                    {[...leaderboardLists]
-                      .sort((a, b) => b.aggregatedPnl - a.aggregatedPnl)
-                      .map((list, index) => {
-                        const pnlPositive = list.aggregatedPnl >= 0;
-                        return (
-                          <li key={list.id}>
-                            <ActivityRow
-                              leading={
-                                <div className="flex items-center gap-2.5">
-                                  <span className="w-5 text-center text-[13px] font-semibold tabular-nums text-white/35">
-                                    {index + 1}
-                                  </span>
-                                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.1] text-[13px] font-semibold">
-                                    {list.name.slice(0, 1).toUpperCase()}
-                                  </div>
-                                </div>
-                              }
-                              title={list.name}
-                              subtitle={`${list.walletCount} ${
-                                list.walletCount === 1 ? "wallet" : "wallets"
-                              }`}
-                              trailing={
-                                <span
-                                  className={`text-[16px] font-semibold tabular-nums ${
-                                    pnlPositive
-                                      ? "text-[#00D54B]"
-                                      : "text-[#FF375F]"
-                                  }`}
-                                >
-                                  {formatSignedUsd(list.aggregatedPnl)}
-                                </span>
-                              }
-                              onClick={() => openList(list.id)}
-                            />
-                          </li>
-                        );
-                      })}
-                  </ol>
+                    ))}
+                  </ul>
                 )}
             </>
           )}
@@ -6159,7 +6539,7 @@ export default function Api() {
             key={`market-fade-${selectedMarketSlug}`}
             ref={stickyMarketFadeRef}
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 z-20 h-[68px] opacity-0"
+            className="pointer-events-none absolute inset-x-0 top-0 z-20 h-[96px] opacity-0"
             style={{
               backgroundImage: `linear-gradient(to bottom, ${marketAccent} 42%, ${hexToRgba(marketAccent, 0.75)}, transparent)`,
             }}
@@ -6170,7 +6550,7 @@ export default function Api() {
               !cashOutItem &&
               !copyTradeTarget &&
               !depositOpen && (
-                <div className="absolute inset-x-0 top-3.5 flex justify-center px-16">
+                <div className={`absolute inset-x-0 ${IOS_CHROME_TOP} flex justify-center px-16`}>
                   <div className="flex h-10 min-w-0 max-w-full items-center gap-1.5">
                     {(() => {
                       const photo = selectedMarket?.image;
@@ -6209,10 +6589,10 @@ export default function Api() {
             className="pointer-events-none absolute inset-x-0 top-0 z-20 opacity-0"
           >
             {showingMarketDetail ? null : (
-              <div className="h-[68px] bg-gradient-to-b from-black from-[42%] via-black/75 to-transparent" />
+              <div className="h-[96px] bg-gradient-to-b from-black from-[42%] via-black/75 to-transparent" />
             )}
             <p
-              className={`absolute top-3.5 truncate text-center text-[15px] font-semibold leading-10 tracking-[-0.02em] text-white ${
+              className={`absolute ${IOS_CHROME_TOP} truncate text-center text-[15px] font-semibold leading-10 tracking-[-0.02em] text-white ${
                 drillBack ? "inset-x-[4.5rem]" : "inset-x-8"
               }`}
             >
@@ -6227,7 +6607,7 @@ export default function Api() {
           !cashOutItem &&
           !copyTradeTarget &&
           !depositOpen && (
-          <div className="absolute left-3.5 top-3.5 z-30">
+          <div className={`absolute left-3.5 ${IOS_CHROME_TOP} z-30`}>
             <BlurBackButton
               onClick={drillBack.onClick}
               label={drillBack.label}
@@ -6242,7 +6622,7 @@ export default function Api() {
           !cashOutItem &&
           !copyTradeTarget &&
           !depositOpen && (
-            <div className="absolute right-3.5 top-3.5 z-30">
+            <div className={`absolute right-3.5 ${IOS_CHROME_TOP} z-30`}>
               <BlurShareButton
                 onClick={() => void shareMarket()}
               />
@@ -6310,54 +6690,163 @@ export default function Api() {
           !depositOpen &&
           !sharePosition &&
           !followList &&
+          !positionsOpen &&
           !onboardingOpen && (
-          <nav
-            className="pointer-events-none absolute inset-x-0 bottom-5 z-10 flex justify-center"
-            aria-label="Main sections"
-          >
+          <>
             <div
-              className="pointer-events-auto relative flex rounded-full bg-black/65 p-2 shadow-[0_8px_32px_rgba(0,0,0,0.45)] ring-1 ring-white/10 backdrop-blur-2xl"
-              role="tablist"
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 bottom-0 z-[9] h-[140px]"
             >
               <div
-                aria-hidden
-                className="absolute top-2 left-2 h-12 w-12 rounded-full bg-white/15 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                className="absolute inset-0 backdrop-blur-[1px]"
                 style={{
-                  transform: `translateX(${Math.max(0, BOTTOM_TABS.findIndex((tab) => tab.id === section)) * 48}px)`,
+                  maskImage:
+                    "linear-gradient(to top, black 0%, black 55%, transparent 100%)",
+                  WebkitMaskImage:
+                    "linear-gradient(to top, black 0%, black 55%, transparent 100%)",
                 }}
               />
-              {BOTTOM_TABS.map((tab) => {
-                const isActive = section === tab.id;
-                const profileSeed =
-                  demoProfile?.wallet ?? profileUsername ?? null;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    aria-label={tab.label}
-                    aria-selected={isActive}
-                    onClick={() => handleSectionChange(tab.id)}
-                    className={`relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-colors duration-300 ${
-                      isActive
-                        ? "text-white"
-                        : "text-white/45 hover:text-white/70"
-                    }`}
-                  >
-                    {tab.id === "profile" && profileSeed ? (
-                      <UserAvatar
-                        seed={profileSeed}
-                        label={profileUsername ?? "You"}
-                        className="h-7 w-7"
-                      />
-                    ) : (
-                      <TabIcon id={tab.id} active={isActive} />
-                    )}
-                  </button>
-                );
-              })}
+              <div
+                className="absolute inset-0 backdrop-blur-[4px]"
+                style={{
+                  maskImage:
+                    "linear-gradient(to top, black 0%, black 40%, transparent 78%)",
+                  WebkitMaskImage:
+                    "linear-gradient(to top, black 0%, black 40%, transparent 78%)",
+                }}
+              />
+              <div
+                className="absolute inset-0 backdrop-blur-[10px]"
+                style={{
+                  maskImage:
+                    "linear-gradient(to top, black 0%, black 28%, transparent 62%)",
+                  WebkitMaskImage:
+                    "linear-gradient(to top, black 0%, black 28%, transparent 62%)",
+                }}
+              />
+              <div
+                className="absolute inset-0 backdrop-blur-[18px]"
+                style={{
+                  maskImage:
+                    "linear-gradient(to top, black 0%, black 18%, transparent 48%)",
+                  WebkitMaskImage:
+                    "linear-gradient(to top, black 0%, black 18%, transparent 48%)",
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black from-15% via-black/55 to-transparent" />
             </div>
-          </nav>
+            <nav
+              className="pointer-events-none absolute inset-x-0 bottom-5 z-10 flex justify-center px-5"
+              aria-label="Main sections"
+            >
+              <div className="pointer-events-auto w-full max-w-[360px]">
+                <TabBarGlass>
+                  <div
+                    className="relative flex w-full justify-between px-1.5 py-2"
+                    role="tablist"
+                  >
+                    <div
+                      aria-hidden
+                      className="absolute top-2 bottom-2 left-1.5 w-[calc((100%-12px)/var(--tab-count))] rounded-full bg-white/20 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                      style={{
+                        ["--tab-count" as string]: BOTTOM_TABS.length,
+                        transform: `translateX(calc(${Math.max(0, BOTTOM_TABS.findIndex((tab) => tab.id === (positionsOpen ? "positions" : section)))} * 100%))`,
+                      }}
+                    />
+                    {BOTTOM_TABS.map((tab) => {
+                      const isActive = positionsOpen
+                        ? tab.id === "positions"
+                        : section === tab.id;
+                      const profileSeed =
+                        demoProfile?.wallet ?? profileUsername ?? null;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          role="tab"
+                          aria-label={
+                            tab.id === "positions"
+                              ? `Positions, ${profilePositionCount} open`
+                              : tab.label
+                          }
+                          aria-selected={isActive}
+                          onClick={() => handleSectionChange(tab.id)}
+                          className={`relative z-10 flex h-12 min-w-0 flex-1 items-center justify-center rounded-full transition-colors duration-300 ${
+                            isActive
+                              ? "text-white"
+                              : "text-white/45 hover:text-white/70"
+                          }`}
+                        >
+                          {tab.id === "profile" && profileSeed ? (
+                            <UserAvatar
+                              seed={profileSeed}
+                              label={profileUsername ?? "You"}
+                              className="h-7 w-7"
+                            />
+                          ) : tab.id === "positions" ? (
+                            <PositionsTabCount
+                              count={profilePositionCount}
+                              active={isActive}
+                              pnlUsd={profilePositionsPnl}
+                              investedUsd={profilePositionsInvested}
+                            />
+                          ) : (
+                            <TabIcon id={tab.id} active={isActive} />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </TabBarGlass>
+              </div>
+            </nav>
+          </>
+        )}
+        {positionsOpen && (
+          <PositionsSheet
+            positions={profilePositions}
+            loading={demoProfileStatus === "loading"}
+            onClose={() => setPositionsOpen(false)}
+            onOpenPosition={(position) => {
+              openMarketBySlug(
+                position.marketSlug ?? "",
+                position.marketTitle,
+                {
+                  image: position.image,
+                  price: position.markPrice,
+                  outcome: position.outcome,
+                },
+              );
+            }}
+            onCashOut={(position) => {
+              const match = userTrades.find((item) => {
+                if (item.cashedOut) return false;
+                const slug = (item.trade.marketSlug ?? "").toLowerCase();
+                const title = item.trade.marketTitle.trim().toLowerCase();
+                const posSlug = (position.marketSlug ?? "").toLowerCase();
+                const posTitle = position.marketTitle.trim().toLowerCase();
+                const sameMarket =
+                  (posSlug && slug === posSlug) || title === posTitle;
+                return (
+                  sameMarket &&
+                  item.trade.outcome.trim().toLowerCase() ===
+                    position.outcome.trim().toLowerCase()
+                );
+              });
+              if (match) setCashOutItem(match);
+              else {
+                openMarketBySlug(
+                  position.marketSlug ?? "",
+                  position.marketTitle,
+                  {
+                    image: position.image,
+                    price: position.markPrice,
+                    outcome: position.outcome,
+                  },
+                );
+              }
+            }}
+          />
         )}
         {onboardingOpen && (
           <Onboarding
@@ -6501,6 +6990,26 @@ export default function Api() {
             to {
               opacity: 1;
               transform: translateY(0);
+            }
+          }
+          @keyframes api-positions-up-blink {
+            0%, 100% { box-shadow: inset 0 0 10px #1f8f45; }
+            50% { box-shadow: inset 0 0 28px #5dd978; }
+          }
+          @keyframes api-positions-down-blink {
+            0%, 100% { box-shadow: inset 0 0 10px #d42e3e; }
+            50% { box-shadow: inset 0 0 28px #ff4d5e; }
+          }
+          .api-positions-up-blink {
+            animation: api-positions-up-blink 0.7s ease-in-out infinite;
+          }
+          .api-positions-down-blink {
+            animation: api-positions-down-blink 0.7s ease-in-out infinite;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .api-positions-up-blink,
+            .api-positions-down-blink {
+              animation: none;
             }
           }
         `}</style>

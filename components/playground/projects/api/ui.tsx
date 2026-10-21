@@ -1,6 +1,12 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 export const ui = {
@@ -27,14 +33,25 @@ export function ChipTabs<T extends string>({
   value,
   onChange,
   ariaLabel,
+  underline = false,
+  fullWidth = false,
 }: {
   tabs: readonly { id: T; label: string; count?: number | string }[];
   value: T;
   onChange: (id: T) => void;
   ariaLabel: string;
+  underline?: boolean;
+  /** Equal-width tabs with a full-bleed underline (reference: Markets / Top traders). */
+  fullWidth?: boolean;
 }) {
   return (
-    <div className="flex gap-5" role="tablist" aria-label={ariaLabel}>
+    <div
+      className={`flex ${fullWidth ? "w-full" : "gap-5"} ${
+        underline ? "border-b border-white/[0.08]" : ""
+      }`}
+      role="tablist"
+      aria-label={ariaLabel}
+    >
       {tabs.map((tab) => {
         const isActive = value === tab.id;
         return (
@@ -46,10 +63,24 @@ export function ChipTabs<T extends string>({
             data-sfx="click"
             data-sfx-hover="tick"
             onClick={() => onChange(tab.id)}
-            className={`inline-flex items-baseline gap-0.5 px-0 pb-1 text-[20px] font-semibold tracking-[-0.03em] ${
+            className={`${
+              fullWidth
+                ? "flex flex-1 items-center justify-center gap-0.5 text-[15px] tracking-[-0.02em]"
+                : "inline-flex items-baseline gap-0.5 text-[20px] tracking-[-0.03em]"
+            } px-0 font-semibold ${
+              underline
+                ? fullWidth
+                  ? "border-b pb-2.5 -mb-px"
+                  : "border-b-2 pb-2.5 -mb-px"
+                : "pb-1"
+            } ${
               isActive
-                ? "text-white"
-                : "text-white/55 hover:text-white/80"
+                ? underline
+                  ? "border-white text-white"
+                  : "text-white"
+                : underline
+                  ? "border-transparent text-white/55 hover:text-white/80"
+                  : "text-white/55 hover:text-white/80"
             }`}
           >
             {tab.label}
@@ -65,6 +96,193 @@ export function ChipTabs<T extends string>({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+export function FilterDropdown<T extends string>({
+  value,
+  onChange,
+  options,
+  ariaLabel,
+}: {
+  value: T;
+  onChange: (id: T) => void;
+  options: readonly { id: T; label: string }[];
+  ariaLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const active = options.find((option) => option.id === value) ?? options[0];
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="relative min-w-0">
+      <button
+        type="button"
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        data-sfx="click"
+        onClick={() => setOpen((prev) => !prev)}
+        className="inline-flex max-w-full items-center gap-1 text-[15px] font-semibold tracking-[-0.02em] text-white"
+      >
+        <span className="truncate">{active?.label}</span>
+        <svg
+          viewBox="0 0 12 12"
+          fill="none"
+          className={`h-3 w-3 shrink-0 text-white/45 transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+          aria-hidden
+        >
+          <path
+            d="M3 4.5 6 7.5 9 4.5"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+      {open ? (
+        <div
+          role="listbox"
+          aria-label={ariaLabel}
+          className="absolute left-0 top-[calc(100%+6px)] z-30 min-w-[148px] overflow-hidden rounded-2xl bg-[#1c1c1e] py-1 shadow-[0_12px_40px_rgba(0,0,0,0.55)] ring-1 ring-white/10"
+        >
+          {options.map((option) => {
+            const selected = option.id === value;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                data-sfx="click"
+                onClick={() => {
+                  onChange(option.id);
+                  setOpen(false);
+                }}
+                className={`flex w-full items-center px-3.5 py-2.5 text-left text-[14px] font-semibold ${
+                  selected
+                    ? "bg-white/10 text-white"
+                    : "text-white/70 hover:bg-white/[0.06] hover:text-white"
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Horizontal scroll-snap pager synced with tab selection. */
+export function SwipeablePages<T extends string>({
+  value,
+  onChange,
+  pages,
+  bleed = true,
+}: {
+  value: T;
+  onChange: (id: T) => void;
+  pages: readonly { id: T; content: ReactNode }[];
+  /** Extend into parent horizontal padding (default true). */
+  bleed?: boolean;
+}) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const pageIdsKey = pages.map((page) => page.id).join("|");
+  const activeIndex = Math.max(
+    0,
+    pages.findIndex((page) => page.id === value),
+  );
+  const syncingRef = useRef(false);
+  const valueRef = useRef(value);
+  const onChangeRef = useRef(onChange);
+  valueRef.current = value;
+  onChangeRef.current = onChange;
+
+  useLayoutEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const width = el.clientWidth;
+    if (width <= 0) return;
+    const target = activeIndex * width;
+    if (Math.abs(el.scrollLeft - target) < 2) return;
+    syncingRef.current = true;
+    el.scrollTo({ left: target, behavior: "smooth" });
+    const release = window.setTimeout(() => {
+      syncingRef.current = false;
+    }, 420);
+    return () => window.clearTimeout(release);
+  }, [activeIndex, pageIdsKey]);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const ids = pageIdsKey.split("|") as T[];
+
+    const syncFromScroll = () => {
+      if (syncingRef.current) return;
+      const width = el.clientWidth;
+      if (width <= 0) return;
+      const nextIndex = Math.round(el.scrollLeft / width);
+      const nextId = ids[nextIndex];
+      if (nextId && nextId !== valueRef.current) onChangeRef.current(nextId);
+    };
+
+    let frame = 0;
+    const onScroll = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(syncFromScroll);
+    };
+
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      el.removeEventListener("scroll", onScroll);
+    };
+  }, [pageIdsKey]);
+
+  return (
+    <div
+      ref={scrollerRef}
+      className={`flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+        bleed ? "-mx-5 w-[calc(100%+2.5rem)]" : "w-full"
+      }`}
+      style={{ touchAction: "pan-x pan-y" }}
+    >
+      {pages.map((page) => (
+        <div
+          key={page.id}
+          role="tabpanel"
+          aria-hidden={page.id !== value}
+          className={`shrink-0 grow-0 basis-full snap-center snap-always ${
+            bleed ? "px-5" : ""
+          }`}
+          style={{ width: "100%", flex: "0 0 100%" }}
+        >
+          {page.content}
+        </div>
+      ))}
     </div>
   );
 }
