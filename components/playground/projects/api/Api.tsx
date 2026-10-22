@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -101,6 +102,8 @@ const IOS_STATUS_BLEED = "-mt-[52px]";
 const IOS_CHROME_TOP = "top-12";
 
 const PROFILE_BALANCE = 1_347;
+/** Temporarily hide first-run onboarding until the flow is ready again. */
+const SHOW_ONBOARDING = false;
 const ONBOARDING_DONE_KEY = "playground-api-onboarded";
 const ONBOARDING_USERNAME_KEY = "playground-api-username";
 const ONBOARDING_FOLLOWS_KEY = "playground-api-follows";
@@ -261,6 +264,17 @@ const LEADERBOARD_PERIOD_OPTIONS = [
 ] as const;
 
 const DEMO_LIVE_MARKET_ID = "demo-live-lal-bos";
+const DEMO_F1_MARKET_ID = "demo-f1-ver-nor";
+const DEMO_MLB_MARKET_ID = "demo-mlb-tb-mil";
+
+const F1_VERSTAPPEN_HEADSHOT =
+  "https://a.espncdn.com/i/headshots/rpm/players/full/4665.png";
+const F1_NORRIS_HEADSHOT =
+  "https://a.espncdn.com/i/headshots/rpm/players/full/5579.png";
+
+const MLB_RAYS_LOGO = "https://a.espncdn.com/i/teamlogos/mlb/500-dark/tb.png";
+const MLB_BREWERS_LOGO =
+  "https://a.espncdn.com/i/teamlogos/mlb/500-dark/mil.png";
 
 function createDemoLiveMarket(): PolymarketMarketData {
   return {
@@ -323,6 +337,142 @@ function createDemoLiveMarket(): PolymarketMarketData {
     ],
     rules:
       "This market will resolve to the team that wins this NBA game.\n\nIf the game is postponed, delayed, or suspended, this market will remain open until the game is completed. If the game is cancelled and not rescheduled, this market will resolve according to Polymarket's standard sports cancellation rules.\n\nOvertime counts. The resolution source is the official NBA box score.",
+  };
+}
+
+function createDemoF1Market(): PolymarketMarketData {
+  return {
+    marketId: DEMO_F1_MARKET_ID,
+    title: "Australian Grand Prix: Verstappen vs. Norris",
+    slug: DEMO_F1_MARKET_ID,
+    category: "Sports",
+    yesPrice: 0.58,
+    noPrice: 0.42,
+    volumeUsd: 1_820_000,
+    volume24h: 178_200,
+    liquidityUsd: 140_000,
+    image: null,
+    closesAt: null,
+    isResolved: false,
+    price24hChange: 0.03,
+    outcomes: [
+      {
+        label: "Max Verstappen",
+        price: 0.58,
+        marketId: DEMO_F1_MARKET_ID,
+        slug: DEMO_F1_MARKET_ID,
+        logo: F1_VERSTAPPEN_HEADSHOT,
+      },
+      {
+        label: "Lando Norris",
+        price: 0.42,
+        marketId: DEMO_F1_MARKET_ID,
+        slug: DEMO_F1_MARKET_ID,
+        logo: F1_NORRIS_HEADSHOT,
+      },
+    ],
+    relatedMarketCount: 1,
+    liveGame: {
+      league: "F1 Australia",
+      status: "upcoming",
+      clock: "",
+      away: {
+        name: "Max Verstappen",
+        score: null,
+        abbr: "VER",
+        logo: F1_VERSTAPPEN_HEADSHOT,
+        portrait: true,
+      },
+      home: {
+        name: "Lando Norris",
+        score: null,
+        abbr: "NOR",
+        logo: F1_NORRIS_HEADSHOT,
+        portrait: true,
+      },
+    },
+    teams: [
+      {
+        name: "Max Verstappen",
+        abbr: "VER",
+        logo: F1_VERSTAPPEN_HEADSHOT,
+        portrait: true,
+      },
+      {
+        name: "Lando Norris",
+        abbr: "NOR",
+        logo: F1_NORRIS_HEADSHOT,
+        portrait: true,
+      },
+    ],
+    rules:
+      "This market will resolve to the driver who finishes ahead at the Australian Grand Prix.\n\nIf the race is postponed, this market remains open until it is completed. If a driver does not start, resolution follows Polymarket motorsport rules.",
+  };
+}
+
+function createDemoMlbMarket(): PolymarketMarketData {
+  return {
+    marketId: DEMO_MLB_MARKET_ID,
+    title: "Rays vs. Brewers",
+    slug: DEMO_MLB_MARKET_ID,
+    category: "Sports",
+    yesPrice: 0.48,
+    noPrice: 0.52,
+    volumeUsd: 960_000,
+    volume24h: 142_000,
+    liquidityUsd: 95_000,
+    image: null,
+    closesAt: null,
+    isResolved: false,
+    price24hChange: -0.01,
+    outcomes: [
+      {
+        label: "Rays",
+        price: 0.48,
+        marketId: DEMO_MLB_MARKET_ID,
+        slug: DEMO_MLB_MARKET_ID,
+        logo: MLB_RAYS_LOGO,
+      },
+      {
+        label: "Brewers",
+        price: 0.52,
+        marketId: DEMO_MLB_MARKET_ID,
+        slug: DEMO_MLB_MARKET_ID,
+        logo: MLB_BREWERS_LOGO,
+      },
+    ],
+    relatedMarketCount: 1,
+    liveGame: {
+      league: "MLB",
+      status: "upcoming",
+      clock: "",
+      away: {
+        name: "Tampa Bay Rays",
+        score: null,
+        abbr: "TB",
+        logo: MLB_RAYS_LOGO,
+      },
+      home: {
+        name: "Milwaukee Brewers",
+        score: null,
+        abbr: "MIL",
+        logo: MLB_BREWERS_LOGO,
+      },
+    },
+    teams: [
+      {
+        name: "Tampa Bay Rays",
+        abbr: "TB",
+        logo: MLB_RAYS_LOGO,
+      },
+      {
+        name: "Milwaukee Brewers",
+        abbr: "MIL",
+        logo: MLB_BREWERS_LOGO,
+      },
+    ],
+    rules:
+      "This market will resolve to the team that wins this MLB game.\n\nExtra innings count. If the game is postponed, the market remains open until it is completed.",
   };
 }
 
@@ -605,6 +755,94 @@ function markCopiedToMarket(
   return changed ? next : items;
 }
 
+/** Demo wallet profile when the API has no data (synthetic float wallets, etc.). */
+function seedDemoWalletProfile(
+  wallet: string,
+  markets: PolymarketMarketData[],
+): PolymarketWalletProfile {
+  const root = hashString(wallet.toLowerCase());
+  const pool = markets.length > 0 ? markets : [];
+  const positionCount = 2 + (root % 4);
+  const positions: PolymarketWalletPosition[] = [];
+  for (let i = 0; i < positionCount; i++) {
+    const market =
+      pool.length > 0
+        ? pool[(root + i * 17) % pool.length]!
+        : null;
+    const sides = market ? getMarketOddsSides(market) : [];
+    const side = sides[(root + i) % Math.max(1, sides.length)];
+    const avgPrice = Math.max(
+      0.12,
+      Math.min(0.88, (side?.price ?? 0.45) * (0.82 + ((root >> i) % 7) * 0.03)),
+    );
+    const markPrice = Math.max(
+      0.08,
+      Math.min(0.95, (side?.price ?? 0.52) * (0.9 + ((root >> (i + 3)) % 5) * 0.04)),
+    );
+    const shares = 40 + ((root + i * 31) % 220);
+    const valueUsd = shares * markPrice;
+    const costUsd = shares * avgPrice;
+    positions.push({
+      marketTitle: market?.title ?? `Market ${i + 1}`,
+      marketSlug: market?.slug ?? null,
+      outcome: side?.label ?? (i % 2 === 0 ? "Yes" : "No"),
+      shares,
+      avgPrice,
+      markPrice,
+      valueUsd,
+      pnlUsd: valueUsd - costUsd,
+      image: market?.image ?? null,
+    });
+  }
+
+  const recentTrades: PolymarketWalletTrade[] = positions.slice(0, 5).map(
+    (position, index) => {
+      const hoursAgo = 2 + ((root + index * 11) % 48);
+      return {
+        side: index % 3 === 0 ? "SELL" : "BUY",
+        outcome: position.outcome,
+        price: position.avgPrice,
+        size: Math.max(8, Math.round(position.shares * (0.25 + (index % 3) * 0.15))),
+        marketTitle: position.marketTitle,
+        marketSlug: position.marketSlug,
+        timestamp: new Date(Date.now() - hoursAgo * 3600_000).toISOString(),
+        txHash: `0xdemo${hashString(`${wallet}:tx:${index}`).toString(16).padStart(60, "0").slice(0, 60)}`,
+      };
+    },
+  );
+
+  const totalPnl = positions.reduce((sum, p) => sum + p.pnlUsd, 0);
+  const portfolioValue = Math.max(
+    420,
+    positions.reduce((sum, p) => sum + p.valueUsd, 0) + 80 + (root % 400),
+  );
+  const tradeCount = 12 + (root % 90);
+  const winRate = 44 + (root % 41);
+  const wins = Math.round((tradeCount * winRate) / 100);
+  const historyEnd = portfolioValue;
+  const history = seedPortfolioHistory(historyEnd).map((point) => ({
+    time: point.time,
+    value: point.value,
+  }));
+
+  return {
+    wallet,
+    totalPnl,
+    realizedPnl: totalPnl * 0.35,
+    unrealizedPnl: totalPnl * 0.65,
+    roiPercent: 6 + (root % 38) + (root % 10) / 10,
+    winRate,
+    wins,
+    losses: Math.max(0, tradeCount - wins),
+    tradeCount,
+    totalVolumeUsd: 8_000 + (root % 60_000),
+    portfolioValue,
+    recentTrades,
+    positions,
+    history,
+  };
+}
+
 function seedProfileCounts(seed: string): { following: number; followers: number } {
   const hash = hashString(seed.toLowerCase());
   return {
@@ -861,6 +1099,13 @@ function ChanceFlow({
   );
 }
 
+function formatChancePct(price: number): string {
+  return `${Math.round(Math.max(0, Math.min(1, price)) * 100)}%`;
+}
+
+/** Shorter hero card under the balance on the first snap page. */
+const FEATURED_MARKET_PREVIEW_HEIGHT = 400;
+
 function OddsCentsFlow({
   price,
   className,
@@ -1043,7 +1288,6 @@ function LivePeriodFlow({
 }
 
 const OUTCOME_BAR_COLORS = ["#00D54B", "#4C8DFF", "#FF9F1C", "#FF375F"] as const;
-const SPORTS_BAR_COLORS = ["#00D54B", "#FF5C5C", "#FF9F1C"] as const;
 
 function formatOutcomeLabel(label: string): string {
   const compact = label.replace(/,/g, "").trim();
@@ -1120,53 +1364,172 @@ function MarketOddsPreview({ market }: { market: PolymarketMarketData }) {
 
 const LUKA_FEATURE_CLIP = "/playground/api/clips/luka-doncic.mp4";
 
-const CLIP_POOLS = {
-  baseball: [
-    "/playground/api/clips/baseball.mp4",
-    "/playground/api/clips/baseball-2.mp4",
-    "/playground/api/clips/baseball-3.mp4",
-    "/playground/api/clips/baseball-4.mp4",
-  ],
-  basketball: [
-    "/playground/api/clips/basketball.mp4",
-    "/playground/api/clips/basketball-2.mp4",
-    "/playground/api/clips/basketball-3.mp4",
-  ],
-  tennis: [
-    "/playground/api/clips/tennis.mp4",
-    "/playground/api/clips/tennis-2.mp4",
-    "/playground/api/clips/tennis-3.mp4",
-    "/playground/api/clips/tennis-4.mp4",
-  ],
-  soccer: [
-    "/playground/api/clips/soccer.mp4",
-    "/playground/api/clips/soccer-2.mp4",
-    "/playground/api/clips/soccer-3.mp4",
-    "/playground/api/clips/soccer-4.mp4",
-  ],
-} as const;
+type SportClipKind =
+  | "baseball"
+  | "basketball"
+  | "tennis"
+  | "soccer"
+  | "combat"
+  | "motorsport";
 
-type SportClipKind = keyof typeof CLIP_POOLS;
+type TaggedClip = {
+  src: string;
+  kind: SportClipKind;
+  /** Lowercase tokens matched against market title / teams / league. */
+  tags: readonly string[];
+};
+
+/** Real highlight moments only — no stock footage. */
+const HIGHLIGHT_CLIPS: readonly TaggedClip[] = [
+  {
+    src: LUKA_FEATURE_CLIP,
+    kind: "basketball",
+    tags: ["luka", "doncic", "mavericks", "mavs", "dallas"],
+  },
+  {
+    src: "/playground/api/clips/nba-luka-alt.mp4",
+    kind: "basketball",
+    tags: ["luka", "doncic", "mavericks", "mavs", "dallas"],
+  },
+  {
+    src: "/playground/api/clips/nba-lebron.mp4",
+    kind: "basketball",
+    tags: ["lebron", "lakers", "james", "los angeles lakers"],
+  },
+  {
+    src: "/playground/api/clips/nba-tatum.mp4",
+    kind: "basketball",
+    tags: ["tatum", "celtics", "boston"],
+  },
+  {
+    src: "/playground/api/clips/nba-giannis.mp4",
+    kind: "basketball",
+    tags: ["giannis", "antetokounmpo", "bucks", "milwaukee"],
+  },
+  {
+    src: "/playground/api/clips/nba-martin.mp4",
+    kind: "basketball",
+    tags: ["martin", "rockets", "sixers", "76ers", "philadelphia"],
+  },
+  {
+    src: "/playground/api/clips/soccer-haaland.mp4",
+    kind: "soccer",
+    tags: ["haaland", "manchester city", "man city"],
+  },
+  {
+    src: "/playground/api/clips/soccer-messi.mp4",
+    kind: "soccer",
+    tags: ["messi", "inter miami", "argentina", "barcelona"],
+  },
+  {
+    src: "/playground/api/clips/soccer-messi-2.mp4",
+    kind: "soccer",
+    tags: ["messi", "inter miami", "argentina", "barcelona"],
+  },
+  {
+    src: "/playground/api/clips/soccer-messi-3.mp4",
+    kind: "soccer",
+    tags: ["messi", "inter miami", "argentina", "barcelona", "celtic"],
+  },
+  {
+    src: "/playground/api/clips/soccer-messi-4.mp4",
+    kind: "soccer",
+    tags: ["messi", "celtic", "barcelona"],
+  },
+  {
+    src: "/playground/api/clips/soccer-ronaldo.mp4",
+    kind: "soccer",
+    tags: ["ronaldo", "cr7", "real madrid", "portugal", "al nassr"],
+  },
+  {
+    src: "/playground/api/clips/soccer-zlatan.mp4",
+    kind: "soccer",
+    tags: ["zlatan", "ibrahimovic", "sweden", "milan", "premier"],
+  },
+  {
+    src: "/playground/api/clips/soccer-handanovic.mp4",
+    kind: "soccer",
+    tags: ["inter", "goalkeeper", "serie a", "ulytau", "kazakhstan"],
+  },
+  {
+    src: "/playground/api/clips/mlb-ohtani.mp4",
+    kind: "baseball",
+    tags: ["ohtani", "shohei", "dodgers", "angels"],
+  },
+  {
+    src: "/playground/api/clips/mlb-judge.mp4",
+    kind: "baseball",
+    tags: ["judge", "yankees", "aaron"],
+  },
+  {
+    src: "/playground/api/clips/mlb-judge-2.mp4",
+    kind: "baseball",
+    tags: ["judge", "yankees", "bellinger"],
+  },
+  {
+    src: "/playground/api/clips/mlb-judge-3.mp4",
+    kind: "baseball",
+    tags: ["judge", "yankees"],
+  },
+  {
+    src: "/playground/api/clips/mlb-semien.mp4",
+    kind: "baseball",
+    tags: ["semien", "rangers", "texas", "mvp", "american league"],
+  },
+  {
+    src: "/playground/api/clips/mlb-gonzalez.mp4",
+    kind: "baseball",
+    tags: ["gonzalez", "mlb", "national league", "rookie"],
+  },
+  {
+    src: "/playground/api/clips/ufc-barboza.mp4",
+    kind: "combat",
+    tags: ["ufc", "mma", "knockout", "barboza", "welterweight", "fight"],
+  },
+  {
+    src: "/playground/api/clips/ufc-ngannou.mp4",
+    kind: "combat",
+    tags: ["ufc", "mma", "ngannou", "heavyweight", "knockout", "champion"],
+  },
+  {
+    src: "/playground/api/clips/f1-verstappen.mp4",
+    kind: "motorsport",
+    tags: ["f1", "formula", "verstappen", "australia", "grand prix", "racing"],
+  },
+];
+
+const CLIP_POOLS: Record<SportClipKind, readonly string[]> = {
+  baseball: HIGHLIGHT_CLIPS.filter((c) => c.kind === "baseball").map((c) => c.src),
+  basketball: HIGHLIGHT_CLIPS.filter((c) => c.kind === "basketball").map(
+    (c) => c.src,
+  ),
+  tennis: HIGHLIGHT_CLIPS.filter((c) => c.kind === "tennis").map((c) => c.src),
+  soccer: HIGHLIGHT_CLIPS.filter((c) => c.kind === "soccer").map((c) => c.src),
+  combat: HIGHLIGHT_CLIPS.filter((c) => c.kind === "combat").map((c) => c.src),
+  motorsport: HIGHLIGHT_CLIPS.filter((c) => c.kind === "motorsport").map(
+    (c) => c.src,
+  ),
+};
+
+const ALL_HIGHLIGHT_SRCS = HIGHLIGHT_CLIPS.map((c) => c.src).filter(
+  (src) => src !== LUKA_FEATURE_CLIP,
+);
 
 type MarketClipRef = { src: string; startRatio: number };
 
-function pickClip(kind: SportClipKind, seed: string): MarketClipRef {
-  const pool = CLIP_POOLS[kind];
-  const hash = hashString(seed);
-  return {
-    src: pool[hash % pool.length],
-    startRatio: 0.08 + (hash % 37) / 100,
-  };
+function marketClipHaystack(market: PolymarketMarketData): string {
+  const teams = (market.teams ?? [])
+    .map((team) => `${team.name} ${team.abbr ?? ""}`)
+    .join(" ");
+  const live = market.liveGame
+    ? `${market.liveGame.league} ${market.liveGame.away.name} ${market.liveGame.home.name}`
+    : "";
+  return `${market.title} ${market.category ?? ""} ${teams} ${live}`.toLowerCase();
 }
 
-function sportClipForMarket(market: PolymarketMarketData): MarketClipRef | null {
+function sportKindForMarket(market: PolymarketMarketData): SportClipKind | null {
   if (!isSportsMarket(market)) return null;
-  const seed = market.slug || market.marketId || market.title;
-  if (seed === DEMO_LIVE_MARKET_ID) {
-    return { src: LUKA_FEATURE_CLIP, startRatio: 0 };
-  }
-  const haystack =
-    `${market.title} ${market.category ?? ""} ${market.liveGame?.league ?? ""}`.toLowerCase();
+  const haystack = marketClipHaystack(market);
   if (
     /\b(lol:|league of legends|cs2|counter-strike|dota|valorant|esport|lck|lpl|lec)\b/.test(
       haystack,
@@ -1175,11 +1538,18 @@ function sportClipForMarket(market: PolymarketMarketData): MarketClipRef | null 
     return null;
   }
   if (
-    /\b(nba|wnba|lakers|celtics|pistons|knicks|bulls|spurs|heat|nets|jazz|dunk|basketball)\b/.test(
+    /\b(nba|wnba|lakers|celtics|pistons|knicks|bulls|spurs|heat|nets|jazz|dunk|basketball|bucks|rockets|warriors|suns|nuggets|mavericks|mavs)\b/.test(
       haystack,
     )
   ) {
-    return pickClip("basketball", seed);
+    return "basketball";
+  }
+  if (
+    /\b(mlb|baseball|al\b|nl\b|american league|national league|world series|home run|cy young|platinum glove|rookie of the year|ohtani|judge|yankees|dodgers|cubs|red sox|astros|rangers|mets|padres|giants|phillies|braves|bellinger|vargas|messick)\b/.test(
+      haystack,
+    )
+  ) {
+    return "baseball";
   }
   if (
     /\b(atp|wta|tennis|cincinnati open|wimbledon|roland\s*garros|us open|australian open|medvedev|swiatek|sakkari|rublev|nakashima)\b/.test(
@@ -1187,38 +1557,641 @@ function sportClipForMarket(market: PolymarketMarketData): MarketClipRef | null 
     ) ||
     /open:\s/.test(haystack)
   ) {
-    return pickClip("tennis", seed);
+    return "tennis";
   }
   if (
-    /\b(epl|mls|ucl|fifa|soccer|premier league|la liga|bundesliga|serie a|ligue 1|world cup|sounders|cardiff|wrexham)\b/.test(
+    /\b(epl|mls|ucl|fifa|soccer|premier league|la liga|bundesliga|serie a|ligue 1|world cup|sounders|cardiff|wrexham|haaland|messi|ulytau|kazakhstan)\b/.test(
       haystack,
     ) ||
     /\bfc\b/.test(haystack)
   ) {
-    return pickClip("soccer", seed);
+    return "soccer";
   }
-  return pickClip("baseball", seed);
+  if (
+    /\b(ufc|mma|fight|welterweight|heavyweight|knockout|chimaev|strickland|bonfim|fortune)\b/.test(
+      haystack,
+    )
+  ) {
+    return "combat";
+  }
+  if (/\b(f1|formula\s*1|grand prix|verstappen|motorsport)\b/.test(haystack)) {
+    return "motorsport";
+  }
+  // Default sports markets to baseball highlights rather than nothing.
+  return "baseball";
+}
+
+function clipMatchScore(haystack: string, tags: readonly string[]): number {
+  let score = 0;
+  for (const tag of tags) {
+    if (haystack.includes(tag)) score += tag.length >= 5 ? 3 : 2;
+  }
+  return score;
+}
+
+/** Assign unique clip sources across a feed — no repeated video until the pool is exhausted. */
+function assignUniqueClips(
+  markets: readonly PolymarketMarketData[],
+): Map<string, MarketClipRef> {
+  const assigned = new Map<string, MarketClipRef>();
+  const usedSrc = new Set<string>();
+
+  const takeUnused = (candidates: readonly string[], seed: string) => {
+    const pool =
+      candidates.length > 0
+        ? candidates
+        : ALL_HIGHLIGHT_SRCS.filter((src) => src !== LUKA_FEATURE_CLIP);
+    const fresh = pool.filter((src) => !usedSrc.has(src));
+    if (fresh.length > 0) {
+      const src = fresh[hashString(seed) % fresh.length]!;
+      usedSrc.add(src);
+      return { src, startRatio: 0 } as MarketClipRef;
+    }
+    // Every highlight already used — scrub a different moment from one of them.
+    const src = pool[hashString(seed) % pool.length]!;
+    const moment = hashString(`moment:${seed}`) % 5;
+    return {
+      src,
+      startRatio: 0.06 + moment * 0.16,
+    } as MarketClipRef;
+  };
+
+  for (const market of markets) {
+    const id = market.marketId;
+    if (assigned.has(id)) continue;
+
+    if (id === DEMO_LIVE_MARKET_ID || market.slug === DEMO_LIVE_MARKET_ID) {
+      usedSrc.add(LUKA_FEATURE_CLIP);
+      assigned.set(id, { src: LUKA_FEATURE_CLIP, startRatio: 0 });
+      continue;
+    }
+
+    if (id === DEMO_F1_MARKET_ID || market.slug === DEMO_F1_MARKET_ID) {
+      const f1Clip = "/playground/api/clips/f1-verstappen.mp4";
+      usedSrc.add(f1Clip);
+      assigned.set(id, { src: f1Clip, startRatio: 0.08 });
+      continue;
+    }
+
+    const kind = sportKindForMarket(market);
+    if (!kind) {
+      assigned.set(id, takeUnused(ALL_HIGHLIGHT_SRCS, market.slug || id));
+      continue;
+    }
+
+    const haystack = marketClipHaystack(market);
+    const highlights = HIGHLIGHT_CLIPS.filter(
+      (clip) =>
+        clip.kind === kind &&
+        !usedSrc.has(clip.src) &&
+        clip.src !== LUKA_FEATURE_CLIP,
+    );
+    let best: TaggedClip | null = null;
+    let bestScore = 0;
+    for (const clip of highlights) {
+      const score = clipMatchScore(haystack, clip.tags);
+      if (score > bestScore) {
+        best = clip;
+        bestScore = score;
+      }
+    }
+    if (best && bestScore > 0) {
+      usedSrc.add(best.src);
+      assigned.set(id, { src: best.src, startRatio: 0 });
+      continue;
+    }
+
+    const kindPool = CLIP_POOLS[kind] ?? [];
+    const combined = [
+      ...kindPool,
+      ...ALL_HIGHLIGHT_SRCS.filter((src) => !kindPool.includes(src)),
+    ];
+    assigned.set(id, takeUnused(combined, market.slug || id));
+  }
+
+  return assigned;
+}
+
+function sportClipForMarket(market: PolymarketMarketData): MarketClipRef | null {
+  const kind = sportKindForMarket(market);
+  if (!kind) return null;
+  if (
+    market.marketId === DEMO_LIVE_MARKET_ID ||
+    market.slug === DEMO_LIVE_MARKET_ID
+  ) {
+    return { src: LUKA_FEATURE_CLIP, startRatio: 0 };
+  }
+  if (
+    market.marketId === DEMO_F1_MARKET_ID ||
+    market.slug === DEMO_F1_MARKET_ID
+  ) {
+    return { src: "/playground/api/clips/f1-verstappen.mp4", startRatio: 0.08 };
+  }
+  const assigned = assignUniqueClips([market]);
+  return assigned.get(market.marketId) ?? null;
 }
 
 function MarketClip({ clip }: { clip: MarketClipRef }) {
+  const startRatio = Math.max(0, Math.min(0.85, clip.startRatio));
   return (
     <video
       src={clip.src}
       autoPlay
       muted
-      loop
       playsInline
       disablePictureInPicture
       controls={false}
       tabIndex={-1}
       onLoadedMetadata={(event) => {
         const video = event.currentTarget;
-        if (Number.isFinite(video.duration) && video.duration > 1) {
-          video.currentTime = video.duration * clip.startRatio;
+        if (!Number.isFinite(video.duration) || video.duration <= 1) return;
+        // Play a short moment window so reused sources still feel distinct.
+        const windowSec = Math.min(8, Math.max(3.5, video.duration * 0.45));
+        const start = Math.min(
+          video.duration * startRatio,
+          Math.max(0, video.duration - windowSec),
+        );
+        video.dataset.momentStart = String(start);
+        video.dataset.momentEnd = String(start + windowSec);
+        video.currentTime = start;
+      }}
+      onTimeUpdate={(event) => {
+        const video = event.currentTarget;
+        const end = Number(video.dataset.momentEnd);
+        const start = Number(video.dataset.momentStart);
+        if (!Number.isFinite(end) || !Number.isFinite(start)) return;
+        if (video.currentTime >= end - 0.05) {
+          video.currentTime = start;
         }
       }}
       className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
     />
+  );
+}
+
+function parseMatchupNames(title: string): [string, string] | null {
+  const cleaned = title.replace(/\?+$/, "").trim();
+  const fight = cleaned.match(/^will\s+(.+?)\s+fight\s+(.+?)(?:\s+next)?$/i);
+  if (fight?.[1] && fight[2]) return [fight[1].trim(), fight[2].trim()];
+  const vs = cleaned.match(
+    /(?:^|:\s*)(.+?)\s+vs\.?\s+(.+?)(?:\s+\([^)]*\))?$/i,
+  );
+  if (vs?.[1] && vs[2]) {
+    const left = vs[1].replace(/^.*:\s*/, "").trim();
+    const right = vs[2].replace(/\s+\([^)]*\)\s*$/, "").trim();
+    if (left && right && !/^(will|spread|over|under)\b/i.test(left)) {
+      return [left, right];
+    }
+  }
+  const at = cleaned.match(/^(.+?)\s+@\s+(.+)$/i);
+  if (at?.[1] && at[2]) return [at[1].trim(), at[2].trim()];
+  return null;
+}
+
+/** True only for real two-sided matchups (both sides named). */
+function isTwoSidedMatchup(market: PolymarketMarketData): boolean {
+  if (parseMatchupNames(market.title)) return true;
+  if ((market.teams?.length ?? 0) >= 2) {
+    const a = market.teams![0]?.name?.trim() ?? "";
+    const b = market.teams![1]?.name?.trim() ?? "";
+    return Boolean(a && b && !nickMatch(a, b));
+  }
+  const named = (market.outcomes ?? []).filter((outcome) => {
+    const label = outcome.label.trim();
+    return label.length > 0 && !/^(yes|no)$/i.test(label);
+  });
+  return named.length >= 2;
+}
+
+function canShowSportsMatchHeader(market: PolymarketMarketData): boolean {
+  if (!isSportsMarket(market)) return false;
+  // Never show the match header for single-side awards / Yes-No futures.
+  return isTwoSidedMatchup(market);
+}
+
+/** Known ESPN MMA cutouts for fight markets that only expose Yes/No outcomes. */
+const FIGHTER_HEADSHOTS: Record<string, string> = {
+  "khamzat chimaev":
+    "https://a.espncdn.com/i/headshots/mma/players/full/4684751.png",
+  "sean strickland":
+    "https://a.espncdn.com/i/headshots/mma/players/full/3093653.png",
+  "merab dvalishvili":
+    "https://a.espncdn.com/i/headshots/mma/players/full/3948572.png",
+  "petr yan":
+    "https://a.espncdn.com/i/headshots/mma/players/full/4293517.png",
+  "gabriel bonfim":
+    "https://a.espncdn.com/i/headshots/mma/players/full/4921516.png",
+  "tyrell fortune":
+    "https://a.espncdn.com/i/headshots/mma/players/full/4065006.png",
+  "max verstappen": F1_VERSTAPPEN_HEADSHOT,
+  "lando norris": F1_NORRIS_HEADSHOT,
+};
+
+function fighterHeadshotUrl(name: string): string | null {
+  const key = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  return FIGHTER_HEADSHOTS[key] ?? null;
+}
+
+function sportsLeagueLabel(market: PolymarketMarketData): string {
+  const haystack =
+    `${market.title} ${market.eventTitle ?? ""} ${market.category ?? ""} ${market.liveGame?.league ?? ""} ${marketClipHaystack(market)}`.toLowerCase();
+
+  // Prefer an explicit non-generic league from live data.
+  const liveLeague = market.liveGame?.league?.trim();
+  if (liveLeague && !/^sports$/i.test(liveLeague)) return liveLeague;
+
+  // F1 — Australian GP when the title says so, otherwise plain F1.
+  if (
+    sportKindForMarket(market) === "motorsport" ||
+    /\b(f1|formula\s*1|grand prix)\b/.test(haystack)
+  ) {
+    if (/\baustralia|australian\b/.test(haystack)) return "F1 Australia";
+    return "F1";
+  }
+
+  if (/\bwnba\b/.test(haystack)) return "WNBA";
+  if (/\bnba\b|lakers|celtics|pistons|suns|76ers|pelicans|nuggets|thunder/.test(haystack)) {
+    return "NBA";
+  }
+  if (/\bnfl\b|bills|broncos|rams|bears|patriots|chiefs|super bowl/.test(haystack)) {
+    return "NFL";
+  }
+  if (/\bnhl\b|stanley cup/.test(haystack)) return "NHL";
+  if (
+    /\bmlb\b|world series|platinum glove|cy young|rookie of the year|\bal\b|\bnl\b|american league|national league|yankees|dodgers|cubs|red sox|astros|rangers|mets|padres|giants|phillies|braves|bellinger|vargas|messick|otto lopez\b/.test(
+      haystack,
+    )
+  ) {
+    return "MLB";
+  }
+  if (
+    /\b(ufc|mma|bantamweight|welterweight|heavyweight|fight|chimaev|strickland|bonfim|fortune|dvalishvili|petr yan)\b/.test(
+      haystack,
+    )
+  ) {
+    return "UFC";
+  }
+  if (/\bwta\b/.test(haystack)) return "WTA";
+  if (
+    /\b(atp|tennis|wimbledon|roland\s*garros|french open|australian open|us open|cincinnati open)\b/.test(
+      haystack,
+    ) ||
+    /open:\s/.test(haystack)
+  ) {
+    return "ATP";
+  }
+  if (/\bpremier league\b|\bepl\b/.test(haystack)) return "EPL";
+  if (/\bchampions league\b|\bucl\b/.test(haystack)) return "UCL";
+  if (/\bla liga\b/.test(haystack)) return "La Liga";
+  if (/\bbundesliga\b/.test(haystack)) return "Bundesliga";
+  if (/\bserie a\b/.test(haystack)) return "Serie A";
+  if (/\bligue 1\b/.test(haystack)) return "Ligue 1";
+  if (/\bmls\b|sounders|wrexham|cardiff/.test(haystack)) return "MLS";
+  if (/\bworld cup\b|\bfifa\b/.test(haystack)) return "FIFA";
+  if (/\bkazakhstan premier league\b|ulytau/.test(haystack)) {
+    return "KPL";
+  }
+  if (
+    /\b(soccer|football|fc\b|netherlands|haaland|messi)\b/.test(haystack) ||
+    sportKindForMarket(market) === "soccer"
+  ) {
+    return "Soccer";
+  }
+
+  const kind = sportKindForMarket(market);
+  if (kind === "basketball") return "NBA";
+  if (kind === "baseball") return "MLB";
+  if (kind === "tennis") return "ATP";
+  if (kind === "combat") return "UFC";
+  if (kind === "soccer") return "Soccer";
+
+  const category = market.category?.trim();
+  if (category && !/^sports$/i.test(category)) return category;
+  // Never surface the generic "Sports" label in match headers.
+  return kind === "motorsport" ? "F1 Australia" : "Sports";
+}
+
+function resolveMatchSides(market: PolymarketMarketData): {
+  left: {
+    name: string;
+    image: string | null;
+    abbr: string | null;
+    portrait: boolean;
+    score: number | null;
+  };
+  right: {
+    name: string;
+    image: string | null;
+    abbr: string | null;
+    portrait: boolean;
+    score: number | null;
+  };
+} {
+  const { away, home } = resolveSportsSides(market);
+  const parsed = parseMatchupNames(market.title);
+  const kind = sportKindForMarket(market);
+  // Fighter cutouts for UFC only — F1 header stays text/timer, no photos.
+  const personSides = kind === "combat";
+  const hideSideImages = kind === "motorsport";
+  const teamLeft = market.teams?.[0];
+  const teamRight = market.teams?.[1];
+  const namedOutcomes = (market.outcomes ?? []).filter((outcome) => {
+    const label = outcome.label.trim();
+    return label.length > 0 && !/^(yes|no)$/i.test(label);
+  });
+
+  const leftName =
+    parsed?.[0] ?? teamLeft?.name ?? namedOutcomes[0]?.label ?? away.name;
+  const rightName =
+    parsed?.[1] ?? teamRight?.name ?? namedOutcomes[1]?.label ?? home.name;
+
+  const isAthleteShot = (url: string | null | undefined) =>
+    Boolean(url && /headshots\//i.test(url));
+  const isTeamLogo = (url: string | null | undefined) =>
+    Boolean(url && /teamlogos\//i.test(url));
+
+  const pickImage = (
+    name: string,
+    sideLogo?: string | null,
+    teamSlotLogo?: string | null,
+  ) => {
+    if (hideSideImages) return null;
+    const outcomeLogo =
+      market.outcomes?.find((o) => nickMatch(o.label, name))?.logo ?? null;
+    const byTeamName =
+      market.teams?.find((team) => nickMatch(team.name, name))?.logo ?? null;
+    if (personSides) {
+      return (
+        (teamSlotLogo && isAthleteShot(teamSlotLogo) ? teamSlotLogo : null) ??
+        (sideLogo && isAthleteShot(sideLogo) ? sideLogo : null) ??
+        fighterHeadshotUrl(name) ??
+        (outcomeLogo && isAthleteShot(outcomeLogo) ? outcomeLogo : null) ??
+        teamSlotLogo ??
+        sideLogo ??
+        outcomeLogo ??
+        null
+      );
+    }
+    const candidates = [teamSlotLogo, sideLogo, byTeamName, outcomeLogo];
+    return (
+      candidates.find((url) => isTeamLogo(url)) ??
+      candidates.find((url) => url && !isAthleteShot(url)) ??
+      null
+    );
+  };
+
+  // Always bind left/right to team slots 0/1 when present so both logos show.
+  const leftLogo = pickImage(leftName, away.logo, teamLeft?.logo);
+  const rightLogo = pickImage(rightName, home.logo, teamRight?.logo);
+  return {
+    left: {
+      name: hideSideImages ? "—" : leftName,
+      image: proxyImageSrc(leftLogo),
+      abbr: teamLeft?.abbr ?? away.abbr ?? null,
+      portrait: personSides,
+      score: away.score,
+    },
+    right: {
+      name: hideSideImages ? "—" : rightName,
+      image: proxyImageSrc(rightLogo),
+      abbr: teamRight?.abbr ?? home.abbr ?? null,
+      portrait: personSides,
+      score: home.score,
+    },
+  };
+}
+
+/** Per-market countdown length under 24h (stable for a given market id). */
+function eventDurationMs(market: PolymarketMarketData): number {
+  const seed = hashString(market.marketId || market.slug || market.title);
+  return (45 * 60 + (seed % (23 * 3600 - 45 * 60))) * 1000 + (seed % 55) * 1000;
+}
+
+/** Target timestamp for countdown (client-only; uses closesAt when within 24h). */
+function eventTargetMs(market: PolymarketMarketData, now: number): number {
+  if (market.closesAt) {
+    const closes = Date.parse(market.closesAt);
+    if (Number.isFinite(closes)) {
+      const remaining = closes - now;
+      if (remaining > 0 && remaining < 24 * 3600_000) return closes;
+    }
+  }
+  return now + eventDurationMs(market);
+}
+
+function formatEventWhen(ms: number): string {
+  return new Date(ms).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function pad2(n: number): string {
+  return String(Math.max(0, n)).padStart(2, "0");
+}
+
+function MatchSideVisual({
+  name,
+  image,
+  abbr,
+}: {
+  name: string;
+  image: string | null;
+  abbr: string | null;
+  portrait?: boolean;
+  mode?: "score" | "timer";
+}) {
+  const [failed, setFailed] = useState(false);
+  const label =
+    (abbr ?? liveSideName(name)).slice(0, 3).toUpperCase() || "?";
+  const isTeamLogo = Boolean(image && /teamlogos\//i.test(image));
+
+  if (name === "—") {
+    return <span className="mx-auto block h-12 w-12" aria-hidden />;
+  }
+
+  // Shared middle box — team logos scaled slightly so they match headshot weight.
+  return (
+    <div className="mx-auto flex h-12 w-12 items-center justify-center">
+      {image && !failed ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={image}
+          alt=""
+          onError={() => setFailed(true)}
+          className={
+            isTeamLogo
+              ? "h-[82%] w-[82%] object-contain"
+              : "h-full w-full object-contain"
+          }
+        />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center text-[12px] font-semibold tracking-wide text-white/80">
+          {label}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function SportsMatchHeader({ market }: { market: PolymarketMarketData }) {
+  const sides = useMemo(() => resolveMatchSides(market), [market]);
+  const game = market.liveGame;
+  const hasScore = sides.left.score != null && sides.right.score != null;
+  const isLive = game?.status === "live";
+  const showScore = hasScore;
+  const hidePhotos = sportKindForMarket(market) === "motorsport";
+  const league = sportsLeagueLabel(market);
+  const [now, setNow] = useState<number | null>(null);
+  const [targetMs, setTargetMs] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (showScore) return;
+    const start = Date.now();
+    setNow(start);
+    setTargetMs(eventTargetMs(market, start));
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [showScore, market]);
+
+  // Shared middle size for live scores and countdown timers.
+  const matchValueClass = `text-[32px] font-semibold tabular-nums leading-none tracking-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] ${instrumentSansCondensed.className}`;
+
+  if (showScore) {
+    const period = game
+      ? formatLiveClock(game.clock, game.status)
+      : isLive
+        ? "Live"
+        : null;
+    return (
+      <div className="flex flex-col items-center">
+        <div className="flex items-center justify-center gap-2">
+          <p className="text-[12px] font-semibold tracking-[0.04em] text-white/80">
+            {league}
+          </p>
+          {period ? (
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold tabular-nums text-[#FF3B30]">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#FF3B30]" />
+              {period}
+            </span>
+          ) : null}
+        </div>
+        <div className="mt-1 flex items-center justify-center gap-3 px-1">
+          <MatchSideVisual
+            name={sides.left.name}
+            image={sides.left.image}
+            abbr={sides.left.abbr}
+            portrait={sides.left.portrait}
+          />
+          <p className={`inline-flex items-center gap-1.5 ${matchValueClass}`}>
+            <NumberFlow
+              value={sides.left.score!}
+              trend={1}
+              format={{ useGrouping: false }}
+              style={nfMaskStyle}
+            />
+            <span className="text-[18px] font-semibold leading-none text-white/55">
+              -
+            </span>
+            <NumberFlow
+              value={sides.right.score!}
+              trend={1}
+              format={{ useGrouping: false }}
+              style={nfMaskStyle}
+            />
+          </p>
+          <MatchSideVisual
+            name={sides.right.name}
+            image={sides.right.image}
+            abbr={sides.right.abbr}
+            portrait={sides.right.portrait}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const remaining =
+    targetMs != null && now != null ? Math.max(0, targetMs - now) : 0;
+  const hours = Math.floor(remaining / 3_600_000);
+  const minutes = Math.floor((remaining % 3_600_000) / 60_000);
+  const seconds = Math.floor((remaining % 60_000) / 1000);
+  const timerReady = targetMs != null && now != null;
+
+  return (
+    <div
+      className={
+        hidePhotos
+          ? "relative flex flex-col items-center justify-center px-1"
+          : "relative grid grid-cols-[48px_minmax(0,1fr)_48px] items-center gap-x-2 px-1"
+      }
+    >
+      {hidePhotos ? null : (
+        <MatchSideVisual
+          name={sides.left.name}
+          image={sides.left.image}
+          abbr={sides.left.abbr}
+          portrait={sides.left.portrait}
+        />
+      )}
+      <div className="flex min-w-0 flex-col items-center justify-center px-1 text-center">
+        <p className="text-[12px] font-medium tracking-[0.02em] text-white/45">
+          {league}
+        </p>
+        <p
+          className={`mt-1 flex items-baseline justify-center gap-[2px] ${matchValueClass}`}
+        >
+          <span className="mr-1 text-[15px] font-semibold text-white/75">
+            in
+          </span>
+          {timerReady ? (
+            <>
+              <NumberFlow
+                value={hours}
+                trend={-1}
+                format={{
+                  minimumIntegerDigits: hours >= 100 ? 3 : 2,
+                  useGrouping: false,
+                }}
+                style={nfMaskStyle}
+              />
+              <span className="text-white/55">:</span>
+              <NumberFlow
+                value={minutes}
+                trend={-1}
+                format={{ minimumIntegerDigits: 2, useGrouping: false }}
+                style={nfMaskStyle}
+              />
+              <span className="text-white/55">:</span>
+              <NumberFlow
+                value={seconds}
+                trend={-1}
+                format={{ minimumIntegerDigits: 2, useGrouping: false }}
+                style={nfMaskStyle}
+              />
+            </>
+          ) : (
+            <span className="tabular-nums text-white/40">--:--:--</span>
+          )}
+        </p>
+        <p className="mt-1.5 text-[12px] font-medium text-white/45">
+          {targetMs != null ? formatEventWhen(targetMs) : "—"}
+        </p>
+      </div>
+      {hidePhotos ? null : (
+        <MatchSideVisual
+          name={sides.right.name}
+          image={sides.right.image}
+          abbr={sides.right.abbr}
+          portrait={sides.right.portrait}
+        />
+      )}
+    </div>
   );
 }
 
@@ -1238,11 +2211,360 @@ function PreviewActionPill({
         event.stopPropagation();
         onClick();
       }}
-      className="min-w-0 flex-1 rounded-full border border-white/15 bg-transparent px-3 py-2.5 text-center text-[14px] font-semibold transition-colors hover:bg-white/[0.06]"
+      className="min-w-0 flex-1 rounded-full border border-white/20 bg-black/45 px-3 py-3 text-center text-[16px] font-semibold backdrop-blur-md transition-colors hover:bg-black/60"
       style={{ color }}
     >
       <span className="block truncate">{label}</span>
     </button>
+  );
+}
+
+type FloatPositionBubble = {
+  id: string;
+  handle: string;
+  avatarUrl: string;
+  pnl: number;
+  side: 0 | 1;
+  edgePx: number;
+  bottomPx: number;
+  delayMs: number;
+  floatDur: number;
+  driftX: number;
+  driftY: number;
+};
+
+type FeedPositionSelection = {
+  trade: PolymarketTradeWithPnl;
+  handle?: string;
+  avatarUrl?: string | null;
+};
+
+const FLOAT_HANDLES = [
+  "maya",
+  "knox",
+  "rio",
+  "nova",
+  "jax",
+  "luna",
+  "cole",
+  "aria",
+  "zane",
+  "ivy",
+  "reed",
+  "sage",
+  "knoxx",
+  "remi",
+  "theo",
+  "wren",
+  "kai",
+  "eden",
+  "ash",
+  "mila",
+  "leo",
+  "nina",
+  "omar",
+  "skye",
+] as const;
+
+/** Synthetic feed trade so preview uspics open the same position sheet as the feed. */
+function tradeFromFloatBubble(
+  bubble: FloatPositionBubble,
+  market: PolymarketMarketData,
+  livePnl: number,
+): PolymarketTradeWithPnl {
+  const sides = getMarketOddsSides(market);
+  const outcome = sides[bubble.side] ?? sides[0]!;
+  const price = Math.max(0.08, Math.min(0.92, outcome.price || 0.5));
+  const walletHex = hashString(bubble.id).toString(16).padStart(40, "0").slice(0, 40);
+  const txHex = hashString(`${bubble.id}:tx`)
+    .toString(16)
+    .padStart(64, "0")
+    .slice(0, 64);
+  const wallet = `0x${walletHex}`;
+  const txHash = `0x${txHex}`;
+  const seed = hashString(`${wallet}-${txHash}`);
+  const markMove = 0.08 + (seed % 22) / 100;
+  const amountUsd = Math.max(50, Math.round(Math.max(24, livePnl) / markMove));
+  const hoursAgo = 1 + (seed % 36);
+  return {
+    side: "BUY",
+    outcome: outcome.label,
+    price,
+    amountUsd,
+    marketTitle: market.title,
+    marketSlug: market.slug,
+    marketCategory: market.category,
+    marketImage: market.image,
+    wallet,
+    timestamp: new Date(Date.now() - hoursAgo * 3600_000).toISOString(),
+    txHash,
+    totalPnl: Math.round(livePnl * (2.4 + (seed % 5) * 0.35)),
+    winRate: 46 + (seed % 42),
+    tradeCount: 8 + (seed % 90),
+  };
+}
+
+/** Deterministic “top positions” stickers per market — 1–3 per side, corner-hugged, no overlap. */
+function buildFloatPositions(marketId: string): FloatPositionBubble[] {
+  const root = hashString(marketId);
+  const leftCount = 1 + (root % 3);
+  const rightCount = 1 + ((root >>> 5) % 3);
+  const raw: FloatPositionBubble[] = [];
+  const usedPhotoKeys = new Set<string>();
+  const usedHandles = new Set<string>();
+
+  /** Solid JPEG portraits — no transparent cutouts. */
+  const uniquePhoto = (seed: string) => {
+    const h = hashString(seed);
+    for (let attempt = 0; attempt < 120; attempt++) {
+      const gender = (h + attempt) % 2 === 0 ? "men" : "women";
+      const id = (h + attempt * 13) % 99;
+      const key = `${gender}:${id}`;
+      if (usedPhotoKeys.has(key)) continue;
+      usedPhotoKeys.add(key);
+      return `https://randomuser.me/api/portraits/${gender}/${id}.jpg`;
+    }
+    const gender = h % 2 === 0 ? "men" : "women";
+    const id = h % 99;
+    return `https://randomuser.me/api/portraits/${gender}/${id}.jpg`;
+  };
+
+  const uniqueHandle = (seed: string) => {
+    const h = hashString(`${seed}:handle`);
+    for (let attempt = 0; attempt < FLOAT_HANDLES.length; attempt++) {
+      const name = FLOAT_HANDLES[(h + attempt) % FLOAT_HANDLES.length]!;
+      if (usedHandles.has(name)) continue;
+      usedHandles.add(name);
+      return name;
+    }
+    return `${FLOAT_HANDLES[h % FLOAT_HANDLES.length]}${(h % 90) + 10}`;
+  };
+
+  const pushSide = (side: 0 | 1, count: number) => {
+    // Avatar is 44px; keep clear vertical gaps so rings don't overlap.
+    const stackGap = 64;
+    const baseBottom = 8 + (hashString(`${marketId}:base:${side}`) % 8);
+    for (let n = 0; n < count; n++) {
+      const seed = `${marketId}::side${side}::${n}`;
+      const h = hashString(seed);
+      const pnl =
+        55 +
+        (h % 90) * 19 +
+        ((h >>> 9) % 55) * 41 +
+        ((h >>> 17) % 12) * 180;
+      // Inset from corners so drift + PnL badge stay inside the card.
+      const edgePx = 10 + (h % 6) + n * 2;
+      const bottomPx = baseBottom + n * stackGap + ((h >>> 3) % 4);
+      const driftX = (1.2 + (h % 3) * 0.4) * (side === 0 ? 1 : -1);
+      const driftY = (1.5 + ((h >>> 6) % 3) * 0.4) * ((h >>> 3) % 2 === 0 ? 1 : -1);
+      raw.push({
+        id: seed,
+        handle: uniqueHandle(seed),
+        avatarUrl: uniquePhoto(seed),
+        pnl,
+        side,
+        edgePx,
+        bottomPx,
+        delayMs: 0,
+        floatDur: 5.5 + ((h >>> 2) % 25) / 10,
+        driftX,
+        driftY,
+      });
+    }
+  };
+
+  pushSide(0, leftCount);
+  pushSide(1, rightCount);
+
+  const order = [...raw].sort(
+    (a, b) => hashString(`${a.id}:ord`) - hashString(`${b.id}:ord`),
+  );
+  order.forEach((bubble, index) => {
+    bubble.delayMs = 60 + index * 95 + (hashString(bubble.id) % 70);
+  });
+  return order;
+}
+
+function FloatingTopPositions({
+  market,
+  onOpenPosition,
+}: {
+  market: PolymarketMarketData;
+  onOpenPosition?: (selection: FeedPositionSelection) => void;
+}) {
+  const bubbles = useMemo(
+    () => buildFloatPositions(market.marketId),
+    [market.marketId],
+  );
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  const [livePnl, setLivePnl] = useState<Record<string, number>>(() =>
+    Object.fromEntries(bubbles.map((b) => [b.id, b.pnl])),
+  );
+
+  useEffect(() => {
+    setLivePnl(Object.fromEntries(bubbles.map((b) => [b.id, b.pnl])));
+  }, [bubbles]);
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        setVisible(Boolean(entry?.isIntersecting && entry.intersectionRatio >= 0.35));
+      },
+      { threshold: [0, 0.35, 0.6, 1] },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [market.marketId]);
+
+  useEffect(() => {
+    if (!visible || bubbles.length === 0) return;
+    let timeout = 0;
+    const schedule = () => {
+      // Very occasional: 7–16s between ticks, then bump one random bubble.
+      const wait = 7000 + Math.floor(Math.random() * 9000);
+      timeout = window.setTimeout(() => {
+        const target = bubbles[Math.floor(Math.random() * bubbles.length)]!;
+        const delta =
+          (12 + Math.floor(Math.random() * 48)) *
+          (Math.random() > 0.35 ? 1 : -1);
+        setLivePnl((prev) => {
+          const current = prev[target.id] ?? target.pnl;
+          return {
+            ...prev,
+            [target.id]: Math.max(24, current + delta),
+          };
+        });
+        schedule();
+      }, wait);
+    };
+    schedule();
+    return () => window.clearTimeout(timeout);
+  }, [visible, bubbles]);
+
+  return (
+    <div
+      ref={rootRef}
+      className="pointer-events-none absolute inset-x-0 bottom-full mb-1 h-[160px] overflow-visible"
+    >
+      {bubbles.map((bubble) => {
+        const pnl = Math.round(livePnl[bubble.id] ?? bubble.pnl);
+        return (
+          <div
+            key={bubble.id}
+            className={`absolute transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+              visible
+                ? "opacity-100 translate-y-0 scale-100"
+                : "opacity-0 translate-y-5 scale-90"
+            }`}
+            style={{
+              ...(bubble.side === 0
+                ? { left: bubble.edgePx }
+                : { right: bubble.edgePx }),
+              bottom: bubble.bottomPx,
+              transitionDelay: visible ? `${bubble.delayMs}ms` : "0ms",
+            }}
+          >
+            <button
+              type="button"
+              aria-label={`Open top position +$${pnl.toLocaleString("en-US")}`}
+              className="pointer-events-auto relative h-11 w-11 cursor-pointer appearance-none border-0 bg-transparent p-0"
+              style={
+                {
+                  ["--float-x"]: `${bubble.driftX}px`,
+                  ["--float-y"]: `${bubble.driftY}px`,
+                  animation: visible
+                    ? `api-float-drift ${bubble.floatDur}s ease-in-out ${bubble.delayMs + 400}ms infinite`
+                    : undefined,
+                } as CSSProperties
+              }
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenPosition?.({
+                  trade: tradeFromFloatBubble(bubble, market, pnl),
+                  handle: bubble.handle,
+                  avatarUrl: bubble.avatarUrl,
+                });
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={bubble.avatarUrl}
+                alt=""
+                className="h-full w-full rounded-full bg-[#2a2a2e] object-cover shadow-[0_6px_18px_rgba(0,0,0,0.45)] ring-2 ring-white/30"
+                draggable={false}
+              />
+              <span
+                className="api-pnl-shine pointer-events-none absolute inset-x-[-4px] -bottom-1.5 inline-flex items-center justify-center overflow-hidden rounded-full px-1.5 py-1.5 text-[11px] font-semibold leading-none tabular-nums tracking-tight text-white"
+                style={{
+                  background:
+                    "linear-gradient(165deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0.1) 22%, rgba(20,20,24,0.72) 48%, rgba(8,8,10,0.82) 100%)",
+                  boxShadow:
+                    "inset 0 1px 1px rgba(255,255,255,0.55), inset 0 -2px 4px rgba(0,0,0,0.35), 0 4px 12px rgba(0,0,0,0.35)",
+                  backdropFilter: "blur(10px)",
+                  WebkitBackdropFilter: "blur(10px)",
+                }}
+              >
+                <NumberFlow
+                  value={pnl}
+                  prefix="+$"
+                  trend={0}
+                  format={{ useGrouping: true, maximumFractionDigits: 0 }}
+                  style={nfMaskStyle}
+                />
+              </span>
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Shared shell — radius clipping lives in `.api-market-preview` (globals.css). */
+const MARKET_PREVIEW_CLIP =
+  "api-market-preview w-full cursor-pointer text-left";
+
+function MarketPreviewMedia({
+  market,
+  clip,
+  accent,
+}: {
+  market: PolymarketMarketData;
+  clip: MarketClipRef | null;
+  accent: string;
+}) {
+  const poster = proxyImageSrc(market.image);
+  return (
+    <div className="api-market-preview-media">
+      {clip ? (
+        <MarketClip clip={clip} />
+      ) : poster ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={poster}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
+      ) : (
+        <div className="absolute inset-0" style={{ backgroundColor: accent }} />
+      )}
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/15 to-black/85"
+      />
+      {/* Soft top veil (no backdrop-blur — it punches square edges through the radius mask) */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[44%] bg-gradient-to-b from-black/55 via-black/25 to-transparent"
+      />
+      <div
+        aria-hidden
+        className="absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-black via-black/55 to-transparent"
+      />
+    </div>
   );
 }
 
@@ -1287,332 +2609,214 @@ function TrendingMarketCard({
   market,
   onOpen,
   onTrade,
+  onOpenPosition,
+  fill = false,
+  height = FEATURED_MARKET_PREVIEW_HEIGHT,
+  clip: clipOverride = null,
 }: {
   market: PolymarketMarketData;
   onOpen: (market: PolymarketMarketData) => void;
   onTrade?: (market: PolymarketMarketData, outcome?: string) => void;
+  onOpenPosition?: (selection: FeedPositionSelection) => void;
+  /** Stretch to the parent height (full snap page above the tab bar). */
+  fill?: boolean;
+  height?: number;
+  clip?: MarketClipRef | null;
 }) {
   const odds = previewOdds(market);
-  const image = proxyImageSrc(market.image);
+  const clip = clipOverride ?? sportClipForMarket(market);
+  const accent = useImageAccent(market.image);
   const volume = market.volumeUsd || market.volume24h;
   const openTrade = (outcome?: string) => {
     if (onTrade) onTrade(market, outcome);
     else onOpen(market);
   };
 
+  type Pill = { key: string; label: string; color: string; outcome?: string };
+  let pills: Pill[] = [];
+
   if (isSportsMarket(market)) {
-    const { game, away, home, awayOdds, homeOdds } = resolveSportsSides(market);
-    const league =
-      game?.league ??
-      market.category ??
-      (market.title.includes(" vs") ? "Sports" : "Sports");
-    const schedule = marketScheduleLabel(market);
-    const sides = [
-      {
-        name: away.name,
-        logo: away.logo,
-        abbr: away.abbr,
-        price: awayOdds?.price ?? market.yesPrice,
-        color: SPORTS_BAR_COLORS[0],
-      },
-      {
-        name: home.name,
-        logo: home.logo,
-        abbr: home.abbr,
-        price: homeOdds?.price ?? market.noPrice,
-        color: SPORTS_BAR_COLORS[1],
-      },
-    ];
+    const { away, home, awayOdds, homeOdds } = resolveSportsSides(market);
+    const awayPrice = awayOdds?.price ?? market.yesPrice;
+    const homePrice = homeOdds?.price ?? market.noPrice;
     const outcomes = (market.outcomes ?? []).filter(
       (outcome) => outcome.label.trim().length > 0,
     );
-    const hasDraw = outcomes.some((outcome) =>
+    const draw = outcomes.find((outcome) =>
       /\bdraw\b|\btie\b/i.test(outcome.label),
     );
-    const pills = hasDraw
+    const awayAbbr =
+      sportsOutcomeAbbr(market, away.name) ??
+      (away.abbr ?? liveSideName(away.name)).slice(0, 3).toUpperCase();
+    const homeAbbr =
+      sportsOutcomeAbbr(market, home.name) ??
+      (home.abbr ?? liveSideName(home.name)).slice(0, 3).toUpperCase();
+    pills = draw
       ? [
           {
-            label:
-              sportsOutcomeAbbr(market, away.name) ??
-              liveSideName(away.name).slice(0, 3).toUpperCase(),
-            color: "#FF7A9A",
+            key: "away",
+            label: `${awayAbbr} ${formatChancePct(awayPrice)}`,
+            color: "#C4B5FD",
             outcome: away.name,
           },
-          { label: "Draw", color: "#FFFFFF", outcome: "Draw" },
           {
-            label:
-              sportsOutcomeAbbr(market, home.name) ??
-              liveSideName(home.name).slice(0, 3).toUpperCase(),
-            color: "#FF7A9A",
+            key: "draw",
+            label: `Draw ${formatChancePct(draw.price)}`,
+            color: "#FFFFFF",
+            outcome: draw.label,
+          },
+          {
+            key: "home",
+            label: `${homeAbbr} ${formatChancePct(homePrice)}`,
+            color: "#E8C44A",
             outcome: home.name,
           },
         ]
       : [
           {
-            label:
-              sportsOutcomeAbbr(market, away.name) ??
-              (away.abbr ?? liveSideName(away.name)).slice(0, 3).toUpperCase(),
-            color: SPORTS_BAR_COLORS[0],
+            key: "away",
+            label: `${awayAbbr} ${formatChancePct(awayPrice)}`,
+            color: "#C4B5FD",
             outcome: away.name,
           },
           {
-            label:
-              sportsOutcomeAbbr(market, home.name) ??
-              (home.abbr ?? liveSideName(home.name)).slice(0, 3).toUpperCase(),
-            color: "#7AA2FF",
+            key: "home",
+            label: `${homeAbbr} ${formatChancePct(homePrice)}`,
+            color: "#E8C44A",
             outcome: home.name,
           },
         ];
+  } else {
+    const isBinary =
+      isBinaryMarket(market) ||
+      odds.shown.every((row) =>
+        /^(yes|no|up|down)$/i.test(row.label.trim()),
+      );
 
-    return (
-      <div className="w-full rounded-[24px] bg-white/[0.08] p-3.5">
-        <button
-          type="button"
-          onClick={() => onOpen(market)}
-          className="flex w-full flex-col text-left"
-        >
-          <div className="flex items-center gap-2">
-            {image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={image}
-                alt=""
-                className="h-5 w-5 shrink-0 rounded object-cover"
-              />
-            ) : null}
-            <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white">
-              <span>{league}</span>
-              {schedule ? (
-                <span className="font-medium text-white/45"> {schedule}</span>
-              ) : null}
-            </p>
-            {volume > 0 ? (
-              <p className="shrink-0 text-[12px] text-white/45">
-                {formatUsd(volume)} Vol.
-              </p>
-            ) : null}
-          </div>
-
-          <div className="mt-3.5 flex flex-col gap-3">
-            {sides.map((side) => (
-              <div key={side.name} className="flex items-start gap-2.5">
-                <LiveTeamMark
-                  logo={side.logo}
-                  name={side.name}
-                  abbr={side.abbr}
-                  size="sm"
-                />
-                <div className="min-w-0 flex-1 pt-0.5">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="min-w-0 truncate text-[15px] font-semibold">
-                      {side.name}
-                    </p>
-                    <p
-                      className={`shrink-0 text-[22px] font-semibold tabular-nums ${instrumentSansCondensed.className}`}
-                    >
-                      <ChanceFlow price={side.price} />
-                    </p>
-                  </div>
-                  <div className="mt-1.5 h-[3px] overflow-hidden rounded-full bg-white/[0.08]">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${Math.max(4, Math.min(100, side.price * 100))}%`,
-                        backgroundColor: side.color,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </button>
-
-        <div className="mt-3.5 flex gap-2">
-          {pills.map((pill) => (
-            <PreviewActionPill
-              key={pill.label}
-              label={pill.label}
-              color={pill.color}
-              onClick={() => openTrade(pill.outcome)}
-            />
-          ))}
-        </div>
-      </div>
-    );
+    if (isBinary && odds.shown.length >= 1) {
+      const primary = odds.shown[0];
+      const secondary =
+        odds.shown[1] ??
+        ({
+          label: /^(yes|up)$/i.test(primary.label) ? "No" : "Yes",
+          price: Math.max(0, 1 - primary.price),
+          key: "secondary",
+        } as const);
+      const normalize = (label: string) =>
+        /up/i.test(label)
+          ? "UP"
+          : /down/i.test(label)
+            ? "DOWN"
+            : /^(yes|no)$/i.test(label)
+              ? label
+              : formatOutcomeLabel(label);
+      const toneFor = (label: string) =>
+        /^(yes|up)$/i.test(label)
+          ? "#00D54B"
+          : /^(no|down)$/i.test(label)
+            ? "#FF375F"
+            : "#FFFFFF";
+      const primaryLabel = normalize(primary.label);
+      const secondaryLabel = normalize(secondary.label);
+      pills = [
+        {
+          key: "primary",
+          label: `${primaryLabel} ${formatChancePct(primary.price)}`,
+          color: toneFor(primaryLabel),
+          outcome: primary.label,
+        },
+        {
+          key: "secondary",
+          label: `${secondaryLabel} ${formatChancePct(secondary.price)}`,
+          color: toneFor(secondaryLabel),
+          outcome: secondary.label,
+        },
+      ];
+    } else {
+      const shown = odds.shown.slice(0, 2);
+      const relatedExtra = Math.max(0, (market.relatedMarketCount ?? 0) - 1);
+      pills =
+        relatedExtra > 1
+          ? [
+              {
+                key: "more",
+                label: `${relatedExtra} more markets`,
+                color: "#FFFFFF",
+              },
+            ]
+          : shown.map((outcome, index) => ({
+              key: outcome.key,
+              label: `${formatOutcomeLabel(outcome.label)} ${formatChancePct(outcome.price)}`,
+              color: OUTCOME_BAR_COLORS[index % OUTCOME_BAR_COLORS.length],
+              outcome: outcome.label,
+            }));
+    }
   }
 
-  const isBinary =
-    isBinaryMarket(market) ||
-    odds.shown.every((row) =>
-      /^(yes|no|up|down)$/i.test(row.label.trim()),
-    );
-
-  if (isBinary && odds.shown.length >= 1) {
-    const primary = odds.shown[0];
-    const secondary =
-      odds.shown[1] ??
-      ({
-        label: /^(yes|up)$/i.test(primary.label) ? "No" : "Yes",
-        price: Math.max(0, 1 - primary.price),
-        key: "secondary",
-      } as const);
-    const primaryLabel = /up/i.test(primary.label)
-      ? "UP"
-      : /down/i.test(primary.label)
-        ? "DOWN"
-        : /^(yes|no)$/i.test(primary.label)
-          ? primary.label
-          : primary.label;
-    const secondaryLabel = /up/i.test(secondary.label)
-      ? "UP"
-      : /down/i.test(secondary.label)
-        ? "DOWN"
-        : /^(yes|no)$/i.test(secondary.label)
-          ? secondary.label
-          : secondary.label;
-    const primaryTone = /^(yes|up)$/i.test(primaryLabel)
-      ? "#00D54B"
-      : /^(no|down)$/i.test(primaryLabel)
-        ? "#FF375F"
-        : "#00D54B";
-    const secondaryTone = /^(yes|up)$/i.test(secondaryLabel)
-      ? "#00D54B"
-      : /^(no|down)$/i.test(secondaryLabel)
-        ? "#FF375F"
-        : "#FF375F";
-
-    return (
-      <div className="w-full rounded-[24px] bg-white/[0.08] p-3.5">
-        <button
-          type="button"
-          onClick={() => onOpen(market)}
-          className="flex w-full flex-col text-left"
-        >
-          <div className="flex items-start gap-2.5">
-            {image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={image}
-                alt=""
-                className="mt-0.5 h-8 w-8 shrink-0 rounded-lg object-cover"
-              />
-            ) : (
-              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-[11px] font-semibold text-white/45">
-                {market.title.slice(0, 1)}
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="line-clamp-2 text-[15px] font-semibold leading-snug">
-                {market.title}
-              </p>
-              {volume > 0 ? (
-                <p className="mt-0.5 text-[12px] text-white/45">
-                  {formatUsd(volume)} Vol.
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <p
-            className={`mt-4 text-[40px] font-semibold leading-none tabular-nums tracking-tight ${instrumentSansCondensed.className}`}
-          >
-            <ChanceFlow price={primary.price} />
-          </p>
-        </button>
-        <div className="mt-4 flex gap-2">
-          <PreviewActionPill
-            label={primaryLabel}
-            color={primaryTone}
-            onClick={() => openTrade(primary.label)}
-          />
-          <PreviewActionPill
-            label={secondaryLabel}
-            color={secondaryTone}
-            onClick={() => openTrade(secondary.label)}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  const shown = odds.shown.slice(0, 2);
-  const relatedExtra = Math.max(0, (market.relatedMarketCount ?? 0) - 1);
+  const schedule = marketScheduleLabel(market);
+  const eyebrow = isSportsMarket(market)
+    ? [
+        market.liveGame?.league ?? market.category ?? "Sports",
+        schedule,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : volume > 0
+      ? `${formatUsd(volume)} Vol.`
+      : market.category;
 
   return (
-    <div className="w-full rounded-[24px] bg-white/[0.08] p-3.5">
-      <button
-        type="button"
-        onClick={() => onOpen(market)}
-        className="flex w-full flex-col text-left"
-      >
-        <div className="flex items-start gap-2.5">
-          {image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={image}
-              alt=""
-              className="mt-0.5 h-8 w-8 shrink-0 rounded-lg object-cover"
-            />
-          ) : (
-            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-[11px] font-semibold text-white/45">
-              {market.title.slice(0, 1)}
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 text-[15px] font-semibold leading-snug">
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${market.title}`}
+      onClick={() => onOpen(market)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen(market);
+        }
+      }}
+      className={`${MARKET_PREVIEW_CLIP} ${fill ? "h-full min-h-0" : ""}`}
+      style={fill ? undefined : { height }}
+    >
+      <MarketPreviewMedia market={market} clip={clip} accent={accent} />
+
+      <div className="relative z-10 flex h-full flex-col px-4 pb-4 pt-3.5">
+        {canShowSportsMatchHeader(market) ? (
+          <SportsMatchHeader market={market} />
+        ) : (
+          <div className="min-w-0">
+            {eyebrow ? (
+              <p className="text-[12px] font-semibold tracking-[0.04em] text-white/70">
+                {eyebrow}
+              </p>
+            ) : null}
+            <p className="mt-1.5 line-clamp-3 text-[22px] font-semibold leading-snug text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">
               {market.title}
             </p>
-            <p className="mt-0.5 text-[12px] text-white/45">
-              {volume > 0 ? `${formatUsd(volume)} Vol.` : market.category}
-            </p>
+          </div>
+        )}
+
+        <div className="relative mt-auto">
+          <FloatingTopPositions
+            market={market}
+            onOpenPosition={onOpenPosition}
+          />
+          <div className="flex gap-2">
+            {pills.map((pill) => (
+              <PreviewActionPill
+                key={pill.key}
+                label={pill.label}
+                color={pill.color}
+                onClick={() => {
+                  if (pill.outcome) openTrade(pill.outcome);
+                  else onOpen(market);
+                }}
+              />
+            ))}
           </div>
         </div>
-
-        <div className="mt-3.5 flex flex-col gap-3">
-          {shown.map((outcome, index) => (
-            <div key={outcome.key}>
-              <div className="flex items-baseline justify-between gap-2">
-                <p className="min-w-0 truncate text-[14px] font-semibold">
-                  {formatOutcomeLabel(outcome.label)}
-                </p>
-                <p
-                  className={`shrink-0 text-[22px] font-semibold tabular-nums ${instrumentSansCondensed.className}`}
-                >
-                  <ChanceFlow price={outcome.price} />
-                </p>
-              </div>
-              <div className="mt-1.5 h-[3px] overflow-hidden rounded-full bg-white/[0.08]">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${Math.max(4, Math.min(100, outcome.price * 100))}%`,
-                    backgroundColor:
-                      OUTCOME_BAR_COLORS[index % OUTCOME_BAR_COLORS.length],
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </button>
-
-      <div className="mt-3.5 flex gap-2">
-        {relatedExtra > 1 ? (
-          <PreviewActionPill
-            label={`${relatedExtra} more markets`}
-            color="#FFFFFF"
-            onClick={() => onOpen(market)}
-          />
-        ) : (
-          shown.map((outcome, index) => (
-            <PreviewActionPill
-              key={outcome.key}
-              label={formatOutcomeLabel(outcome.label)}
-              color={OUTCOME_BAR_COLORS[index % OUTCOME_BAR_COLORS.length]}
-              onClick={() => openTrade(outcome.label)}
-            />
-          ))
-        )}
       </div>
     </div>
   );
@@ -1873,18 +3077,26 @@ function LiveGameCard({
   market,
   onOpen,
   onTrade,
+  onOpenPosition,
   featured = false,
+  fill = false,
+  height = FEATURED_MARKET_PREVIEW_HEIGHT,
+  clip: clipOverride = null,
 }: {
   market: PolymarketMarketData;
   onOpen: (market: PolymarketMarketData) => void;
   onTrade?: (market: PolymarketMarketData, outcome: string) => void;
+  onOpenPosition?: (selection: FeedPositionSelection) => void;
   featured?: boolean;
+  fill?: boolean;
+  height?: number;
+  clip?: MarketClipRef | null;
 }) {
   const { game, away, home, awayOdds, homeOdds } = resolveSportsSides(market);
   const accent = useImageAccent(
     market.image ?? away.logo ?? home.logo ?? null,
   );
-  const clip = sportClipForMarket(market);
+  const clip = clipOverride ?? sportClipForMarket(market);
   const isLive = game?.status === "live";
   const hasScore = away.score != null && home.score != null;
   const period = game ? formatLiveClock(game.clock, game.status) : "Sports";
@@ -1970,8 +3182,6 @@ function LiveGameCard({
     );
   }
 
-  const poster = proxyImageSrc(market.image);
-
   return (
     <div
       role="button"
@@ -1984,142 +3194,27 @@ function LiveGameCard({
           onOpen(market);
         }
       }}
-      className="relative h-[448px] w-full cursor-pointer overflow-hidden rounded-[24px] bg-black text-left"
+      className={`${MARKET_PREVIEW_CLIP} ${fill ? "h-full min-h-0" : ""}`}
+      style={fill ? undefined : { height }}
     >
-      <div className="pointer-events-none absolute inset-0">
-        {clip ? (
-          <MarketClip clip={clip} />
-        ) : poster ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={poster}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover object-center"
-          />
-        ) : (
-          <div
-            className="absolute inset-0"
-            style={{ backgroundColor: accent }}
-          />
-        )}
-        <div
-          aria-hidden
-          className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/20 to-black/85"
-        />
-        <div
-          aria-hidden
-          className="absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-black via-black/55 to-transparent"
-        />
-      </div>
+      <MarketPreviewMedia market={market} clip={clip} accent={accent} />
 
       <div className="relative z-10 flex h-full flex-col px-4 pb-4 pt-3.5">
-        <div className="flex items-center justify-center gap-2">
-          <p className="text-[12px] font-semibold tracking-[0.04em] text-white/80">
-            {league}
-          </p>
-          <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold tabular-nums text-[#FF3B30]">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#FF3B30]" />
-            {isLive || game?.status === "live" ? (
-              game ? (
-                <LivePeriodFlow clock={game.clock} status={game.status} />
-              ) : (
-                "Live"
-              )
-            ) : game ? (
-              <LivePeriodFlow clock={game.clock} status={game.status} />
-            ) : (
-              period
-            )}
-          </span>
-        </div>
+        <SportsMatchHeader market={market} />
 
-        <div className="mt-3 flex items-center justify-center gap-2.5">
-          <LiveTeamMark
-            logo={away.logo}
-            name={away.name}
-            abbr={away.abbr}
-            portrait={away.portrait}
-            size="header"
-          />
-          <p
-            className={`inline-flex items-center gap-1.5 text-[40px] font-semibold tabular-nums leading-none tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)] ${instrumentSansCondensed.className}`}
-          >
-            {hasScore ? (
-              <>
-                <NumberFlow
-                  value={away.score!}
-                  trend={1}
-                  format={{ useGrouping: false }}
-                  style={nfMaskStyle}
-                />
-                <span className="text-[22px] font-semibold leading-none text-white/55">
-                  -
-                </span>
-                <NumberFlow
-                  value={home.score!}
-                  trend={1}
-                  format={{ useGrouping: false }}
-                  style={nfMaskStyle}
-                />
-              </>
-            ) : (
-              <span className="text-white/50">-</span>
-            )}
-          </p>
-          <LiveTeamMark
-            logo={home.logo}
-            name={home.name}
-            abbr={home.abbr}
-            portrait={home.portrait}
-            size="header"
-          />
-        </div>
-
-        <div className="mt-auto flex flex-col gap-4">
-          <div className="flex flex-col gap-3">
-            {(
-              [
-                {
-                  side: away,
-                  price: awayPrice,
-                  bar: "#00D54B",
-                },
-                {
-                  side: home,
-                  price: homePrice,
-                  bar: "#FF375F",
-                },
-              ] as const
-            ).map((row) => (
-              <div key={row.side.name} className="min-w-0">
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="min-w-0 truncate text-[14px] font-semibold text-white">
-                    {row.side.name}
-                  </p>
-                  <p className="shrink-0 text-[14px] font-semibold tabular-nums text-white">
-                    <ChanceFlow price={row.price} />
-                  </p>
-                </div>
-                <div className="mt-1.5 h-[5px] overflow-hidden rounded-full bg-white/20">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${Math.max(4, Math.min(100, row.price * 100))}%`,
-                      backgroundColor: row.bar,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {onTrade ? (
+        {onTrade ? (
+          <div className="relative mt-auto">
+            <FloatingTopPositions
+              market={market}
+              onOpenPosition={onOpenPosition}
+            />
             <div className="flex gap-2">
               {tradeOutcomes.map((outcome, index) => {
                 const isDraw = /draw/i.test(outcome.label);
-                const label =
+                const name =
                   sportsOutcomeAbbr(market, outcome.label) ??
                   (isDraw ? "Draw" : liveSideName(outcome.label));
+                const label = `${name} ${formatChancePct(outcome.price)}`;
                 const tone = isDraw
                   ? "text-white"
                   : nickMatch(outcome.label, away.name) || index === 0
@@ -2134,15 +3229,15 @@ function LiveGameCard({
                       event.stopPropagation();
                       onTrade(market, outcome.label);
                     }}
-                    className={`min-w-0 flex-1 rounded-full border border-white/20 bg-black/45 py-2.5 text-[14px] font-semibold backdrop-blur-md transition-colors hover:bg-black/60 ${tone}`}
+                    className={`min-w-0 flex-1 rounded-full border border-white/20 bg-black/45 py-3 text-[16px] font-semibold backdrop-blur-md transition-colors hover:bg-black/60 ${tone}`}
                   >
                     {label}
                   </button>
                 );
               })}
             </div>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -2946,18 +4041,29 @@ function ProfileIdentityHeader({
   seed,
   name,
   wallet,
+  avatarUrl,
   nameRef,
   trailing,
 }: {
   seed: string;
   name: string;
   wallet: string;
+  avatarUrl?: string | null;
   nameRef?: RefObject<HTMLElement | null>;
   trailing?: ReactNode;
 }) {
   return (
     <div className="flex items-center gap-3">
-      <UserAvatar seed={seed} label={name} className="h-11 w-11 text-[13px]" />
+      {avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={avatarUrl}
+          alt=""
+          className="h-11 w-11 shrink-0 rounded-full bg-[#2a2a2e] object-cover"
+        />
+      ) : (
+        <UserAvatar seed={seed} label={name} className="h-11 w-11 text-[13px]" />
+      )}
       <div className="min-w-0 flex-1">
         <p
           ref={nameRef as RefObject<HTMLParagraphElement>}
@@ -3299,7 +4405,6 @@ function PositionsTabCount({
   count,
   active,
   pnlUsd,
-  investedUsd,
 }: {
   count: number;
   active: boolean;
@@ -3313,18 +4418,6 @@ function PositionsTabCount({
       : pnlUsd > 0
         ? "up"
         : "down";
-  const roi =
-    investedUsd > 0 ? Math.abs(pnlUsd) / investedUsd : Math.abs(pnlUsd) > 0 ? 1 : 0;
-  const intensity = Math.min(1, 0.35 + roi * 1.4);
-  const glowBlur = mode === "flat" ? 0 : 10 + intensity * 22;
-  const glowColor = mode === "up" ? "#1f8f45" : "#d42e3e";
-  const blink =
-    mode === "up"
-      ? "api-positions-up-blink"
-      : mode === "down"
-        ? "api-positions-down-blink"
-        : undefined;
-  const blinkMs = Math.max(420, Math.round(900 - intensity * 480));
 
   return (
     <span
@@ -3332,32 +4425,30 @@ function PositionsTabCount({
         active ? "text-white" : "text-white/80"
       }`}
     >
+      {/* Default grey chip — green tint only when PnL is up */}
       <span
         aria-hidden
         className={`absolute inset-0 rounded-[inherit] ${
-          active ? "bg-white/20" : "bg-white/[0.12]"
+          mode === "up"
+            ? active
+              ? "bg-[#1f8f45]/35"
+              : "bg-[#1f8f45]/22"
+            : active
+              ? "bg-white/20"
+              : "bg-white/[0.12]"
         }`}
       />
-      {mode !== "flat" && (
-        <>
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-0 rounded-[inherit] motion-reduce:transition-none"
-            style={{
-              boxShadow: `inset 0 0 ${glowBlur}px ${glowColor}`,
-              opacity: 0.55 + intensity * 0.45,
-              transition: "box-shadow 200ms ease-out, opacity 200ms ease-out",
-            }}
-          />
-          <span
-            aria-hidden
-            className={`${blink} pointer-events-none absolute inset-0 rounded-[inherit] motion-reduce:opacity-50`}
-            style={{
-              opacity: 0.4 + intensity * 0.6,
-              animationDuration: `${blinkMs}ms`,
-            }}
-          />
-        </>
+      {mode === "up" && (
+        <span
+          aria-hidden
+          className="api-positions-up-blink pointer-events-none absolute inset-0 rounded-[inherit] motion-reduce:opacity-50"
+        />
+      )}
+      {mode === "down" && (
+        <span
+          aria-hidden
+          className="api-positions-down-blink pointer-events-none absolute inset-0 rounded-[inherit] motion-reduce:hidden"
+        />
       )}
       <span className="relative z-[1]">{count}</span>
     </span>
@@ -3401,7 +4492,12 @@ function FeedTabIcon({ active }: { active: boolean }) {
 }
 
 const TAB_BAR_GLASS_BORDER = "rgba(255, 255, 255, 0.28)";
-const TAB_BAR_RADIUS = 32;
+const TAB_BAR_RADIUS = 28;
+/** Fixed outer height so LiquidGlass can't stretch the pill. */
+const TAB_BAR_HEIGHT = 56;
+const TAB_BAR_BOTTOM = 20;
+/** Space reserved under feed cards so actions clear the floating tab bar. */
+const TAB_BAR_CONTENT_INSET = TAB_BAR_HEIGHT + TAB_BAR_BOTTOM + 12;
 
 function TabBarGlass({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -3420,15 +4516,16 @@ function TabBarGlass({ children }: { children: ReactNode }) {
     return (
       <div
         className="relative w-full overflow-hidden rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
-        style={
-          reducedTransparency
+        style={{
+          height: TAB_BAR_HEIGHT,
+          ...(reducedTransparency
             ? { background: "rgba(12, 12, 14, 0.94)" }
             : {
                 background: "rgba(0, 0, 0, 0.58)",
                 backdropFilter: "blur(18px) saturate(140%)",
                 WebkitBackdropFilter: "blur(18px) saturate(140%)",
-              }
-        }
+              }),
+        }}
       >
         {children}
       </div>
@@ -3445,8 +4542,8 @@ function TabBarGlass({ children }: { children: ReactNode }) {
       borderColor={TAB_BAR_GLASS_BORDER}
       lens="rim"
       quality="high"
-      className="w-full shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
-      style={{ width: "100%" }}
+      className="w-full overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
+      style={{ width: "100%", height: TAB_BAR_HEIGHT }}
     >
       {children}
     </LiquidGlass>
@@ -3573,10 +4670,12 @@ function TabIcon({ id, active }: { id: TabId; active: boolean }) {
 
 export default function Api() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const feedSnapRef = useRef<HTMLElement>(null);
   const stickyTitleRef = useRef<HTMLElement>(null);
   const stickyNavRef = useRef<HTMLDivElement>(null);
   const stickyMarketFadeRef = useRef<HTMLDivElement>(null);
   const [section, setSection] = useState<SectionId>("explore");
+  const [feedPastHero, setFeedPastHero] = useState(false);
   const [positionsOpen, setPositionsOpen] = useState(false);
   const [liveMarkets, setLiveMarkets] = useState<PolymarketMarketData[]>([]);
   const [trendingMarkets, setTrendingMarkets] = useState<
@@ -3614,6 +4713,7 @@ export default function Api() {
   );
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
   const [walletLabel, setWalletLabel] = useState<string | null>(null);
+  const [walletAvatarUrl, setWalletAvatarUrl] = useState<string | null>(null);
   const [selectedMarketSlug, setSelectedMarketSlug] = useState<string | null>(
     null,
   );
@@ -3659,12 +4759,12 @@ export default function Api() {
     "idle" | "loading" | "ready" | "error"
   >("idle");
   const [feedPositionTrade, setFeedPositionTrade] =
-    useState<PolymarketTradeWithPnl | null>(null);
+    useState<FeedPositionSelection | null>(null);
   const [feedFriendsOnly, setFeedFriendsOnly] = useState(false);
   const [followedWallets, setFollowedWallets] = useState<Set<string>>(
     () => new Set(),
   );
-  const [onboardingOpen, setOnboardingOpen] = useState(true);
+  const [onboardingOpen, setOnboardingOpen] = useState(SHOW_ONBOARDING);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
   const [profileSubScreen, setProfileSubScreen] =
     useState<ProfileSubScreen | null>(null);
@@ -3854,12 +4954,27 @@ export default function Api() {
           createDemoLiveMarket(),
           ...remoteLive.filter((market) => market.marketId !== DEMO_LIVE_MARKET_ID),
         ]);
-        setTrendingMarkets(Array.isArray(data.trending) ? data.trending : []);
+        const remoteTrending = Array.isArray(data.trending) ? data.trending : [];
+        setTrendingMarkets([
+          createDemoF1Market(),
+          createDemoMlbMarket(),
+          ...remoteTrending.filter(
+            (market) =>
+              market.marketId !== DEMO_F1_MARKET_ID &&
+              market.marketId !== DEMO_MLB_MARKET_ID &&
+              !(market.category ?? "").toLowerCase().includes("crypto") &&
+              !/\b(bitcoin|ethereum|btc\b|eth\b)\b/i.test(market.title) &&
+              sportKindForMarket(market) !== "combat" &&
+              // Keep only two-sided sports cards in the snap feed.
+              (!isSportsMarket(market) || isTwoSidedMatchup(market)),
+          ),
+        ]);
         setMarketsStatus("ready");
       } catch (error) {
         if (controller.signal.aborted) return;
         console.error("Failed to load markets feed:", error);
         setLiveMarkets([createDemoLiveMarket()]);
+        setTrendingMarkets([createDemoF1Market(), createDemoMlbMarket()]);
         setMarketsStatus("ready");
       }
     };
@@ -4090,6 +5205,12 @@ export default function Api() {
     };
   }, [selectedListId]);
 
+  const marketsForDemoRef = useRef<PolymarketMarketData[]>([]);
+  marketsForDemoRef.current = [...liveMarkets, ...trendingMarkets];
+  const demoWalletCacheRef = useRef(
+    new Map<string, PolymarketWalletProfile>(),
+  );
+
   useEffect(() => {
     if (!selectedWallet) {
       setWalletProfile(null);
@@ -4098,23 +5219,46 @@ export default function Api() {
     }
 
     const controller = new AbortController();
+    const wallet = selectedWallet;
+    const cached = demoWalletCacheRef.current.get(wallet.toLowerCase());
 
     const load = async () => {
-      setWalletStatus("loading");
+      // Keep prior chart/data visible while fetching — avoids loading flicker.
+      if (!cached) setWalletStatus("loading");
+      else {
+        setWalletProfile(cached);
+        setWalletStatus("ready");
+      }
       try {
         const res = await fetch(
-          `/api/polymarketscan/wallet/${encodeURIComponent(selectedWallet)}?limit=50`,
+          `/api/polymarketscan/wallet/${encodeURIComponent(wallet)}?limit=50`,
           { signal: controller.signal },
         );
         if (!res.ok) throw new Error("fetch failed");
         const data = (await res.json()) as PolymarketWalletProfile;
         if (controller.signal.aborted) return;
-        setWalletProfile(data);
+        const hasBody =
+          (data.positions?.length ?? 0) > 0 ||
+          (data.recentTrades?.length ?? 0) > 0 ||
+          data.portfolioValue > 0;
+        const profile = hasBody
+          ? data
+          : cached ??
+            seedDemoWalletProfile(wallet, marketsForDemoRef.current);
+        if (!hasBody) {
+          demoWalletCacheRef.current.set(wallet.toLowerCase(), profile);
+        }
+        setWalletProfile(profile);
         setWalletStatus("ready");
       } catch (error) {
         if (controller.signal.aborted) return;
         console.error("Failed to load wallet profile:", error);
-        setWalletStatus("error");
+        const profile =
+          cached ??
+          seedDemoWalletProfile(wallet, marketsForDemoRef.current);
+        demoWalletCacheRef.current.set(wallet.toLowerCase(), profile);
+        setWalletProfile(profile);
+        setWalletStatus("ready");
       }
     };
 
@@ -4287,10 +5431,22 @@ export default function Api() {
   };
 
   const openCopyTrade = (wallet: string, displayName: string | null) => {
+    const label = (displayName ?? walletLabel)?.trim() || null;
+    const short = shortWallet(wallet);
+    // Prefer the username from the profile/feed you opened from — not a
+    // hex-derived handle from the wallet address.
+    const isRealUsername =
+      Boolean(label) &&
+      !/^0x/i.test(label!) &&
+      label !== short &&
+      label!.toLowerCase() !== wallet.toLowerCase();
+    const username = isRealUsername
+      ? label!.replace(/^@/, "")
+      : resolveFeedHandle(wallet);
     setCopyTradeTarget({
       wallet,
-      displayName: displayName ?? walletLabel ?? shortWallet(wallet),
-      handle: resolveFeedHandle(wallet),
+      displayName: username,
+      handle: username,
     });
   };
 
@@ -4412,8 +5568,55 @@ export default function Api() {
     setCopyTrades([]);
     seededCopyWallets.current.clear();
     setProfileSubScreen(null);
-    setOnboardingOpen(true);
+    if (SHOW_ONBOARDING) setOnboardingOpen(true);
   };
+
+  const isExploreFeed = section === "explore" && !showingDrillDown;
+  const homeFeedMarkets = useMemo(() => {
+    const featured = liveMarkets[0] ?? null;
+    const f1 =
+      trendingMarkets.find((market) => market.marketId === DEMO_F1_MARKET_ID) ??
+      createDemoF1Market();
+    const mlb =
+      trendingMarkets.find((market) => market.marketId === DEMO_MLB_MARKET_ID) ??
+      createDemoMlbMarket();
+    const rest = trendingMarkets.filter(
+      (market) =>
+        market.marketId !== featured?.marketId &&
+        market.marketId !== DEMO_F1_MARKET_ID &&
+        market.marketId !== DEMO_MLB_MARKET_ID &&
+        !(market.category ?? "").toLowerCase().includes("crypto") &&
+        !/\b(bitcoin|ethereum|btc\b|eth\b)\b/i.test(market.title) &&
+        // Feed is team sports + F1 — no UFC fighter cards.
+        sportKindForMarket(market) !== "combat" &&
+        (!isSportsMarket(market) || isTwoSidedMatchup(market)),
+    );
+    // Featured live, F1 Australia, other matchups, MLB last (team logos).
+    return featured ? [featured, f1, ...rest, mlb] : [f1, ...rest, mlb];
+  }, [liveMarkets, trendingMarkets]);
+  const homeFeedClips = useMemo(
+    () => assignUniqueClips(homeFeedMarkets),
+    [homeFeedMarkets],
+  );
+
+  useEffect(() => {
+    if (!isExploreFeed) {
+      setFeedPastHero(false);
+      return;
+    }
+    const scroller = feedSnapRef.current;
+    if (!scroller) return;
+
+    const update = () => {
+      const page = Math.max(1, scroller.clientHeight);
+      const index = Math.round(scroller.scrollTop / page);
+      setFeedPastHero(index > 0);
+    };
+
+    update();
+    scroller.addEventListener("scroll", update, { passive: true });
+    return () => scroller.removeEventListener("scroll", update);
+  }, [isExploreFeed, homeFeedMarkets.length, marketsStatus]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -4569,20 +5772,27 @@ export default function Api() {
     setSelectedListId(id);
   };
 
-  const openWallet = (wallet: string, displayName: string | null) => {
+  const openWallet = (
+    wallet: string,
+    displayName: string | null,
+    avatarUrl?: string | null,
+  ) => {
     setSelectedWallet(wallet);
     setWalletLabel(displayName ?? shortWallet(wallet));
+    setWalletAvatarUrl(avatarUrl ?? null);
     setWalletProfileTab("positions");
   };
 
   const backFromWallet = () => {
     setSelectedWallet(null);
     setWalletLabel(null);
+    setWalletAvatarUrl(null);
   };
 
   const backFromList = () => {
     setSelectedWallet(null);
     setWalletLabel(null);
+    setWalletAvatarUrl(null);
     setSelectedListId(null);
   };
 
@@ -4709,14 +5919,14 @@ export default function Api() {
         ? demoProfile.history
         : seedPortfolioHistory(PROFILE_BALANCE);
     const endValue = PROFILE_BALANCE + extraDepositUsd + copiedOpenPnl;
-    if (extraDepositUsd <= 0 && Math.abs(copiedOpenPnl) < 0.01) return base;
-    return [
-      ...base,
-      {
-        time: Math.floor(Date.now() / 1000),
-        value: endValue,
-      },
-    ];
+    if (base.length < 2) return base;
+    const last = base[base.length - 1]!;
+    // Update the last point in place — don't append a new timestamp every PnL tick
+    // (copy-sim updates were making Liveline feel laggy).
+    if (Math.abs(last.value - endValue) < 0.005) return base;
+    return base.map((point, index) =>
+      index === base.length - 1 ? { ...point, value: endValue } : point,
+    );
   }, [copiedOpenPnl, demoProfile, extraDepositUsd]);
 
   const walletBalance =
@@ -4729,7 +5939,7 @@ export default function Api() {
     }
     if (walletBalance > 0) return seedPortfolioHistory(walletBalance);
     return [];
-  }, [walletProfile, walletBalance]);
+  }, [walletProfile]);
 
   const listHistory = useMemo(() => {
     if (!listDetail) return [];
@@ -5185,7 +6395,7 @@ export default function Api() {
   };
 
   const exploreHeader = (
-    <header className="mb-4 pt-2">
+    <header className="mb-4 shrink-0 pt-2">
       <div className="flex items-start justify-between gap-3">
         <button
           type="button"
@@ -5195,7 +6405,7 @@ export default function Api() {
         >
           <p
             ref={stickyTitleRef as React.RefObject<HTMLParagraphElement>}
-            className={`text-[42px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSansCondensed.className}`}
+            className={`text-[32px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSansCondensed.className}`}
           >
             {demoProfileStatus === "loading" ? (
               "—"
@@ -5276,13 +6486,20 @@ export default function Api() {
         <IosStatusBar />
         <div
           ref={scrollRef}
-          className={`relative z-[1] h-full min-h-0 overflow-y-auto overscroll-contain px-5 ${IOS_STATUS_PAD} [scrollbar-gutter:stable] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
-            showingMarketDetail && !showingWalletProfile
-              ? "pb-24"
+          className={`relative z-[1] h-full min-h-0 px-5 ${IOS_STATUS_PAD} [scrollbar-gutter:stable] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+            isExploreFeed
+              ? "flex flex-col overflow-hidden"
               : showingDrillDown || showingProfileSubScreen
-                ? "pb-5"
-                : "pb-24"
+                ? "overflow-y-auto overscroll-contain pb-5"
+                : "overflow-y-auto overscroll-contain"
           }`}
+          style={
+            !showingDrillDown && !showingProfileSubScreen
+              ? { paddingBottom: TAB_BAR_CONTENT_INSET }
+              : showingMarketDetail
+                ? { paddingBottom: TAB_BAR_CONTENT_INSET }
+                : undefined
+          }
         >
           {showingWalletProfile ? (
             <header className="mb-4 pt-9">
@@ -5290,6 +6507,7 @@ export default function Api() {
                 seed={selectedWallet ?? "wallet"}
                 name={walletLabel ?? shortWallet(selectedWallet ?? "")}
                 wallet={selectedWallet ?? ""}
+                avatarUrl={walletAvatarUrl}
                 nameRef={stickyTitleRef}
                 trailing={
                   selectedWallet ? (
@@ -5457,8 +6675,6 @@ export default function Api() {
                 {profileSubScreen === "referral" ? "Referrals" : "Settings"}
               </h2>
             </header>
-          ) : section === "explore" ? (
-            exploreHeader
           ) : section === "search" ? (
             <header className="mb-4">
               <h2 className={ui.title}>
@@ -5931,78 +7147,79 @@ export default function Api() {
             </div>
           )}
 
-          {section === "explore" && !showingDrillDown && (
-            <div className="flex flex-col gap-6">
-              <section aria-label="Live games">
-                {marketsStatus === "loading" && (
+          {isExploreFeed && (
+            <section
+              ref={feedSnapRef}
+              aria-label="Market previews"
+              className="-mx-5 min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-y-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {marketsStatus === "loading" &&
+                Array.from({ length: 3 }).map((_, i) => (
                   <div
-                    className="h-[448px] w-full animate-pulse rounded-[24px] bg-white/10"
-                    aria-hidden
-                  />
-                )}
-
-                {marketsStatus === "error" && (
-                  <p className="text-sm text-white/55">
-                    Couldn&apos;t load live markets.
-                  </p>
-                )}
-
-                {marketsStatus === "ready" && liveMarkets.length === 0 && (
-                  <p className="text-sm text-white/55">
-                    No live sports markets.
-                  </p>
-                )}
-
-                {marketsStatus === "ready" && liveMarkets[0] && (
-                  <LiveGameCard
-                    market={liveMarkets[0]}
-                    featured
-                    onOpen={openMarket}
-                    onTrade={openTradeFlow}
-                  />
-                )}
-              </section>
-
-              <section aria-label="Trending markets">
-                {marketsStatus === "loading" && (
-                  <div
-                    className="flex flex-col gap-2.5 animate-pulse"
+                    key={i}
+                    className="flex h-full min-h-full snap-start snap-always flex-col px-5"
                     aria-hidden
                   >
-                    {Array.from({ length: 4 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-[168px] rounded-[24px] bg-white/10"
-                      />
-                    ))}
+                    {i === 0 ? exploreHeader : null}
+                    <div className="min-h-0 w-full flex-1 animate-pulse rounded-[24px] bg-white/10" />
                   </div>
-                )}
+                ))}
 
-                {marketsStatus === "error" && (
+              {marketsStatus === "error" && (
+                <div className="px-5">
+                  {exploreHeader}
                   <p className="text-sm text-white/55">
-                    Couldn&apos;t load trending markets.
+                    Couldn&apos;t load markets.
                   </p>
-                )}
+                </div>
+              )}
 
-                {marketsStatus === "ready" && trendingMarkets.length === 0 && (
-                  <p className="text-sm text-white/55">No trending markets.</p>
-                )}
+              {marketsStatus === "ready" && homeFeedMarkets.length === 0 && (
+                <div className="px-5">
+                  {exploreHeader}
+                  <p className="text-sm text-white/55">No markets right now.</p>
+                </div>
+              )}
 
-                {marketsStatus === "ready" && trendingMarkets.length > 0 && (
-                  <ul className="flex flex-col gap-2.5">
-                    {trendingMarkets.map((market) => (
-                      <li key={market.marketId}>
-                        <TrendingMarketCard
-                          market={market}
-                          onOpen={openMarket}
-                          onTrade={openTradeFlow}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            </div>
+              {marketsStatus === "ready" &&
+                homeFeedMarkets.map((market, index) => {
+                  const isFirst = index === 0;
+                  const isFeaturedLive =
+                    isFirst &&
+                    liveMarkets[0]?.marketId === market.marketId &&
+                    isSportsMarket(market);
+                  return (
+                    <div
+                      key={market.marketId}
+                      className="flex h-full min-h-full snap-start snap-always flex-col px-5"
+                    >
+                      {isFirst ? exploreHeader : null}
+                      <div className="min-h-0 flex-1 pb-1">
+                        {isFeaturedLive ? (
+                          <LiveGameCard
+                            market={market}
+                            featured
+                            fill
+                            clip={homeFeedClips.get(market.marketId) ?? null}
+                            onOpen={openMarket}
+                            onTrade={openTradeFlow}
+                            onOpenPosition={setFeedPositionTrade}
+                          />
+                        ) : (
+                          <TrendingMarketCard
+                            market={market}
+                            fill
+                            clip={homeFeedClips.get(market.marketId) ?? null}
+                            onOpen={openMarket}
+                            onTrade={openTradeFlow}
+                            onOpenPosition={setFeedPositionTrade}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </section>
           )}
 
           {showingMarketDetail && (
@@ -6213,7 +7430,9 @@ export default function Api() {
                                   : undefined)
                               }
                               onOpenWallet={(wallet) => openWallet(wallet, null)}
-                              onOpenTrade={() => setFeedPositionTrade(trade)}
+                              onOpenTrade={() =>
+                                setFeedPositionTrade({ trade })
+                              }
                               currentUser={commentAuthor}
                             />
                           </li>
@@ -6458,12 +7677,6 @@ export default function Api() {
                 </div>
               )}
 
-              {walletStatus === "error" && (
-                <p className="text-sm text-white/55">
-                  Couldn&apos;t load this wallet. Try again in a moment.
-                </p>
-              )}
-
               {walletStatus === "ready" && walletProfile && (
                 <div className="flex flex-col gap-4">
                   <section
@@ -6592,7 +7805,7 @@ export default function Api() {
                               : undefined
                           }
                           onOpenWallet={(wallet) => openWallet(wallet, null)}
-                          onOpenTrade={() => setFeedPositionTrade(trade)}
+                          onOpenTrade={() => setFeedPositionTrade({ trade })}
                           currentUser={commentAuthor}
                         />
                       </li>
@@ -6974,18 +8187,26 @@ export default function Api() {
               <div className="absolute inset-0 bg-gradient-to-t from-black from-15% via-black/55 to-transparent" />
             </div>
             <nav
-              className="pointer-events-none absolute inset-x-0 bottom-5 z-10 flex justify-center px-5"
+              className="pointer-events-none absolute inset-x-0 z-10 flex justify-center px-5 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+              style={{
+                bottom: TAB_BAR_BOTTOM,
+                transform:
+                  isExploreFeed && feedPastHero
+                    ? "scale(0.86)"
+                    : "scale(1)",
+                transformOrigin: "center bottom",
+              }}
               aria-label="Main sections"
             >
               <div className="pointer-events-auto w-full max-w-[360px]">
                 <TabBarGlass>
                   <div
-                    className="relative flex w-full justify-between px-1.5 py-2"
+                    className="relative flex h-full w-full items-center justify-between px-1.5"
                     role="tablist"
                   >
                     <div
                       aria-hidden
-                      className="absolute top-2 bottom-2 left-1.5 w-[calc((100%-12px)/var(--tab-count))] rounded-full bg-white/20 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                      className="absolute top-1.5 bottom-1.5 left-1.5 w-[calc((100%-12px)/var(--tab-count))] rounded-full bg-white/20 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
                       style={{
                         ["--tab-count" as string]: BOTTOM_TABS.length,
                         transform: `translateX(calc(${Math.max(0, BOTTOM_TABS.findIndex((tab) => tab.id === (positionsOpen ? "positions" : section)))} * 100%))`,
@@ -7009,7 +8230,7 @@ export default function Api() {
                           }
                           aria-selected={isActive}
                           onClick={() => handleSectionChange(tab.id)}
-                          className={`relative z-10 flex h-12 min-w-0 flex-1 items-center justify-center rounded-full transition-colors duration-300 ${
+                          className={`relative z-10 flex h-11 min-w-0 flex-1 items-center justify-center rounded-full transition-colors duration-300 ${
                             isActive
                               ? "text-white"
                               : "text-white/45 hover:text-white/70"
@@ -7086,7 +8307,7 @@ export default function Api() {
             }}
           />
         )}
-        {onboardingOpen && (
+        {SHOW_ONBOARDING && onboardingOpen && (
           <Onboarding
             traders={leaderboardWallets}
             tradersStatus={leaderboardStatus}
@@ -7098,35 +8319,44 @@ export default function Api() {
         )}
         {feedPositionTrade && (
           <FeedPositionSheet
-            trade={feedPositionTrade}
-            handle={resolveFeedHandle(feedPositionTrade.wallet)}
+            trade={feedPositionTrade.trade}
+            handle={
+              feedPositionTrade.handle ??
+              resolveFeedHandle(feedPositionTrade.trade.wallet)
+            }
+            avatarUrl={feedPositionTrade.avatarUrl}
             marketImage={
-              feedPositionTrade.marketSlug
-                ? marketImageBySlug.get(feedPositionTrade.marketSlug)
+              feedPositionTrade.trade.marketSlug
+                ? marketImageBySlug.get(feedPositionTrade.trade.marketSlug)
                 : undefined
             }
             volume24h={
-              feedPositionTrade.marketSlug
-                ? marketBySlug.get(feedPositionTrade.marketSlug)?.volume24h
+              feedPositionTrade.trade.marketSlug
+                ? marketBySlug.get(feedPositionTrade.trade.marketSlug)
+                    ?.volume24h
                 : undefined
             }
             market={
-              feedPositionTrade.marketSlug
-                ? marketBySlug.get(feedPositionTrade.marketSlug)
+              feedPositionTrade.trade.marketSlug
+                ? marketBySlug.get(feedPositionTrade.trade.marketSlug)
                 : undefined
             }
             onClose={() => setFeedPositionTrade(null)}
-            following={isFollowing(feedPositionTrade.wallet)}
-            onFollowToggle={() => toggleFollow(feedPositionTrade.wallet)}
+            following={isFollowing(feedPositionTrade.trade.wallet)}
+            onFollowToggle={() =>
+              toggleFollow(feedPositionTrade.trade.wallet)
+            }
             isOwn={Boolean(
               demoProfile?.wallet &&
-                feedPositionTrade.wallet.toLowerCase() ===
+                feedPositionTrade.trade.wallet.toLowerCase() ===
                   demoProfile.wallet.toLowerCase(),
             )}
             onOpenWallet={() =>
               openWallet(
-                feedPositionTrade.wallet,
-                resolveFeedHandle(feedPositionTrade.wallet),
+                feedPositionTrade.trade.wallet,
+                feedPositionTrade.handle ??
+                  resolveFeedHandle(feedPositionTrade.trade.wallet),
+                feedPositionTrade.avatarUrl,
               )
             }
             onTrade={
@@ -7134,10 +8364,14 @@ export default function Api() {
                 ? (outcome) => {
                     openTradeFlow(
                       marketFromFeedTrade(
-                        feedPositionTrade,
-                        marketBySlug.get(feedPositionTrade.marketSlug),
-                        feedPositionTrade.marketSlug
-                          ? marketImageBySlug.get(feedPositionTrade.marketSlug)
+                        feedPositionTrade.trade,
+                        marketBySlug.get(
+                          feedPositionTrade.trade.marketSlug,
+                        ),
+                        feedPositionTrade.trade.marketSlug
+                          ? marketImageBySlug.get(
+                              feedPositionTrade.trade.marketSlug,
+                            )
                           : undefined,
                       ),
                       outcome,
@@ -7219,38 +8453,6 @@ export default function Api() {
             onClose={() => setFollowList(null)}
           />
         )}
-        <style>{`
-          @keyframes api-market-enter {
-            from {
-              opacity: 0;
-              transform: translateY(10px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          @keyframes api-positions-up-blink {
-            0%, 100% { box-shadow: inset 0 0 10px #1f8f45; }
-            50% { box-shadow: inset 0 0 28px #5dd978; }
-          }
-          @keyframes api-positions-down-blink {
-            0%, 100% { box-shadow: inset 0 0 10px #d42e3e; }
-            50% { box-shadow: inset 0 0 28px #ff4d5e; }
-          }
-          .api-positions-up-blink {
-            animation: api-positions-up-blink 0.7s ease-in-out infinite;
-          }
-          .api-positions-down-blink {
-            animation: api-positions-down-blink 0.7s ease-in-out infinite;
-          }
-          @media (prefers-reduced-motion: reduce) {
-            .api-positions-up-blink,
-            .api-positions-down-blink {
-              animation: none;
-            }
-          }
-        `}</style>
       </article>
     </div>
   );

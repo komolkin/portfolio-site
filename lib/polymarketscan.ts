@@ -932,11 +932,19 @@ function parseMatchupTitle(
     return null;
   }
 
-  const match = title
-    .trim()
-    .match(
-      /(?:^|:\s*)(.+?)\s+vs\.?\s+(.+?)(?:\s+\([^)]*\))?(?:\s+[-–—].*)?(?:\s+\d{4}[-/]\d{2}[-/]\d{2})?$/i,
-    );
+  const cleaned = title.replace(/\?+$/, "").trim();
+
+  // "Will Khamzat Chimaev fight Sean Strickland next?"
+  const fight = cleaned.match(
+    /^will\s+(.+?)\s+fight\s+(.+?)(?:\s+next)?$/i,
+  );
+  if (fight?.[1] && fight[2]) {
+    return { away: fight[1].trim(), home: fight[2].trim() };
+  }
+
+  const match = cleaned.match(
+    /(?:^|:\s*)(.+?)\s+vs\.?\s+(.+?)(?:\s+\([^)]*\))?(?:\s+[-–—].*)?(?:\s+\d{4}[-/]\d{2}[-/]\d{2})?$/i,
+  );
   if (!match?.[1] || !match[2]) return null;
 
   let away = match[1]
@@ -1477,7 +1485,16 @@ function guessLeague(market: PolymarketMarketData): string | undefined {
   if (/\bnba\b/.test(text)) return "NBA";
   if (/\bnfl\b/.test(text)) return "NFL";
   if (/\bnhl\b/.test(text)) return "NHL";
-  if (/\bmlb\b/.test(text)) return "MLB";
+  if (
+    /\bmlb\b|platinum glove|cy young|rookie of the year|american league|national league|\bal\b|\bnl\b/.test(
+      text,
+    )
+  ) {
+    return "MLB";
+  }
+  if (/\b(ufc|mma|welterweight|heavyweight|bantamweight)\b/.test(text)) {
+    return "UFC";
+  }
   if (
     /\b(tennis|atp|wta|wimbledon|roland\s*garros|french open|australian open|us open)\b/.test(
       text,
@@ -1499,17 +1516,21 @@ function sportsTeamsFromMarket(
   market: PolymarketMarketData,
   catalog: EspnTeamLogo[],
 ): PolymarketSportsTeam[] {
-  const league = guessLeague(market);
+  const league = guessLeague(market) ?? market.liveGame?.league ?? undefined;
   const asTeam = (
     name: string,
     logo?: string | null,
     abbr?: string | null,
   ): PolymarketSportsTeam => {
     const hit = lookupTeamLogo(name, catalog, league);
+    // Always prefer ESPN catalog team logos over Wikipedia / random photos.
+    const resolvedLogo =
+      hit?.logo ?? (isEspnTeamLogo(logo) ? logo : null) ?? null;
     return {
       name: hit?.displayName ?? name,
-      logo: hit?.logo ?? logo ?? null,
+      logo: resolvedLogo,
       abbr: hit?.abbr ?? abbr ?? null,
+      portrait: false,
     };
   };
 
@@ -1528,9 +1549,26 @@ function sportsTeamsFromMarket(
     ];
   }
 
+  const matchup = parseMatchupTitle(market.title);
+  if (matchup) {
+    return [asTeam(matchup.away), asTeam(matchup.home)];
+  }
+
   const named = namedOutcomes(market);
   if (named.length >= 2) {
     return named.map((outcome) => asTeam(outcome.label, outcome.logo));
+  }
+
+  const country = countryTeamFromTitle(market.title);
+  if (country) {
+    return [
+      {
+        name: country.name,
+        logo: country.logo,
+        abbr: country.abbr,
+        portrait: false,
+      },
+    ];
   }
 
   const subject = teamSubjectFromTitle(market.title);
@@ -1815,7 +1853,7 @@ async function photoForQueries(queries: string[]): Promise<string | null> {
 }
 
 const PLAYER_SPORT =
-  /\b(tennis|atp|wta|wimbledon|roland\s*garros|french open|australian open|us open|cincinnati open|indian wells|miami open|madrid open|italian open|national bank open|china open|paris masters|golf|pga|lpga|ufc|mma|boxing)\b/i;
+  /\b(tennis|atp|wta|wimbledon|roland\s*garros|french open|australian open|us open|cincinnati open|indian wells|miami open|madrid open|italian open|national bank open|china open|paris masters|golf|pga|lpga|ufc|mma|boxing|fight|welterweight|heavyweight|bantamweight)\b/i;
 
 function isPlayerSport(market: PolymarketMarketData): boolean {
   return PLAYER_SPORT.test(
@@ -1836,16 +1874,274 @@ function looksLikePersonName(name: string): boolean {
   return parts.every((part) => /^[A-Za-z][A-Za-z.'’-]*$/.test(part));
 }
 
-async function lookupPlayerPortrait(name: string): Promise<string | null> {
-  const key = `player-portrait-v1:${nickKey(name)}`;
+function isEspnAthleteHeadshot(url: string | null | undefined): boolean {
+  return Boolean(url && /espncdn\.com\/.*\/headshots\//i.test(url));
+}
+
+function isEspnTeamLogo(url: string | null | undefined): boolean {
+  return Boolean(url && /espncdn\.com\/i\/teamlogos\//i.test(url));
+}
+
+const COUNTRY_TEAM_LOGOS: Record<
+  string,
+  { name: string; abbr: string; logo: string }
+> = {
+  netherlands: {
+    name: "Netherlands",
+    abbr: "NED",
+    logo: "https://a.espncdn.com/i/teamlogos/countries/500/ned.png",
+  },
+  france: {
+    name: "France",
+    abbr: "FRA",
+    logo: "https://a.espncdn.com/i/teamlogos/countries/500/fra.png",
+  },
+  germany: {
+    name: "Germany",
+    abbr: "GER",
+    logo: "https://a.espncdn.com/i/teamlogos/countries/500/ger.png",
+  },
+  england: {
+    name: "England",
+    abbr: "ENG",
+    logo: "https://a.espncdn.com/i/teamlogos/countries/500/eng.png",
+  },
+  spain: {
+    name: "Spain",
+    abbr: "ESP",
+    logo: "https://a.espncdn.com/i/teamlogos/countries/500/esp.png",
+  },
+  portugal: {
+    name: "Portugal",
+    abbr: "POR",
+    logo: "https://a.espncdn.com/i/teamlogos/countries/500/por.png",
+  },
+  brazil: {
+    name: "Brazil",
+    abbr: "BRA",
+    logo: "https://a.espncdn.com/i/teamlogos/countries/500/bra.png",
+  },
+  argentina: {
+    name: "Argentina",
+    abbr: "ARG",
+    logo: "https://a.espncdn.com/i/teamlogos/countries/500/arg.png",
+  },
+  kazakhstan: {
+    name: "Kazakhstan",
+    abbr: "KAZ",
+    logo: "https://a.espncdn.com/i/teamlogos/countries/500/kaz.png",
+  },
+};
+
+function countryTeamFromTitle(
+  title: string,
+): { name: string; abbr: string; logo: string } | null {
+  const hay = title.toLowerCase();
+  // Only national-team contexts — not club leagues that merely mention a country.
+  const nationalContext =
+    /\b(world cup|euro\b|nations league|national team|official\s+\d{4}|squad|roster|included in)\b/.test(
+      hay,
+    ) || /\b[a-z]+['']s?\s+official\b/.test(hay);
+  if (!nationalContext) return null;
+  for (const [key, value] of Object.entries(COUNTRY_TEAM_LOGOS)) {
+    if (hay.includes(key)) return value;
+  }
+  return null;
+}
+
+async function espnAthleteTeamLogo(
+  name: string,
+  preferredSports: string[] = [],
+): Promise<{ name: string; abbr: string; logo: string } | null> {
+  const q = name.trim();
+  if (!q) return null;
+  const key = `athlete-team-logo-v1:${nickKey(q)}:${preferredSports.join(",")}`;
+  const cached = getCached<{ name: string; abbr: string; logo: string } | null>(
+    key,
+  );
+  if (cached !== null) return cached || null;
+
+  try {
+    const searchUrl = `https://site.web.api.espn.com/apis/common/v3/search?query=${encodeURIComponent(q)}&limit=8&type=player`;
+    const searchRes = await fetch(searchUrl, fetchNoStore);
+    if (!searchRes.ok) {
+      setCache(key, null, TITLE_PHOTO_TTL_MS);
+      return null;
+    }
+    const searchJson = (await searchRes.json()) as {
+      items?: Array<{
+        id?: string;
+        displayName?: string;
+        sport?: string;
+        league?: string;
+        defaultLeagueSlug?: string;
+      }>;
+    };
+    const nick = nickKey(q);
+    const last = nick.split(" ").at(-1) ?? "";
+    const ranked = (searchJson.items ?? [])
+      .map((item, index) => {
+        const display = nickKey(item.displayName ?? "");
+        if (!item.id || !display) return null;
+        if (display !== nick && !(last && display.includes(last))) return null;
+        const sport = (item.sport ?? "").toLowerCase();
+        let score = display === nick ? 20 : 10;
+        const pref = preferredSports.findIndex((s) => s === sport);
+        if (pref >= 0) score += 12 - pref;
+        score -= index;
+        return {
+          id: item.id,
+          sport,
+          league: (
+            item.league ??
+            item.defaultLeagueSlug ??
+            ""
+          ).toLowerCase(),
+          score,
+        };
+      })
+      .filter(
+        (
+          row,
+        ): row is {
+          id: string;
+          sport: string;
+          league: string;
+          score: number;
+        } => Boolean(row),
+      )
+      .sort((a, b) => b.score - a.score);
+    const best = ranked[0];
+    if (!best?.sport || !best.league) {
+      setCache(key, null, TITLE_PHOTO_TTL_MS);
+      return null;
+    }
+
+    const detailUrl = `https://site.web.api.espn.com/apis/common/v3/sports/${best.sport}/${best.league}/athletes/${best.id}`;
+    const detailRes = await fetch(detailUrl, fetchNoStore);
+    if (!detailRes.ok) {
+      setCache(key, null, TITLE_PHOTO_TTL_MS);
+      return null;
+    }
+    const detailJson = (await detailRes.json()) as {
+      athlete?: {
+        team?: {
+          displayName?: string;
+          abbreviation?: string;
+          logos?: Array<{ href?: string; rel?: string[] }>;
+        };
+      };
+    };
+    const team = detailJson.athlete?.team;
+    const logo = pickEspnLogo(team?.logos);
+    if (!team?.displayName || !logo) {
+      setCache(key, null, TITLE_PHOTO_TTL_MS);
+      return null;
+    }
+    const resolved = {
+      name: team.displayName,
+      abbr: (team.abbreviation ?? "").trim() || null,
+      logo,
+    };
+    const packed = {
+      name: resolved.name,
+      abbr: resolved.abbr ?? resolved.name.slice(0, 3).toUpperCase(),
+      logo: resolved.logo,
+    };
+    setCache(key, packed, TITLE_PHOTO_TTL_MS);
+    return packed;
+  } catch {
+    setCache(key, null, TITLE_PHOTO_TTL_MS);
+    return null;
+  }
+}
+
+function preferredEspnSports(market: PolymarketMarketData): string[] {
+  const hay = `${market.title} ${market.eventTitle ?? ""} ${market.category ?? ""}`.toLowerCase();
+  if (/\b(ufc|mma|fight|boxing|bellator|pfl)\b/.test(hay)) return ["mma", "boxing"];
+  if (/\b(tennis|atp|wta|wimbledon|open)\b/.test(hay)) return ["tennis"];
+  if (/\b(golf|pga|lpga)\b/.test(hay)) return ["golf"];
+  if (
+    /\b(mlb|al\b|nl\b|american league|national league|platinum glove|cy young|rookie of the year|mvp award)\b/.test(
+      hay,
+    )
+  ) {
+    return ["baseball"];
+  }
+  if (/\b(nba|wnba)\b/.test(hay)) return ["basketball"];
+  if (/\b(nfl|super bowl)\b/.test(hay)) return ["football"];
+  if (
+    /\b(soccer|premier league|world cup|fifa|ucl|la liga|bundesliga|serie a|mls|netherlands|fc\b)\b/.test(
+      hay,
+    )
+  ) {
+    return ["soccer"];
+  }
+  return ["baseball", "soccer", "basketball", "football", "tennis"];
+}
+
+async function espnAthleteHeadshot(
+  name: string,
+  preferredSports: string[] = [],
+): Promise<string | null> {
+  const q = name.trim();
+  if (!q) return null;
+  try {
+    const url = `https://site.web.api.espn.com/apis/common/v3/search?query=${encodeURIComponent(q)}&limit=8&type=player`;
+    const res = await fetch(url, fetchNoStore);
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      items?: Array<{
+        displayName?: string;
+        sport?: string;
+        headshot?: { href?: string };
+      }>;
+    };
+    const items = json.items ?? [];
+    if (items.length === 0) return null;
+
+    const nick = nickKey(q);
+    const last = nick.split(" ").at(-1) ?? "";
+    const ranked = items
+      .map((item, index) => {
+        const href = item.headshot?.href;
+        if (!href || !isPhotoUrl(href)) return null;
+        const sport = (item.sport ?? "").toLowerCase();
+        const display = nickKey(item.displayName ?? "");
+        let score = 0;
+        if (display === nick) score += 20;
+        else if (last && display.includes(last)) score += 10;
+        else return null;
+        const pref = preferredSports.findIndex((s) => s === sport);
+        if (pref >= 0) score += 12 - pref;
+        else if (preferredSports.length > 0) score -= 2;
+        if (/\.png(?:$|\?)/i.test(href)) score += 4;
+        score -= index;
+        return { href: cleanMediaUrl(href), score };
+      })
+      .filter((row): row is { href: string; score: number } => Boolean(row))
+      .sort((a, b) => b.score - a.score);
+    return ranked[0]?.href ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function lookupPlayerPortrait(
+  name: string,
+  market?: PolymarketMarketData,
+): Promise<string | null> {
+  const key = `player-portrait-v2:${nickKey(name)}`;
   const cached = getCached<string>(key);
   if (cached !== null) return cached || null;
 
   const existing = inFlightByKey.get(key) as Promise<string | null> | undefined;
   if (existing) return existing;
 
+  const preferred = market ? preferredEspnSports(market) : [];
   const promise = (async () => {
     const photo =
+      (await espnAthleteHeadshot(name, preferred)) ??
       (await wikipediaPersonPhoto(name)) ??
       (await wikipediaPersonPhoto(`${name} tennis`)) ??
       (await commonsPhoto(name));
@@ -1861,21 +2157,76 @@ async function lookupPlayerPortrait(name: string): Promise<string | null> {
   }
 }
 
-async function withPlayerPortraits(
+function isCombatAthleteMarket(market: PolymarketMarketData): boolean {
+  const hay = `${market.title} ${market.eventTitle ?? ""} ${market.category ?? ""}`.toLowerCase();
+  return /\b(ufc|mma|boxing|bellator|pfl|fight|welterweight|heavyweight|bantamweight)\b/.test(
+    hay,
+  );
+}
+
+async function withSideImages(
   teams: PolymarketSportsTeam[],
   market: PolymarketMarketData,
+  catalog: EspnTeamLogo[],
 ): Promise<PolymarketSportsTeam[]> {
-  const playerSport = isPlayerSport(market);
   if (teams.length === 0) return teams;
 
+  // Athlete headshots only for UFC/MMA.
+  if (isCombatAthleteMarket(market)) {
+    return Promise.all(
+      teams.map(async (team) => {
+        if (team.logo && isEspnAthleteHeadshot(team.logo)) {
+          return { ...team, portrait: true };
+        }
+        if (isEspnTeamLogo(team.logo)) return { ...team, portrait: false };
+        const portrait = await lookupPlayerPortrait(team.name, market);
+        if (!portrait) return { ...team, portrait: false };
+        return { ...team, logo: portrait, portrait: true };
+      }),
+    );
+  }
+
+  // Everyone else: ESPN team logos (catalog, athlete→club, or national side).
+  const league = guessLeague(market) ?? market.liveGame?.league ?? undefined;
+  const preferred = preferredEspnSports(market);
   return Promise.all(
     teams.map(async (team) => {
-      if (team.logo) return team;
-      if (!playerSport && !looksLikePersonName(team.name)) return team;
-      const portrait = await lookupPlayerPortrait(team.name);
-      return portrait
-        ? { ...team, logo: portrait, portrait: true }
-        : team;
+      const catalogHit = lookupTeamLogo(team.name, catalog, league);
+      if (catalogHit?.logo) {
+        return {
+          name: catalogHit.displayName,
+          logo: catalogHit.logo,
+          abbr: catalogHit.abbr,
+          portrait: false,
+        };
+      }
+      if (isEspnTeamLogo(team.logo)) {
+        return { ...team, portrait: false };
+      }
+
+      if (looksLikePersonName(team.name)) {
+        const club = await espnAthleteTeamLogo(team.name, preferred);
+        if (club) {
+          return {
+            name: club.name,
+            logo: club.logo,
+            abbr: club.abbr,
+            portrait: false,
+          };
+        }
+      }
+
+      const country = countryTeamFromTitle(market.title);
+      if (country) {
+        return {
+          name: country.name,
+          logo: country.logo,
+          abbr: country.abbr,
+          portrait: false,
+        };
+      }
+
+      return { ...team, logo: null, portrait: false };
     }),
   );
 }
@@ -1890,11 +2241,12 @@ async function enrichSportsMarket(
     fetchEspnTeamCatalog(),
   ]);
   const withGame = attachLiveGame(market, boards, catalog);
-  const teams = await withPlayerPortraits(
+  const teams = await withSideImages(
     sportsTeamsFromMarket(withGame, catalog),
     withGame,
+    catalog,
   );
-  const withTeams = {
+  const withTeams: PolymarketMarketData = {
     ...withGame,
     teams,
     outcomes: (withGame.outcomes ?? []).map((outcome) => {
@@ -1907,6 +2259,27 @@ async function enrichSportsMarket(
       return team?.logo ? { ...outcome, logo: team.logo } : outcome;
     }),
   };
+
+  // Keep liveGame side logos in sync with resolved ESPN team marks.
+  if (withTeams.liveGame && teams.length >= 2) {
+    withTeams.liveGame = {
+      ...withTeams.liveGame,
+      away: {
+        ...withTeams.liveGame.away,
+        name: teams[0]!.name,
+        logo: teams[0]!.logo,
+        abbr: teams[0]!.abbr,
+        portrait: false,
+      },
+      home: {
+        ...withTeams.liveGame.home,
+        name: teams[1]!.name,
+        logo: teams[1]!.logo,
+        abbr: teams[1]!.abbr,
+        portrait: false,
+      },
+    };
+  }
 
   if (withTeams.image?.startsWith("/")) return withTeams;
   const photo = await photoForQueries(await sportsPhotoQueries(withTeams));
@@ -1930,7 +2303,7 @@ export async function getLiveSportsMarkets(
   limit = 10,
 ): Promise<PolymarketMarketData[]> {
   const capped = Math.min(Math.max(limit, 1), 16);
-  const key = `live-games-v2:${capped}`;
+  const key = `live-games-v3:${capped}`;
   const cached = getCached<PolymarketMarketData[]>(key);
   if (cached) return cached;
 
@@ -2074,7 +2447,7 @@ export async function getTrendingMarkets(
   limit = 10,
 ): Promise<PolymarketMarketData[]> {
   const capped = Math.min(Math.max(limit, 1), 48);
-  const key = `trending-sports-crypto-v1:${capped}`;
+  const key = `trending-sports-crypto-v2:${capped}`;
   const cached = getCached<PolymarketMarketData[]>(key);
   if (cached) return cached;
 

@@ -700,3 +700,118 @@ body > * {
   display: none; /* Chrome, Safari, Opera */
 }
 
+/* API playground — keep in CSS (not inline <style>) to avoid hydration mismatches */
+
+/* Force video + backdrop-blur to respect 24px corners (Safari/Chrome overflow gap). */
+.api-market-preview {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  background: #000;
+  isolation: isolate;
+  transform: translateZ(0);
+  clip-path: inset(0 round 24px);
+  -webkit-clip-path: inset(0 round 24px);
+  /* Safari: promote a mask layer so overflow+radius actually clips video/blur */
+  -webkit-mask-image: -webkit-radial-gradient(#fff 100%, #fff 100%);
+  mask-image: radial-gradient(#fff 100%, #fff 100%);
+}
+
+.api-market-preview-media {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+@keyframes api-market-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes api-float-drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  33% {
+    transform: translate(var(--float-x), calc(var(--float-y) * -0.45));
+  }
+  66% {
+    transform: translate(calc(var(--float-x) * -0.65), var(--float-y));
+  }
+}
+
+.api-pnl-shine::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    125deg,
+    rgba(255, 255, 255, 0.42) 0%,
+    rgba(255, 255, 255, 0.12) 28%,
+    transparent 52%,
+    transparent 100%
+  );
+  mix-blend-mode: soft-light;
+}
+
+.api-pnl-shine > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes api-positions-up-blink {
+  0%,
+  100% {
+    box-shadow: inset 0 0 8px #1f8f45;
+    opacity: 0.45;
+  }
+  50% {
+    box-shadow: inset 0 0 14px #3db86a;
+    opacity: 0.7;
+  }
+}
+
+/* Mostly quiet; a brief red flash only every ~9s */
+@keyframes api-positions-down-blink {
+  0%,
+  88%,
+  100% {
+    box-shadow: inset 0 0 0 transparent;
+    opacity: 0;
+  }
+  91%,
+  94% {
+    box-shadow: inset 0 0 16px #c44a52;
+    opacity: 0.65;
+  }
+}
+
+.api-positions-up-blink {
+  animation: api-positions-up-blink 2.8s ease-in-out infinite;
+}
+
+.api-positions-down-blink {
+  animation: api-positions-down-blink 9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .api-positions-up-blink,
+  .api-positions-down-blink {
+    animation: none;
+  }
+}
+

@@ -329,6 +329,7 @@ export function FollowButton({
 export default function FeedPositionSheet({
   trade,
   handle,
+  avatarUrl,
   marketImage,
   volume24h,
   following,
@@ -343,6 +344,7 @@ export default function FeedPositionSheet({
 }: {
   trade: PolymarketTradeWithPnl;
   handle: string;
+  avatarUrl?: string | null;
   marketImage?: string;
   volume24h?: number;
   following: boolean;
@@ -557,7 +559,16 @@ export default function FeedPositionSheet({
               aria-label={`Open ${handle}'s profile`}
               className="flex min-w-0 flex-1 items-center gap-2.5 rounded-2xl text-left transition-opacity hover:opacity-80"
             >
-              <UserAvatar seed={trade.wallet} label={handle} className="h-10 w-10" />
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="h-10 w-10 shrink-0 rounded-full bg-[#2a2a2e] object-cover"
+                />
+              ) : (
+                <UserAvatar seed={trade.wallet} label={handle} className="h-10 w-10" />
+              )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[15px] font-semibold leading-tight">
                   {handle}
