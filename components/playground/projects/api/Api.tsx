@@ -1691,14 +1691,44 @@ function sportClipForMarket(market: PolymarketMarketData): MarketClipRef | null 
   return assigned.get(market.marketId) ?? null;
 }
 
-function MarketClip({ clip }: { clip: MarketClipRef }) {
+function MarketClip({
+  clip,
+  active = true,
+}: {
+  clip: MarketClipRef;
+  active?: boolean;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
   const startRatio = Math.max(0, Math.min(0.85, clip.startRatio));
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (!active || document.hidden) {
+      video.pause();
+      return;
+    }
+    void video.play().catch(() => {});
+  }, [active, clip.src]);
+
+  useEffect(() => {
+    const onVis = () => {
+      const video = videoRef.current;
+      if (!video) return;
+      if (document.hidden || !active) video.pause();
+      else void video.play().catch(() => {});
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [active]);
+
   return (
     <video
+      ref={videoRef}
       src={clip.src}
-      autoPlay
       muted
       playsInline
+      preload="metadata"
       disablePictureInPicture
       controls={false}
       tabIndex={-1}
@@ -1714,8 +1744,10 @@ function MarketClip({ clip }: { clip: MarketClipRef }) {
         video.dataset.momentStart = String(start);
         video.dataset.momentEnd = String(start + windowSec);
         video.currentTime = start;
+        if (active && !document.hidden) void video.play().catch(() => {});
       }}
       onTimeUpdate={(event) => {
+        if (!active) return;
         const video = event.currentTarget;
         const end = Number(video.dataset.momentEnd);
         const start = Number(video.dataset.momentStart);
@@ -2039,7 +2071,13 @@ function MatchSideVisual({
   );
 }
 
-function SportsMatchHeader({ market }: { market: PolymarketMarketData }) {
+function SportsMatchHeader({
+  market,
+  active = true,
+}: {
+  market: PolymarketMarketData;
+  active?: boolean;
+}) {
   const sides = useMemo(() => resolveMatchSides(market), [market]);
   const game = market.liveGame;
   const hasScore = sides.left.score != null && sides.right.score != null;
@@ -2051,13 +2089,16 @@ function SportsMatchHeader({ market }: { market: PolymarketMarketData }) {
   const [targetMs, setTargetMs] = useState<number | null>(null);
 
   useEffect(() => {
-    if (showScore) return;
+    if (showScore || !active) return;
     const start = Date.now();
     setNow(start);
     setTargetMs(eventTargetMs(market, start));
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    const id = window.setInterval(() => {
+      if (document.hidden) return;
+      setNow(Date.now());
+    }, 1000);
     return () => window.clearInterval(id);
-  }, [showScore, market]);
+  }, [showScore, market, active]);
 
   // Shared middle size for live scores and countdown timers.
   const matchValueClass = `text-[32px] font-semibold tabular-nums leading-none tracking-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] ${instrumentSansCondensed.className}`;
@@ -2388,9 +2429,11 @@ function buildFloatPositions(marketId: string): FloatPositionBubble[] {
 function FloatingTopPositions({
   market,
   onOpenPosition,
+  active = true,
 }: {
   market: PolymarketMarketData;
   onOpenPosition?: (selection: FeedPositionSelection) => void;
+  active?: boolean;
 }) {
   const bubbles = useMemo(
     () => buildFloatPositions(market.marketId),
@@ -2401,6 +2444,7 @@ function FloatingTopPositions({
   const [livePnl, setLivePnl] = useState<Record<string, number>>(() =>
     Object.fromEntries(bubbles.map((b) => [b.id, b.pnl])),
   );
+  const show = active && visible;
 
   useEffect(() => {
     setLivePnl(Object.fromEntries(bubbles.map((b) => [b.id, b.pnl])));
@@ -2420,12 +2464,16 @@ function FloatingTopPositions({
   }, [market.marketId]);
 
   useEffect(() => {
-    if (!visible || bubbles.length === 0) return;
+    if (!show || bubbles.length === 0) return;
     let timeout = 0;
     const schedule = () => {
-      // Very occasional: 7–16s between ticks, then bump one random bubble.
-      const wait = 7000 + Math.floor(Math.random() * 9000);
+      // Rare ticks — avoid constant React churn on every card.
+      const wait = 14_000 + Math.floor(Math.random() * 16_000);
       timeout = window.setTimeout(() => {
+        if (document.hidden) {
+          schedule();
+          return;
+        }
         const target = bubbles[Math.floor(Math.random() * bubbles.length)]!;
         const delta =
           (12 + Math.floor(Math.random() * 48)) *
@@ -2442,7 +2490,7 @@ function FloatingTopPositions({
     };
     schedule();
     return () => window.clearTimeout(timeout);
-  }, [visible, bubbles]);
+  }, [show, bubbles]);
 
   return (
     <div
@@ -2455,7 +2503,7 @@ function FloatingTopPositions({
           <div
             key={bubble.id}
             className={`absolute transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-              visible
+              show
                 ? "opacity-100 translate-y-0 scale-100"
                 : "opacity-0 translate-y-5 scale-90"
             }`}
@@ -2464,7 +2512,7 @@ function FloatingTopPositions({
                 ? { left: bubble.edgePx }
                 : { right: bubble.edgePx }),
               bottom: bubble.bottomPx,
-              transitionDelay: visible ? `${bubble.delayMs}ms` : "0ms",
+              transitionDelay: show ? `${bubble.delayMs}ms` : "0ms",
             }}
           >
             <button
@@ -2472,13 +2520,13 @@ function FloatingTopPositions({
               aria-label={`Open top position +$${pnl.toLocaleString("en-US")}`}
               className="pointer-events-auto relative h-11 w-11 cursor-pointer appearance-none border-0 bg-transparent p-0"
               style={
-                {
-                  ["--float-x"]: `${bubble.driftX}px`,
-                  ["--float-y"]: `${bubble.driftY}px`,
-                  animation: visible
-                    ? `api-float-drift ${bubble.floatDur}s ease-in-out ${bubble.delayMs + 400}ms infinite`
-                    : undefined,
-                } as CSSProperties
+                show
+                  ? ({
+                      ["--float-x"]: `${bubble.driftX}px`,
+                      ["--float-y"]: `${bubble.driftY}px`,
+                      animation: `api-float-drift ${bubble.floatDur}s ease-in-out ${bubble.delayMs + 400}ms infinite`,
+                    } as CSSProperties)
+                  : undefined
               }
               onClick={(event) => {
                 event.stopPropagation();
@@ -2495,25 +2543,19 @@ function FloatingTopPositions({
                 alt=""
                 className="h-full w-full rounded-full bg-[#2a2a2e] object-cover shadow-[0_6px_18px_rgba(0,0,0,0.45)] ring-2 ring-white/30"
                 draggable={false}
+                loading="lazy"
+                decoding="async"
               />
               <span
-                className="api-pnl-shine pointer-events-none absolute inset-x-[-4px] -bottom-1.5 inline-flex items-center justify-center overflow-hidden rounded-full px-1.5 py-1.5 text-[11px] font-semibold leading-none tabular-nums tracking-tight text-white"
+                className="pointer-events-none absolute inset-x-[-4px] -bottom-1.5 inline-flex items-center justify-center overflow-hidden rounded-full px-1.5 py-1.5 text-[11px] font-semibold leading-none tabular-nums tracking-tight text-white"
                 style={{
                   background:
                     "linear-gradient(165deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0.1) 22%, rgba(20,20,24,0.72) 48%, rgba(8,8,10,0.82) 100%)",
                   boxShadow:
                     "inset 0 1px 1px rgba(255,255,255,0.55), inset 0 -2px 4px rgba(0,0,0,0.35), 0 4px 12px rgba(0,0,0,0.35)",
-                  backdropFilter: "blur(10px)",
-                  WebkitBackdropFilter: "blur(10px)",
                 }}
               >
-                <NumberFlow
-                  value={pnl}
-                  prefix="+$"
-                  trend={0}
-                  format={{ useGrouping: true, maximumFractionDigits: 0 }}
-                  style={nfMaskStyle}
-                />
+                +${pnl.toLocaleString("en-US")}
               </span>
             </button>
           </div>
@@ -2531,23 +2573,31 @@ function MarketPreviewMedia({
   market,
   clip,
   accent,
+  active = true,
 }: {
   market: PolymarketMarketData;
   clip: MarketClipRef | null;
   accent: string;
+  /** Only the on-screen (or adjacent) card should decode/play video. */
+  active?: boolean;
 }) {
   const poster = proxyImageSrc(market.image);
   return (
     <div className="api-market-preview-media">
-      {clip ? (
-        <MarketClip clip={clip} />
+      {clip && active ? (
+        <MarketClip clip={clip} active={active} />
       ) : poster ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={poster}
           alt=""
           className="absolute inset-0 h-full w-full object-cover object-center"
+          loading="lazy"
+          decoding="async"
         />
+      ) : clip && !active ? (
+        // Keep a dark plate while off-screen so snap pages stay cheap.
+        <div className="absolute inset-0 bg-black" />
       ) : (
         <div className="absolute inset-0" style={{ backgroundColor: accent }} />
       )}
@@ -2613,6 +2663,7 @@ function TrendingMarketCard({
   fill = false,
   height = FEATURED_MARKET_PREVIEW_HEIGHT,
   clip: clipOverride = null,
+  active = true,
 }: {
   market: PolymarketMarketData;
   onOpen: (market: PolymarketMarketData) => void;
@@ -2622,6 +2673,8 @@ function TrendingMarketCard({
   fill?: boolean;
   height?: number;
   clip?: MarketClipRef | null;
+  /** When false, skip video decode / timers / float motion. */
+  active?: boolean;
 }) {
   const odds = previewOdds(market);
   const clip = clipOverride ?? sportClipForMarket(market);
@@ -2780,11 +2833,16 @@ function TrendingMarketCard({
       className={`${MARKET_PREVIEW_CLIP} ${fill ? "h-full min-h-0" : ""}`}
       style={fill ? undefined : { height }}
     >
-      <MarketPreviewMedia market={market} clip={clip} accent={accent} />
+      <MarketPreviewMedia
+        market={market}
+        clip={clip}
+        accent={accent}
+        active={active}
+      />
 
       <div className="relative z-10 flex h-full flex-col px-4 pb-4 pt-3.5">
         {canShowSportsMatchHeader(market) ? (
-          <SportsMatchHeader market={market} />
+          <SportsMatchHeader market={market} active={active} />
         ) : (
           <div className="min-w-0">
             {eyebrow ? (
@@ -2802,6 +2860,7 @@ function TrendingMarketCard({
           <FloatingTopPositions
             market={market}
             onOpenPosition={onOpenPosition}
+            active={active}
           />
           <div className="flex gap-2">
             {pills.map((pill) => (
@@ -3082,6 +3141,7 @@ function LiveGameCard({
   fill = false,
   height = FEATURED_MARKET_PREVIEW_HEIGHT,
   clip: clipOverride = null,
+  active = true,
 }: {
   market: PolymarketMarketData;
   onOpen: (market: PolymarketMarketData) => void;
@@ -3091,6 +3151,7 @@ function LiveGameCard({
   fill?: boolean;
   height?: number;
   clip?: MarketClipRef | null;
+  active?: boolean;
 }) {
   const { game, away, home, awayOdds, homeOdds } = resolveSportsSides(market);
   const accent = useImageAccent(
@@ -3197,16 +3258,22 @@ function LiveGameCard({
       className={`${MARKET_PREVIEW_CLIP} ${fill ? "h-full min-h-0" : ""}`}
       style={fill ? undefined : { height }}
     >
-      <MarketPreviewMedia market={market} clip={clip} accent={accent} />
+      <MarketPreviewMedia
+        market={market}
+        clip={clip}
+        accent={accent}
+        active={active}
+      />
 
       <div className="relative z-10 flex h-full flex-col px-4 pb-4 pt-3.5">
-        <SportsMatchHeader market={market} />
+        <SportsMatchHeader market={market} active={active} />
 
         {onTrade ? (
           <div className="relative mt-auto">
             <FloatingTopPositions
               market={market}
               onOpenPosition={onOpenPosition}
+              active={active}
             />
             <div className="flex gap-2">
               {tradeOutcomes.map((outcome, index) => {
@@ -4676,6 +4743,7 @@ export default function Api() {
   const stickyMarketFadeRef = useRef<HTMLDivElement>(null);
   const [section, setSection] = useState<SectionId>("explore");
   const [feedPastHero, setFeedPastHero] = useState(false);
+  const [feedPageIndex, setFeedPageIndex] = useState(0);
   const [positionsOpen, setPositionsOpen] = useState(false);
   const [liveMarkets, setLiveMarkets] = useState<PolymarketMarketData[]>([]);
   const [trendingMarkets, setTrendingMarkets] = useState<
@@ -4991,8 +5059,10 @@ export default function Api() {
     let tick = 0;
 
     const id = window.setInterval(() => {
+      if (document.hidden) return;
       tick += 1;
-      clockSeconds -= 1;
+      // Interval is 3s — advance clock ~3 seconds per tick.
+      clockSeconds -= 3;
       if (clockSeconds < 0) {
         if (quarter < 4) {
           quarter += 1;
@@ -5070,7 +5140,7 @@ export default function Api() {
           selected?.marketId === DEMO_LIVE_MARKET_ID ? demoLiveNext! : selected,
         );
       }
-    }, 1000);
+    }, 3000);
 
     return () => window.clearInterval(id);
   }, []);
@@ -5602,20 +5672,31 @@ export default function Api() {
   useEffect(() => {
     if (!isExploreFeed) {
       setFeedPastHero(false);
+      setFeedPageIndex(0);
       return;
     }
     const scroller = feedSnapRef.current;
     if (!scroller) return;
 
+    let raf = 0;
     const update = () => {
+      raf = 0;
       const page = Math.max(1, scroller.clientHeight);
       const index = Math.round(scroller.scrollTop / page);
       setFeedPastHero(index > 0);
+      setFeedPageIndex(index);
+    };
+    const onScroll = () => {
+      if (raf) return;
+      raf = window.requestAnimationFrame(update);
     };
 
     update();
-    scroller.addEventListener("scroll", update, { passive: true });
-    return () => scroller.removeEventListener("scroll", update);
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      scroller.removeEventListener("scroll", onScroll);
+      if (raf) window.cancelAnimationFrame(raf);
+    };
   }, [isExploreFeed, homeFeedMarkets.length, marketsStatus]);
 
   useEffect(() => {
@@ -6063,6 +6144,7 @@ export default function Api() {
     if (!hasActiveCopy) return;
 
     const id = window.setInterval(() => {
+      if (document.hidden) return;
       copySimTick.current += 1;
       const tick = copySimTick.current;
       const now = Date.now();
@@ -6094,7 +6176,7 @@ export default function Api() {
         }
         return next;
       });
-    }, 1400);
+    }, 4000);
 
     return () => window.clearInterval(id);
   }, [hasActiveCopy]);
@@ -7188,10 +7270,16 @@ export default function Api() {
                     isFirst &&
                     liveMarkets[0]?.marketId === market.marketId &&
                     isSportsMarket(market);
+                  // Only the current + next/prev page decode video & run timers.
+                  const cardActive = Math.abs(index - feedPageIndex) <= 1;
                   return (
                     <div
                       key={market.marketId}
                       className="flex h-full min-h-full snap-start snap-always flex-col px-5"
+                      style={{
+                        contentVisibility: cardActive ? "visible" : "auto",
+                        containIntrinsicSize: "auto 640px",
+                      }}
                     >
                       {isFirst ? exploreHeader : null}
                       <div className="min-h-0 flex-1 pb-1">
@@ -7200,6 +7288,7 @@ export default function Api() {
                             market={market}
                             featured
                             fill
+                            active={cardActive}
                             clip={homeFeedClips.get(market.marketId) ?? null}
                             onOpen={openMarket}
                             onTrade={openTradeFlow}
@@ -7209,6 +7298,7 @@ export default function Api() {
                           <TrendingMarketCard
                             market={market}
                             fill
+                            active={cardActive}
                             clip={homeFeedClips.get(market.marketId) ?? null}
                             onOpen={openMarket}
                             onTrade={openTradeFlow}
