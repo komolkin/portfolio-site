@@ -67,7 +67,6 @@ import {
   BlurShareButton,
   ChipTabs,
   FilterDropdown,
-  SwipeablePages,
   ui,
 } from "./ui";
 import { hexToRgba, useImageAccent } from "./imageAccent";
@@ -88,13 +87,10 @@ type SectionId = "explore" | "search" | "feed" | "profile";
 type TabId = SectionId | "positions";
 type ProfileSubScreen = "referral" | "settings";
 type ListDetailTab = "trades" | "wallets";
-type HomeTab = "markets" | "leaderboard";
 type LeaderboardTab = "traders" | "friends" | "lists";
 type LeaderboardPeriod = "24h" | "week" | "month";
 type MarketDetailTab = "trades" | "traders" | "rules";
 type ProfileTab = "positions" | "history" | "copying";
-type TrendingView = "masonry" | "list";
-
 const MARKET_ENTER =
   "motion-safe:animate-[api-market-enter_300ms_cubic-bezier(0.32,0.72,0,1)_both]";
 const MARKET_ENTER_DELAYED =
@@ -251,11 +247,6 @@ const BOTTOM_TABS: readonly { id: TabId; label: string }[] = [
   { id: "feed", label: "Feed" },
   { id: "profile", label: "Profile" },
 ];
-
-const HOME_TABS = [
-  { id: "markets", label: "Markets" },
-  { id: "leaderboard", label: "Leaderboard" },
-] as const;
 
 const LEADERBOARD_SCOPE_OPTIONS = [
   { id: "traders", label: "Top traders" },
@@ -1051,7 +1042,8 @@ function LivePeriodFlow({
   return <>{formatLiveClock(clock, status)}</>;
 }
 
-const OUTCOME_BAR_COLORS = ["#00D54B", "#4C8DFF", "#FF9F1C"] as const;
+const OUTCOME_BAR_COLORS = ["#00D54B", "#4C8DFF", "#FF9F1C", "#FF375F"] as const;
+const SPORTS_BAR_COLORS = ["#00D54B", "#FF5C5C", "#FF9F1C"] as const;
 
 function formatOutcomeLabel(label: string): string {
   const compact = label.replace(/,/g, "").trim();
@@ -1125,8 +1117,6 @@ function MarketOddsPreview({ market }: { market: PolymarketMarketData }) {
     </div>
   );
 }
-
-const TRENDING_IMAGE_HEIGHT = 136;
 
 const LUKA_FEATURE_CLIP = "/playground/api/clips/luka-doncic.mp4";
 
@@ -1232,102 +1222,399 @@ function MarketClip({ clip }: { clip: MarketClipRef }) {
   );
 }
 
-function TrendingMarketMedia({
-  market,
-  clip,
+function PreviewActionPill({
+  label,
+  color,
+  onClick,
 }: {
-  market: PolymarketMarketData;
-  clip: MarketClipRef | null;
+  label: string;
+  color: string;
+  onClick: () => void;
 }) {
-  if (clip) return <MarketClip clip={clip} />;
-  const image = proxyImageSrc(market.image);
-  if (image) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={image} alt="" className="h-full w-full object-cover" />
-    );
-  }
   return (
-    <div className="flex h-full w-full items-center justify-center bg-white/[0.08] text-[11px] font-semibold text-white/35">
-      Market
-    </div>
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      className="min-w-0 flex-1 rounded-full border border-white/15 bg-transparent px-3 py-2.5 text-center text-[14px] font-semibold transition-colors hover:bg-white/[0.06]"
+      style={{ color }}
+    >
+      <span className="block truncate">{label}</span>
+    </button>
   );
+}
+
+function marketScheduleLabel(market: PolymarketMarketData): string | null {
+  const game = market.liveGame;
+  if (game?.status === "live") {
+    return formatLiveClock(game.clock, game.status);
+  }
+  if (market.closesAt) {
+    const closes = Date.parse(market.closesAt);
+    if (Number.isFinite(closes)) {
+      const when = new Date(closes);
+      const now = new Date();
+      const sameDay =
+        when.getFullYear() === now.getFullYear() &&
+        when.getMonth() === now.getMonth() &&
+        when.getDate() === now.getDate();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(now.getDate() + 1);
+      const isTomorrow =
+        when.getFullYear() === tomorrow.getFullYear() &&
+        when.getMonth() === tomorrow.getMonth() &&
+        when.getDate() === tomorrow.getDate();
+      const time = when.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+      if (sameDay) return `Today, ${time}`;
+      if (isTomorrow) return `Tomorrow, ${time}`;
+      return when.toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    }
+  }
+  return null;
 }
 
 function TrendingMarketCard({
   market,
   onOpen,
-  variant = "masonry",
+  onTrade,
 }: {
   market: PolymarketMarketData;
   onOpen: (market: PolymarketMarketData) => void;
-  variant?: TrendingView;
+  onTrade?: (market: PolymarketMarketData, outcome?: string) => void;
 }) {
-  const accent = useImageAccent(market.image);
   const odds = previewOdds(market);
-  const top = odds.shown[0];
+  const image = proxyImageSrc(market.image);
+  const volume = market.volumeUsd || market.volume24h;
+  const openTrade = (outcome?: string) => {
+    if (onTrade) onTrade(market, outcome);
+    else onOpen(market);
+  };
 
-  if (variant === "list") {
+  if (isSportsMarket(market)) {
+    const { game, away, home, awayOdds, homeOdds } = resolveSportsSides(market);
+    const league =
+      game?.league ??
+      market.category ??
+      (market.title.includes(" vs") ? "Sports" : "Sports");
+    const schedule = marketScheduleLabel(market);
+    const sides = [
+      {
+        name: away.name,
+        logo: away.logo,
+        abbr: away.abbr,
+        price: awayOdds?.price ?? market.yesPrice,
+        color: SPORTS_BAR_COLORS[0],
+      },
+      {
+        name: home.name,
+        logo: home.logo,
+        abbr: home.abbr,
+        price: homeOdds?.price ?? market.noPrice,
+        color: SPORTS_BAR_COLORS[1],
+      },
+    ];
+    const outcomes = (market.outcomes ?? []).filter(
+      (outcome) => outcome.label.trim().length > 0,
+    );
+    const hasDraw = outcomes.some((outcome) =>
+      /\bdraw\b|\btie\b/i.test(outcome.label),
+    );
+    const pills = hasDraw
+      ? [
+          {
+            label:
+              sportsOutcomeAbbr(market, away.name) ??
+              liveSideName(away.name).slice(0, 3).toUpperCase(),
+            color: "#FF7A9A",
+            outcome: away.name,
+          },
+          { label: "Draw", color: "#FFFFFF", outcome: "Draw" },
+          {
+            label:
+              sportsOutcomeAbbr(market, home.name) ??
+              liveSideName(home.name).slice(0, 3).toUpperCase(),
+            color: "#FF7A9A",
+            outcome: home.name,
+          },
+        ]
+      : [
+          {
+            label:
+              sportsOutcomeAbbr(market, away.name) ??
+              (away.abbr ?? liveSideName(away.name)).slice(0, 3).toUpperCase(),
+            color: SPORTS_BAR_COLORS[0],
+            outcome: away.name,
+          },
+          {
+            label:
+              sportsOutcomeAbbr(market, home.name) ??
+              (home.abbr ?? liveSideName(home.name)).slice(0, 3).toUpperCase(),
+            color: "#7AA2FF",
+            outcome: home.name,
+          },
+        ];
+
     return (
-      <button
-        type="button"
-        onClick={() => onOpen(market)}
-        className="flex w-full items-center gap-3 overflow-hidden rounded-[20px] text-left transition-[filter,background-color] duration-500 hover:brightness-110"
-        style={{ backgroundColor: accent }}
-      >
-        <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden">
-          <TrendingMarketMedia market={market} clip={null} />
+      <div className="w-full rounded-[24px] bg-white/[0.08] p-3.5">
+        <button
+          type="button"
+          onClick={() => onOpen(market)}
+          className="flex w-full flex-col text-left"
+        >
+          <div className="flex items-center gap-2">
+            {image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={image}
+                alt=""
+                className="h-5 w-5 shrink-0 rounded object-cover"
+              />
+            ) : null}
+            <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white">
+              <span>{league}</span>
+              {schedule ? (
+                <span className="font-medium text-white/45"> {schedule}</span>
+              ) : null}
+            </p>
+            {volume > 0 ? (
+              <p className="shrink-0 text-[12px] text-white/45">
+                {formatUsd(volume)} Vol.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="mt-3.5 flex flex-col gap-3">
+            {sides.map((side) => (
+              <div key={side.name} className="flex items-start gap-2.5">
+                <LiveTeamMark
+                  logo={side.logo}
+                  name={side.name}
+                  abbr={side.abbr}
+                  size="sm"
+                />
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="min-w-0 truncate text-[15px] font-semibold">
+                      {side.name}
+                    </p>
+                    <p
+                      className={`shrink-0 text-[22px] font-semibold tabular-nums ${instrumentSansCondensed.className}`}
+                    >
+                      <ChanceFlow price={side.price} />
+                    </p>
+                  </div>
+                  <div className="mt-1.5 h-[3px] overflow-hidden rounded-full bg-white/[0.08]">
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.max(4, Math.min(100, side.price * 100))}%`,
+                        backgroundColor: side.color,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </button>
+
+        <div className="mt-3.5 flex gap-2">
+          {pills.map((pill) => (
+            <PreviewActionPill
+              key={pill.label}
+              label={pill.label}
+              color={pill.color}
+              onClick={() => openTrade(pill.outcome)}
+            />
+          ))}
         </div>
-        <div className="min-w-0 flex-1 py-2.5 pr-1">
-          <p className="line-clamp-2 text-[13px] font-semibold leading-snug">
-            {market.title}
-          </p>
-          <p className="mt-1 text-[11px] text-white/45">
-            {formatUsd(market.volumeUsd || market.volume24h)} Vol
-          </p>
-        </div>
-        {top ? (
-          <p
-            className={`shrink-0 pr-3 text-[16px] font-semibold tabular-nums ${instrumentSansCondensed.className}`}
-          >
-            <ChanceFlow price={top.price} />
-          </p>
-        ) : null}
-      </button>
+      </div>
     );
   }
 
+  const isBinary =
+    isBinaryMarket(market) ||
+    odds.shown.every((row) =>
+      /^(yes|no|up|down)$/i.test(row.label.trim()),
+    );
+
+  if (isBinary && odds.shown.length >= 1) {
+    const primary = odds.shown[0];
+    const secondary =
+      odds.shown[1] ??
+      ({
+        label: /^(yes|up)$/i.test(primary.label) ? "No" : "Yes",
+        price: Math.max(0, 1 - primary.price),
+        key: "secondary",
+      } as const);
+    const primaryLabel = /up/i.test(primary.label)
+      ? "UP"
+      : /down/i.test(primary.label)
+        ? "DOWN"
+        : /^(yes|no)$/i.test(primary.label)
+          ? primary.label
+          : primary.label;
+    const secondaryLabel = /up/i.test(secondary.label)
+      ? "UP"
+      : /down/i.test(secondary.label)
+        ? "DOWN"
+        : /^(yes|no)$/i.test(secondary.label)
+          ? secondary.label
+          : secondary.label;
+    const primaryTone = /^(yes|up)$/i.test(primaryLabel)
+      ? "#00D54B"
+      : /^(no|down)$/i.test(primaryLabel)
+        ? "#FF375F"
+        : "#00D54B";
+    const secondaryTone = /^(yes|up)$/i.test(secondaryLabel)
+      ? "#00D54B"
+      : /^(no|down)$/i.test(secondaryLabel)
+        ? "#FF375F"
+        : "#FF375F";
+
+    return (
+      <div className="w-full rounded-[24px] bg-white/[0.08] p-3.5">
+        <button
+          type="button"
+          onClick={() => onOpen(market)}
+          className="flex w-full flex-col text-left"
+        >
+          <div className="flex items-start gap-2.5">
+            {image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={image}
+                alt=""
+                className="mt-0.5 h-8 w-8 shrink-0 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-[11px] font-semibold text-white/45">
+                {market.title.slice(0, 1)}
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="line-clamp-2 text-[15px] font-semibold leading-snug">
+                {market.title}
+              </p>
+              {volume > 0 ? (
+                <p className="mt-0.5 text-[12px] text-white/45">
+                  {formatUsd(volume)} Vol.
+                </p>
+              ) : null}
+            </div>
+          </div>
+          <p
+            className={`mt-4 text-[40px] font-semibold leading-none tabular-nums tracking-tight ${instrumentSansCondensed.className}`}
+          >
+            <ChanceFlow price={primary.price} />
+          </p>
+        </button>
+        <div className="mt-4 flex gap-2">
+          <PreviewActionPill
+            label={primaryLabel}
+            color={primaryTone}
+            onClick={() => openTrade(primary.label)}
+          />
+          <PreviewActionPill
+            label={secondaryLabel}
+            color={secondaryTone}
+            onClick={() => openTrade(secondary.label)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const shown = odds.shown.slice(0, 2);
+  const relatedExtra = Math.max(0, (market.relatedMarketCount ?? 0) - 1);
+
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(market)}
-      className="w-full overflow-hidden rounded-[20px] text-left transition-[filter,background-color] duration-500 hover:brightness-110"
-      style={{ backgroundColor: accent }}
-    >
-      <div
-        className="relative overflow-hidden"
-        style={{ height: TRENDING_IMAGE_HEIGHT }}
+    <div className="w-full rounded-[24px] bg-white/[0.08] p-3.5">
+      <button
+        type="button"
+        onClick={() => onOpen(market)}
+        className="flex w-full flex-col text-left"
       >
-        {/* Keep masonry tiles on still frames — video only on the featured live card. */}
-        <TrendingMarketMedia market={market} clip={null} />
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-10"
-          style={{
-            backgroundImage: `linear-gradient(to top, ${accent}, transparent)`,
-          }}
-        />
+        <div className="flex items-start gap-2.5">
+          {image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={image}
+              alt=""
+              className="mt-0.5 h-8 w-8 shrink-0 rounded-lg object-cover"
+            />
+          ) : (
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-[11px] font-semibold text-white/45">
+              {market.title.slice(0, 1)}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-2 text-[15px] font-semibold leading-snug">
+              {market.title}
+            </p>
+            <p className="mt-0.5 text-[12px] text-white/45">
+              {volume > 0 ? `${formatUsd(volume)} Vol.` : market.category}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3.5 flex flex-col gap-3">
+          {shown.map((outcome, index) => (
+            <div key={outcome.key}>
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="min-w-0 truncate text-[14px] font-semibold">
+                  {formatOutcomeLabel(outcome.label)}
+                </p>
+                <p
+                  className={`shrink-0 text-[22px] font-semibold tabular-nums ${instrumentSansCondensed.className}`}
+                >
+                  <ChanceFlow price={outcome.price} />
+                </p>
+              </div>
+              <div className="mt-1.5 h-[3px] overflow-hidden rounded-full bg-white/[0.08]">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${Math.max(4, Math.min(100, outcome.price * 100))}%`,
+                    backgroundColor:
+                      OUTCOME_BAR_COLORS[index % OUTCOME_BAR_COLORS.length],
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </button>
+
+      <div className="mt-3.5 flex gap-2">
+        {relatedExtra > 1 ? (
+          <PreviewActionPill
+            label={`${relatedExtra} more markets`}
+            color="#FFFFFF"
+            onClick={() => onOpen(market)}
+          />
+        ) : (
+          shown.map((outcome, index) => (
+            <PreviewActionPill
+              key={outcome.key}
+              label={formatOutcomeLabel(outcome.label)}
+              color={OUTCOME_BAR_COLORS[index % OUTCOME_BAR_COLORS.length]}
+              onClick={() => openTrade(outcome.label)}
+            />
+          ))
+        )}
       </div>
-      <div className="px-2.5 pb-2.5 pt-1.5">
-        <p className="line-clamp-3 text-[12px] font-semibold leading-snug">
-          {market.title}
-        </p>
-        <MarketOddsPreview market={market} />
-        <p className="mt-2.5 flex flex-wrap gap-x-2 text-[10px] text-white/40">
-          <span>{formatUsd(market.volumeUsd || market.volume24h)} Vol</span>
-          {odds.total > 3 ? <span>{odds.total} Markets</span> : null}
-        </p>
-      </div>
-    </button>
+    </div>
   );
 }
 
@@ -1697,7 +1984,7 @@ function LiveGameCard({
           onOpen(market);
         }
       }}
-      className="relative h-[420px] w-full cursor-pointer overflow-hidden rounded-[24px] bg-black text-left"
+      className="relative h-[448px] w-full cursor-pointer overflow-hidden rounded-[24px] bg-black text-left"
     >
       <div className="pointer-events-none absolute inset-0">
         {clip ? (
@@ -3291,7 +3578,6 @@ export default function Api() {
   const stickyMarketFadeRef = useRef<HTMLDivElement>(null);
   const [section, setSection] = useState<SectionId>("explore");
   const [positionsOpen, setPositionsOpen] = useState(false);
-  const [homeTab, setHomeTab] = useState<HomeTab>("markets");
   const [liveMarkets, setLiveMarkets] = useState<PolymarketMarketData[]>([]);
   const [trendingMarkets, setTrendingMarkets] = useState<
     PolymarketMarketData[]
@@ -4139,7 +4425,6 @@ export default function Api() {
     return () => window.cancelAnimationFrame(id);
   }, [
     section,
-    homeTab,
     selectedMarketSlug,
     selectedWallet,
     selectedListId,
@@ -4381,21 +4666,19 @@ export default function Api() {
     ? (listDetail?.name ?? "List")
     : selectedMarketSlug
       ? "Market"
-      : section === "explore" && homeTab === "leaderboard"
-        ? "Leaderboard"
+      : section === "search"
+        ? "Search"
         : "Back";
   const listBackLabel =
     section === "search"
       ? "Search"
-      : section === "explore" && homeTab === "leaderboard"
-        ? "Leaderboard"
-        : "Squads";
+      : "Squads";
   const marketBackLabel = selectedListId
     ? (listDetail?.name ?? "Squad")
     : section === "feed"
       ? "Feed"
-      : section === "explore" && homeTab === "leaderboard"
-        ? "Leaderboard"
+      : section === "search"
+        ? "Search"
         : "Explore";
 
   const drillBack = showingWalletProfile
@@ -4953,16 +5236,6 @@ export default function Api() {
           Deposit
         </button>
       </div>
-      <div className="mt-5">
-        <ChipTabs
-          ariaLabel="Home sections"
-          value={homeTab}
-          onChange={setHomeTab}
-          underline
-          fullWidth
-          tabs={HOME_TABS}
-        />
-      </div>
     </header>
   );
 
@@ -4977,11 +5250,9 @@ export default function Api() {
         aria-busy={
           (section === "explore" &&
             !showingDrillDown &&
-            homeTab === "markets" &&
             (marketsStatus === "loading" || listsStatus === "loading")) ||
-          (section === "explore" &&
+          (section === "search" &&
             !showingDrillDown &&
-            homeTab === "leaderboard" &&
             leaderboardStatus === "loading") ||
           (showingListDetail && listDetailStatus === "loading") ||
           (showingWalletProfile && walletStatus === "loading") ||
@@ -5302,191 +5573,7 @@ export default function Api() {
 
           {section === "search" && !showingDrillDown && (
             <div className="flex flex-col gap-6">
-              <ListsPreviewRail
-                lists={lists}
-                status={listsStatus}
-                onOpen={openList}
-              />
-
-              {searchQuery.trim() === "" && (
-                <section aria-label="Recent searches">
-                  <h3 className={`mb-2.5 ${ui.section}`}>Recents</h3>
-                  <p className="py-1 text-[14px] text-white/45">
-                    No recent searches
-                  </p>
-                </section>
-              )}
-
-              <div className="flex flex-col gap-2.5">
-              {searchStatus === "loading" && (
-                <div className="space-y-2.5 animate-pulse" aria-hidden>
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="h-[64px] rounded-xl bg-white/10" />
-                  ))}
-                </div>
-              )}
-              {searchStatus === "error" && (
-                <p className="text-sm text-white/55">
-                  Couldn&apos;t search right now.
-                </p>
-              )}
-              {searchStatus === "ready" && searchResults.length === 0 && (
-                <p className="text-sm text-white/55">No markets found.</p>
-              )}
-              {searchStatus === "ready" && searchResults.length > 0 && (
-                <ul className="flex flex-col gap-2.5">
-                  {searchResults.map((market) => (
-                    <li key={market.marketId}>
-                      <button
-                        type="button"
-                        onClick={() => openMarket(market)}
-                        className="w-full rounded-[20px] bg-white/[0.08] p-3.5 text-left transition-colors hover:bg-white/[0.1]"
-                      >
-                        <div className="flex items-start gap-3">
-                          {proxyImageSrc(market.image) ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={proxyImageSrc(market.image)!}
-                              alt=""
-                              className="h-12 w-12 shrink-0 rounded-2xl object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-[12px] font-semibold text-white/40">
-                              M
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            {market.category ? (
-                              <p className="text-[11px] font-medium text-white/40">
-                                {market.category}
-                              </p>
-                            ) : null}
-                            <p className="line-clamp-2 text-[15px] font-semibold leading-snug">
-                              {market.title}
-                            </p>
-                            <p className="mt-1 text-[12px] text-white/45">
-                              {formatUsd(market.volumeUsd || market.volume24h)}{" "}
-                              Vol
-                              {(market.relatedMarketCount ?? 1) > 1
-                                ? ` · ${market.relatedMarketCount} Markets`
-                                : ""}
-                            </p>
-                          </div>
-                        </div>
-                        <MarketOddsPreview market={market} />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              </div>
-            </div>
-          )}
-
-          {section === "explore" && !showingDrillDown && (
-            <SwipeablePages
-              value={homeTab}
-              onChange={setHomeTab}
-              pages={[
-                {
-                  id: "markets" as const,
-                  content: (
-                    <div className="flex flex-col gap-6">
-                      <section aria-label="Live games">
-                        {marketsStatus === "loading" && (
-                          <div
-                            className="h-[420px] w-full animate-pulse rounded-[24px] bg-white/10"
-                            aria-hidden
-                          />
-                        )}
-
-                        {marketsStatus === "error" && (
-                          <p className="text-sm text-white/55">
-                            Couldn&apos;t load live markets.
-                          </p>
-                        )}
-
-                        {marketsStatus === "ready" &&
-                          liveMarkets.length === 0 && (
-                            <p className="text-sm text-white/55">
-                              No live sports markets.
-                            </p>
-                          )}
-
-                        {marketsStatus === "ready" && liveMarkets[0] && (
-                          <LiveGameCard
-                            market={liveMarkets[0]}
-                            featured
-                            onOpen={openMarket}
-                            onTrade={openTradeFlow}
-                          />
-                        )}
-                      </section>
-
-                      <section aria-label="Trending markets">
-                        <h3 className={`mb-2.5 ${ui.section}`}>Trending</h3>
-
-                        {marketsStatus === "loading" && (
-                          <div
-                            className="columns-2 gap-2.5 animate-pulse"
-                            aria-hidden
-                          >
-                            {[72, 108, 88, 124, 80, 96, 116, 76, 104, 92].map(
-                              (body, i) => (
-                                <div
-                                  key={i}
-                                  className="mb-2.5 break-inside-avoid overflow-hidden rounded-[20px] bg-white/10"
-                                >
-                                  <div
-                                    className="bg-white/[0.08]"
-                                    style={{
-                                      height: TRENDING_IMAGE_HEIGHT,
-                                    }}
-                                  />
-                                  <div style={{ height: body }} />
-                                </div>
-                              ),
-                            )}
-                          </div>
-                        )}
-
-                        {marketsStatus === "error" && (
-                          <p className="text-sm text-white/55">
-                            Couldn&apos;t load trending markets.
-                          </p>
-                        )}
-
-                        {marketsStatus === "ready" &&
-                          trendingMarkets.length === 0 && (
-                            <p className="text-sm text-white/55">
-                              No trending markets.
-                            </p>
-                          )}
-
-                        {marketsStatus === "ready" &&
-                          trendingMarkets.length > 0 && (
-                            <ul className="columns-2 gap-2.5">
-                              {trendingMarkets.map((market) => (
-                                <li
-                                  key={market.marketId}
-                                  className="mb-2.5 break-inside-avoid"
-                                >
-                                  <TrendingMarketCard
-                                    market={market}
-                                    onOpen={openMarket}
-                                    variant="masonry"
-                                  />
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                      </section>
-                    </div>
-                  ),
-                },
-                {
-                  id: "leaderboard" as const,
-                  content: (
+              <section aria-label="Leaderboard">
                     <div className="flex flex-col gap-4">
                       <div className="flex items-center gap-4">
                         <FilterDropdown
@@ -5761,10 +5848,161 @@ export default function Api() {
                         </>
                       )}
                     </div>
-                  ),
-                },
-              ]}
-            />
+              </section>
+
+              <ListsPreviewRail
+                lists={lists}
+                status={listsStatus}
+                onOpen={openList}
+              />
+
+              {searchQuery.trim() === "" && (
+                <section aria-label="Recent searches">
+                  <h3 className={`mb-2.5 ${ui.section}`}>Recents</h3>
+                  <p className="py-1 text-[14px] text-white/45">
+                    No recent searches
+                  </p>
+                </section>
+              )}
+
+              <div className="flex flex-col gap-2.5">
+              {searchStatus === "loading" && (
+                <div className="space-y-2.5 animate-pulse" aria-hidden>
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="h-[64px] rounded-xl bg-white/10" />
+                  ))}
+                </div>
+              )}
+              {searchStatus === "error" && (
+                <p className="text-sm text-white/55">
+                  Couldn&apos;t search right now.
+                </p>
+              )}
+              {searchStatus === "ready" && searchResults.length === 0 && (
+                <p className="text-sm text-white/55">No markets found.</p>
+              )}
+              {searchStatus === "ready" && searchResults.length > 0 && (
+                <ul className="flex flex-col gap-2.5">
+                  {searchResults.map((market) => (
+                    <li key={market.marketId}>
+                      <button
+                        type="button"
+                        onClick={() => openMarket(market)}
+                        className="w-full rounded-[20px] bg-white/[0.08] p-3.5 text-left transition-colors hover:bg-white/[0.1]"
+                      >
+                        <div className="flex items-start gap-3">
+                          {proxyImageSrc(market.image) ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={proxyImageSrc(market.image)!}
+                              alt=""
+                              className="h-12 w-12 shrink-0 rounded-2xl object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-[12px] font-semibold text-white/40">
+                              M
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            {market.category ? (
+                              <p className="text-[11px] font-medium text-white/40">
+                                {market.category}
+                              </p>
+                            ) : null}
+                            <p className="line-clamp-2 text-[15px] font-semibold leading-snug">
+                              {market.title}
+                            </p>
+                            <p className="mt-1 text-[12px] text-white/45">
+                              {formatUsd(market.volumeUsd || market.volume24h)}{" "}
+                              Vol
+                              {(market.relatedMarketCount ?? 1) > 1
+                                ? ` · ${market.relatedMarketCount} Markets`
+                                : ""}
+                            </p>
+                          </div>
+                        </div>
+                        <MarketOddsPreview market={market} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              </div>
+            </div>
+          )}
+
+          {section === "explore" && !showingDrillDown && (
+            <div className="flex flex-col gap-6">
+              <section aria-label="Live games">
+                {marketsStatus === "loading" && (
+                  <div
+                    className="h-[448px] w-full animate-pulse rounded-[24px] bg-white/10"
+                    aria-hidden
+                  />
+                )}
+
+                {marketsStatus === "error" && (
+                  <p className="text-sm text-white/55">
+                    Couldn&apos;t load live markets.
+                  </p>
+                )}
+
+                {marketsStatus === "ready" && liveMarkets.length === 0 && (
+                  <p className="text-sm text-white/55">
+                    No live sports markets.
+                  </p>
+                )}
+
+                {marketsStatus === "ready" && liveMarkets[0] && (
+                  <LiveGameCard
+                    market={liveMarkets[0]}
+                    featured
+                    onOpen={openMarket}
+                    onTrade={openTradeFlow}
+                  />
+                )}
+              </section>
+
+              <section aria-label="Trending markets">
+                {marketsStatus === "loading" && (
+                  <div
+                    className="flex flex-col gap-2.5 animate-pulse"
+                    aria-hidden
+                  >
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-[168px] rounded-[24px] bg-white/10"
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {marketsStatus === "error" && (
+                  <p className="text-sm text-white/55">
+                    Couldn&apos;t load trending markets.
+                  </p>
+                )}
+
+                {marketsStatus === "ready" && trendingMarkets.length === 0 && (
+                  <p className="text-sm text-white/55">No trending markets.</p>
+                )}
+
+                {marketsStatus === "ready" && trendingMarkets.length > 0 && (
+                  <ul className="flex flex-col gap-2.5">
+                    {trendingMarkets.map((market) => (
+                      <li key={market.marketId}>
+                        <TrendingMarketCard
+                          market={market}
+                          onOpen={openMarket}
+                          onTrade={openTradeFlow}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </div>
           )}
 
           {showingMarketDetail && (
