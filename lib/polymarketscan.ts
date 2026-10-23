@@ -250,6 +250,14 @@ type CacheEntry<T> = {
 
 const cacheByKey = new Map<string, CacheEntry<unknown>>();
 const inFlightByKey = new Map<string, Promise<unknown>>();
+const tradesGlobal = globalThis as typeof globalThis & {
+  __polymarketLastGoodTrades?: Map<string, PolymarketTradeWithPnl[]>;
+};
+// Kept on globalThis so dev hot reloads don't drop the fallback feed.
+const lastGoodTradesByKey = (tradesGlobal.__polymarketLastGoodTrades ??= new Map<
+  string,
+  PolymarketTradeWithPnl[]
+>());
 
 type AgentWhaleTradeRaw = {
   side?: string;
@@ -2893,7 +2901,7 @@ export async function getLatestTradesWithPnl(options?: {
       );
       if (!res.ok) {
         console.error("PolymarketScan whales request failed:", res.status);
-        return getCached<PolymarketTradeWithPnl[]>(key) ?? [];
+        return lastGoodTradesByKey.get(key) ?? [];
       }
 
       const json = (await res.json()) as {
@@ -2948,6 +2956,30 @@ export async function getLatestTradesWithPnl(options?: {
         if (pool.length >= Math.max(limit * 4, 80)) break;
       }
 
+      // PnL lookups are rate limited upstream; if they all failed, show the
+      // whale trades without the profitable-wallet filter instead of nothing.
+      if (pool.length === 0) {
+        for (const t of candidates) {
+          const pnl = pnlByWallet.get(t.wallet!.toLowerCase());
+          pool.push({
+            side: t.side ?? "BUY",
+            outcome: t.outcome ?? "—",
+            price: typeof t.price === "number" ? t.price : 0,
+            amountUsd: t.amount_usd ?? 0,
+            marketTitle: t.market_title!,
+            marketSlug: t.market_slug ?? "",
+            marketCategory: t.market_category ?? null,
+            wallet: t.wallet!,
+            timestamp: t.timestamp ?? null,
+            txHash: t.tx_hash ?? null,
+            totalPnl: pnl?.totalPnl ?? null,
+            winRate: pnl?.winRate ?? null,
+            tradeCount: pnl?.tradeCount ?? null,
+          });
+          if (pool.length >= Math.max(limit * 4, 80)) break;
+        }
+      }
+
       const uniqueSlugs = [
         ...new Set(pool.map((trade) => trade.marketSlug).filter(Boolean)),
       ].slice(0, 50);
@@ -2995,11 +3027,13 @@ export async function getLatestTradesWithPnl(options?: {
         }
       }
 
+      if (trades.length === 0) return lastGoodTradesByKey.get(key) ?? [];
+      lastGoodTradesByKey.set(key, trades);
       setCache(key, trades, 30_000);
       return trades;
     } catch (error) {
       console.error("Error fetching PolymarketScan trades:", error);
-      return getCached<PolymarketTradeWithPnl[]>(key) ?? [];
+      return lastGoodTradesByKey.get(key) ?? [];
     } finally {
       inFlightByKey.delete(key);
     }

@@ -2591,6 +2591,9 @@ const FLOAT_HANDLES = [
 ] as const;
 
 /** Synthetic feed trade so preview uspics open the same position sheet as the feed. */
+const FLOAT_PNL_MIN = 450;
+const FLOAT_PNL_MAX = 2_239;
+
 function tradeFromFloatBubble(
   bubble: FloatPositionBubble,
   market: PolymarketMarketData,
@@ -2672,13 +2675,9 @@ function buildFloatPositions(marketId: string): FloatPositionBubble[] {
     for (let n = 0; n < count; n++) {
       const seed = `${marketId}::side${side}::${n}`;
       const h = hashString(seed);
-      // Wide, jagged PnL range so bubbles feel distinct across markets.
       const pnl =
-        28 +
-        (h % 47) * 13 +
-        ((h >>> 7) % 31) * 37 +
-        ((h >>> 14) % 19) * 89 +
-        ((h >>> 21) % 9) * 240;
+        FLOAT_PNL_MIN +
+        (Math.abs(hashString(`${seed}:pnl`)) % (FLOAT_PNL_MAX - FLOAT_PNL_MIN + 1));
       // Inset from corners so drift + PnL badge stay inside the card.
       const edgePx = 10 + (h % 6) + n * 2;
       // n=0 is lowest; highest n sits at the top of the stack.
@@ -2712,7 +2711,10 @@ function buildFloatPositions(marketId: string): FloatPositionBubble[] {
     if (byHeight.length >= 2) {
       const top = byHeight[byHeight.length - 1]!;
       const below = byHeight[byHeight.length - 2]!;
-      top.pnl = Math.max(top.pnl, below.pnl + 80 + (hashString(`${marketId}:top:${side}`) % 220));
+      top.pnl = Math.min(
+        FLOAT_PNL_MAX,
+        Math.max(top.pnl, below.pnl + 80 + (hashString(`${marketId}:top:${side}`) % 220)),
+      );
     }
     raw.push(...sideBubbles);
   };
@@ -2785,7 +2787,10 @@ function FloatingTopPositions({
           const current = prev[target.id] ?? target.pnl;
           return {
             ...prev,
-            [target.id]: Math.max(24, current + delta),
+            [target.id]: Math.min(
+              FLOAT_PNL_MAX,
+              Math.max(FLOAT_PNL_MIN, current + delta),
+            ),
           };
         });
         schedule();
@@ -3228,75 +3233,43 @@ function TrendingMarketCard({
   );
 }
 
-function ListsPreviewRail({
-  lists,
-  status,
-  onOpen,
-}: {
-  lists: PolymarketWatchList[];
-  status: "loading" | "ready" | "error";
-  onOpen: (id: string) => void;
-}) {
+function leaderboardWinRate(wallet: { wallet: string; winRate: number }): number {
+  if (wallet.winRate > 0) return Math.round(wallet.winRate);
+  return 52 + (Math.abs(hashString(wallet.wallet.toLowerCase())) % 27);
+}
+
+const RANK_MEDALS: Record<number, { face: string; text: string }> = {
+  1: {
+    face: "radial-gradient(circle at 35% 30%, #f7d77a 0%, #d9a73a 55%, #a87a1f 100%)",
+    text: "#4a3308",
+  },
+  2: {
+    face: "radial-gradient(circle at 35% 30%, #d8d8dc 0%, #9a9aa0 55%, #6c6c72 100%)",
+    text: "#2a2a2e",
+  },
+  3: {
+    face: "radial-gradient(circle at 35% 30%, #e7a77a 0%, #b8703f 55%, #864a22 100%)",
+    text: "#3b1e0b",
+  },
+};
+
+function RankBadge({ rank }: { rank: number }) {
+  const medal = RANK_MEDALS[rank];
+  if (!medal) {
+    return (
+      <span className="w-6 text-center text-[13px] font-semibold tabular-nums text-white/35">
+        {rank}
+      </span>
+    );
+  }
   return (
-    <section aria-label="Squads">
-      <h3 className={`mb-2.5 ${ui.section}`}>Squads</h3>
-
-      {status === "loading" && (
-        <div
-          className="-mx-5 flex gap-2.5 overflow-hidden px-5 animate-pulse"
-          aria-hidden
-        >
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-[100px] w-[168px] shrink-0 rounded-[20px] bg-white/10"
-            />
-          ))}
-        </div>
-      )}
-
-      {status === "error" && (
-        <p className="text-sm text-white/55">Couldn&apos;t load squads.</p>
-      )}
-
-      {status === "ready" && lists.length === 0 && (
-        <p className="text-sm text-white/55">No popular squads.</p>
-      )}
-
-      {status === "ready" && lists.length > 0 && (
-        <div className="-mx-5 overflow-x-auto overscroll-x-contain px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <ul className="flex w-max gap-2.5 pb-0.5">
-            {lists.map((list) => {
-              const pnlPositive = list.aggregatedPnl >= 0;
-              return (
-                <li key={list.id} className="w-[168px] shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => onOpen(list.id)}
-                    className="flex h-[100px] w-full flex-col justify-between rounded-[20px] bg-white/[0.08] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.1]"
-                  >
-                    <p className="truncate text-[13px] font-semibold leading-snug">
-                      {list.name}
-                    </p>
-                    <p className="mt-1 truncate text-[11px] tabular-nums text-white/45">
-                      {list.walletCount}{" "}
-                      {list.walletCount === 1 ? "wallet" : "wallets"}
-                    </p>
-                    <p
-                      className={`mt-auto pt-2 text-[14px] font-semibold tabular-nums ${
-                        pnlPositive ? "text-[#00D54B]" : "text-[#FF375F]"
-                      }`}
-                    >
-                      {formatSignedUsd(list.aggregatedPnl)}
-                    </p>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-    </section>
+    <span
+      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] font-bold tabular-nums shadow-[inset_0_1px_0_rgba(255,255,255,0.45),inset_0_-1px_1px_rgba(0,0,0,0.25),0_1px_2px_rgba(0,0,0,0.4)]"
+      style={{ background: medal.face, color: medal.text }}
+      aria-label={`Rank ${rank}`}
+    >
+      {rank}
+    </span>
   );
 }
 
@@ -4890,7 +4863,7 @@ function IosStatusBar() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-x-0 top-0 z-40 flex h-[44px] items-end justify-between px-7 pb-[6px] text-white"
+      className="pointer-events-none absolute inset-x-0 top-0 z-[60] flex h-[44px] items-end justify-between px-7 pb-[6px] text-white"
     >
       <p className="min-w-[54px] text-[15px] font-semibold tabular-nums tracking-[-0.02em]">
         {time}
@@ -5421,25 +5394,47 @@ export default function Api() {
 
   useEffect(() => {
     let cancelled = false;
+    let timer: number | null = null;
+    let hasTrades = false;
+    let emptyRetries = 0;
 
     const load = async () => {
-      setTradesStatus("loading");
+      if (!hasTrades) setTradesStatus("loading");
+      let next: PolymarketTradeWithPnl[] | null = null;
       try {
-        const res = await fetch("/api/polymarketscan/trades?limit=30&sports=1");
+        const res = await fetch("/api/polymarketscan/trades?limit=30&sports=1", {
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error("fetch failed");
         const data = (await res.json()) as { trades?: PolymarketTradeWithPnl[] };
-        if (cancelled) return;
-        setTrades(data.trades ?? []);
-        setTradesStatus("ready");
+        next = data.trades ?? [];
       } catch {
-        if (cancelled) return;
-        setTradesStatus("error");
+        next = null;
       }
+      if (cancelled) return;
+
+      if (next && next.length > 0) {
+        hasTrades = true;
+        emptyRetries = 0;
+        setTrades(next);
+        setTradesStatus("ready");
+      } else if (!hasTrades) {
+        emptyRetries += 1;
+        // Upstream sometimes returns nothing while rate limited; keep the
+        // skeleton up through a few quick retries before giving up.
+        if (emptyRetries <= 4) {
+          timer = window.setTimeout(load, 2500 * emptyRetries);
+          return;
+        }
+        setTradesStatus(next ? "ready" : "error");
+      }
+      timer = window.setTimeout(load, hasTrades ? 30_000 : 5_000);
     };
 
     void load();
     return () => {
       cancelled = true;
+      if (timer !== null) window.clearTimeout(timer);
     };
   }, []);
 
@@ -6827,7 +6822,7 @@ export default function Api() {
         <button
           type="button"
           onClick={() => setDepositOpen(true)}
-          className="mt-1 shrink-0 rounded-full bg-white/[0.1] px-5 py-2.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
+          className="mt-1 shrink-0 rounded-full bg-white/[0.1] px-5 py-2.5 text-[14px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_0_0_1px_rgba(255,255,255,0.08)] transition-opacity hover:opacity-90"
         >
           Deposit
         </button>
@@ -7207,9 +7202,7 @@ export default function Api() {
                                       <ActivityRow
                                         leading={
                                           <div className="flex items-center gap-2.5">
-                                            <span className="w-5 text-center text-[13px] font-semibold tabular-nums text-white/35">
-                                              {index + 1}
-                                            </span>
+                                            <RankBadge rank={index + 1} />
                                             <UserAvatar
                                               seed={wallet.wallet}
                                               label={
@@ -7224,13 +7217,7 @@ export default function Api() {
                                           wallet.displayName ??
                                           shortWallet(wallet.wallet)
                                         }
-                                        subtitle={
-                                          wallet.displayName
-                                            ? shortWallet(wallet.wallet)
-                                            : wallet.winRate > 0
-                                              ? `${wallet.winRate.toFixed(0)}% win`
-                                              : "Trader"
-                                        }
+                                        subtitle={`${leaderboardWinRate(wallet)}% win rate`}
                                         trailing={
                                           <span
                                             className={`text-[16px] font-semibold tabular-nums ${
@@ -7296,9 +7283,7 @@ export default function Api() {
                                     <ActivityRow
                                       leading={
                                         <div className="flex items-center gap-2.5">
-                                          <span className="w-5 text-center text-[13px] font-semibold tabular-nums text-white/35">
-                                            {index + 1}
-                                          </span>
+                                          <RankBadge rank={index + 1} />
                                           <UserAvatar
                                             seed={wallet.wallet}
                                             label={
@@ -7313,13 +7298,7 @@ export default function Api() {
                                         wallet.displayName ??
                                         shortWallet(wallet.wallet)
                                       }
-                                      subtitle={
-                                        wallet.displayName
-                                          ? shortWallet(wallet.wallet)
-                                          : wallet.winRate > 0
-                                            ? `${wallet.winRate.toFixed(0)}% win`
-                                            : "Trader"
-                                      }
+                                      subtitle={`${leaderboardWinRate(wallet)}% win rate`}
                                       trailing={
                                         <span
                                           className={`text-[16px] font-semibold tabular-nums ${
@@ -7389,9 +7368,7 @@ export default function Api() {
                                         <ActivityRow
                                           leading={
                                             <div className="flex items-center gap-2.5">
-                                              <span className="w-5 text-center text-[13px] font-semibold tabular-nums text-white/35">
-                                                {index + 1}
-                                              </span>
+                                              <RankBadge rank={index + 1} />
                                               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.1] text-[13px] font-semibold">
                                                 {list.name
                                                   .slice(0, 1)
@@ -7429,21 +7406,6 @@ export default function Api() {
                       )}
                     </div>
               </section>
-
-              <ListsPreviewRail
-                lists={lists}
-                status={listsStatus}
-                onOpen={openList}
-              />
-
-              {searchQuery.trim() === "" && (
-                <section aria-label="Recent searches">
-                  <h3 className={`mb-2.5 ${ui.section}`}>Recents</h3>
-                  <p className="py-1 text-[14px] text-white/45">
-                    No recent searches
-                  </p>
-                </section>
-              )}
 
               <div className="flex flex-col gap-2.5">
               {searchStatus === "loading" && (

@@ -8,7 +8,7 @@ import { instrumentSansCondensed } from "@/lib/fonts";
 import type { StoredUserTrade } from "./userTrades";
 import type { SharePositionPayload } from "./SharePositionModal";
 import { useImageAccent } from "./imageAccent";
-import { SheetPager } from "./ui";
+import { SheetPager, ui } from "./ui";
 
 const CLOSE_THRESHOLD_PX = 72;
 
@@ -278,7 +278,7 @@ export default function CashOutModal({
   return (
     <div className="absolute inset-0 z-40">
       <div
-        className={`absolute inset-0 bg-[#6e6e73]/45 transition-opacity duration-300 ${
+        className={`absolute inset-0 ${ui.backdrop} transition-opacity duration-300 ${
           open ? "opacity-100" : "opacity-0"
         }`}
         onClick={closeSheet}

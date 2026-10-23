@@ -3,13 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import NumberFlow from "@number-flow/react";
 import { instrumentSansCondensed } from "@/lib/fonts";
-import { SheetPager } from "./ui";
+import { AmountKeypad, SheetPager, applyAmountKey, ui } from "./ui";
 
 const CLOSE_THRESHOLD_PX = 72;
-const DEFAULT_AMOUNT = 100;
 const MIN_AMOUNT = 10;
 const MAX_AMOUNT = 50_000;
-const PRESETS = [50, 100, 250, 500, 1_000] as const;
 const PROCESS_MS = 1100;
 
 const nfMaskStyle = {
@@ -110,6 +108,19 @@ function BackIcon({ className }: { className?: string }) {
         strokeWidth="1.75"
         strokeLinecap="round"
         strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CloseIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" className={className} aria-hidden>
+      <path
+        d="M3.5 3.5l9 9M12.5 3.5l-9 9"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
       />
     </svg>
   );
@@ -286,10 +297,8 @@ export default function DepositModal({
 }) {
   const [step, setStep] = useState<Step>("amount");
   const [stepDir, setStepDir] = useState<1 | -1>(1);
-  const [amount, setAmount] = useState(DEFAULT_AMOUNT);
-  const [amountDraft, setAmountDraft] = useState(String(DEFAULT_AMOUNT));
-  const [amountFocused, setAmountFocused] = useState(false);
-  const [method, setMethod] = useState<Method | null>(null);
+  const [amountDigits, setAmountDigits] = useState("");
+  const [method, setMethod] = useState<Method | null>("apple");
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvc, setCardCvc] = useState("");
@@ -301,7 +310,6 @@ export default function DepositModal({
   const [open, setOpen] = useState(false);
   const [drawerOffset, setDrawerOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const amountInputRef = useRef<HTMLInputElement>(null);
   const dragStartY = useRef(0);
   const dragStartOffset = useRef(0);
   const closeTimerRef = useRef<number | null>(null);
@@ -318,6 +326,7 @@ export default function DepositModal({
     wallet && wallet.startsWith("0x")
       ? wallet
       : "0xA1b2C3d4E5f6789012345678901234567890AbCd";
+  const amount = amountDigits === "" ? 0 : Number(amountDigits);
   const amountValid = amount >= MIN_AMOUNT;
   const cardDigits = cardNumber.replace(/\D/g, "");
   const expiryDigits = cardExpiry.replace(/\D/g, "");
@@ -357,11 +366,23 @@ export default function DepositModal({
         return;
       }
       if (step === "pay") {
-        goTo("method", -1);
+        goTo("amount", -1);
         return;
       }
       if (step === "processing") return;
       closeSheetRef.current();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [step]);
+
+  useEffect(() => {
+    if (step !== "amount") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (/^\d$/.test(e.key)) pressKeyRef.current(e.key);
+      else if (e.key === "Backspace") pressKeyRef.current("back");
+      else if (e.key === "Enter" && amountValidRef.current) goTo("pay");
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -381,27 +402,18 @@ export default function DepositModal({
     return () => window.clearTimeout(id);
   }, [step]);
 
-  const commitAmount = (raw: string) => {
-    const digits = raw.replace(/\D/g, "");
-    const next = Math.min(
-      MAX_AMOUNT,
-      Math.max(MIN_AMOUNT, digits === "" ? MIN_AMOUNT : Number(digits)),
-    );
-    setAmount(next);
-    setAmountDraft(String(next));
-    return next;
-  };
-
-  const setPreset = (value: number) => {
-    const next = Math.min(MAX_AMOUNT, Math.max(MIN_AMOUNT, value));
-    setAmount(next);
-    setAmountDraft(String(next));
-  };
-
-  const startPay = (next: Method) => {
+  const pickMethod = (next: Method) => {
     setMethod(next);
-    goTo("pay");
+    goTo("amount", -1);
   };
+
+  const pressKey = (key: string) => {
+    setAmountDigits((prev) => applyAmountKey(prev, key, MAX_AMOUNT));
+  };
+  const pressKeyRef = useRef(pressKey);
+  pressKeyRef.current = pressKey;
+  const amountValidRef = useRef(amountValid);
+  amountValidRef.current = amountValid;
 
   const submitPay = () => {
     if (!canPay) return;
@@ -459,7 +471,7 @@ export default function DepositModal({
   return (
     <div className="absolute inset-0 z-40">
       <div
-        className={`absolute inset-0 bg-[#6e6e73]/45 transition-opacity duration-300 ${
+        className={`absolute inset-0 ${ui.backdrop} transition-opacity duration-300 ${
           open ? "opacity-100" : "opacity-0"
         }`}
         onClick={step === "processing" ? undefined : closeSheet}
@@ -469,7 +481,7 @@ export default function DepositModal({
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel}
-        className="absolute inset-x-0 bottom-0 flex max-h-[94%] flex-col overflow-hidden rounded-t-[1.75rem] bg-black shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
+        className={`absolute inset-x-0 bottom-0 top-[44px] flex flex-col overflow-hidden rounded-t-[1.75rem] ${ui.sheet} shadow-[0_-12px_40px_rgba(0,0,0,0.45)]`}
         style={{
           transform: open
             ? `translateY(${drawerOffset}px)`
@@ -480,148 +492,80 @@ export default function DepositModal({
         }}
       >
         <div
-          className="flex shrink-0 touch-none flex-col px-5 pb-1 pt-2"
+          className="h-3 shrink-0 touch-none"
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
-        >
-          <span
-            aria-hidden
-            className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/30"
-          />
-        </div>
+          aria-hidden
+        />
 
-        <div className="min-h-0 overflow-y-auto overscroll-contain px-5 pb-5">
-          <SheetPager step={step} direction={stepDir}>
+        <div className="min-h-0 flex-1">
+          <SheetPager step={step} direction={stepDir} fill>
             {step === "amount" && (
-              <div className="flex flex-col gap-4">
-                <div>
-                  <h2 className="text-[20px] font-semibold tracking-[-0.02em]">
+              <div className="flex h-full min-h-0 flex-col px-5 pb-5">
+                <div className="relative flex h-14 shrink-0 items-center justify-center">
+                  <h2 className="text-[17px] font-semibold tracking-[-0.01em]">
                     Deposit
                   </h2>
-                  <p className="mt-1 text-[13px] text-white/45">
-                    Add funds to start trading
+                  <button
+                    type="button"
+                    aria-label="Close"
+                    onClick={closeSheet}
+                    className="absolute right-0 flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.08] text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white"
+                  >
+                    <CloseIcon className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="flex min-h-0 flex-1 items-center justify-center">
+                  <p
+                    className="flex items-start font-semibold leading-none tracking-[-0.04em] text-white"
+                    aria-live="polite"
+                  >
+                    <span className="mt-[0.18em] text-[34px]">$</span>
+                    <NumberFlow
+                      value={amount}
+                      format={{ useGrouping: true, maximumFractionDigits: 0 }}
+                      className="text-[64px]"
+                      style={nfMaskStyle}
+                    />
                   </p>
-                </div>
-
-                <div className="rounded-[20px] bg-white/[0.08] px-3.5 py-3.5">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-[12px] font-medium text-white/45">
-                      Amount
-                    </p>
-                    <label
-                      className={`inline-flex cursor-text items-baseline text-[34px] font-semibold leading-none tabular-nums tracking-tight text-white ${instrumentSansCondensed.className}`}
-                      onClick={() => amountInputRef.current?.focus()}
-                    >
-                      <input
-                        ref={amountInputRef}
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        aria-label="Deposit amount in dollars"
-                        value={
-                          amountFocused
-                            ? amountDraft
-                            : amount.toLocaleString("en-US")
-                        }
-                        size={Math.max(
-                          2,
-                          (amountFocused
-                            ? amountDraft
-                            : amount.toLocaleString("en-US")
-                          ).length,
-                        )}
-                        onFocus={(e) => {
-                          setAmountFocused(true);
-                          setAmountDraft(String(amount));
-                          requestAnimationFrame(() => e.target.select());
-                        }}
-                        onBlur={() => {
-                          setAmountFocused(false);
-                          commitAmount(amountDraft);
-                        }}
-                        onChange={(e) => {
-                          const digits = e.target.value.replace(/\D/g, "");
-                          setAmountDraft(digits);
-                          if (digits === "") return;
-                          const next = Math.min(MAX_AMOUNT, Number(digits));
-                          if (Number.isFinite(next)) {
-                            setAmount(Math.max(0, next));
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            amountInputRef.current?.blur();
-                            if (amountValid) goTo("method");
-                          }
-                          if (e.key === "Escape") {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setAmountDraft(String(amount));
-                            amountInputRef.current?.blur();
-                          }
-                        }}
-                        className="min-w-[2ch] bg-transparent text-right text-[34px] font-semibold leading-none tabular-nums tracking-tight text-white outline-none caret-[#00D54B]"
-                      />
-                      <span aria-hidden>$</span>
-                    </label>
-                  </div>
-                  <div className="mt-3 flex gap-1.5">
-                    {PRESETS.map((value) => {
-                      const active = amount === value;
-                      return (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => setPreset(value)}
-                          className={`min-w-0 flex-1 rounded-full py-1.5 text-[13px] font-semibold transition-colors ${
-                            active
-                              ? "bg-white text-black"
-                              : "bg-white/[0.1] text-white/80 hover:bg-white/15"
-                          }`}
-                        >
-                          {value >= 1000 ? `$${value / 1000}k` : `$${value}`}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="rounded-[20px] bg-white/[0.08] px-3.5 py-1">
-                  <div className="flex items-center justify-between py-3 text-[14px]">
-                    <span className="text-white/45">Current balance</span>
-                    <span className="font-semibold tabular-nums">
-                      {formatUsdMoney(balance)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between border-t border-white/[0.06] py-3 text-[14px]">
-                    <span className="font-semibold text-white/70">
-                      After deposit
-                    </span>
-                    <span className="font-semibold tabular-nums text-[#00D54B]">
-                      {formatUsdMoney(balance + amount)}
-                    </span>
-                  </div>
                 </div>
 
                 <button
                   type="button"
-                  disabled={!amountValid}
                   onClick={() => goTo("method")}
-                  className="w-full rounded-full bg-white py-3.5 text-[15px] font-semibold text-black transition-colors hover:bg-white/90 disabled:bg-white/20 disabled:text-white/40"
+                  className="flex w-full shrink-0 items-center gap-3 rounded-[20px] border border-white/[0.1] px-3.5 py-3 text-left transition-colors hover:bg-white/[0.04]"
                 >
-                  Continue
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.1] text-white">
+                    <MethodGlyph id={method ?? "apple"} />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[15px] font-medium">
+                    {methodLabel(method ?? "apple")}
+                  </span>
+                  <ChevronIcon className="h-4 w-4 shrink-0 rotate-90 text-white/60" />
                 </button>
-                <p className="text-center text-[11px] text-white/35">
-                  Minimum {formatUsdShort(MIN_AMOUNT)} · No deposit fee
-                </p>
+
+                <AmountKeypad onKey={pressKey} className="mt-3" />
+
+                <button
+                  type="button"
+                  disabled={!amountValid}
+                  onClick={() => goTo("pay")}
+                  className="mt-3 w-full shrink-0 rounded-full bg-white py-4 text-[16px] font-semibold text-black transition-colors hover:bg-white/90 disabled:bg-white/[0.08] disabled:text-white/40"
+                >
+                  {amount === 0
+                    ? "Enter amount"
+                    : amount < MIN_AMOUNT
+                      ? `Minimum ${formatUsdShort(MIN_AMOUNT)}`
+                      : `Deposit ${formatUsdShort(amount)}`}
+                </button>
               </div>
             )}
 
             {step === "method" && (
-              <div className="flex flex-col gap-4">
+              <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain px-5 pb-5 pt-3">
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -646,7 +590,7 @@ export default function DepositModal({
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => startPay(item.id)}
+                      onClick={() => pickMethod(item.id)}
                       className={`flex w-full items-center gap-3 px-3.5 py-3.5 text-left transition-colors hover:bg-white/[0.04] ${
                         index > 0 ? "border-t border-white/[0.06]" : ""
                       }`}
@@ -670,12 +614,12 @@ export default function DepositModal({
             )}
 
             {step === "pay" && method && (
-              <div className="flex flex-col gap-4">
+              <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain px-5 pb-5 pt-3">
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
                     aria-label="Back"
-                    onClick={() => goTo("method", -1)}
+                    onClick={() => goTo("amount", -1)}
                     className="flex h-9 w-9 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
                   >
                     <BackIcon className="h-4 w-4" />
@@ -852,7 +796,7 @@ export default function DepositModal({
             )}
 
             {step === "processing" && (
-              <div className="flex flex-col items-center py-10 text-center">
+              <div className="flex h-full flex-col items-center justify-center px-5 pb-16 text-center">
                 <span
                   aria-hidden
                   className="h-10 w-10 animate-spin rounded-full border-2 border-white/15 border-t-white"
@@ -867,7 +811,7 @@ export default function DepositModal({
             )}
 
             {step === "success" && receipt && (
-              <div className="flex flex-col items-center pb-1 pt-2 text-center">
+              <div className="flex h-full min-h-0 flex-col items-center overflow-y-auto overscroll-contain px-5 pb-5 pt-6 text-center">
                 <div className="w-full">
                   <DepositedHero value={receipt.amount} />
                   <p className="mt-1 text-[13px] text-white/45">

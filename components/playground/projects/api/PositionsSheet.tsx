@@ -4,7 +4,7 @@ import NumberFlow from "@number-flow/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { PolymarketWalletPosition } from "@/lib/polymarketscan";
 import { instrumentSansCondensed } from "@/lib/fonts";
-import { ChipTabs } from "./ui";
+import { ChipTabs, ui } from "./ui";
 
 type PositionsTab = "active" | "orders" | "history";
 
@@ -350,7 +350,7 @@ export default function PositionsSheet({
   return (
     <div className="absolute inset-0 z-40">
       <div
-        className={`absolute inset-0 bg-black/55 transition-opacity duration-300 ${
+        className={`absolute inset-0 ${ui.backdrop} transition-opacity duration-300 ${
           open ? "opacity-100" : "opacity-0"
         }`}
         onClick={closeSheet}
@@ -360,7 +360,7 @@ export default function PositionsSheet({
         role="dialog"
         aria-modal="true"
         aria-label="Positions"
-        className="absolute inset-x-0 bottom-0 flex h-[92%] flex-col overflow-hidden rounded-t-[1.75rem] bg-[#111113] shadow-[0_-12px_40px_rgba(0,0,0,0.5)]"
+        className={`absolute inset-x-0 bottom-0 flex h-[92%] flex-col overflow-hidden rounded-t-[1.75rem] ${ui.sheet} shadow-[0_-12px_40px_rgba(0,0,0,0.5)]`}
         style={{
           transform: open
             ? `translateY(${drawerOffset}px)`

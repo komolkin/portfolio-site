@@ -11,6 +11,8 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 export const ui = {
   shell: "bg-black text-white",
+  backdrop: "bg-black/60",
+  sheet: "bg-[#1c1c1e]",
   surface: "rounded-[24px] bg-white/[0.08]",
   surfacePad: "rounded-[24px] bg-white/[0.08] px-4 py-4",
   pillPrimary:
@@ -424,6 +426,67 @@ export function ActivityRow({
 
 const SHEET_STEP_EASE = [0.32, 0.72, 0, 1] as const;
 
+const KEYPAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back"] as const;
+
+/** Appends a keypad key to a digit string, capped at `max`. */
+export function applyAmountKey(prev: string, key: string, max: number): string {
+  if (key === "back") return prev.slice(0, -1);
+  const next = (prev === "0" ? "" : prev) + key;
+  if (next === "0") return "";
+  return Number(next) > max ? prev : next;
+}
+
+function DeleteKeyIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M8.6 5.5H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H8.6a2 2 0 0 1-1.52-.7L3 12l4.08-5.8a2 2 0 0 1 1.52-.7Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M11 9.5l5 5M16 9.5l-5 5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export function AmountKeypad({
+  onKey,
+  className = "",
+}: {
+  onKey: (key: string) => void;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`grid shrink-0 grid-cols-3 ${className}`}
+      role="group"
+      aria-label="Amount keypad"
+    >
+      {KEYPAD_KEYS.map((key) =>
+        key === "" ? (
+          <span key="blank" aria-hidden />
+        ) : (
+          <button
+            key={key}
+            type="button"
+            aria-label={key === "back" ? "Delete" : key}
+            onClick={() => onKey(key)}
+            className="flex h-[52px] items-center justify-center rounded-2xl text-[26px] font-medium tabular-nums text-white transition-colors active:bg-white/[0.06]"
+          >
+            {key === "back" ? <DeleteKeyIcon className="h-6 w-6" /> : key}
+          </button>
+        ),
+      )}
+    </div>
+  );
+}
+
 export function SheetPager({
   step,
   direction,
@@ -436,10 +499,10 @@ export function SheetPager({
   children: ReactNode;
 }) {
   const reduceMotion = useReducedMotion();
-  const duration = reduceMotion ? 0 : fill ? 0.42 : 0.38;
+  const duration = reduceMotion ? 0 : fill ? 0.28 : 0.38;
   const transition = { duration, ease: SHEET_STEP_EASE };
-  const enterX = fill ? 80 : 18;
-  const exitX = fill ? 56 : 14;
+  const enterX = fill ? 32 : 18;
+  const exitX = fill ? 24 : 14;
   const pageRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number | null>(null);
 
@@ -460,7 +523,11 @@ export function SheetPager({
   }, [step, fill]);
 
   const page = (
-    <AnimatePresence mode="sync" initial={false} custom={direction}>
+    <AnimatePresence
+      mode={fill ? "wait" : "sync"}
+      initial={false}
+      custom={direction}
+    >
       <motion.div
         key={step}
         ref={fill ? undefined : pageRef}
@@ -469,22 +536,28 @@ export function SheetPager({
         animate="center"
         exit="exit"
         variants={{
-          enter: (dir: 1 | -1) => ({
-            x: fill ? `${dir * 100}%` : dir * enterX,
-            opacity: fill ? 1 : 0,
-          }),
+          enter: (dir: 1 | -1) => ({ x: dir * enterX, opacity: 0 }),
           center: { x: 0, opacity: 1 },
           exit: (dir: 1 | -1) => ({
-            x: fill ? `${dir * -28}%` : dir * -exitX,
-            opacity: fill ? 1 : 0,
+            x: dir * -exitX,
+            opacity: 0,
             position: "absolute",
             top: 0,
             left: 0,
             width: "100%",
+            ...(fill
+              ? {
+                  height: "100%",
+                  pointerEvents: "none" as const,
+                  transition: { duration: reduceMotion ? 0 : 0.14, ease: "easeIn" },
+                }
+              : {}),
           }),
         }}
         transition={transition}
-        className={fill ? "flex h-full min-h-0 flex-col" : "w-full"}
+        className={
+          fill ? "flex h-full min-h-0 flex-col will-change-[transform,opacity]" : "w-full"
+        }
       >
         {children}
       </motion.div>

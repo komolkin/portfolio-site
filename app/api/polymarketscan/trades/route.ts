@@ -16,7 +16,10 @@ export async function GET(request: Request) {
     { trades },
     {
       headers: {
-        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+        "Cache-Control":
+          trades.length > 0
+            ? "public, s-maxage=30, stale-while-revalidate=60"
+            : "no-store",
       },
     },
   );

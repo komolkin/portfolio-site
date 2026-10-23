@@ -11,7 +11,7 @@ import {
   type CopyTrade,
   type CopyTradeMode,
 } from "./copyTrades";
-import { ActivityRow, SheetPager } from "./ui";
+import { ActivityRow, SheetPager, ui } from "./ui";
 import type { StoredUserTrade } from "./userTrades";
 
 const CLOSE_THRESHOLD_PX = 72;
@@ -379,7 +379,7 @@ export default function CopyTradeModal({
   return (
     <div className="absolute inset-0 z-40">
       <div
-        className={`absolute inset-0 bg-[#6e6e73]/45 transition-opacity duration-300 ${
+        className={`absolute inset-0 ${ui.backdrop} transition-opacity duration-300 ${
           open ? "opacity-100" : "opacity-0"
         }`}
         onClick={closeSheet}
@@ -390,7 +390,7 @@ export default function CopyTradeModal({
         aria-modal="true"
         aria-labelledby="copytrade-title"
         aria-label={ariaLabel}
-        className="absolute inset-x-0 bottom-0 flex max-h-[94%] flex-col overflow-hidden rounded-t-[1.75rem] bg-black shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
+        className={`absolute inset-x-0 bottom-0 flex max-h-[94%] flex-col overflow-hidden rounded-t-[1.75rem] ${ui.sheet} shadow-[0_-12px_40px_rgba(0,0,0,0.45)]`}
         style={{
           transform: open ? `translateY(${drawerOffset}px)` : "translateY(100%)",
           transition: isDragging
