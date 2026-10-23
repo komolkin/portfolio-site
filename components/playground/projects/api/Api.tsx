@@ -2908,6 +2908,30 @@ function MarketPreviewMedia({
         className="absolute inset-0 z-[2]"
         style={{ backgroundImage: PREVIEW_SCRIM }}
       />
+      <MarketAmbient market={market} accent={accent} active={active} />
+    </div>
+  );
+}
+
+/** Slow team-colored glows rising from behind the trade buttons. */
+function MarketAmbient({
+  market,
+  accent,
+  active,
+}: {
+  market: PolymarketMarketData;
+  accent: string;
+  active: boolean;
+}) {
+  const tones = matchupTeamTones(market);
+  const left = tones?.away.text ?? accent;
+  const right = tones?.home.text ?? accent;
+  const glow = (color: string) =>
+    `radial-gradient(closest-side, ${hexToRgba(color, 0.85)} 0%, ${hexToRgba(color, 0.4)} 42%, ${hexToRgba(color, 0.12)} 72%, transparent 100%)`;
+  return (
+    <div aria-hidden className="api-market-ambient" data-active={active}>
+      <span data-side="left" style={{ backgroundImage: glow(left) }} />
+      <span data-side="right" style={{ backgroundImage: glow(right) }} />
     </div>
   );
 }

@@ -906,3 +906,58 @@ body > * {
 .api-odds-chart div:has(> button) {
   display: none !important;
 }
+
+/* API playground — ambient team-color glow on feed market cards */
+.api-market-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.api-market-ambient > span {
+  position: absolute;
+  bottom: -34%;
+  width: 120%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  will-change: transform, opacity;
+  animation: api-ambient-drift 10s ease-in-out infinite alternate;
+}
+
+.api-market-ambient > span[data-side="left"] {
+  left: -52%;
+  --ambient-dx: 10%;
+}
+
+.api-market-ambient > span[data-side="right"] {
+  right: -52%;
+  --ambient-dx: -10%;
+  animation-duration: 12s;
+  animation-delay: -6s;
+}
+
+.api-market-ambient[data-active="false"] > span {
+  animation-play-state: paused;
+}
+
+@keyframes api-ambient-drift {
+  from {
+    opacity: 0.55;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(var(--ambient-dx), -12%, 0) scale(1.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .api-market-ambient > span {
+    animation: none;
+    opacity: 0.8;
+  }
+}
