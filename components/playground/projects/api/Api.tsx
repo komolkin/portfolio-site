@@ -315,12 +315,16 @@ function createDemoLiveMarket(): PolymarketMarketData {
         score: 78,
         abbr: "LAL",
         logo: "https://a.espncdn.com/i/teamlogos/nba/500-dark/lal.png",
+        color: "#552583",
+        altColor: "#fdb927",
       },
       home: {
         name: "Celtics",
         score: 81,
         abbr: "BOS",
         logo: "https://a.espncdn.com/i/teamlogos/nba/500-dark/bos.png",
+        color: "#008348",
+        altColor: "#ffffff",
       },
     },
     teams: [
@@ -328,11 +332,15 @@ function createDemoLiveMarket(): PolymarketMarketData {
         name: "Lakers",
         abbr: "LAL",
         logo: "https://a.espncdn.com/i/teamlogos/nba/500-dark/lal.png",
+        color: "#552583",
+        altColor: "#fdb927",
       },
       {
         name: "Celtics",
         abbr: "BOS",
         logo: "https://a.espncdn.com/i/teamlogos/nba/500-dark/bos.png",
+        color: "#008348",
+        altColor: "#ffffff",
       },
     ],
     rules:
@@ -451,12 +459,16 @@ function createDemoMlbMarket(): PolymarketMarketData {
         score: null,
         abbr: "TB",
         logo: MLB_RAYS_LOGO,
+        color: "#092c5c",
+        altColor: "#8fbce6",
       },
       home: {
         name: "Milwaukee Brewers",
         score: null,
         abbr: "MIL",
         logo: MLB_BREWERS_LOGO,
+        color: "#13294b",
+        altColor: "#ffc52f",
       },
     },
     teams: [
@@ -464,11 +476,15 @@ function createDemoMlbMarket(): PolymarketMarketData {
         name: "Tampa Bay Rays",
         abbr: "TB",
         logo: MLB_RAYS_LOGO,
+        color: "#092c5c",
+        altColor: "#8fbce6",
       },
       {
         name: "Milwaukee Brewers",
         abbr: "MIL",
         logo: MLB_BREWERS_LOGO,
+        color: "#13294b",
+        altColor: "#ffc52f",
       },
     ],
     rules:
@@ -1038,9 +1054,18 @@ function resolveSportsSides(market: PolymarketMarketData) {
       logo?: string | null;
       abbr?: string | null;
       portrait?: boolean;
+      color?: string | null;
+      altColor?: string | null;
     },
     team:
-      | { name: string; logo: string | null; abbr: string | null; portrait?: boolean }
+      | {
+          name: string;
+          logo: string | null;
+          abbr: string | null;
+          portrait?: boolean;
+          color?: string | null;
+          altColor?: string | null;
+        }
       | undefined,
   ) =>
     team
@@ -1050,6 +1075,8 @@ function resolveSportsSides(market: PolymarketMarketData) {
           logo: team.logo ?? side.logo,
           abbr: team.abbr ?? side.abbr,
           portrait: team.portrait ?? side.portrait,
+          color: team.color ?? side.color,
+          altColor: team.altColor ?? side.altColor,
         }
       : side;
   const away = overlay(
@@ -1079,6 +1106,111 @@ function resolveSportsSides(market: PolymarketMarketData) {
     odds.find((side) => side !== awayOdds) ??
     odds[1];
   return { game, away, home, awayOdds, homeOdds };
+}
+
+type TeamTone = {
+  /** Button fill. */
+  fill: string;
+  /** Label color on top of `fill`. */
+  ink: string;
+  /** Readable accent for text on the dark card. */
+  text: string;
+};
+
+function parseHex(hex: string): [number, number, number] | null {
+  const match = hex.trim().match(/^#?([0-9a-f]{6})$/i);
+  if (!match) return null;
+  const value = parseInt(match[1]!, 16);
+  return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+}
+
+function toHex([r, g, b]: [number, number, number]): string {
+  return `#${[r, g, b]
+    .map((channel) => Math.round(channel).toString(16).padStart(2, "0"))
+    .join("")}`;
+}
+
+function relativeLuminance([r, g, b]: [number, number, number]): number {
+  const linear = (channel: number) => {
+    const c = channel / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+}
+
+function saturation([r, g, b]: [number, number, number]): number {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  return max === 0 ? 0 : (max - min) / max;
+}
+
+function mixWithWhite(
+  rgb: [number, number, number],
+  amount: number,
+): [number, number, number] {
+  return rgb.map((channel) => channel + (255 - channel) * amount) as [
+    number,
+    number,
+    number,
+  ];
+}
+
+/** Lighten toward white until luminance reaches `target`. */
+function liftToLuminance(
+  rgb: [number, number, number],
+  target: number,
+): [number, number, number] {
+  if (relativeLuminance(rgb) >= target) return rgb;
+  for (let step = 1; step <= 20; step++) {
+    const next = mixWithWhite(rgb, step * 0.05);
+    if (relativeLuminance(next) >= target) return next;
+  }
+  return mixWithWhite(rgb, 1);
+}
+
+/** Black, white and greys read as "no color" on a dark card. */
+function isUsableTeamColor(rgb: [number, number, number]): boolean {
+  return saturation(rgb) >= 0.25 && relativeLuminance(rgb) >= 0.015;
+}
+
+function colorDistance(
+  a: [number, number, number],
+  b: [number, number, number],
+): number {
+  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+}
+
+function toneFromRgb(rgb: [number, number, number]): TeamTone {
+  const fill = liftToLuminance(rgb, 0.06);
+  return {
+    fill: toHex(fill),
+    ink: relativeLuminance(fill) > 0.4 ? "#000000" : "#FFFFFF",
+    text: toHex(liftToLuminance(rgb, 0.3)),
+  };
+}
+
+/** Trade colors for both sides of a matchup, derived from team colors. */
+function matchupTeamTones(
+  market: PolymarketMarketData,
+): { away: TeamTone; home: TeamTone } | null {
+  if (!isSportsMarket(market)) return null;
+  const { away, home } = resolveSportsSides(market);
+  const candidates = (side: { color?: string | null; altColor?: string | null }) =>
+    [side.color, side.altColor]
+      .map((hex) => (hex ? parseHex(hex) : null))
+      .filter((rgb): rgb is [number, number, number] => Boolean(rgb && isUsableTeamColor(rgb)));
+  const awayOptions = candidates(away);
+  const homeOptions = candidates(home);
+  const awayRgb = awayOptions[0];
+  if (!awayRgb || homeOptions.length === 0) return null;
+  // Avoid two near-identical buttons (e.g. two navy teams): use an alternate color.
+  const homeRgb =
+    homeOptions.find((rgb) => colorDistance(rgb, awayRgb) >= 90) ?? homeOptions[0]!;
+  const awayFinal =
+    colorDistance(awayRgb, homeRgb) >= 90
+      ? awayRgb
+      : (awayOptions.slice(1).find((rgb) => colorDistance(rgb, homeRgb) >= 90) ?? awayRgb);
+  return { away: toneFromRgb(awayFinal), home: toneFromRgb(homeRgb) };
 }
 
 function ChanceFlow({
@@ -1247,44 +1379,99 @@ function LiveScoreFlow({
   );
 }
 
+const ORDINAL_PERIOD: Record<string, string> = {
+  "1st": "Q1",
+  "2nd": "Q2",
+  "3rd": "Q3",
+  "4th": "Q4",
+};
+
+/** Parses "Q3 4:18", "4:18 - 3rd", "3rd 4:18" or "42.3 - 4th" into period + seconds left. */
+function parseGameClock(
+  clock: string,
+): { period: string; seconds: number } | null {
+  const text = clock.trim();
+  const normalizePeriod = (raw: string) => {
+    const key = raw.trim().toLowerCase();
+    return ORDINAL_PERIOD[key] ?? raw.trim().toUpperCase();
+  };
+  const toSeconds = (mins: string | undefined, secs: string) =>
+    Number(mins ?? 0) * 60 + Math.floor(Number(secs));
+
+  let match = text.match(/^(Q\d|OT\d?|\d(?:st|nd|rd|th))\s+(\d{1,2}):(\d{2})$/i);
+  if (match) {
+    return { period: normalizePeriod(match[1]!), seconds: toSeconds(match[2], match[3]!) };
+  }
+  match = text.match(/^(\d{1,2}):(\d{2})\s*-\s*(\d(?:st|nd|rd|th)|OT\d?)$/i);
+  if (match) {
+    return { period: normalizePeriod(match[3]!), seconds: toSeconds(match[1], match[2]!) };
+  }
+  match = text.match(/^(\d{1,2}(?:\.\d)?)\s*-\s*(\d(?:st|nd|rd|th)|OT\d?)$/i);
+  if (match) {
+    return { period: normalizePeriod(match[2]!), seconds: toSeconds(undefined, match[1]!) };
+  }
+  return null;
+}
+
+/** Live game clock: period label + mm:ss counting down between data updates. */
 function LivePeriodFlow({
   clock,
   status,
+  active = true,
 }: {
   clock: string;
   status: string;
+  active?: boolean;
 }) {
+  const parsed = status === "live" ? parseGameClock(clock) : null;
+  const period = parsed?.period ?? null;
+  const sourceSeconds = parsed?.seconds ?? null;
+  const [seconds, setSeconds] = useState<number | null>(sourceSeconds);
+
+  useEffect(() => {
+    setSeconds((prev) => {
+      if (sourceSeconds == null) return null;
+      // Small drift from the local tick is fine; avoid visible back-jumps.
+      if (prev != null && prev <= sourceSeconds && sourceSeconds - prev <= 3) {
+        return prev;
+      }
+      return sourceSeconds;
+    });
+  }, [period, sourceSeconds]);
+
+  useEffect(() => {
+    if (!active || sourceSeconds == null) return;
+    const id = window.setInterval(() => {
+      if (document.hidden) return;
+      setSeconds((prev) => (prev == null ? prev : Math.max(0, prev - 1)));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [active, period, sourceSeconds]);
+
   if (status === "final") return <>Final</>;
-  if (status === "live") {
-    const match = clock.match(/^(Q\d+|OT|HT)\s+(\d+):(\d{2})$/i);
-    if (match) {
-      const period = match[1]!;
-      const minutes = Number(match[2]);
-      const seconds = Number(match[3]);
-      return (
-        <span className="inline-flex items-baseline gap-1">
-          <span>{period}</span>
-          <span className="inline-flex items-baseline tabular-nums">
-            <NumberFlow
-              value={minutes}
-              trend={1}
-              format={{ useGrouping: false }}
-              style={nfMaskStyle}
-            />
-            :
-            <NumberFlow
-              value={seconds}
-              trend={1}
-              format={{ useGrouping: false, minimumIntegerDigits: 2 }}
-              style={nfMaskStyle}
-            />
-          </span>
-        </span>
-      );
-    }
-    return <>{clock || "Live"}</>;
-  }
-  return <>{formatLiveClock(clock, status)}</>;
+  if (status !== "live") return <>{formatLiveClock(clock, status)}</>;
+  if (!period || seconds == null) return <>{clock || "Live"}</>;
+
+  return (
+    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
+      <span>{period}</span>
+      <span className="inline-flex items-baseline tabular-nums">
+        <NumberFlow
+          value={Math.floor(seconds / 60)}
+          trend={-1}
+          format={{ useGrouping: false }}
+          style={nfMaskStyle}
+        />
+        <span>:</span>
+        <NumberFlow
+          value={seconds % 60}
+          trend={-1}
+          format={{ useGrouping: false, minimumIntegerDigits: 2 }}
+          style={nfMaskStyle}
+        />
+      </span>
+    </span>
+  );
 }
 
 const OUTCOME_BAR_COLORS = ["#00D54B", "#4C8DFF", "#FF9F1C", "#FF375F"] as const;
@@ -2118,7 +2305,15 @@ function SportsMatchHeader({
           {period ? (
             <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold tabular-nums text-[#FF3B30]">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#FF3B30]" />
-              {period}
+              {game ? (
+                <LivePeriodFlow
+                  clock={game.clock}
+                  status={game.status}
+                  active={active}
+                />
+              ) : (
+                period
+              )}
             </span>
           ) : null}
         </div>
@@ -2385,20 +2580,24 @@ function buildFloatPositions(marketId: string): FloatPositionBubble[] {
     // Avatar is 44px; keep clear vertical gaps so rings don't overlap.
     const stackGap = 64;
     const baseBottom = 8 + (hashString(`${marketId}:base:${side}`) % 8);
+    const sideBubbles: FloatPositionBubble[] = [];
     for (let n = 0; n < count; n++) {
       const seed = `${marketId}::side${side}::${n}`;
       const h = hashString(seed);
+      // Wide, jagged PnL range so bubbles feel distinct across markets.
       const pnl =
-        55 +
-        (h % 90) * 19 +
-        ((h >>> 9) % 55) * 41 +
-        ((h >>> 17) % 12) * 180;
+        28 +
+        (h % 47) * 13 +
+        ((h >>> 7) % 31) * 37 +
+        ((h >>> 14) % 19) * 89 +
+        ((h >>> 21) % 9) * 240;
       // Inset from corners so drift + PnL badge stay inside the card.
       const edgePx = 10 + (h % 6) + n * 2;
+      // n=0 is lowest; highest n sits at the top of the stack.
       const bottomPx = baseBottom + n * stackGap + ((h >>> 3) % 4);
       const driftX = (1.2 + (h % 3) * 0.4) * (side === 0 ? 1 : -1);
       const driftY = (1.5 + ((h >>> 6) % 3) * 0.4) * ((h >>> 3) % 2 === 0 ? 1 : -1);
-      raw.push({
+      sideBubbles.push({
         id: seed,
         handle: uniqueHandle(seed),
         avatarUrl: uniquePhoto(seed),
@@ -2412,6 +2611,22 @@ function buildFloatPositions(marketId: string): FloatPositionBubble[] {
         driftY,
       });
     }
+
+    // Assign PnLs so the visually top bubble always has the largest value.
+    const pnls = sideBubbles
+      .map((bubble) => bubble.pnl)
+      .sort((a, b) => a - b);
+    const byHeight = [...sideBubbles].sort((a, b) => a.bottomPx - b.bottomPx);
+    byHeight.forEach((bubble, index) => {
+      bubble.pnl = pnls[index]!;
+    });
+    // Nudge the top one clearly ahead of the rest.
+    if (byHeight.length >= 2) {
+      const top = byHeight[byHeight.length - 1]!;
+      const below = byHeight[byHeight.length - 2]!;
+      top.pnl = Math.max(top.pnl, below.pnl + 80 + (hashString(`${marketId}:top:${side}`) % 220));
+    }
+    raw.push(...sideBubbles);
   };
 
   pushSide(0, leftCount);
@@ -2547,7 +2762,7 @@ function FloatingTopPositions({
                 decoding="async"
               />
               <span
-                className="api-pnl-shine pointer-events-none absolute inset-x-[-4px] -bottom-1.5 inline-flex items-center justify-center overflow-hidden rounded-full bg-black/45 px-1.5 py-1.5 text-[11px] font-semibold leading-none tabular-nums tracking-tight text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),inset_0_-2px_4px_rgba(0,0,0,0.35),0_4px_12px_rgba(0,0,0,0.35)] backdrop-blur-md"
+                className="api-pnl-shine pointer-events-none absolute -bottom-1.5 left-1/2 inline-flex -translate-x-1/2 items-center justify-center overflow-hidden whitespace-nowrap rounded-full bg-black/45 px-2 py-1.5 text-[11px] font-semibold leading-none tabular-nums tracking-tight text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),inset_0_-2px_4px_rgba(0,0,0,0.35),0_4px_12px_rgba(0,0,0,0.35)] backdrop-blur-md"
               >
                 +${pnl.toLocaleString("en-US")}
               </span>
@@ -2562,6 +2777,12 @@ function FloatingTopPositions({
 /** Shared shell — radius clipping lives in `.api-market-preview` (globals.css). */
 const MARKET_PREVIEW_CLIP =
   "api-market-preview w-full cursor-pointer text-left";
+
+/** Eased top + bottom darkening so the scrim has no visible bands. */
+const PREVIEW_SCRIM = [
+  "linear-gradient(to bottom, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.5) 8%, rgba(0,0,0,0.36) 16%, rgba(0,0,0,0.22) 24%, rgba(0,0,0,0.1) 32%, rgba(0,0,0,0.03) 38%, transparent 44%)",
+  "linear-gradient(to top, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.9) 10%, rgba(0,0,0,0.78) 20%, rgba(0,0,0,0.6) 30%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.22) 50%, rgba(0,0,0,0.09) 58%, rgba(0,0,0,0.02) 64%, transparent 70%)",
+].join(", ");
 
 function MarketPreviewMedia({
   market,
@@ -2595,18 +2816,22 @@ function MarketPreviewMedia({
       ) : (
         <div className="absolute inset-0" style={{ backgroundColor: accent }} />
       )}
+      <div aria-hidden className="api-progressive-blur h-[34%]" data-edge="top">
+        <i />
+        <i />
+        <i />
+        <i />
+      </div>
+      <div aria-hidden className="api-progressive-blur h-[52%]" data-edge="bottom">
+        <i />
+        <i />
+        <i />
+        <i />
+      </div>
       <div
         aria-hidden
-        className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/15 to-black/85"
-      />
-      {/* Soft top veil (no backdrop-blur — it punches square edges through the radius mask) */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[44%] bg-gradient-to-b from-black/55 via-black/25 to-transparent"
-      />
-      <div
-        aria-hidden
-        className="absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-black via-black/55 to-transparent"
+        className="absolute inset-0 z-[2]"
+        style={{ backgroundImage: PREVIEW_SCRIM }}
       />
     </div>
   );
@@ -2684,6 +2909,7 @@ function TrendingMarketCard({
 
   if (isSportsMarket(market)) {
     const { away, home, awayOdds, homeOdds } = resolveSportsSides(market);
+    const tones = matchupTeamTones(market);
     const awayPrice = awayOdds?.price ?? market.yesPrice;
     const homePrice = homeOdds?.price ?? market.noPrice;
     const outcomes = (market.outcomes ?? []).filter(
@@ -2703,7 +2929,7 @@ function TrendingMarketCard({
           {
             key: "away",
             label: `${awayAbbr} ${formatChancePct(awayPrice)}`,
-            color: "#C4B5FD",
+            color: tones?.away.text ?? "#C4B5FD",
             outcome: away.name,
           },
           {
@@ -2715,7 +2941,7 @@ function TrendingMarketCard({
           {
             key: "home",
             label: `${homeAbbr} ${formatChancePct(homePrice)}`,
-            color: "#E8C44A",
+            color: tones?.home.text ?? "#E8C44A",
             outcome: home.name,
           },
         ]
@@ -2723,13 +2949,13 @@ function TrendingMarketCard({
           {
             key: "away",
             label: `${awayAbbr} ${formatChancePct(awayPrice)}`,
-            color: "#C4B5FD",
+            color: tones?.away.text ?? "#C4B5FD",
             outcome: away.name,
           },
           {
             key: "home",
             label: `${homeAbbr} ${formatChancePct(homePrice)}`,
-            color: "#E8C44A",
+            color: tones?.home.text ?? "#E8C44A",
             outcome: home.name,
           },
         ];
@@ -8180,7 +8406,20 @@ export default function Api() {
           >
             {isBinaryMarket(selectedMarket) ? (
               <div className="pointer-events-auto flex gap-2.5">
-                {getMarketOddsSides(selectedMarket).map((side) => (
+                {getMarketOddsSides(selectedMarket).map((side, index, sides) => {
+                  const tones = matchupTeamTones(selectedMarket);
+                  const { away, home } = resolveSportsSides(selectedMarket);
+                  const tone = tones
+                    ? nickMatch(side.label, home.name) &&
+                      !nickMatch(side.label, away.name)
+                      ? tones.home
+                      : nickMatch(side.label, away.name)
+                        ? tones.away
+                        : index === sides.length - 1
+                          ? tones.home
+                          : tones.away
+                    : null;
+                  return (
                   <button
                     key={side.side}
                     type="button"
@@ -8190,6 +8429,11 @@ export default function Api() {
                     className={`min-w-0 flex-1 overflow-hidden px-3 ${
                       side.side === "yes" ? ui.pillYes : ui.pillNo
                     }`}
+                    style={
+                      tone
+                        ? { backgroundColor: tone.fill, color: tone.ink }
+                        : undefined
+                    }
                   >
                     <span className="flex min-w-0 items-baseline justify-center gap-1">
                       <span className="min-w-0 truncate">
@@ -8201,7 +8445,8 @@ export default function Api() {
                       </span>
                     </span>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <button
@@ -8349,6 +8594,36 @@ export default function Api() {
           <PositionsSheet
             positions={profilePositions}
             loading={demoProfileStatus === "loading"}
+            history={
+              mergedProfileHistory.length > 0 ? (
+                <ul className="divide-y divide-white/[0.06] px-1">
+                  {mergedProfileHistory.map((trade, index) => (
+                    <li
+                      key={`${trade.txHash ?? trade.timestamp}-${trade.outcome}-${index}`}
+                    >
+                      <ProfileHistoryRow
+                        trade={trade}
+                        marketImage={
+                          trade.marketSlug
+                            ? profileMarketImages.get(trade.marketSlug)
+                            : undefined
+                        }
+                        onOpen={(slug, title, hint) => {
+                          setPositionsOpen(false);
+                          openMarketBySlug(slug, title, hint);
+                        }}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              ) : profileHistoryStatus === "loading" ? (
+                <div className="space-y-2 animate-pulse" aria-hidden>
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="h-[58px] rounded-xl bg-white/10" />
+                  ))}
+                </div>
+              ) : undefined
+            }
             onClose={() => setPositionsOpen(false)}
             onOpenPosition={(position) => {
               openMarketBySlug(

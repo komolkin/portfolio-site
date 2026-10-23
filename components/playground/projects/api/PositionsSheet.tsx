@@ -1,9 +1,12 @@
 "use client";
 
 import NumberFlow from "@number-flow/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { PolymarketWalletPosition } from "@/lib/polymarketscan";
 import { instrumentSansCondensed } from "@/lib/fonts";
+import { ChipTabs } from "./ui";
+
+type PositionsTab = "active" | "orders" | "history";
 
 const CLOSE_THRESHOLD_PX = 72;
 const TRACK_CENTS = 100;
@@ -257,13 +260,17 @@ export default function PositionsSheet({
   onClose,
   onOpenPosition,
   onCashOut,
+  history,
 }: {
   positions: PolymarketWalletPosition[];
   loading?: boolean;
   onClose: () => void;
   onOpenPosition: (position: PolymarketWalletPosition) => void;
   onCashOut?: (position: PolymarketWalletPosition) => void;
+  /** Rendered transaction history for the History tab. */
+  history?: ReactNode;
 }) {
+  const [tab, setTab] = useState<PositionsTab>("active");
   const [open, setOpen] = useState(false);
   const [drawerOffset, setDrawerOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -368,18 +375,38 @@ export default function PositionsSheet({
             aria-hidden
             className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/30"
           />
-          <div className="flex items-end justify-between gap-3">
-            <h2 className="text-[28px] font-semibold leading-none tracking-[-0.04em] text-white">
-              Positions
-            </h2>
-            <p className="pb-0.5 text-[13px] font-semibold tabular-nums text-white/45">
-              {positions.length} open
-            </p>
+          <h2 className="text-[28px] font-semibold leading-none tracking-[-0.04em] text-white">
+            Positions
+          </h2>
+          <div className="mt-4">
+            <ChipTabs
+              tabs={[
+                { id: "active", label: "Active", count: positions.length },
+                { id: "orders", label: "Open Orders" },
+                { id: "history", label: "History" },
+              ]}
+              value={tab}
+              onChange={setTab}
+              ariaLabel="Positions"
+              underline
+              fullWidth
+            />
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-8">
-          {loading && positions.length === 0 && (
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-8 pt-1">
+          {tab === "orders" && (
+            <p className="px-1 pt-6 text-sm text-white/55">
+              No open orders.
+            </p>
+          )}
+          {tab === "history" &&
+            (history ?? (
+              <p className="px-1 pt-6 text-sm text-white/55">
+                No transactions yet.
+              </p>
+            ))}
+          {tab === "active" && loading && positions.length === 0 && (
             <div className="space-y-3 animate-pulse" aria-hidden>
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
@@ -389,12 +416,12 @@ export default function PositionsSheet({
               ))}
             </div>
           )}
-          {!loading && positions.length === 0 && (
+          {tab === "active" && !loading && positions.length === 0 && (
             <p className="px-1 pt-6 text-sm text-white/55">
               No open positions yet.
             </p>
           )}
-          {positions.length > 0 && (
+          {tab === "active" && positions.length > 0 && (
             <ul className="flex flex-col gap-3">
               {positions.map((position, index) => (
                 <li

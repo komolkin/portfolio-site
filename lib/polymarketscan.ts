@@ -25,6 +25,9 @@ export type LiveGameTeam = {
   logo?: string | null;
   abbr?: string | null;
   portrait?: boolean;
+  /** Primary team color as `#rrggbb` (ESPN). */
+  color?: string | null;
+  altColor?: string | null;
 };
 
 export type LiveGameInfo = {
@@ -74,6 +77,9 @@ export type PolymarketSportsTeam = {
   logo: string | null;
   abbr: string | null;
   portrait?: boolean;
+  /** Primary team color as `#rrggbb` (ESPN). */
+  color?: string | null;
+  altColor?: string | null;
 };
 
 export type PolymarketTradeWithPnl = {
@@ -1016,6 +1022,8 @@ type EspnBoardGame = {
     abbr: string;
     score: number | null;
     logo: string | null;
+    color: string | null;
+    altColor: string | null;
   }[];
 };
 
@@ -1080,8 +1088,16 @@ type EspnTeamLogo = {
   displayName: string;
   abbr: string;
   logo: string;
+  color: string | null;
+  altColor: string | null;
   keys: string[];
 };
+
+/** ESPN returns hex without `#`; normalize to `#rrggbb` or null. */
+function espnHexColor(value: string | undefined | null): string | null {
+  const hex = (value ?? "").trim().replace(/^#/, "");
+  return /^[0-9a-f]{6}$/i.test(hex) ? `#${hex.toLowerCase()}` : null;
+}
 
 function pickEspnLogo(
   logos: Array<{ href?: string; rel?: string[] }> | undefined,
@@ -1128,7 +1144,7 @@ function catalogKeys(team: {
 }
 
 async function fetchEspnTeamCatalog(): Promise<EspnTeamLogo[]> {
-  const key = "espn-team-logos-v2";
+  const key = "espn-team-logos-v3";
   const cached = getCached<EspnTeamLogo[]>(key);
   if (cached) return cached;
 
@@ -1153,6 +1169,8 @@ async function fetchEspnTeamCatalog(): Promise<EspnTeamLogo[]> {
                       displayName?: string;
                       shortDisplayName?: string;
                       location?: string;
+                      color?: string;
+                      alternateColor?: string;
                       logos?: Array<{ href?: string; rel?: string[] }>;
                     };
                   }>;
@@ -1177,6 +1195,8 @@ async function fetchEspnTeamCatalog(): Promise<EspnTeamLogo[]> {
                   team.displayName ?? team.shortDisplayName ?? name,
                 abbr,
                 logo,
+                color: espnHexColor(team.color),
+                altColor: espnHexColor(team.alternateColor),
                 keys: catalogKeys(team),
               });
             }
@@ -1328,6 +1348,8 @@ async function fetchEspnScoreboards(): Promise<EspnBoardGame[]> {
                   displayName?: string;
                   abbreviation?: string;
                   logo?: string;
+                  color?: string;
+                  alternateColor?: string;
                 };
                 score?: string;
               }>;
@@ -1353,6 +1375,8 @@ async function fetchEspnScoreboards(): Promise<EspnBoardGame[]> {
                 typeof competitor.team?.logo === "string"
                   ? competitor.team.logo
                   : null,
+              color: espnHexColor(competitor.team?.color),
+              altColor: espnHexColor(competitor.team?.alternateColor),
               score:
                 competitor.score != null && competitor.score !== ""
                   ? Number(competitor.score)
@@ -1416,12 +1440,16 @@ function attachLiveGame(
         score: awayTeam?.score ?? null,
         logo: awayTeam?.logo ?? awayLogo?.logo ?? null,
         abbr: awayTeam?.abbr ?? awayLogo?.abbr ?? null,
+        color: awayTeam?.color ?? awayLogo?.color ?? null,
+        altColor: awayTeam?.altColor ?? awayLogo?.altColor ?? null,
       },
       home: {
         name: matchup.home,
         score: homeTeam?.score ?? null,
         logo: homeTeam?.logo ?? homeLogo?.logo ?? null,
         abbr: homeTeam?.abbr ?? homeLogo?.abbr ?? null,
+        color: homeTeam?.color ?? homeLogo?.color ?? null,
+        altColor: homeTeam?.altColor ?? homeLogo?.altColor ?? null,
       },
     },
   };
@@ -1521,6 +1549,7 @@ function sportsTeamsFromMarket(
     name: string,
     logo?: string | null,
     abbr?: string | null,
+    colors?: { color?: string | null; altColor?: string | null },
   ): PolymarketSportsTeam => {
     const hit = lookupTeamLogo(name, catalog, league);
     // Always prefer ESPN catalog team logos over Wikipedia / random photos.
@@ -1531,6 +1560,8 @@ function sportsTeamsFromMarket(
       logo: resolvedLogo,
       abbr: hit?.abbr ?? abbr ?? null,
       portrait: false,
+      color: hit?.color ?? colors?.color ?? null,
+      altColor: hit?.altColor ?? colors?.altColor ?? null,
     };
   };
 
@@ -1540,11 +1571,13 @@ function sportsTeamsFromMarket(
         market.liveGame.away.name,
         market.liveGame.away.logo,
         market.liveGame.away.abbr,
+        market.liveGame.away,
       ),
       asTeam(
         market.liveGame.home.name,
         market.liveGame.home.logo,
         market.liveGame.home.abbr,
+        market.liveGame.home,
       ),
     ];
   }
@@ -2198,6 +2231,8 @@ async function withSideImages(
           logo: catalogHit.logo,
           abbr: catalogHit.abbr,
           portrait: false,
+          color: catalogHit.color ?? team.color ?? null,
+          altColor: catalogHit.altColor ?? team.altColor ?? null,
         };
       }
       if (isEspnTeamLogo(team.logo)) {
@@ -2270,6 +2305,8 @@ async function enrichSportsMarket(
         logo: teams[0]!.logo,
         abbr: teams[0]!.abbr,
         portrait: false,
+        color: teams[0]!.color ?? withTeams.liveGame.away.color ?? null,
+        altColor: teams[0]!.altColor ?? withTeams.liveGame.away.altColor ?? null,
       },
       home: {
         ...withTeams.liveGame.home,
@@ -2277,6 +2314,8 @@ async function enrichSportsMarket(
         logo: teams[1]!.logo,
         abbr: teams[1]!.abbr,
         portrait: false,
+        color: teams[1]!.color ?? withTeams.liveGame.home.color ?? null,
+        altColor: teams[1]!.altColor ?? withTeams.liveGame.home.altColor ?? null,
       },
     };
   }

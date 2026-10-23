@@ -728,6 +728,58 @@ body > * {
   backface-visibility: hidden;
 }
 
+/* Progressive blur: stacked backdrop layers, each masked to a band so blur ramps up toward the edge. */
+.api-progressive-blur {
+  --pb-dir: to bottom;
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.api-progressive-blur[data-edge="top"] {
+  --pb-dir: to top;
+  top: 0;
+}
+
+.api-progressive-blur[data-edge="bottom"] {
+  bottom: 0;
+}
+
+.api-progressive-blur > i {
+  position: absolute;
+  inset: 0;
+}
+
+.api-progressive-blur > i:nth-child(1) {
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
+  mask-image: linear-gradient(var(--pb-dir), transparent 0%, #000 20%, #000 40%, transparent 60%);
+  -webkit-mask-image: linear-gradient(var(--pb-dir), transparent 0%, #000 20%, #000 40%, transparent 60%);
+}
+
+.api-progressive-blur > i:nth-child(2) {
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  mask-image: linear-gradient(var(--pb-dir), transparent 20%, #000 40%, #000 60%, transparent 80%);
+  -webkit-mask-image: linear-gradient(var(--pb-dir), transparent 20%, #000 40%, #000 60%, transparent 80%);
+}
+
+.api-progressive-blur > i:nth-child(3) {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  mask-image: linear-gradient(var(--pb-dir), transparent 40%, #000 60%, #000 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(var(--pb-dir), transparent 40%, #000 60%, #000 80%, transparent 100%);
+}
+
+.api-progressive-blur > i:nth-child(4) {
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  mask-image: linear-gradient(var(--pb-dir), transparent 60%, #000 80%);
+  -webkit-mask-image: linear-gradient(var(--pb-dir), transparent 60%, #000 80%);
+}
+
 @keyframes api-market-enter {
   from {
     opacity: 0;

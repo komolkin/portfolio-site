@@ -44,14 +44,52 @@ export function ChipTabs<T extends string>({
   /** Equal-width tabs with a full-bleed underline (reference: Markets / Top traders). */
   fullWidth?: boolean;
 }) {
+  const listRef = useRef<HTMLDivElement>(null);
+  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(
+    null,
+  );
+  const tabsKey = tabs.map((tab) => `${tab.id}:${tab.label}:${tab.count ?? ""}`).join("|");
+
+  useLayoutEffect(() => {
+    if (!underline) return;
+    const list = listRef.current;
+    if (!list) return;
+    const measure = () => {
+      const active = list.querySelector<HTMLElement>('[aria-selected="true"]');
+      if (!active) return;
+      setIndicator((prev) =>
+        prev && prev.left === active.offsetLeft && prev.width === active.offsetWidth
+          ? prev
+          : { left: active.offsetLeft, width: active.offsetWidth },
+      );
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(list);
+    return () => ro.disconnect();
+  }, [underline, value, tabsKey]);
+
   return (
     <div
-      className={`flex ${fullWidth ? "w-full" : "gap-5"} ${
+      ref={listRef}
+      className={`relative flex ${fullWidth ? "w-full" : "gap-5"} ${
         underline ? "border-b border-white/[0.08]" : ""
       }`}
       role="tablist"
       aria-label={ariaLabel}
     >
+      {underline && indicator ? (
+        <span
+          aria-hidden
+          className={`pointer-events-none absolute -bottom-px left-0 rounded-full bg-white transition-[transform,width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ${
+            fullWidth ? "h-px" : "h-0.5"
+          }`}
+          style={{
+            width: indicator.width,
+            transform: `translateX(${indicator.left}px)`,
+          }}
+        />
+      ) : null}
       {tabs.map((tab) => {
         const isActive = value === tab.id;
         return (
@@ -67,21 +105,9 @@ export function ChipTabs<T extends string>({
               fullWidth
                 ? "flex flex-1 items-center justify-center gap-0.5 text-[15px] tracking-[-0.02em]"
                 : "inline-flex items-baseline gap-0.5 text-[20px] tracking-[-0.03em]"
-            } px-0 font-semibold ${
-              underline
-                ? fullWidth
-                  ? "border-b pb-2.5 -mb-px"
-                  : "border-b-2 pb-2.5 -mb-px"
-                : "pb-1"
-            } ${
-              isActive
-                ? underline
-                  ? "border-white text-white"
-                  : "text-white"
-                : underline
-                  ? "border-transparent text-white/55 hover:text-white/80"
-                  : "text-white/55 hover:text-white/80"
-            }`}
+            } px-0 font-semibold transition-colors duration-200 ${
+              underline ? "pb-2.5" : "pb-1"
+            } ${isActive ? "text-white" : "text-white/55 hover:text-white/80"}`}
           >
             {tab.label}
             {tab.count != null && tab.count !== 0 ? (

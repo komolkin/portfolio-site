@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { PROJECTS, type ProjectId } from "@/components/playground/playground-route";
+import {
+  PROJECTS,
+  isProjectListed,
+  type ProjectId,
+} from "@/components/playground/playground-route";
 
 interface PlaygroundNavProps {
   activeProject: ProjectId;
@@ -177,7 +181,9 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
           </div>
 
         <ul className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-3">
-          {PROJECTS.map(({ id, label }, i) => {
+          {PROJECTS.map((project, i) => {
+            if (!isProjectListed(project)) return null;
+            const { id, label } = project;
             const index1 = i + 1;
             const isActive = activeProject === id;
             return (
@@ -214,7 +220,9 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
         aria-label="Playground projects"
       >
         <ul className="group/projects flex flex-col" style={{ minWidth: "10rem" }}>
-          {PROJECTS.map(({ id, label }, i) => {
+          {PROJECTS.map((project, i) => {
+            if (!isProjectListed(project)) return null;
+            const { id, label } = project;
             const index1 = i + 1;
             const isActive = activeProject === id;
             return (

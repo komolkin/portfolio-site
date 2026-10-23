@@ -12,7 +12,7 @@ export const PROJECTS = [
   { id: "binary-compact", label: "Binary" },
   { id: "leverage-selector", label: "Categorical" },
   { id: "resolved-card", label: "Resolved" },
-  { id: "ai-cam", label: "Selfie" },
+  { id: "ai-cam", label: "Selfie", hidden: true },
   { id: "api", label: "API" },
   { id: "buttony", label: "Buttony" },
   { id: "leverage", label: "Leverage" },
@@ -24,6 +24,12 @@ export const PROJECTS = [
 ] as const;
 
 export type ProjectId = (typeof PROJECTS)[number]["id"];
+
+export function isProjectListed(
+  project: (typeof PROJECTS)[number],
+): boolean {
+  return !("hidden" in project && project.hidden);
+}
 
 export function projectIdFromIndex1(index1: number): ProjectId {
   return PROJECTS[index1 - 1].id;
