@@ -28,78 +28,6 @@ function formatSignedUsd(value: number): string {
   return formatUsd(0);
 }
 
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 18 18" className="h-4 w-4" aria-hidden>
-      <path
-        fill="#4285F4"
-        d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62Z"
-      />
-      <path
-        fill="#34A853"
-        d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18Z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M3.97 10.72A5.41 5.41 0 0 1 3.69 9c0-.6.1-1.18.28-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.35 2.82.96 4.05l3.01-2.33Z"
-      />
-      <path
-        fill="#EA4335"
-        d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58Z"
-      />
-    </svg>
-  );
-}
-
-function WalletIcon() {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4" aria-hidden>
-      <rect
-        x="1.75"
-        y="4"
-        width="12.5"
-        height="9"
-        rx="2"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
-      <path d="M1.75 6.5h12.5" stroke="currentColor" strokeWidth="1.4" />
-      <circle
-        cx="11.5"
-        cy="9.75"
-        r="1.05"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
-    </svg>
-  );
-}
-
-function ProgressiveBlur({ edge }: { edge: "top" | "bottom" }) {
-  const to = edge === "top" ? "to bottom" : "to top";
-  return (
-    <div
-      className={`pointer-events-none absolute inset-x-0 z-[2] h-[46%] ${
-        edge === "top" ? "top-0" : "bottom-0"
-      }`}
-      aria-hidden
-    >
-      {[24, 14, 8, 4, 1].map((blur, i) => (
-        <div
-          key={blur}
-          className="absolute inset-0"
-          style={{
-            backdropFilter: `blur(${blur}px)`,
-            WebkitBackdropFilter: `blur(${blur}px)`,
-            maskImage: `linear-gradient(${to}, black 0%, black ${10 + i * 8}%, transparent ${38 + i * 14}%)`,
-            WebkitMaskImage: `linear-gradient(${to}, black 0%, black ${10 + i * 8}%, transparent ${38 + i * 14}%)`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
 export default function Onboarding({
   traders,
   tradersStatus,
@@ -137,7 +65,9 @@ export default function Onboarding({
 
   return (
     <div
-      className="absolute inset-0 z-40 flex flex-col overflow-hidden bg-black px-5 pt-6 pb-5"
+      className={`absolute inset-0 z-40 flex flex-col overflow-hidden bg-black px-5 pt-6 ${
+        step === "welcome" ? "pb-10" : "pb-5"
+      }`}
       role="dialog"
       aria-modal="true"
       aria-label="Get started"
@@ -145,8 +75,6 @@ export default function Onboarding({
       {step === "welcome" ? (
         <>
           <MarketRiver images={marketImages} />
-          <ProgressiveBlur edge="top" />
-          <ProgressiveBlur edge="bottom" />
         </>
       ) : (
         <div
@@ -183,29 +111,28 @@ export default function Onboarding({
 
       {step === "welcome" && (
         <div className="relative flex min-h-0 flex-1 flex-col">
-          <div className="relative z-10 mt-4 shrink-0">
-            <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em] [text-shadow:0_2px_24px_rgba(0,0,0,0.75)]">
-              Copy traders, track markets, and see what&apos;s moving — all in
-              one feed.
-            </h1>
-          </div>
-          <div className="relative z-10 mt-auto flex shrink-0 flex-col gap-2.5">
+          <h1 className="relative z-10 mx-auto mt-auto mb-6 max-w-[300px] text-balance text-center text-[28px] font-semibold leading-tight tracking-[-0.03em] [text-shadow:0_2px_24px_rgba(0,0,0,0.75)]">
+            Copy traders, track markets, and see what&apos;s moving
+          </h1>
+          <div className="relative z-10 flex shrink-0 flex-col gap-2.5">
             <button
               type="button"
               onClick={() => setStep("username")}
-              className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full bg-white text-[15px] font-semibold text-black"
+              className="mx-auto flex h-12 items-center justify-center rounded-full bg-white px-8 text-[15px] font-semibold text-black"
             >
-              <GoogleIcon />
-              Continue with Google
+              Get started
             </button>
-            <button
-              type="button"
-              onClick={() => setStep("username")}
-              className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full bg-white/[0.08] text-[15px] font-semibold text-white"
-            >
-              <WalletIcon />
-              Connect wallet
-            </button>
+            <p className="mt-2 text-center text-[11px] leading-[1.45] text-white/45">
+              By using Worm, you agree to accept our
+              <br />
+              <button type="button" className="font-semibold text-white/85">
+                Terms of Use
+              </button>{" "}
+              and{" "}
+              <button type="button" className="font-semibold text-white/85">
+                Privacy Policy
+              </button>
+            </p>
           </div>
         </div>
       )}

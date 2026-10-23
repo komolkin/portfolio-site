@@ -15,6 +15,9 @@ const SUPABASE_ANON_KEY =
 
 const CACHE_TTL_MS = 60_000;
 
+/** `site.api.espn.com` 403s server-side fetches; the web host serves the same API. */
+const ESPN_SITE_API = "https://site.web.api.espn.com";
+
 const fetchNoStore = {
   cache: "no-store" as const,
 };
@@ -1030,55 +1033,55 @@ type EspnBoardGame = {
 const ESPN_TEAMS: { league: string; url: string }[] = [
   {
     league: "NFL",
-    url: "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/football/nfl/teams`,
   },
   {
     league: "NBA",
-    url: "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/basketball/nba/teams`,
   },
   {
     league: "NHL",
-    url: "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/teams",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/hockey/nhl/teams`,
   },
   {
     league: "MLB",
-    url: "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/teams",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/baseball/mlb/teams`,
   },
   {
     league: "WNBA",
-    url: "https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/teams",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/basketball/wnba/teams`,
   },
   {
     league: "MLS",
-    url: "https://site.api.espn.com/apis/site/v2/sports/soccer/usa.1/teams",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/soccer/usa.1/teams`,
   },
   {
     league: "EPL",
-    url: "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/teams",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/soccer/eng.1/teams`,
   },
   {
     league: "La Liga",
-    url: "https://site.api.espn.com/apis/site/v2/sports/soccer/esp.1/teams",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/soccer/esp.1/teams`,
   },
   {
     league: "Bundesliga",
-    url: "https://site.api.espn.com/apis/site/v2/sports/soccer/ger.1/teams",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/soccer/ger.1/teams`,
   },
   {
     league: "Serie A",
-    url: "https://site.api.espn.com/apis/site/v2/sports/soccer/ita.1/teams",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/soccer/ita.1/teams`,
   },
   {
     league: "Ligue 1",
-    url: "https://site.api.espn.com/apis/site/v2/sports/soccer/fra.1/teams",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/soccer/fra.1/teams`,
   },
   {
     league: "UCL",
-    url: "https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/teams",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/soccer/uefa.champions/teams`,
   },
   {
     league: "World Cup",
-    url: "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/teams",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/soccer/fifa.world/teams`,
   },
 ];
 
@@ -1208,7 +1211,8 @@ async function fetchEspnTeamCatalog(): Promise<EspnTeamLogo[]> {
         }),
       );
       const catalog = groups.flat();
-      setCache(key, catalog, 6 * 60 * 60 * 1000);
+      // A failed/empty fetch must not poison team marks for hours.
+      if (catalog.length > 0) setCache(key, catalog, 6 * 60 * 60 * 1000);
       return catalog;
     } catch (error) {
       console.error("ESPN team catalog failed:", error);
@@ -1279,31 +1283,31 @@ function resolveMatchupTeams(
 const ESPN_SCOREBOARDS: { league: string; url: string }[] = [
   {
     league: "NFL",
-    url: "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/football/nfl/scoreboard`,
   },
   {
     league: "NBA",
-    url: "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/basketball/nba/scoreboard`,
   },
   {
     league: "NHL",
-    url: "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/hockey/nhl/scoreboard`,
   },
   {
     league: "MLB",
-    url: "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/baseball/mlb/scoreboard`,
   },
   {
     league: "EPL",
-    url: "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/soccer/eng.1/scoreboard`,
   },
   {
     league: "UCL",
-    url: "https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/scoreboard",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/soccer/uefa.champions/scoreboard`,
   },
   {
     league: "La Liga",
-    url: "https://site.api.espn.com/apis/site/v2/sports/soccer/esp.1/scoreboard",
+    url: `${ESPN_SITE_API}/apis/site/v2/sports/soccer/esp.1/scoreboard`,
   },
 ];
 

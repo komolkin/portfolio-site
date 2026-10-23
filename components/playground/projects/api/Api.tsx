@@ -30,6 +30,7 @@ import { instrumentSansCondensed } from "@/lib/fonts";
 import FeedPositionSheet, { FollowButton } from "./FeedPositionSheet";
 import Onboarding from "./Onboarding";
 import PositionsSheet, { BubblyPositionCard } from "./PositionsSheet";
+import MarketTopTraders from "./MarketTopTraders";
 import ReferralScreen from "./ReferralScreen";
 import SettingsScreen from "./SettingsScreen";
 import FollowListSheet, {
@@ -102,8 +103,10 @@ const IOS_STATUS_BLEED = "-mt-[52px]";
 const IOS_CHROME_TOP = "top-12";
 
 const PROFILE_BALANCE = 1_347;
-/** Temporarily hide first-run onboarding until the flow is ready again. */
-const SHOW_ONBOARDING = false;
+const MARKET_PAGE_BG = "#111113";
+/** Lets trading work before (or without) the remote demo profile loading. */
+const LOCAL_TRADER_WALLET = "0x000000000000000000000000000000000000d3a0";
+const SHOW_ONBOARDING = true;
 const ONBOARDING_DONE_KEY = "playground-api-onboarded";
 const ONBOARDING_USERNAME_KEY = "playground-api-username";
 const ONBOARDING_FOLLOWS_KEY = "playground-api-follows";
@@ -266,6 +269,7 @@ const LEADERBOARD_PERIOD_OPTIONS = [
 const DEMO_LIVE_MARKET_ID = "demo-live-lal-bos";
 const DEMO_F1_MARKET_ID = "demo-f1-ver-nor";
 const DEMO_MLB_MARKET_ID = "demo-mlb-tb-mil";
+const DEMO_EPL_MARKET_ID = "demo-epl-mci-ars";
 
 const F1_VERSTAPPEN_HEADSHOT =
   "https://a.espncdn.com/i/headshots/rpm/players/full/4665.png";
@@ -489,6 +493,68 @@ function createDemoMlbMarket(): PolymarketMarketData {
     ],
     rules:
       "This market will resolve to the team that wins this MLB game.\n\nExtra innings count. If the game is postponed, the market remains open until it is completed.",
+  };
+}
+
+const EPL_MAN_CITY_LOGO = "https://a.espncdn.com/i/teamlogos/soccer/500/382.png";
+const EPL_ARSENAL_LOGO = "https://a.espncdn.com/i/teamlogos/soccer/500/359.png";
+
+function createDemoEplMarket(): PolymarketMarketData {
+  const city = {
+    name: "Manchester City",
+    abbr: "MCI",
+    logo: EPL_MAN_CITY_LOGO,
+    color: "#6cabdd",
+    altColor: "#1c2c5b",
+  };
+  const arsenal = {
+    name: "Arsenal",
+    abbr: "ARS",
+    logo: EPL_ARSENAL_LOGO,
+    color: "#ef0107",
+    altColor: "#ffffff",
+  };
+  return {
+    marketId: DEMO_EPL_MARKET_ID,
+    title: "Man City vs. Arsenal",
+    slug: DEMO_EPL_MARKET_ID,
+    category: "Sports",
+    yesPrice: 0.64,
+    noPrice: 0.36,
+    volumeUsd: 3_140_000,
+    volume24h: 526_000,
+    liquidityUsd: 240_000,
+    image: null,
+    closesAt: null,
+    isResolved: false,
+    price24hChange: 0.09,
+    outcomes: [
+      {
+        label: "Man City",
+        price: 0.64,
+        marketId: DEMO_EPL_MARKET_ID,
+        slug: DEMO_EPL_MARKET_ID,
+        logo: EPL_MAN_CITY_LOGO,
+      },
+      {
+        label: "Arsenal",
+        price: 0.36,
+        marketId: DEMO_EPL_MARKET_ID,
+        slug: DEMO_EPL_MARKET_ID,
+        logo: EPL_ARSENAL_LOGO,
+      },
+    ],
+    relatedMarketCount: 1,
+    liveGame: {
+      league: "Premier League",
+      status: "live",
+      clock: "2H 67:12",
+      away: { ...city, score: 2 },
+      home: { ...arsenal, score: 1 },
+    },
+    teams: [city, arsenal],
+    rules:
+      "This market will resolve to the team that wins this Premier League match in regulation time, including stoppage time.\n\nIf the match ends in a draw, the market resolves to No for both teams. The resolution source is the official Premier League match report.",
   };
 }
 
@@ -1389,7 +1455,7 @@ const ORDINAL_PERIOD: Record<string, string> = {
 /** Parses "Q3 4:18", "4:18 - 3rd", "3rd 4:18" or "42.3 - 4th" into period + seconds left. */
 function parseGameClock(
   clock: string,
-): { period: string; seconds: number } | null {
+): { period: string; seconds: number; countUp?: boolean } | null {
   const text = clock.trim();
   const normalizePeriod = (raw: string) => {
     const key = raw.trim().toLowerCase();
@@ -1398,7 +1464,16 @@ function parseGameClock(
   const toSeconds = (mins: string | undefined, secs: string) =>
     Number(mins ?? 0) * 60 + Math.floor(Number(secs));
 
-  let match = text.match(/^(Q\d|OT\d?|\d(?:st|nd|rd|th))\s+(\d{1,2}):(\d{2})$/i);
+  // Soccer halves count up from kickoff: "2H 67:12".
+  let match = text.match(/^(1H|2H|ET)\s+(\d{1,3}):(\d{2})$/i);
+  if (match) {
+    return {
+      period: match[1]!.toUpperCase(),
+      seconds: toSeconds(match[2], match[3]!),
+      countUp: true,
+    };
+  }
+  match = text.match(/^(Q\d|OT\d?|\d(?:st|nd|rd|th))\s+(\d{1,2}):(\d{2})$/i);
   if (match) {
     return { period: normalizePeriod(match[1]!), seconds: toSeconds(match[2], match[3]!) };
   }
@@ -1426,27 +1501,29 @@ function LivePeriodFlow({
   const parsed = status === "live" ? parseGameClock(clock) : null;
   const period = parsed?.period ?? null;
   const sourceSeconds = parsed?.seconds ?? null;
+  const step = parsed?.countUp ? 1 : -1;
   const [seconds, setSeconds] = useState<number | null>(sourceSeconds);
 
   useEffect(() => {
     setSeconds((prev) => {
       if (sourceSeconds == null) return null;
       // Small drift from the local tick is fine; avoid visible back-jumps.
-      if (prev != null && prev <= sourceSeconds && sourceSeconds - prev <= 3) {
-        return prev;
+      if (prev != null && Math.abs(prev - sourceSeconds) <= 3) {
+        const ahead = step > 0 ? prev >= sourceSeconds : prev <= sourceSeconds;
+        if (ahead) return prev;
       }
       return sourceSeconds;
     });
-  }, [period, sourceSeconds]);
+  }, [period, sourceSeconds, step]);
 
   useEffect(() => {
     if (!active || sourceSeconds == null) return;
     const id = window.setInterval(() => {
       if (document.hidden) return;
-      setSeconds((prev) => (prev == null ? prev : Math.max(0, prev - 1)));
+      setSeconds((prev) => (prev == null ? prev : Math.max(0, prev + step)));
     }, 1000);
     return () => window.clearInterval(id);
-  }, [active, period, sourceSeconds]);
+  }, [active, period, sourceSeconds, step]);
 
   if (status === "final") return <>Final</>;
   if (status !== "live") return <>{formatLiveClock(clock, status)}</>;
@@ -1458,14 +1535,14 @@ function LivePeriodFlow({
       <span className="inline-flex items-baseline tabular-nums">
         <NumberFlow
           value={Math.floor(seconds / 60)}
-          trend={-1}
+          trend={step}
           format={{ useGrouping: false }}
           style={nfMaskStyle}
         />
         <span>:</span>
         <NumberFlow
           value={seconds % 60}
-          trend={-1}
+          trend={step}
           format={{ useGrouping: false, minimumIntegerDigits: 2 }}
           style={nfMaskStyle}
         />
@@ -1848,12 +1925,10 @@ function assignUniqueClips(
       continue;
     }
 
-    const kindPool = CLIP_POOLS[kind] ?? [];
-    const combined = [
-      ...kindPool,
-      ...ALL_HIGHLIGHT_SRCS.filter((src) => !kindPool.includes(src)),
-    ];
-    assigned.set(id, takeUnused(combined, market.slug || id));
+    const kindPool = (CLIP_POOLS[kind] ?? []).filter(
+      (src) => src !== LUKA_FEATURE_CLIP,
+    );
+    assigned.set(id, takeUnused(kindPool, market.slug || id));
   }
 
   return assigned;
@@ -4930,6 +5005,9 @@ function TabIcon({ id, active }: { id: TabId; active: boolean }) {
 export default function Api() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const feedSnapRef = useRef<HTMLElement>(null);
+  /** Scroll offsets of the views underneath each drill-in, restored on back. */
+  const scrollStackRef = useRef<Array<{ outer: number; feed: number }>>([]);
+  const pendingScrollRef = useRef<{ outer: number; feed: number } | null>(null);
   const stickyTitleRef = useRef<HTMLElement>(null);
   const stickyNavRef = useRef<HTMLDivElement>(null);
   const stickyMarketFadeRef = useRef<HTMLDivElement>(null);
@@ -4947,6 +5025,7 @@ export default function Api() {
   const [listDetailTab, setListDetailTab] = useState<ListDetailTab>("trades");
   const [marketDetailTab, setMarketDetailTab] =
     useState<MarketDetailTab>("trades");
+  const [marketPhotoPool, setMarketPhotoPool] = useState<string[]>([]);
   const [marketActivity, setMarketActivity] =
     useState<PolymarketMarketActivity | null>(null);
   const [leaderboardTab, setLeaderboardTab] =
@@ -5215,13 +5294,21 @@ export default function Api() {
           ...remoteLive.filter((market) => market.marketId !== DEMO_LIVE_MARKET_ID),
         ]);
         const remoteTrending = Array.isArray(data.trending) ? data.trending : [];
+        setMarketPhotoPool(
+          [...remoteLive, ...remoteTrending]
+            .map((market) => market.image)
+            .filter((src): src is string => Boolean(src)),
+        );
         setTrendingMarkets([
           createDemoF1Market(),
+          createDemoEplMarket(),
           createDemoMlbMarket(),
           ...remoteTrending.filter(
             (market) =>
               market.marketId !== DEMO_F1_MARKET_ID &&
+              market.marketId !== DEMO_EPL_MARKET_ID &&
               market.marketId !== DEMO_MLB_MARKET_ID &&
+              !(isSportsMarket(market) && sportKindForMarket(market) === null) &&
               !(market.category ?? "").toLowerCase().includes("crypto") &&
               !/\b(bitcoin|ethereum|btc\b|eth\b)\b/i.test(market.title) &&
               sportKindForMarket(market) !== "combat" &&
@@ -5234,7 +5321,11 @@ export default function Api() {
         if (controller.signal.aborted) return;
         console.error("Failed to load markets feed:", error);
         setLiveMarkets([createDemoLiveMarket()]);
-        setTrendingMarkets([createDemoF1Market(), createDemoMlbMarket()]);
+        setTrendingMarkets([
+          createDemoF1Market(),
+          createDemoEplMarket(),
+          createDemoMlbMarket(),
+        ]);
         setMarketsStatus("ready");
       }
     };
@@ -5631,9 +5722,7 @@ export default function Api() {
   const showingWalletProfile = selectedWallet !== null;
   const showingMarketDetail =
     selectedMarketSlug !== null && selectedWallet === null;
-  const marketAccent = useImageAccent(
-    showingMarketDetail ? (selectedMarket?.image ?? null) : null,
-  );
+  const marketAccent = MARKET_PAGE_BG;
   const sportsMarketView = Boolean(
     selectedMarket
       ? isSportsMarket(selectedMarket)
@@ -5643,9 +5732,6 @@ export default function Api() {
               market.slug === selectedMarketSlug && isSportsMarket(market),
           ),
   );
-  const marketClip = selectedMarket
-    ? sportClipForMarket(selectedMarket)
-    : null;
   const showingListDetail =
     (section === "explore" || section === "search") &&
     selectedListId !== null &&
@@ -5842,19 +5928,27 @@ export default function Api() {
     const mlb =
       trendingMarkets.find((market) => market.marketId === DEMO_MLB_MARKET_ID) ??
       createDemoMlbMarket();
+    const epl =
+      trendingMarkets.find((market) => market.marketId === DEMO_EPL_MARKET_ID) ??
+      createDemoEplMarket();
     const rest = trendingMarkets.filter(
       (market) =>
         market.marketId !== featured?.marketId &&
         market.marketId !== DEMO_F1_MARKET_ID &&
         market.marketId !== DEMO_MLB_MARKET_ID &&
+        market.marketId !== DEMO_EPL_MARKET_ID &&
+        // Esports matchups have no clips or team marks to show.
+        !(isSportsMarket(market) && sportKindForMarket(market) === null) &&
         !(market.category ?? "").toLowerCase().includes("crypto") &&
         !/\b(bitcoin|ethereum|btc\b|eth\b)\b/i.test(market.title) &&
         // Feed is team sports + F1 — no UFC fighter cards.
         sportKindForMarket(market) !== "combat" &&
         (!isSportsMarket(market) || isTwoSidedMatchup(market)),
     );
-    // Featured live, F1 Australia, other matchups, MLB last (team logos).
-    return featured ? [featured, f1, ...rest, mlb] : [f1, ...rest, mlb];
+    // Featured live, F1 Australia, Premier League, other matchups, MLB last.
+    return featured
+      ? [featured, f1, epl, ...rest, mlb]
+      : [f1, epl, ...rest, mlb];
   }, [liveMarkets, trendingMarkets]);
   const homeFeedClips = useMemo(
     () => assignUniqueClips(homeFeedMarkets),
@@ -5894,11 +5988,21 @@ export default function Api() {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollTop = 0;
-    const id = window.requestAnimationFrame(() => {
-      el.scrollTop = 0;
-    });
+    const restore = pendingScrollRef.current;
+    pendingScrollRef.current = null;
+    if (!showingDrillDown && !showingProfileSubScreen) {
+      scrollStackRef.current = [];
+    }
+    const apply = () => {
+      el.scrollTop = restore?.outer ?? 0;
+      const feed = feedSnapRef.current;
+      if (feed && restore) feed.scrollTop = restore.feed;
+    };
+    apply();
+    const id = window.requestAnimationFrame(apply);
     return () => window.cancelAnimationFrame(id);
+    // Only navigation should reset or restore scroll.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     section,
     selectedMarketSlug,
@@ -6001,7 +6105,19 @@ export default function Api() {
     section,
   ]);
 
-  const openMarket = (market: PolymarketMarketData) => {
+  const rememberScroll = () => {
+    scrollStackRef.current.push({
+      outer: scrollRef.current?.scrollTop ?? 0,
+      feed: feedSnapRef.current?.scrollTop ?? 0,
+    });
+  };
+
+  const restoreScrollOnBack = () => {
+    pendingScrollRef.current = scrollStackRef.current.pop() ?? null;
+  };
+
+  const openMarket = (market: PolymarketMarketData, remember = true) => {
+    if (remember) rememberScroll();
     setSelectedWallet(null);
     setWalletLabel(null);
     setSelectedMarket(market);
@@ -6020,11 +6136,13 @@ export default function Api() {
       slug,
       title,
     );
+    rememberScroll();
     if (local) {
       openMarket(
         preview?.image && !local.image
           ? { ...local, image: preview.image }
           : local,
+        false,
       );
       return;
     }
@@ -6038,6 +6156,7 @@ export default function Api() {
   };
 
   const openList = (id: string) => {
+    rememberScroll();
     setSelectedMarketSlug(null);
     setSelectedMarket(null);
     setSelectedWallet(null);
@@ -6050,6 +6169,7 @@ export default function Api() {
     displayName: string | null,
     avatarUrl?: string | null,
   ) => {
+    rememberScroll();
     setSelectedWallet(wallet);
     setWalletLabel(displayName ?? shortWallet(wallet));
     setWalletAvatarUrl(avatarUrl ?? null);
@@ -6057,12 +6177,14 @@ export default function Api() {
   };
 
   const backFromWallet = () => {
+    restoreScrollOnBack();
     setSelectedWallet(null);
     setWalletLabel(null);
     setWalletAvatarUrl(null);
   };
 
   const backFromList = () => {
+    restoreScrollOnBack();
     setSelectedWallet(null);
     setWalletLabel(null);
     setWalletAvatarUrl(null);
@@ -6070,6 +6192,7 @@ export default function Api() {
   };
 
   const backFromMarket = () => {
+    restoreScrollOnBack();
     setSelectedMarketSlug(null);
     setSelectedMarket(null);
     setMarketStatus("idle");
@@ -6261,14 +6384,13 @@ export default function Api() {
     add("/playground/api/lakers-celtics.jpg");
     for (const market of [...liveMarkets, ...trendingMarkets]) {
       add(market.image);
-      for (const team of market.teams ?? []) add(team.logo);
-      for (const outcome of market.outcomes ?? []) add(outcome.logo);
     }
+    for (const src of marketPhotoPool) add(src);
     for (const trade of trades) {
       add(trade.marketImage);
     }
     return urls;
-  }, [liveMarkets, trendingMarkets, trades]);
+  }, [liveMarkets, trendingMarkets, marketPhotoPool, trades]);
 
   const marketBySlug = useMemo(() => {
     const map = new Map<string, PolymarketMarketData>();
@@ -6858,29 +6980,7 @@ export default function Api() {
                 key={`market-header-${selectedMarketSlug}`}
                 className={`relative -mx-5 ${IOS_STATUS_BLEED} mb-3 overflow-hidden ${MARKET_ENTER}`}
               >
-                {marketClip || selectedMarket?.image ? (
-                  <div className="relative h-[168px] overflow-hidden">
-                    {marketClip ? (
-                      <MarketClip clip={marketClip} />
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={selectedMarket?.image ?? ""}
-                        alt=""
-                        className="absolute inset-0 h-full w-full object-cover object-top"
-                      />
-                    )}
-                    <div
-                      aria-hidden
-                      className="absolute inset-0"
-                      style={{
-                        backgroundImage: `linear-gradient(to bottom, ${hexToRgba(marketAccent, 0.2)} 0%, ${hexToRgba(marketAccent, 0.08)} 40%, ${marketAccent} 100%)`,
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="pt-12" />
-                )}
+                <div className="pt-[92px]" />
                 <h2 className="sr-only">
                   {selectedMarket?.title ?? "Market"}
                 </h2>
@@ -7657,8 +7757,7 @@ export default function Api() {
                         },
                         {
                           id: "traders",
-                          label: "Traders",
-                          count: marketActivity?.traders.length || undefined,
+                          label: "Top traders",
                         },
                         { id: "rules", label: "Rules" },
                       ] as const
@@ -7675,7 +7774,7 @@ export default function Api() {
                     </div>
                   )}
 
-                  {marketDetailTab !== "rules" &&
+                  {marketDetailTab === "trades" &&
                     marketActivityStatus === "error" &&
                     marketFeedTrades.length === 0 && (
                     <p className="mt-2 text-sm text-white/55">
@@ -7722,62 +7821,41 @@ export default function Api() {
                       </ul>
                     )}
 
-                  {marketActivityStatus === "ready" &&
-                    marketDetailTab === "traders" &&
-                    (marketActivity?.traders.length ?? 0) === 0 && (
-                      <p className="mt-2 text-sm text-white/55">No traders found.</p>
-                    )}
-
-                  {marketActivityStatus === "ready" &&
-                    marketDetailTab === "traders" &&
-                    (marketActivity?.traders.length ?? 0) > 0 && (
-                      <ol className="divide-y divide-white/[0.06]">
-                        {marketActivity!.traders.map((trader, index) => {
-                          const pnlPositive =
-                            trader.totalPnl === null
-                              ? null
-                              : trader.totalPnl >= 0;
-                          return (
-                            <li key={trader.wallet}>
-                              <ActivityRow
-                                leading={
-                                  <div className="flex items-center gap-2.5">
-                                    <span className="w-5 text-center text-[13px] font-semibold tabular-nums text-white/35">
-                                      {index + 1}
-                                    </span>
-                                    <UserAvatar
-                                      seed={trader.wallet}
-                                      className="h-11 w-11 text-[13px]"
-                                    />
-                                  </div>
-                                }
-                                title={shortWallet(trader.wallet)}
-                                subtitle={`${formatUsd(trader.volumeUsd)} vol${
-                                  trader.winRate !== null
-                                    ? ` · ${trader.winRate.toFixed(0)}% win`
-                                    : ""
-                                }`}
-                                trailing={
-                                  <span
-                                    className={`text-[16px] font-semibold tabular-nums ${
-                                      pnlPositive === null
-                                        ? "text-white/55"
-                                        : pnlPositive
-                                          ? "text-[#00D54B]"
-                                          : "text-[#FF375F]"
-                                    }`}
-                                  >
-                                    {trader.totalPnl === null
-                                      ? "—"
-                                      : formatSignedUsd(trader.totalPnl)}
-                                  </span>
-                                }
-                                onClick={() => openWallet(trader.wallet, null)}
-                              />
-                            </li>
-                          );
-                        })}
-                      </ol>
+                  {marketDetailTab === "traders" &&
+                    marketActivityStatus !== "loading" &&
+                    selectedMarket && (
+                      <MarketTopTraders
+                        marketKey={selectedMarket.slug || selectedMarket.marketId}
+                        sides={getMarketOddsSides(selectedMarket).map(
+                          (side, index, all) => {
+                            const tones = matchupTeamTones(selectedMarket);
+                            const { away, home } =
+                              resolveSportsSides(selectedMarket);
+                            const tone = tones
+                              ? nickMatch(side.label, home.name) &&
+                                !nickMatch(side.label, away.name)
+                                ? tones.home
+                                : nickMatch(side.label, away.name)
+                                  ? tones.away
+                                  : index === all.length - 1
+                                    ? tones.home
+                                    : tones.away
+                              : null;
+                            return {
+                              label: side.label,
+                              price: side.price,
+                              color:
+                                tone?.text ??
+                                (index === 0 ? "#00D54B" : "#FF375F"),
+                            };
+                          },
+                        )}
+                        trades={marketActivity?.trades ?? []}
+                        resolveHandle={resolveFeedHandle}
+                        isFollowing={isFollowing}
+                        onToggleFollow={toggleFollow}
+                        onOpenWallet={(wallet) => openWallet(wallet, null)}
+                      />
                     )}
 
                   {marketDetailTab === "rules" && (
@@ -8276,6 +8354,13 @@ export default function Api() {
             style={{
               backgroundImage: `linear-gradient(to bottom, ${marketAccent} 42%, ${hexToRgba(marketAccent, 0.75)}, transparent)`,
             }}
+          />
+        )}
+
+        {showingMarketDetail && (
+          <div
+            key={`market-title-${selectedMarketSlug}`}
+            className="pointer-events-none absolute inset-x-0 top-0 z-20"
           >
             {sportsMarketView &&
               !tradeFlowMarket &&
@@ -8394,7 +8479,6 @@ export default function Api() {
                   <button
                     key={side.side}
                     type="button"
-                    disabled={!demoProfile?.wallet}
                     data-sfx="press"
                     onClick={() => openTradeFlow(selectedMarket, side.label)}
                     className={`min-w-0 flex-1 overflow-hidden px-3 ${
@@ -8422,7 +8506,6 @@ export default function Api() {
             ) : (
               <button
                 type="button"
-                disabled={!demoProfile?.wallet}
                 data-sfx="press"
                 onClick={() => openTradeFlow(selectedMarket)}
                 className={`pointer-events-auto w-full ${ui.pillPrimary}`}
@@ -8713,11 +8796,11 @@ export default function Api() {
             referralCode={referralCode}
           />
         )}
-        {tradeFlowMarket && demoProfile?.wallet && (
+        {tradeFlowMarket && (
           <TradeFlowModal
             market={tradeFlowMarket}
             initialOutcome={tradeFlowOutcome}
-            wallet={demoProfile.wallet}
+            wallet={demoProfile?.wallet ?? LOCAL_TRADER_WALLET}
             handle={ownShareHandle}
             referralCode={referralCode}
             maxAmount={Math.max(100, profileBalance)}

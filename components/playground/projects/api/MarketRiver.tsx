@@ -1,12 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useReducedMotion } from "framer-motion";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 
 const MAX_POOL = 48;
-const VISIBLE = 30;
-const SWAP_MS = 2200;
-const FADE_MS = 480;
+const SWAP_MS = 1400;
+const FADE_MS = 600;
+const ASPECTS = [3 / 4, 4 / 5, 1, 4 / 3, 3 / 2] as const;
+
+/** Farther layers are smaller, dimmer and slower — the parallax reads as depth. */
+const LAYERS = [
+  { count: 10, width: [16, 24], opacity: 0.38, duration: 60 },
+  { count: 8, width: [24, 34], opacity: 0.62, duration: 40 },
+  { count: 6, width: [34, 46], opacity: 0.9, duration: 26 },
+] as const;
+
+type Tile = {
+  src: string;
+  left: number;
+  top: number;
+  width: number;
+  aspect: number;
+};
 
 function isDisplayableImage(src: string): boolean {
   if (!src) return false;
@@ -30,6 +44,31 @@ function imageKey(src: string): string {
   }
 }
 
+const THUMB_WIDTH = 500;
+
+/** Tiles are ~170px wide at most; request Wikimedia thumbnails instead of 960px+ originals. */
+function thumbnailSrc(src: string): string {
+  const resized = src.replace(/\/(\d{3,4})px-([^/]+)$/, (match, width, file) =>
+    Number(width) > THUMB_WIDTH ? `/${THUMB_WIDTH}px-${file}` : match,
+  );
+  if (resized !== src) return resized;
+  const original = src.match(
+    /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/commons)\/([0-9a-f])\/([0-9a-f]{2})\/([^/]+\.(?:jpe?g|png))$/i,
+  );
+  if (!original) return src;
+  const [, base, a, ab, file] = original;
+  return `${base}/thumb/${a}/${ab}/${file}/${THUMB_WIDTH}px-${file}`;
+}
+
+function preload(src: string): Promise<void> {
+  const img = new Image();
+  img.decoding = "async";
+  img.src = src;
+  return img.decode().catch(() => {
+    throw new Error("preload failed");
+  });
+}
+
 function uniqueSources(images: string[]): string[] {
   const seen = new Set<string>();
   const unique: string[] = [];
@@ -39,18 +78,56 @@ function uniqueSources(images: string[]): string[] {
     const key = imageKey(normalized);
     if (seen.has(key)) continue;
     seen.add(key);
-    unique.push(normalized);
+    unique.push(thumbnailSrc(normalized));
     if (unique.length >= MAX_POOL) break;
   }
   return unique;
 }
 
-function pickRandom<T>(items: T[]): T | undefined {
-  if (items.length === 0) return undefined;
-  return items[Math.floor(Math.random() * items.length)];
+function mulberry32(seed: number) {
+  let t = seed >>> 0;
+  return () => {
+    t = (t + 0x6d2b79f5) >>> 0;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-function FadingTile({ src, eager }: { src: string; eager?: boolean }) {
+function buildLayers(pool: string[]): Tile[][] {
+  const rand = mulberry32(0x5eed);
+  const total = LAYERS.reduce((sum, layer) => sum + layer.count, 0);
+  // Never show the same image twice: shrink every layer when the pool is small.
+  const scale = Math.min(1, pool.length / total);
+  let cursor = 0;
+  return LAYERS.map((layer, depth) => {
+    const tiles: Tile[] = [];
+    const count = Math.max(1, Math.floor(layer.count * scale));
+    for (let i = 0; i < count && cursor < pool.length; i++) {
+      const width =
+        layer.width[0] + rand() * (layer.width[1] - layer.width[0]);
+      // Alternate columns so each layer spreads across the screen.
+      const column = (i + depth) % 3;
+      const centerX = ((column + 0.5) / 3) * 100 + (rand() - 0.5) * 24;
+      tiles.push({
+        src: pool[cursor++]!,
+        left: centerX - width / 2,
+        top: (i / count) * 100 + rand() * (60 / count),
+        width,
+        aspect: ASPECTS[Math.floor(rand() * ASPECTS.length)]!,
+      });
+    }
+    return tiles;
+  });
+}
+
+const TileImage = memo(function TileImage({
+  tile,
+  src,
+}: {
+  tile: Tile;
+  src: string;
+}) {
   const [current, setCurrent] = useState(src);
   const [visible, setVisible] = useState(true);
 
@@ -65,17 +142,25 @@ function FadingTile({ src, eager }: { src: string; eager?: boolean }) {
   }, [src, current]);
 
   return (
-    <div className="aspect-square overflow-hidden rounded-[10px] bg-white/10">
+    <div
+      className="absolute overflow-hidden rounded-[6px] bg-white/[0.06]"
+      style={{
+        left: `${tile.left}%`,
+        top: `${tile.top}%`,
+        width: `${tile.width}%`,
+        aspectRatio: tile.aspect,
+      }}
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={current}
         alt=""
         draggable={false}
         decoding="async"
-        loading={eager ? "eager" : "lazy"}
-        className="h-full w-full object-cover transition-opacity ease-in-out"
+        className="h-full w-full object-cover transition-[opacity,transform] ease-out"
         style={{
           opacity: visible ? 1 : 0,
+          transform: visible ? "scale(1)" : "scale(1.08)",
           transitionDuration: `${FADE_MS}ms`,
         }}
         onError={(e) => {
@@ -85,109 +170,114 @@ function FadingTile({ src, eager }: { src: string; eager?: boolean }) {
       />
     </div>
   );
-}
+});
 
 export default function MarketRiver({ images }: { images: string[] }) {
-  const reduceMotion = useReducedMotion();
   const pool = useMemo(() => uniqueSources(images), [images]);
-  const paused = reduceMotion !== false;
-  const [slots, setSlots] = useState<string[]>([]);
-  const lastIndex = useRef(-1);
-  const columns = 6;
+  const layers = useMemo(
+    () => (pool.length > 0 ? buildLayers(pool) : []),
+    [pool],
+  );
+  const [srcs, setSrcs] = useState<string[]>([]);
+  const srcsRef = useRef<string[]>([]);
 
   useEffect(() => {
-    setSlots((prev) => {
-      if (pool.length === 0) return [];
-      if (prev.length === 0) return pool.slice(0, Math.min(VISIBLE, pool.length));
-      const kept = prev.filter((src) => pool.includes(src));
-      const next = [...kept];
-      for (const src of pool) {
-        if (next.length >= VISIBLE) break;
-        if (!next.includes(src)) next.push(src);
-      }
-      return next.slice(0, Math.min(VISIBLE, pool.length));
-    });
+    setSrcs(layers.flat().map((tile) => tile.src));
+  }, [layers]);
+
+  useEffect(() => {
+    srcsRef.current = srcs;
+  }, [srcs]);
+
+  useEffect(() => {
+    if (pool.length < 2) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let cancelled = false;
+    const id = window.setInterval(() => {
+      const current = srcsRef.current;
+      if (document.hidden || current.length === 0) return;
+      const used = new Set(current);
+      const unused = pool.filter((src) => !used.has(src));
+      if (unused.length === 0) return;
+      const index = Math.floor(Math.random() * current.length);
+      const incoming = unused[Math.floor(Math.random() * unused.length)]!;
+      // Swap only once decoded so the fade never reveals an empty tile.
+      preload(incoming)
+        .then(() => {
+          if (cancelled) return;
+          setSrcs((prev) => {
+            if (prev.includes(incoming) || index >= prev.length) return prev;
+            const next = [...prev];
+            next[index] = incoming;
+            return next;
+          });
+        })
+        .catch(() => {});
+    }, SWAP_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
   }, [pool]);
 
-  useEffect(() => {
-    if (paused || slots.length < 2) return;
-
-    const tick = () => {
-      if (document.hidden) return;
-      setSlots((prev) => {
-        if (prev.length === 0) return prev;
-        let index = Math.floor(Math.random() * prev.length);
-        if (prev.length > 1 && index === lastIndex.current) {
-          index = (index + 1) % prev.length;
-        }
-        lastIndex.current = index;
-        const used = new Set(prev);
-        used.delete(prev[index]!);
-        const unused = pool.filter((src) => !used.has(src) && src !== prev[index]);
-        const next = [...prev];
-        const replacement = pickRandom(unused);
-        if (replacement) {
-          next[index] = replacement;
-          return next;
-        }
-        let other = Math.floor(Math.random() * prev.length);
-        if (other === index) other = (other + 1) % prev.length;
-        const hold = next[index]!;
-        next[index] = next[other]!;
-        next[other] = hold;
-        return next;
-      });
-    };
-
-    const id = window.setInterval(tick, SWAP_MS);
-    return () => window.clearInterval(id);
-  }, [paused, pool, slots.length]);
-
-  if (slots.length === 0) return null;
+  if (layers.length === 0) return null;
+  let flatIndex = 0;
+  const offsets = layers.map((tiles) => {
+    const start = flatIndex;
+    flatIndex += tiles.length;
+    return start;
+  });
 
   return (
-    <div className="absolute inset-0 overflow-hidden" aria-hidden>
-      <div
-        className="market-river-grid absolute left-1/2 top-1/2 w-[155%] will-change-transform"
-        style={{
-          transform: "translate3d(-50%, -50%, 0) rotate(-10deg)",
-          animationName: paused ? "none" : "market-grid-drift",
-          animationDuration: "28s",
-          animationTimingFunction: "ease-in-out",
-          animationIterationCount: "infinite",
-          animationDirection: "alternate",
-        }}
-      >
+    <div
+      className="absolute inset-0 overflow-hidden bg-black [contain:strict]"
+      aria-hidden
+    >
+      {layers.map((tiles, depth) => (
         <div
-          className="grid gap-1.5"
-          style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+          key={depth}
+          className="market-river-layer absolute inset-x-0 top-0 will-change-transform [backface-visibility:hidden]"
+          style={{
+            height: "280%",
+            opacity: LAYERS[depth]!.opacity,
+            animationName: "market-river-rise",
+            animationDuration: `${LAYERS[depth]!.duration}s`,
+            animationTimingFunction: "linear",
+            animationIterationCount: "infinite",
+          }}
         >
-          {slots.map((src, i) => (
-            <FadingTile key={i} src={src} eager={i < 8} />
+          {/* Two identical copies so the upward loop is seamless. */}
+          {[0, 1].map((copy) => (
+            <div
+              key={copy}
+              className="absolute inset-x-0 h-1/2"
+              style={{ top: `${copy * 50}%` }}
+            >
+              {tiles.map((tile, i) => (
+                <TileImage
+                  key={i}
+                  tile={tile}
+                  src={srcs[offsets[depth]! + i] ?? tile.src}
+                />
+              ))}
+            </div>
           ))}
         </div>
-      </div>
+      ))}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "linear-gradient(to bottom, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.18) 28%, rgba(0,0,0,0.28) 62%, rgba(0,0,0,0.88) 100%)",
+            "linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.6) 9%, rgba(0,0,0,0.1) 26%, rgba(0,0,0,0.12) 45%, rgba(0,0,0,0.75) 66%, #000 84%)",
         }}
       />
       <style>{`
-        @keyframes market-grid-drift {
-          from {
-            transform: translate3d(-54%, -52%, 0) rotate(-12deg) scale(1.02);
-          }
-          to {
-            transform: translate3d(-46%, -48%, 0) rotate(-8deg) scale(1.12);
-          }
+        @keyframes market-river-rise {
+          from { transform: translate3d(0, 0, 0); }
+          to { transform: translate3d(0, -50%, 0); }
         }
         @media (prefers-reduced-motion: reduce) {
-          .market-river-grid {
-            animation: none !important;
-            transform: translate3d(-50%, -50%, 0) rotate(-10deg);
-          }
+          .market-river-layer { animation: none !important; }
         }
       `}</style>
     </div>
