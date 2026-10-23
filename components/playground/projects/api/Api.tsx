@@ -104,6 +104,9 @@ const IOS_CHROME_TOP = "top-12";
 
 const PROFILE_BALANCE = 1_347;
 const MARKET_PAGE_BG = "#111113";
+/** Feed edges fade over 24px; snap pages pad 24px so resting cards stay fully opaque. */
+const FEED_EDGE_MASK =
+  "linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.35) 8px, rgba(0,0,0,0.8) 16px, #000 24px, #000 calc(100% - 24px), rgba(0,0,0,0.8) calc(100% - 16px), rgba(0,0,0,0.35) calc(100% - 8px), transparent 100%)";
 /** Lets trading work before (or without) the remote demo profile loading. */
 const LOCAL_TRADER_WALLET = "0x000000000000000000000000000000000000d3a0";
 const SHOW_ONBOARDING = true;
@@ -7527,13 +7530,17 @@ export default function Api() {
             <section
               ref={feedSnapRef}
               aria-label="Market previews"
-              className="pointer-events-none relative z-[1] -mx-5 min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-y-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="pointer-events-none relative z-[1] -mx-5 -my-6 min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-y-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              style={{
+                maskImage: FEED_EDGE_MASK,
+                WebkitMaskImage: FEED_EDGE_MASK,
+              }}
             >
               {marketsStatus === "loading" &&
                 Array.from({ length: 3 }).map((_, i) => (
                   <div
                     key={i}
-                    className="flex h-full min-h-full snap-start snap-always flex-col px-5"
+                    className="flex h-full min-h-full snap-start snap-always flex-col px-5 py-6"
                     aria-hidden
                   >
                     {i === 0 ? (
@@ -7544,7 +7551,7 @@ export default function Api() {
                 ))}
 
               {marketsStatus === "error" && (
-                <div className="px-5">
+                <div className="px-5 pt-6">
                   <div aria-hidden className="shrink-0" style={{ height: exploreHeaderHeight }} />
                   <p className="text-sm text-white/55">
                     Couldn&apos;t load markets.
@@ -7553,7 +7560,7 @@ export default function Api() {
               )}
 
               {marketsStatus === "ready" && homeFeedMarkets.length === 0 && (
-                <div className="px-5">
+                <div className="px-5 pt-6">
                   <div aria-hidden className="shrink-0" style={{ height: exploreHeaderHeight }} />
                   <p className="text-sm text-white/55">No markets right now.</p>
                 </div>
@@ -7571,7 +7578,7 @@ export default function Api() {
                   return (
                     <div
                       key={market.marketId}
-                      className="flex h-full min-h-full snap-start snap-always flex-col px-5"
+                      className="flex h-full min-h-full snap-start snap-always flex-col px-5 py-6"
                       style={{
                         contentVisibility: cardActive ? "visible" : "auto",
                         containIntrinsicSize: "auto 640px",
