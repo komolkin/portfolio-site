@@ -400,7 +400,7 @@ export default function PositionsSheet({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-8 pt-1">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-8 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tab === "orders" && (
             <p className="px-1 pt-6 text-sm text-white/55">
               No open orders.

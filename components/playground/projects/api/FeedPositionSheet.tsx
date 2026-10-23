@@ -93,39 +93,22 @@ function ChanceSparkline({
   );
 }
 
-function formatUsd(value: number): string {
-  const abs = Math.abs(value);
-  const sign = value < 0 ? "-" : "";
-  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(1)}K`;
-  return `${sign}$${abs.toFixed(0)}`;
-}
 
-function formatUsdPrecise(value: number): string {
-  const abs = Math.abs(value);
+
+function formatUsdMoney(value: number): string {
   const sign = value < 0 ? "-" : "";
-  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 10_000) return `${sign}$${(abs / 1_000).toFixed(1)}K`;
-  return `${sign}$${abs.toLocaleString("en-US", {
+  return `${sign}$${Math.abs(value).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
 }
 
-function formatSignedUsd(value: number): string {
-  const formatted = formatUsdPrecise(Math.abs(value));
-  if (value > 0) return `+${formatted}`;
-  if (value < 0) return `-${formatted.replace("-", "")}`;
-  return formatUsdPrecise(0);
+function formatSignedUsdMoney(value: number): string {
+  const formatted = formatUsdMoney(Math.abs(value));
+  return value > 0 ? `+${formatted}` : value < 0 ? `-${formatted}` : formatted;
 }
 
-function formatSignedPercent(value: number): string {
-  const abs = Math.abs(value);
-  const formatted = `${abs >= 10 ? abs.toFixed(0) : abs.toFixed(1)}%`;
-  if (value > 0) return `+${formatted}`;
-  if (value < 0) return `-${formatted}`;
-  return "0%";
-}
+
 
 function formatOdds(price: number): string {
   return `${Math.round(price * 100)}¢`;
@@ -157,7 +140,7 @@ function oppositeOutcome(outcome: string, marketTitle?: string): string {
   return "No";
 }
 
-const CHART_PAD = { top: 28, right: 14, bottom: 12, left: 14 } as const;
+const CHART_PAD = { top: 28, right: 0, bottom: 12, left: 0 } as const;
 const MAX_CHART_MARKERS = 8;
 
 const CHART_RANGES = [
@@ -187,31 +170,71 @@ function mulberry32(seed: number) {
  * Built backwards from "now" as a random walk with occasional jumps, so it
  * reads like real order flow instead of a smooth wave.
  */
+/** Where the opened position sits on the time axis; shared with the marker layout. */
+function entryAnchorTime(
+  entryTime: number | null,
+  t0: number,
+  t1: number,
+): number {
+  const span = Math.max(1, t1 - t0);
+  if (entryTime == null) return t0 + span * 0.22;
+  return Math.max(t0 + span * 0.1, Math.min(t1 - span * 0.1, entryTime));
+}
+
 function seedChanceHistory(
   endPercent: number,
   seed: number,
   rangeSecs: number,
+  entry?: { time: number | null; percent: number },
 ): LivelinePoint[] {
   const now = Math.floor(Date.now() / 1000);
   const stepSecs = rangeSecs / (CHART_STEPS - 1);
   const rand = mulberry32(seed ^ Math.round(rangeSecs));
   const end = Math.max(3, Math.min(97, endPercent));
   // Longer windows wander further from today's price.
-  const volatility = 0.5 + Math.log10(rangeSecs / 3600 + 1) * 0.9;
+  const volatility = 0.35 + Math.log10(rangeSecs / 3600 + 1) * 0.6;
   const values: number[] = [end];
   let value = end;
+  let drift = 0;
   for (let i = 1; i < CHART_STEPS; i++) {
-    const noise = (rand() - 0.5) * 2 * volatility;
-    const jump = rand() < 0.04 ? (rand() - 0.5) * volatility * 9 : 0;
+    // Momentum makes moves trend for a while instead of pure zig-zag.
+    drift = drift * 0.6 + (rand() - 0.5) * volatility * 0.8;
+    const noise = (rand() - 0.5) * volatility * 1.6;
+    const jump = rand() < 0.03 ? (rand() - 0.5) * volatility * 7 : 0;
     // Soft pull away from the 0/100 rails.
     const rail = value < 8 ? 0.6 : value > 92 ? -0.6 : 0;
-    value = Math.max(2, Math.min(98, value + noise + jump + rail));
+    value = Math.max(2, Math.min(98, value + drift + noise + jump + rail));
     values.push(value);
   }
   values.reverse();
-  return values.map((v, i) => ({
+  const points = values.map((v, i) => ({
     time: Math.round(now - (CHART_STEPS - 1 - i) * stepSecs),
-    value: Math.round(v * 10) / 10,
+    value: v,
+  }));
+
+  if (entry) {
+    // Bend the walk so it passes through the entry price at the entry time and
+    // still ends on the current price.
+    const t0 = points[0]!.time;
+    const t1 = points[points.length - 1]!.time;
+    const anchorTime = entryAnchorTime(entry.time, t0, t1);
+    const anchor = Math.min(
+      CHART_STEPS - 2,
+      Math.max(1, Math.round((anchorTime - t0) / stepSecs)),
+    );
+    const target = Math.max(2, Math.min(98, entry.percent));
+    const offset = target - points[anchor]!.value;
+    const last = CHART_STEPS - 1;
+    for (let i = 0; i < CHART_STEPS; i++) {
+      const weight = i <= anchor ? 1 : (last - i) / (last - anchor);
+      points[i]!.value = Math.max(1, Math.min(99, points[i]!.value + offset * weight));
+    }
+    points[anchor] = { time: anchorTime, value: target };
+  }
+
+  return points.map((point) => ({
+    time: point.time,
+    value: Math.round(point.value * 10) / 10,
   }));
 }
 
@@ -317,9 +340,11 @@ function pinTradesOnHistory(
   for (const [pinIndex, pin] of visiblePins.slice(0, MAX_CHART_MARKERS).entries()) {
     const fallback = t0 + span * (0.22 + ((pinIndex * 0.19) % 0.56));
     let time =
-      pin.time == null
-        ? fallback
-        : Math.max(t0 + span * 0.1, Math.min(t1 - span * 0.1, pin.time));
+      pin.key === pinnedKey
+        ? entryAnchorTime(pin.time, t0, t1)
+        : pin.time == null
+          ? fallback
+          : Math.max(t0 + span * 0.1, Math.min(t1 - span * 0.1, pin.time));
 
     for (const taken of used) {
       if (Math.abs(time - taken) / span < 0.08) {
@@ -388,9 +413,11 @@ function feedTradeAsWalletTrade(trade: PolymarketTradeWithPnl): PolymarketWallet
 export function FollowButton({
   following,
   onClick,
+  size = "sm",
 }: {
   following: boolean;
   onClick: () => void;
+  size?: "sm" | "md";
 }) {
   return (
     <button
@@ -401,7 +428,9 @@ export function FollowButton({
         e.stopPropagation();
         onClick();
       }}
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold leading-none ${
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full text-[13px] font-semibold leading-none ${
+        size === "md" ? "h-9 px-4" : "px-3.5 py-1.5"
+      } ${
         following
           ? "bg-transparent text-white ring-1 ring-white/20"
           : "bg-white text-black"
@@ -511,8 +540,12 @@ export default function FeedPositionSheet({
   const entryChance = outcomeChance(trade.price, trade.outcome, trade.outcome);
   const chartColor = markPrice >= trade.price ? "#00D54B" : "#FF375F";
   const baseHistory = useMemo(
-    () => seedChanceHistory(chance, seed, chartRangeSecs),
-    [chance, seed, chartRangeSecs],
+    () =>
+      seedChanceHistory(chance, seed, chartRangeSecs, {
+        time: parseTradeTime(trade.timestamp),
+        percent: entryChance,
+      }),
+    [chance, seed, chartRangeSecs, trade.timestamp, entryChance],
   );
   const chartTrades = useMemo(() => {
     const seen = new Set(marketTrades.map(tradeItemKey));
@@ -708,46 +741,54 @@ export default function FeedPositionSheet({
               </div>
             </button>
             {isOwn ? null : (
-              <FollowButton following={following} onClick={onFollowToggle} />
+              <FollowButton
+                following={following}
+                onClick={onFollowToggle}
+                size="md"
+              />
             )}
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
-          <section className="rounded-[20px] bg-white/[0.08] px-3.5 pb-3.5 pt-3.5">
-            <div className="flex items-start gap-2.5">
+        <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-4">
+          <section className="rounded-[28px] bg-white/[0.08] px-4 pb-4 pt-5">
+            <div className="flex items-center gap-2 px-1">
               {tradedLogo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={tradedLogo}
                   alt=""
-                  className="h-9 w-9 shrink-0 object-contain"
+                  className="h-5 w-5 shrink-0 object-contain"
                 />
               ) : marketImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={marketImage}
                   alt=""
-                  className="h-9 w-9 shrink-0 rounded-lg object-cover"
+                  className="h-5 w-5 shrink-0 rounded-md object-cover"
                 />
-              ) : (
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-[11px] font-semibold text-white/40">
-                  {trade.marketTitle.slice(0, 1).toUpperCase()}
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-semibold leading-snug">
-                  {trade.marketTitle}
-                </p>
-                {volume24h !== undefined && volume24h > 0 && (
-                  <p className="mt-0.5 text-[11px] text-white/40">
-                    Vol. {formatUsd(volume24h)}
-                  </p>
-                )}
-              </div>
+              ) : null}
+              <p className="min-w-0 truncate text-[14px] font-semibold leading-tight">
+                {tradedLogo
+                  ? outcomeLabel
+                  : `${outcomeLabel} · ${trade.marketTitle}`}
+              </p>
             </div>
 
-            <div className="-mx-1 mt-2 h-[168px] overflow-visible" aria-label="Position chance chart">
+            <p
+              className={`mt-2 px-1 text-[38px] font-semibold leading-none tracking-tight tabular-nums ${instrumentSansCondensed.className}`}
+            >
+              {formatUsdMoney(currentValue)}
+            </p>
+            <p
+              className={`mt-1.5 px-1 text-[14px] font-semibold tabular-nums ${
+                pnlPositive ? "text-[#00D54B]" : "text-[#FF375F]"
+              }`}
+            >
+              {formatSignedUsdMoney(pnlUsd)}
+            </p>
+
+            <div className="-mx-4 mt-3 h-[168px] overflow-visible" aria-label="Position chance chart">
               {chanceHistory.length >= 2 ? (
                 <div className="relative h-full w-full isolate">
                   <ChanceSparkline
@@ -819,7 +860,7 @@ export default function FeedPositionSheet({
                         </span>
                         {selected ? (
                           <span
-                            className="absolute left-1/2 bottom-[calc(50%+8px)] -translate-x-1/2 rounded-full bg-black px-1.5 py-[3px] text-[10px] font-semibold tabular-nums leading-none"
+                            className="absolute left-1/2 bottom-[calc(50%+9px)] -translate-x-1/2 rounded-full bg-black px-2 py-1 text-[12px] font-semibold tabular-nums leading-none"
                             style={{ color: ring }}
                           >
                             {formatOdds(item?.price ?? trade.price)}
@@ -833,7 +874,7 @@ export default function FeedPositionSheet({
             </div>
 
             <div
-              className="mt-1 flex items-center justify-between gap-1"
+              className="mt-3 flex items-center justify-between gap-1"
               role="tablist"
               aria-label="Chart range"
             >
@@ -846,7 +887,7 @@ export default function FeedPositionSheet({
                     role="tab"
                     aria-selected={selected}
                     onClick={() => setChartRangeId(range.id)}
-                    className={`h-7 flex-1 rounded-full text-[12px] font-semibold tabular-nums transition-colors duration-200 ${
+                    className={`h-9 flex-1 rounded-full text-[14px] font-semibold tabular-nums transition-colors duration-200 ${
                       selected
                         ? "bg-white/[0.14] text-white"
                         : "text-white/45 hover:text-white/75"
@@ -856,51 +897,6 @@ export default function FeedPositionSheet({
                   </button>
                 );
               })}
-            </div>
-
-            <div className="mt-3 flex items-start justify-between gap-3">
-              <div>
-                <p
-                  className={`text-[28px] font-semibold leading-none tracking-tight tabular-nums ${instrumentSansCondensed.className}`}
-                >
-                  {formatUsdPrecise(currentValue)}
-                </p>
-                <p className="mt-1.5 text-[12px] tabular-nums text-white/45">
-                  {shares.toLocaleString("en-US", { maximumFractionDigits: 0 })}{" "}
-                  Shares
-                </p>
-              </div>
-              <div className="text-right">
-                <p
-                  className={`text-[15px] font-semibold tabular-nums ${
-                    pnlPositive ? "text-[#00D54B]" : "text-[#FF375F]"
-                  }`}
-                >
-                  {formatSignedUsd(pnlUsd)}
-                </p>
-                <p
-                  className={`mt-1.5 text-[12px] font-semibold tabular-nums ${
-                    pnlPositive ? "text-[#00D54B]" : "text-[#FF375F]"
-                  }`}
-                >
-                  {formatSignedPercent(pnlPct)}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-3 flex items-center justify-between text-[11px] text-white/40">
-              <span>
-                Invested{" "}
-                <span className="tabular-nums text-white/70">
-                  {formatUsdPrecise(trade.amountUsd)}
-                </span>
-              </span>
-              <span>
-                Avg. Entry{" "}
-                <span className="tabular-nums text-white/70">
-                  {formatOdds(trade.price)}
-                </span>
-              </span>
             </div>
 
             <button
@@ -924,9 +920,9 @@ export default function FeedPositionSheet({
                   referralCode,
                 })
               }
-              className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-full border border-white/15 text-[13px] font-semibold text-white"
+              className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full border border-white/15 text-[15px] font-semibold text-white"
             >
-              <ShareIcon className="h-3.5 w-3.5" />
+              <ShareIcon className="h-4 w-4" />
               Share
             </button>
           </section>

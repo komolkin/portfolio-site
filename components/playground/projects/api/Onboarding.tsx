@@ -1,12 +1,91 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import type { PolymarketLeaderboardWallet } from "@/lib/polymarketscan";
 import { FollowButton } from "./FeedPositionSheet";
 import MarketRiver from "./MarketRiver";
 import UserAvatar from "./UserAvatar";
 
-type OnboardingStep = "welcome" | "username" | "follow";
+type OnboardingStep = "welcome" | "invite" | "follow";
+
+const STEP_EASE = [0.22, 1, 0.36, 1] as const;
+const INVITE_LENGTH = 6;
+const INVITE_CODE = "111111";
+
+function TermsNote() {
+  return (
+    <p className="text-center text-[11px] leading-[1.45] text-white/45">
+      By using Worm, you agree to accept our
+      <br />
+      <button type="button" className="font-semibold text-white/85">
+        Terms of Use
+      </button>{" "}
+      and{" "}
+      <button type="button" className="font-semibold text-white/85">
+        Privacy Policy
+      </button>
+    </p>
+  );
+}
+
+function InviteCodeInput({
+  value,
+  onChange,
+  onSubmit,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+}) {
+  const [focused, setFocused] = useState(false);
+  const half = INVITE_LENGTH / 2;
+  const cell = (index: number) => {
+    const char = value[index];
+    const active = focused && index === Math.min(value.length, INVITE_LENGTH - 1);
+    return (
+      <span
+        key={index}
+        className={`flex h-14 w-11 items-center justify-center rounded-[14px] text-[24px] font-semibold uppercase tabular-nums transition-colors ${
+          active ? "bg-white/[0.14] ring-1 ring-white/50" : "bg-white/[0.08]"
+        } ${char ? "text-white" : "text-white/25"}`}
+      >
+        {char ?? "*"}
+      </span>
+    );
+  };
+  return (
+    <label className="relative mt-8 flex items-center justify-center gap-2">
+      {Array.from({ length: half }, (_, i) => cell(i))}
+      <span className="mx-1 text-[22px] font-semibold text-white/30">-</span>
+      {Array.from({ length: half }, (_, i) => cell(i + half))}
+      <input
+        type="text"
+        inputMode="text"
+        autoComplete="one-time-code"
+        autoCapitalize="characters"
+        spellCheck={false}
+        autoFocus
+        aria-label="Invite code"
+        value={value}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && value.length === INVITE_LENGTH) onSubmit();
+        }}
+        onChange={(e) =>
+          onChange(
+            e.target.value
+              .toUpperCase()
+              .replace(/[^A-Z0-9]/g, "")
+              .slice(0, INVITE_LENGTH),
+          )
+        }
+        className="absolute inset-0 h-full w-full cursor-text opacity-0"
+      />
+    </label>
+  );
+}
 
 function shortWallet(wallet: string): string {
   if (wallet.length < 10) return wallet;
@@ -32,6 +111,7 @@ export default function Onboarding({
   traders,
   tradersStatus,
   marketImages,
+  teamLogos,
   isFollowing,
   onToggleFollow,
   onComplete,
@@ -39,140 +119,176 @@ export default function Onboarding({
   traders: PolymarketLeaderboardWallet[];
   tradersStatus: "loading" | "ready" | "error";
   marketImages: string[];
+  teamLogos: string[];
   isFollowing: (wallet: string) => boolean;
   onToggleFollow: (wallet: string) => void;
   onComplete: (username: string | null) => void;
 }) {
   const [step, setStep] = useState<OnboardingStep>("welcome");
-  const [username, setUsername] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [inviteError, setInviteError] = useState(false);
+
+  const submitInvite = () => {
+    if (inviteCode === INVITE_CODE) setStep("follow");
+    else setInviteError(true);
+  };
   const suggested = useMemo(
     () => traders.slice(0, 8),
     [traders],
   );
 
-  const trimmed = username.trim().replace(/^@/, "");
-  const usernameValid = /^[a-zA-Z0-9_]{3,16}$/.test(trimmed);
+  const finish = () => onComplete(null);
 
-  const finish = (name: string | null) => {
-    onComplete(name && name.length > 0 ? name : null);
-  };
-
-  const skip = () => {
-    if (step === "welcome") setStep("username");
-    else if (step === "username") setStep("follow");
-    else finish(trimmed || null);
+  const back = () => {
+    setStep(step === "follow" ? "invite" : "welcome");
   };
 
   return (
     <div
-      className={`absolute inset-0 z-40 flex flex-col overflow-hidden bg-black px-5 pt-6 ${
-        step === "welcome" ? "pb-10" : "pb-5"
-      }`}
+      className="absolute inset-0 z-40 flex flex-col overflow-hidden bg-black px-5 pt-[64px] pb-5"
       role="dialog"
       aria-modal="true"
       aria-label="Get started"
     >
-      {step === "welcome" ? (
-        <>
-          <MarketRiver images={marketImages} />
-        </>
-      ) : (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[48%]"
-          style={{
-            background:
-              "radial-gradient(ellipse 110% 90% at 50% -8%, rgba(58, 86, 104, 0.58) 0%, rgba(34, 53, 68, 0.28) 38%, transparent 72%)",
-          }}
-        />
-      )}
+      <AnimatePresence initial={false}>
+        {step === "welcome" ? (
+          <motion.div
+            key="river"
+            className="absolute inset-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.06 }}
+            transition={{ duration: 0.5, ease: STEP_EASE }}
+          >
+            <MarketRiver images={marketImages} logos={teamLogos} />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="glow"
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[48%]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, ease: STEP_EASE }}
+            style={{
+              background:
+                "radial-gradient(ellipse 110% 90% at 50% -8%, rgba(58, 86, 104, 0.58) 0%, rgba(34, 53, 68, 0.28) 38%, transparent 72%)",
+            }}
+          />
+        )}
+      </AnimatePresence>
       <div className="relative z-[3] flex min-h-0 flex-1 flex-col">
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex gap-1.5" aria-hidden>
-          {(["welcome", "username", "follow"] as const).map((id) => (
-            <span
-              key={id}
-              className={`h-1 w-6 rounded-full ${
-                step === id ? "bg-white" : "bg-white/20"
-              }`}
-            />
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={skip}
-          className={`text-[12px] font-semibold hover:text-white/80 ${
-            step === "welcome" ? "text-white/70" : "text-white/45"
-          }`}
+      <AnimatePresence initial={false}>
+      {step !== "welcome" && (
+        <motion.div
+          key="progress"
+          className="mb-6 grid grid-cols-[1fr_auto_1fr] items-center"
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, transition: { duration: 0.16 } }}
+          transition={{ duration: 0.3, delay: 0.18, ease: STEP_EASE }}
         >
-          Skip
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={back}
+            aria-label="Back"
+            className="-ml-2 flex h-9 w-9 items-center justify-center justify-self-start rounded-full text-white/70 hover:bg-white/[0.08] hover:text-white"
+          >
+            <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" aria-hidden>
+              <path
+                d="M10 3.5 5.5 8l4.5 4.5"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+          <div className="flex gap-1.5" aria-hidden>
+            {(["invite", "follow"] as const).map((id) => (
+              <span
+                key={id}
+                className={`h-1 w-6 rounded-full ${
+                  step === id ? "bg-white" : "bg-white/20"
+                }`}
+              />
+            ))}
+          </div>
+          {step === "follow" && (
+            <button
+              type="button"
+              onClick={finish}
+              className="justify-self-end text-[12px] font-semibold text-white/45 hover:text-white/80"
+            >
+              Skip
+            </button>
+          )}
+        </motion.div>
+      )}
+      </AnimatePresence>
 
+      <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={step}
+        className="flex min-h-0 flex-1 flex-col"
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10, transition: { duration: 0.16, ease: "easeIn" } }}
+        transition={{ duration: 0.32, ease: STEP_EASE }}
+      >
       {step === "welcome" && (
-        <div className="relative flex min-h-0 flex-1 flex-col">
+        <div className="relative flex min-h-0 flex-1 flex-col pb-5">
           <h1 className="relative z-10 mx-auto mt-auto mb-6 max-w-[300px] text-balance text-center text-[28px] font-semibold leading-tight tracking-[-0.03em] [text-shadow:0_2px_24px_rgba(0,0,0,0.75)]">
             Copy traders, track markets, and see what&apos;s moving
           </h1>
           <div className="relative z-10 flex shrink-0 flex-col gap-2.5">
             <button
               type="button"
-              onClick={() => setStep("username")}
+              onClick={() => setStep("invite")}
               className="mx-auto flex h-12 items-center justify-center rounded-full bg-white px-8 text-[15px] font-semibold text-black"
             >
-              Get started
+              I have an invite code
             </button>
-            <p className="mt-2 text-center text-[11px] leading-[1.45] text-white/45">
-              By using Worm, you agree to accept our
-              <br />
-              <button type="button" className="font-semibold text-white/85">
-                Terms of Use
-              </button>{" "}
-              and{" "}
-              <button type="button" className="font-semibold text-white/85">
-                Privacy Policy
-              </button>
-            </p>
           </div>
         </div>
       )}
 
-      {step === "username" && (
+      {step === "invite" && (
         <div className="flex min-h-0 flex-1 flex-col">
           <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em]">
-            Choose a username
+            Enter the invite code you have received
           </h1>
-          <p className="mt-3 text-[14px] leading-relaxed text-white/55">
-            This is how other traders will see you in the feed.
-          </p>
-          <label className="mt-6 flex items-center gap-2 rounded-full bg-white/[0.08] px-3.5 py-3">
-            <span className="text-[15px] font-semibold text-white/35">@</span>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) =>
-                setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))
-              }
-              placeholder="yourname"
-              maxLength={16}
-              autoComplete="off"
-              spellCheck={false}
-              className="min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-white outline-none placeholder:text-white/30"
-            />
-          </label>
-          <p className="mt-2 text-[11px] text-white/40">
-            3–16 characters. Letters, numbers, and underscores.
-          </p>
-          <button
-            type="button"
-            disabled={!usernameValid}
-            onClick={() => setStep("follow")}
-            className="mt-auto h-12 w-full rounded-full bg-white text-[15px] font-semibold text-black disabled:bg-white/20 disabled:text-white/40"
+          <InviteCodeInput
+            value={inviteCode}
+            onChange={(value) => {
+              setInviteCode(value);
+              setInviteError(false);
+            }}
+            onSubmit={submitInvite}
+          />
+          <p
+            role="alert"
+            className={`mt-3 text-center text-[13px] font-medium text-[#FF375F] transition-opacity ${
+              inviteError ? "opacity-100" : "opacity-0"
+            }`}
           >
-            Continue
-          </button>
+            That invite code isn&apos;t valid
+          </p>
+          <div className="mt-auto flex flex-col gap-4">
+            <button
+              type="button"
+              disabled={inviteCode.length < INVITE_LENGTH}
+              onClick={submitInvite}
+              className="h-12 w-full rounded-full bg-white text-[15px] font-semibold text-black disabled:bg-white/20 disabled:text-white/40"
+            >
+              Let me in
+            </button>
+            <TermsNote />
+          </div>
         </div>
       )}
+
 
       {step === "follow" && (
         <div className="flex min-h-0 flex-1 flex-col">
@@ -233,13 +349,15 @@ export default function Onboarding({
           </div>
           <button
             type="button"
-            onClick={() => finish(trimmed || null)}
+            onClick={finish}
             className="mt-4 h-12 w-full shrink-0 rounded-full bg-white text-[15px] font-semibold text-black"
           >
             Done
           </button>
         </div>
       )}
+      </motion.div>
+      </AnimatePresence>
       </div>
     </div>
   );

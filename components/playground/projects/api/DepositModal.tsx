@@ -548,7 +548,7 @@ export default function DepositModal({
             )}
 
             {step === "method" && (
-              <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain px-5 pb-5 pt-3">
+              <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-5 pt-3">
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -597,7 +597,7 @@ export default function DepositModal({
             )}
 
             {step === "pay" && method && (
-              <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain px-5 pb-5 pt-3">
+              <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-5 pt-3">
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -794,7 +794,7 @@ export default function DepositModal({
             )}
 
             {step === "success" && receipt && (
-              <div className="flex h-full min-h-0 flex-col items-center overflow-y-auto overscroll-contain px-5 pb-5 pt-6 text-center">
+              <div className="flex h-full min-h-0 flex-col items-center overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-5 pt-6 text-center">
                 <div className="w-full">
                   <DepositedHero value={receipt.amount} />
                   <p className="mt-1 text-[13px] text-white/45">

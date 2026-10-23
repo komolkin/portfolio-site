@@ -14,8 +14,13 @@ const LAYERS = [
   { count: 6, width: [34, 46], opacity: 0.9, duration: 26 },
 ] as const;
 
+/** Every Nth tile is a team logo when logos are available. */
+const LOGO_EVERY = 3;
+const MAX_LOGOS = 40;
+
 type Tile = {
   src: string;
+  logo: boolean;
   left: number;
   top: number;
   width: number;
@@ -94,27 +99,36 @@ function mulberry32(seed: number) {
   };
 }
 
-function buildLayers(pool: string[]): Tile[][] {
+function buildLayers(pool: string[], logoPool: string[]): Tile[][] {
   const rand = mulberry32(0x5eed);
   const total = LAYERS.reduce((sum, layer) => sum + layer.count, 0);
   // Never show the same image twice: shrink every layer when the pool is small.
-  const scale = Math.min(1, pool.length / total);
+  const scale = Math.min(1, (pool.length + logoPool.length) / total);
   let cursor = 0;
+  let logoCursor = 0;
+  let index = 0;
   return LAYERS.map((layer, depth) => {
     const tiles: Tile[] = [];
     const count = Math.max(1, Math.floor(layer.count * scale));
-    for (let i = 0; i < count && cursor < pool.length; i++) {
+    for (let i = 0; i < count; i++) {
+      const wantLogo = index++ % LOGO_EVERY === 1;
+      const logo =
+        (wantLogo && logoCursor < logoPool.length) || cursor >= pool.length;
+      if (logo && logoCursor >= logoPool.length) break;
       const width =
-        layer.width[0] + rand() * (layer.width[1] - layer.width[0]);
+        (layer.width[0] + rand() * (layer.width[1] - layer.width[0])) *
+        (logo ? 0.75 : 1);
       // Alternate columns so each layer spreads across the screen.
       const column = (i + depth) % 3;
       const centerX = ((column + 0.5) / 3) * 100 + (rand() - 0.5) * 24;
+      const aspect = ASPECTS[Math.floor(rand() * ASPECTS.length)]!;
       tiles.push({
-        src: pool[cursor++]!,
+        src: logo ? logoPool[logoCursor++]! : pool[cursor++]!,
+        logo,
         left: centerX - width / 2,
         top: (i / count) * 100 + rand() * (60 / count),
         width,
-        aspect: ASPECTS[Math.floor(rand() * ASPECTS.length)]!,
+        aspect: logo ? 1 : aspect,
       });
     }
     return tiles;
@@ -143,7 +157,11 @@ const TileImage = memo(function TileImage({
 
   return (
     <div
-      className="absolute overflow-hidden rounded-[6px] bg-white/[0.06]"
+      className={`absolute ${
+        tile.logo
+          ? "[filter:drop-shadow(0_6px_16px_rgba(0,0,0,0.55))]"
+          : "overflow-hidden rounded-[6px] bg-white/[0.06]"
+      }`}
       style={{
         left: `${tile.left}%`,
         top: `${tile.top}%`,
@@ -157,7 +175,9 @@ const TileImage = memo(function TileImage({
         alt=""
         draggable={false}
         decoding="async"
-        className="h-full w-full object-cover transition-[opacity,transform] ease-out"
+        className={`h-full w-full transition-[opacity,transform] ease-out ${
+          tile.logo ? "object-contain" : "object-cover"
+        }`}
         style={{
           opacity: visible ? 1 : 0,
           transform: visible ? "scale(1)" : "scale(1.08)",
@@ -172,34 +192,47 @@ const TileImage = memo(function TileImage({
   );
 });
 
-export default function MarketRiver({ images }: { images: string[] }) {
+export default function MarketRiver({
+  images,
+  logos = [],
+}: {
+  images: string[];
+  logos?: string[];
+}) {
   const pool = useMemo(() => uniqueSources(images), [images]);
-  const layers = useMemo(
-    () => (pool.length > 0 ? buildLayers(pool) : []),
-    [pool],
+  const logoPool = useMemo(
+    () => [...new Set(logos)].slice(0, MAX_LOGOS),
+    [logos],
   );
+  const layers = useMemo(
+    () =>
+      pool.length + logoPool.length > 0 ? buildLayers(pool, logoPool) : [],
+    [pool, logoPool],
+  );
+  const flatTiles = useMemo(() => layers.flat(), [layers]);
   const [srcs, setSrcs] = useState<string[]>([]);
   const srcsRef = useRef<string[]>([]);
 
   useEffect(() => {
-    setSrcs(layers.flat().map((tile) => tile.src));
-  }, [layers]);
+    setSrcs(flatTiles.map((tile) => tile.src));
+  }, [flatTiles]);
 
   useEffect(() => {
     srcsRef.current = srcs;
   }, [srcs]);
 
   useEffect(() => {
-    if (pool.length < 2) return;
+    if (pool.length + logoPool.length < 2) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     let cancelled = false;
     const id = window.setInterval(() => {
       const current = srcsRef.current;
       if (document.hidden || current.length === 0) return;
       const used = new Set(current);
-      const unused = pool.filter((src) => !used.has(src));
-      if (unused.length === 0) return;
       const index = Math.floor(Math.random() * current.length);
+      const source = flatTiles[index]?.logo ? logoPool : pool;
+      const unused = source.filter((src) => !used.has(src));
+      if (unused.length === 0) return;
       const incoming = unused[Math.floor(Math.random() * unused.length)]!;
       // Swap only once decoded so the fade never reveals an empty tile.
       preload(incoming)
@@ -218,7 +251,7 @@ export default function MarketRiver({ images }: { images: string[] }) {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [pool]);
+  }, [pool, logoPool, flatTiles]);
 
   if (layers.length === 0) return null;
   let flatIndex = 0;

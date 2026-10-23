@@ -366,7 +366,7 @@ export function MessageComposer({
               No GIFs match that.
             </p>
           ) : (
-            <div className="grid max-h-[188px] grid-cols-3 gap-1.5 overflow-y-auto">
+            <div className="grid max-h-[188px] grid-cols-3 gap-1.5 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {gifs.map((gif) => (
                 <button
                   key={gif.id}

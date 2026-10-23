@@ -829,7 +829,7 @@ export default function TradeFlowModal({
 
             {step === "confirm" && (
               <div className="flex h-full min-h-0 flex-col">
-                <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
+                <div className="relative min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-4">
                   <button
                     type="button"
                     aria-label="Back"
@@ -908,7 +908,7 @@ export default function TradeFlowModal({
                   </button>
                 </div>
 
-                <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto overscroll-contain px-6 pb-9 text-center">
+                <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-6 pb-9 text-center">
                   <h2 className="mt-4 text-[34px] font-semibold tracking-[-0.03em] text-white [text-shadow:0_0_24px_rgba(255,255,255,0.35)] animate-[trade-success-fade_0.5s_cubic-bezier(0.32,0.72,0,1)_0.15s_both]">
                     You predicted!
                   </h2>

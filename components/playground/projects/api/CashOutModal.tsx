@@ -312,7 +312,7 @@ export default function CashOutModal({
           />
         </div>
 
-        <div className="min-h-0 overflow-y-auto overscroll-contain px-5 pb-5">
+        <div className="min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-5">
           <SheetPager step={step} direction={1}>
           {step === "confirm" ? (
             <div className="flex flex-col gap-4">

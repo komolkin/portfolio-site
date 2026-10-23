@@ -499,6 +499,25 @@ function createDemoMlbMarket(): PolymarketMarketData {
   };
 }
 
+const ONBOARDING_NBA_LOGOS = [
+  "lal", "bos", "gs", "mia", "chi", "ny", "dal", "den", "phx", "mil",
+  "okc", "phi", "lac", "cle", "sa", "min", "hou", "mem", "sac", "ind",
+  "atl", "orl", "tor", "bkn", "no", "por", "utah", "det", "cha", "wsh",
+].map((abbr) => `https://a.espncdn.com/i/teamlogos/nba/500/${abbr}.png`);
+
+const ONBOARDING_LEAGUE_LOGOS = [
+  "https://a.espncdn.com/i/teamlogos/leagues/500/nba.png",
+  "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
+  "https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png",
+  "https://a.espncdn.com/i/leaguelogos/soccer/500/2.png",
+  "https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png",
+  "https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png",
+  "https://a.espncdn.com/i/leaguelogos/soccer/500/15.png",
+  "https://a.espncdn.com/i/teamlogos/leagues/500/wnba.png",
+  "https://a.espncdn.com/i/leaguelogos/soccer/500/10.png",
+  "https://a.espncdn.com/i/teamlogos/leagues/500/mls.png",
+];
+
 const EPL_MAN_CITY_LOGO = "https://a.espncdn.com/i/teamlogos/soccer/500/382.png";
 const EPL_ARSENAL_LOGO = "https://a.espncdn.com/i/teamlogos/soccer/500/359.png";
 
@@ -2593,6 +2612,7 @@ const FLOAT_HANDLES = [
 /** Synthetic feed trade so preview uspics open the same position sheet as the feed. */
 const FEED_TRADES_STORAGE_KEY = "api-playground-feed-trades-v1";
 
+const MAX_PROFILE_POSITIONS = 5;
 const FLOAT_PNL_MIN = 450;
 const FLOAT_PNL_MAX = 2_239;
 
@@ -4848,19 +4868,21 @@ function TabBarGlass({ children }: { children: ReactNode }) {
 }
 
 function IosStatusBar() {
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
     const tick = () => setNow(new Date());
+    tick();
     const id = window.setInterval(tick, 30_000);
     return () => window.clearInterval(id);
   }, []);
 
-  const time = now.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: false,
-  });
+  const time =
+    now?.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: false,
+    }) ?? "";
 
   return (
     <div
@@ -6385,6 +6407,7 @@ export default function Api() {
     const add = (src: string | null | undefined) => {
       if (!src) return;
       const normalized = src.startsWith("//") ? `https:${src}` : src;
+      if (/\/soccer-leagues\//i.test(normalized)) return;
       const key = keyOf(normalized);
       if (seen.has(key)) return;
       seen.add(key);
@@ -6400,6 +6423,26 @@ export default function Api() {
     }
     return urls;
   }, [liveMarkets, trendingMarkets, marketPhotoPool, trades]);
+
+  const onboardingLogos = useMemo(() => {
+    const teams = [...ONBOARDING_NBA_LOGOS];
+    const add = (src: string | null | undefined) => {
+      if (src && /teamlogos\/nba\//i.test(src)) {
+        teams.push(src.replace("/500-dark/", "/500/"));
+      }
+    };
+    for (const market of [...liveMarkets, ...trendingMarkets]) {
+      for (const team of market.teams ?? []) add(team.logo);
+    }
+    // Interleave so leagues stay visible among the many team logos.
+    const leagues = [...ONBOARDING_LEAGUE_LOGOS];
+    const mixed: string[] = [];
+    while (teams.length > 0 || leagues.length > 0) {
+      mixed.push(...teams.splice(0, 3));
+      if (leagues.length > 0) mixed.push(leagues.shift()!);
+    }
+    return mixed;
+  }, [liveMarkets, trendingMarkets]);
 
   const marketBySlug = useMemo(() => {
     const map = new Map<string, PolymarketMarketData>();
@@ -6559,6 +6602,7 @@ export default function Api() {
     );
     const merged = [...userPositions];
     for (const position of demoProfile.positions) {
+      if (merged.length >= MAX_PROFILE_POSITIONS) break;
       const key = `${position.marketSlug ?? position.marketTitle}-${position.outcome}`;
       if (!seen.has(key)) merged.push(position);
     }
@@ -6894,8 +6938,8 @@ export default function Api() {
             isExploreFeed
               ? "flex flex-col overflow-hidden"
               : showingDrillDown || showingProfileSubScreen
-                ? "overflow-y-auto overscroll-contain pb-5"
-                : "overflow-y-auto overscroll-contain"
+                ? "overflow-y-auto overscroll-contain pb-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                : "overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           }`}
           style={
             !showingDrillDown && !showingProfileSubScreen
@@ -8703,6 +8747,7 @@ export default function Api() {
             traders={leaderboardWallets}
             tradersStatus={leaderboardStatus}
             marketImages={onboardingImages}
+            teamLogos={onboardingLogos}
             isFollowing={isFollowing}
             onToggleFollow={toggleFollow}
             onComplete={completeOnboarding}

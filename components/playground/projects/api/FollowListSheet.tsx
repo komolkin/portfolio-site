@@ -156,7 +156,7 @@ export default function FollowListSheet({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5">
+        <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-5">
           {people.length === 0 ? (
             <p className="text-sm text-white/55">
               {kind === "following"

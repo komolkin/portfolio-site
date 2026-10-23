@@ -1,4 +1,5 @@
 export const PROJECTS = [
+  { id: "api", label: "API" },
   { id: "mcp", label: "MCP" },
   { id: "positions", label: "Positions" },
   { id: "expandable", label: "Expandable" },
@@ -13,7 +14,6 @@ export const PROJECTS = [
   { id: "leverage-selector", label: "Categorical" },
   { id: "resolved-card", label: "Resolved" },
   { id: "ai-cam", label: "Selfie", hidden: true },
-  { id: "api", label: "API" },
   { id: "buttony", label: "Buttony" },
   { id: "leverage", label: "Leverage" },
   { id: "spotlight", label: "Spotlight" },

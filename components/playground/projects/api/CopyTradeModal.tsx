@@ -411,7 +411,7 @@ export default function CopyTradeModal({
           />
         </div>
 
-        <div className="min-h-0 overflow-y-auto overscroll-contain px-5 pb-5">
+        <div className="min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-5">
           <SheetPager step={step} direction={stepDir}>
           {step === "form" && (
             <div className="flex flex-col gap-3">
@@ -919,7 +919,7 @@ export default function CopyTradeModal({
                 {riskSummary(live.maxDailyUsd, live.maxOpenPositions)}
               </p>
 
-              <div className="max-h-[240px] overflow-y-auto overscroll-contain">
+              <div className="max-h-[240px] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain">
                 {copiedEntries.length === 0 ? (
                   <p className="py-3 text-[13px] text-white/45">
                     Waiting for their next trade
