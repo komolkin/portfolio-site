@@ -2547,13 +2547,7 @@ function FloatingTopPositions({
                 decoding="async"
               />
               <span
-                className="pointer-events-none absolute inset-x-[-4px] -bottom-1.5 inline-flex items-center justify-center overflow-hidden rounded-full px-1.5 py-1.5 text-[11px] font-semibold leading-none tabular-nums tracking-tight text-white"
-                style={{
-                  background:
-                    "linear-gradient(165deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0.1) 22%, rgba(20,20,24,0.72) 48%, rgba(8,8,10,0.82) 100%)",
-                  boxShadow:
-                    "inset 0 1px 1px rgba(255,255,255,0.55), inset 0 -2px 4px rgba(0,0,0,0.35), 0 4px 12px rgba(0,0,0,0.35)",
-                }}
+                className="api-pnl-shine pointer-events-none absolute inset-x-[-4px] -bottom-1.5 inline-flex items-center justify-center overflow-hidden rounded-full bg-black/45 px-1.5 py-1.5 text-[11px] font-semibold leading-none tabular-nums tracking-tight text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),inset_0_-2px_4px_rgba(0,0,0,0.35),0_4px_12px_rgba(0,0,0,0.35)] backdrop-blur-md"
               >
                 +${pnl.toLocaleString("en-US")}
               </span>
