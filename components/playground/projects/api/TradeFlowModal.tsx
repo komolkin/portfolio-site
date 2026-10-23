@@ -19,14 +19,14 @@ const nfMaskStyle = {
 } as const;
 
 const WIN_SPARKLES = [
-  { top: "2%", left: "4%", size: 12, delay: "0ms", color: "#E8C44A" },
-  { top: "8%", right: "2%", size: 9, delay: "120ms", color: "#00D54B" },
+  { top: "2%", left: "4%", size: 12, delay: "0ms", color: "#FFFFFF" },
+  { top: "8%", right: "2%", size: 9, delay: "120ms", color: "#FFFFFFB3" },
   { top: "42%", left: "-2%", size: 7, delay: "220ms", color: "#FFFFFF" },
-  { top: "48%", right: "-4%", size: 11, delay: "80ms", color: "#E8C44A" },
-  { bottom: "6%", left: "10%", size: 8, delay: "180ms", color: "#00D54B" },
+  { top: "48%", right: "-4%", size: 11, delay: "80ms", color: "#FFFFFF" },
+  { bottom: "6%", left: "10%", size: 8, delay: "180ms", color: "#FFFFFFB3" },
   { bottom: "0%", right: "12%", size: 10, delay: "260ms", color: "#FFFFFF" },
-  { top: "-6%", left: "42%", size: 8, delay: "40ms", color: "#E8C44A" },
-  { bottom: "-8%", left: "48%", size: 7, delay: "300ms", color: "#00D54B" },
+  { top: "-6%", left: "42%", size: 8, delay: "40ms", color: "#FFFFFF" },
+  { bottom: "-8%", left: "48%", size: 7, delay: "300ms", color: "#FFFFFFB3" },
 ] as const;
 
 function formatUsd(value: number): string {

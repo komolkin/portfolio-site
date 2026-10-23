@@ -471,6 +471,7 @@ export default function FeedPositionSheet({
   referralCode,
   isOwn = false,
   market,
+  outcomeTone,
 }: {
   trade: PolymarketTradeWithPnl;
   handle: string;
@@ -486,6 +487,7 @@ export default function FeedPositionSheet({
   referralCode: string;
   isOwn?: boolean;
   market?: PolymarketMarketData;
+  outcomeTone?: (outcome: string) => { fill: string; ink: string } | null;
 }) {
   const [drawerOffset, setDrawerOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -569,6 +571,25 @@ export default function FeedPositionSheet({
     1,
     (chanceHistory.at(-1)?.time ?? 0) - (chanceHistory[0]?.time ?? 0),
   );
+
+  const sharePosition = () =>
+    onShare({
+      title: trade.marketTitle,
+      subtitle: outcomeLabel,
+      image: marketImage,
+      handle,
+      wallet: trade.wallet,
+      timestamp: trade.timestamp,
+      invested: trade.amountUsd,
+      entryPrice: trade.price,
+      markPrice,
+      currentValue,
+      pnlUsd,
+      pnlPct,
+      exitLabel: trade.side.toUpperCase() === "SELL" ? "Exit" : "Now",
+      closed: trade.side.toUpperCase() === "SELL",
+      referralCode,
+    });
 
   const closeSheet = () => {
     setOpen(false);
@@ -751,8 +772,16 @@ export default function FeedPositionSheet({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-4">
-          <section className="rounded-[28px] bg-white/[0.08] px-4 pb-4 pt-5">
-            <div className="flex items-center gap-2 px-1">
+          <section className="relative rounded-[28px] bg-white/[0.08] px-5 pb-4 pt-4">
+            <button
+              type="button"
+              aria-label="Share position"
+              onClick={sharePosition}
+              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.08] text-white/80 transition-colors hover:bg-white/[0.14] hover:text-white"
+            >
+              <ShareIcon className="h-4 w-4" />
+            </button>
+            <div className="flex h-6 items-center gap-2 pr-10">
               {tradedLogo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -776,19 +805,19 @@ export default function FeedPositionSheet({
             </div>
 
             <p
-              className={`mt-2 px-1 text-[38px] font-semibold leading-none tracking-tight tabular-nums ${instrumentSansCondensed.className}`}
+              className={`mt-1.5 text-[38px] font-semibold leading-none tracking-tight tabular-nums ${instrumentSansCondensed.className}`}
             >
               {formatUsdMoney(currentValue)}
             </p>
             <p
-              className={`mt-1.5 px-1 text-[14px] font-semibold tabular-nums ${
+              className={`mt-1.5 text-[14px] font-semibold tabular-nums ${
                 pnlPositive ? "text-[#00D54B]" : "text-[#FF375F]"
               }`}
             >
               {formatSignedUsdMoney(pnlUsd)}
             </p>
 
-            <div className="-mx-4 mt-3 h-[168px] overflow-visible" aria-label="Position chance chart">
+            <div className="-mx-5 mt-3 h-[168px] overflow-visible" aria-label="Position chance chart">
               {chanceHistory.length >= 2 ? (
                 <div className="relative h-full w-full isolate">
                   <ChanceSparkline
@@ -899,61 +928,42 @@ export default function FeedPositionSheet({
               })}
             </div>
 
-            <button
-              type="button"
-              onClick={() =>
-                onShare({
-                  title: trade.marketTitle,
-                  subtitle: outcomeLabel,
-                  image: marketImage,
-                  handle,
-                  wallet: trade.wallet,
-                  timestamp: trade.timestamp,
-                  invested: trade.amountUsd,
-                  entryPrice: trade.price,
-                  markPrice,
-                  currentValue,
-                  pnlUsd,
-                  pnlPct,
-                  exitLabel: trade.side.toUpperCase() === "SELL" ? "Exit" : "Now",
-                  closed: trade.side.toUpperCase() === "SELL",
-                  referralCode,
-                })
-              }
-              className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full border border-white/15 text-[15px] font-semibold text-white"
-            >
-              <ShareIcon className="h-4 w-4" />
-              Share
-            </button>
           </section>
         </div>
 
         <div className="shrink-0 px-5 pb-5 pt-3">
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              type="button"
-              disabled={!onTrade}
-              onClick={() => onTrade?.(outcomeLabel)}
-              className="min-w-0 overflow-hidden rounded-full bg-[#00D54B] px-3 py-3.5 text-[15px] font-semibold text-black disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <span className="flex min-w-0 items-baseline justify-center gap-1">
-                <span className="min-w-0 truncate">{outcomeButtonLabel}</span>
-                <span className="shrink-0">{chance}%</span>
-              </span>
-            </button>
-            <button
-              type="button"
-              disabled={!onTrade}
-              onClick={() => onTrade?.(otherOutcome)}
-              className="min-w-0 overflow-hidden rounded-full bg-[#FF375F] px-3 py-3.5 text-[15px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <span className="flex min-w-0 items-baseline justify-center gap-1">
-                <span className="min-w-0 truncate">{otherButtonLabel}</span>
-                <span className="shrink-0">
-                  {Math.max(0, 100 - chance)}%
-                </span>
-              </span>
-            </button>
+          <div className="flex gap-2.5">
+            {[
+              { outcome: outcomeLabel, label: outcomeButtonLabel, cents: chance, pill: ui.pillYes },
+              {
+                outcome: otherOutcome,
+                label: otherButtonLabel,
+                cents: Math.max(0, 100 - chance),
+                pill: ui.pillNo,
+              },
+            ].map((side) => {
+              const tone = outcomeTone?.(side.outcome) ?? null;
+              return (
+                <button
+                  key={side.outcome}
+                  type="button"
+                  data-sfx="press"
+                  disabled={!onTrade}
+                  onClick={() => onTrade?.(side.outcome)}
+                  className={`min-w-0 flex-1 overflow-hidden px-3 ${side.pill}`}
+                  style={
+                    tone
+                      ? { backgroundColor: tone.fill, color: tone.ink }
+                      : undefined
+                  }
+                >
+                  <span className="flex min-w-0 items-baseline justify-center gap-1">
+                    <span className="min-w-0 truncate">{side.label}</span>
+                    <span className="shrink-0 tabular-nums">{side.cents}¢</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

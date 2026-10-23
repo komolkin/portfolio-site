@@ -254,7 +254,10 @@ const cacheByKey = new Map<string, CacheEntry<unknown>>();
 const inFlightByKey = new Map<string, Promise<unknown>>();
 const tradesGlobal = globalThis as typeof globalThis & {
   __polymarketLastGoodTrades?: Map<string, PolymarketTradeWithPnl[]>;
+  __polymarketLastGoodDemoProfile?: Map<string, PolymarketDemoProfile>;
 };
+const lastGoodDemoProfileByKey = (tradesGlobal.__polymarketLastGoodDemoProfile ??=
+  new Map<string, PolymarketDemoProfile>());
 // Kept on globalThis so dev hot reloads don't drop the fallback feed.
 const lastGoodTradesByKey = (tradesGlobal.__polymarketLastGoodTrades ??= new Map<
   string,
@@ -3911,13 +3914,14 @@ export async function getDemoProfilePortfolio(options?: {
             : profile;
 
         setCache(key, resolved, 60_000);
+        lastGoodDemoProfileByKey.set(key, resolved);
         return resolved;
       }
 
-      return getCached<PolymarketDemoProfile>(key);
+      return lastGoodDemoProfileByKey.get(key) ?? null;
     } catch (error) {
       console.error("Error building demo profile portfolio:", error);
-      return getCached<PolymarketDemoProfile>(key);
+      return lastGoodDemoProfileByKey.get(key) ?? null;
     } finally {
       inFlightByKey.delete(key);
     }

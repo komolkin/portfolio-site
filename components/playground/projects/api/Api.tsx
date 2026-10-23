@@ -27,7 +27,7 @@ import type {
 } from "@/lib/polymarketscan";
 import { sportsOutcomeAbbr } from "@/lib/polymarketscan";
 import { instrumentSansCondensed } from "@/lib/fonts";
-import FeedPositionSheet, { FollowButton } from "./FeedPositionSheet";
+import FeedPositionSheet from "./FeedPositionSheet";
 import Onboarding from "./Onboarding";
 import PositionsSheet, { BubblyPositionCard } from "./PositionsSheet";
 import MarketTopTraders from "./MarketTopTraders";
@@ -49,16 +49,12 @@ import CopyTradeModal from "./CopyTradeModal";
 import DepositModal from "./DepositModal";
 import {
   COPY_TRADES_KEY,
-  applyCopyFills,
   copiedTradesForWallet,
   copyRelationshipEntries,
   copyRelationshipPnl,
   formatCopyRule,
   loadCopyTrades,
   saveCopyTrades,
-  simulateCopySource,
-  sourcesFromFeedTrades,
-  sourcesFromWalletProfile,
   tickCopiedMarks,
   type CopyTrade,
 } from "./copyTrades";
@@ -1299,6 +1295,25 @@ function matchupTeamTones(
       ? awayRgb
       : (awayOptions.slice(1).find((rgb) => colorDistance(rgb, homeRgb) >= 90) ?? awayRgb);
   return { away: toneFromRgb(awayFinal), home: toneFromRgb(homeRgb) };
+}
+
+/** Team fill for one outcome's trade button, matching the market page CTA. */
+function outcomeTeamTone(
+  market: PolymarketMarketData,
+  label: string,
+): TeamTone | null {
+  const tones = matchupTeamTones(market);
+  if (!tones) return null;
+  const { away, home } = resolveSportsSides(market);
+  if (nickMatch(label, home.name) && !nickMatch(label, away.name)) {
+    return tones.home;
+  }
+  if (nickMatch(label, away.name)) return tones.away;
+  const sides = getMarketOddsSides(market);
+  const index = sides.findIndex(
+    (side) => side.label.trim().toLowerCase() === label.trim().toLowerCase(),
+  );
+  return index === sides.length - 1 ? tones.home : tones.away;
 }
 
 function ChanceFlow({
@@ -2611,6 +2626,7 @@ const FLOAT_HANDLES = [
 
 /** Synthetic feed trade so preview uspics open the same position sheet as the feed. */
 const FEED_TRADES_STORAGE_KEY = "api-playground-feed-trades-v1";
+const DEMO_PROFILE_STORAGE_KEY = "api-playground-demo-profile-v1";
 
 const MAX_PROFILE_POSITIONS = 5;
 const FLOAT_PNL_MIN = 450;
@@ -4193,12 +4209,23 @@ function ProfilePositionRow({
   );
 }
 
+function formatHistoryPnl(value: number): string {
+  const abs = Math.abs(value);
+  const amount = abs.toLocaleString("en-US", {
+    minimumFractionDigits: abs < 100 ? 2 : 0,
+    maximumFractionDigits: abs < 100 ? 2 : 0,
+  });
+  return `${value < 0 ? "-" : "+"}$${amount}`;
+}
+
 function ProfileHistoryRow({
   trade,
+  pnlUsd,
   marketImage,
   onOpen,
 }: {
   trade: PolymarketWalletTrade;
+  pnlUsd?: number;
   marketImage?: string;
   onOpen: (
     slug: string,
@@ -4233,9 +4260,19 @@ function ProfileHistoryRow({
       title={trade.marketTitle}
       subtitle={`${trade.side} · ${trade.outcome} · ${formatOdds(trade.price)}${timeAgo ? ` · ${timeAgo}` : ""}`}
       trailing={
-        <span className="text-[16px] font-semibold tabular-nums">
-          {formatUsd(trade.size * trade.price)}
-        </span>
+        pnlUsd !== undefined ? (
+          <span
+            className={`text-[16px] font-semibold tabular-nums ${
+              pnlUsd < 0 ? "text-[#FF375F]" : "text-[#00D54B]"
+            }`}
+          >
+            {formatHistoryPnl(pnlUsd)}
+          </span>
+        ) : (
+          <span className="text-[16px] font-semibold tabular-nums text-white/45">
+            {formatUsd(trade.size * trade.price)}
+          </span>
+        )
       }
       onClick={() =>
         onOpen(trade.marketSlug ?? "", trade.marketTitle, {
@@ -4307,6 +4344,20 @@ function CopyTradeCard({
   );
 }
 
+function CheckGlyph() {
+  return (
+    <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" fill="none" aria-hidden>
+      <path
+        d="M2.5 6.2 4.8 8.5 9.5 3.5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function ProfileCountRow({
   following,
   followers,
@@ -4321,34 +4372,26 @@ function ProfileCountRow({
   onFollowersClick?: () => void;
 }) {
   const countClass =
-    "flex items-baseline gap-1.5 rounded-md text-left transition-opacity hover:opacity-80";
+    "flex items-baseline gap-1 rounded-md text-left transition-opacity hover:opacity-80";
   return (
-    <div className="mt-3 flex items-baseline gap-5 text-[13px] leading-none">
-      <button
-        type="button"
-        onClick={onFollowingClick}
-        className={countClass}
-      >
-        <span className="text-white/45">Following</span>
-        <span className="font-semibold tabular-nums">
+    <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[14px] leading-none">
+      <button type="button" onClick={onFollowingClick} className={countClass}>
+        <span className="font-semibold tabular-nums text-white">
           {following.toLocaleString()}
         </span>
+        <span className="text-white/45">Following</span>
       </button>
-      <button
-        type="button"
-        onClick={onFollowersClick}
-        className={countClass}
-      >
-        <span className="text-white/45">Followers</span>
-        <span className="font-semibold tabular-nums">
+      <button type="button" onClick={onFollowersClick} className={countClass}>
+        <span className="font-semibold tabular-nums text-white">
           {followers.toLocaleString()}
         </span>
+        <span className="text-white/45">Followers</span>
       </button>
-      <p className="flex items-baseline gap-1.5">
-        <span className="text-white/45">Win rate</span>
-        <span className="font-semibold tabular-nums">
+      <p className="flex items-baseline gap-1">
+        <span className="font-semibold tabular-nums text-white">
           {winRate === null ? "—" : `${winRate.toFixed(1)}%`}
         </span>
+        <span className="text-white/45">Win rate</span>
       </p>
     </div>
   );
@@ -4369,31 +4412,75 @@ function ProfileIdentityHeader({
   nameRef?: RefObject<HTMLElement | null>;
   trailing?: ReactNode;
 }) {
+  const [copied, setCopied] = useState(false);
+  const hasAddress = wallet.startsWith("0x");
+  const nameIsAddress = name.startsWith("0x");
+  const displayName = nameIsAddress && hasAddress ? shortWallet(wallet) : name;
+  const walletLabel = !hasAddress
+    ? wallet
+    : nameIsAddress
+      ? "Copy address"
+      : shortWallet(wallet);
+  const showWallet = Boolean(walletLabel) && walletLabel !== displayName;
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 1400);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
+  const copyWallet = async () => {
+    if (!hasAddress) return;
+    try {
+      await navigator.clipboard.writeText(wallet);
+      setCopied(true);
+    } catch {
+      // Clipboard can be blocked in embedded previews.
+    }
+  };
+
   return (
-    <div className="flex items-center gap-3">
-      {avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={avatarUrl}
-          alt=""
-          className="h-11 w-11 shrink-0 rounded-full bg-[#2a2a2e] object-cover"
-        />
-      ) : (
-        <UserAvatar seed={seed} label={name} className="h-11 w-11 text-[13px]" />
-      )}
-      <div className="min-w-0 flex-1">
-        <p
-          ref={nameRef as RefObject<HTMLParagraphElement>}
-          className="truncate text-[15px] font-semibold"
-        >
-          {name}
-        </p>
-        <p className="mt-0.5 text-[11px] tabular-nums text-white/40">
-          {shortWallet(wallet)}
-        </p>
+    <div>
+      <div className="flex items-start justify-between gap-3">
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarUrl}
+            alt=""
+            className="h-16 w-16 shrink-0 rounded-full bg-[#2a2a2e] object-cover"
+          />
+        ) : (
+          <UserAvatar seed={seed} label={name} className="h-16 w-16 text-[18px]" />
+        )}
+        {trailing ? (
+          <div className="flex shrink-0 items-center gap-1">{trailing}</div>
+        ) : null}
       </div>
-      {trailing ? (
-        <div className="flex shrink-0 items-center gap-1">{trailing}</div>
+      <p
+        ref={nameRef as RefObject<HTMLParagraphElement>}
+        className="mt-3 truncate text-[24px] font-semibold leading-tight tracking-[-0.03em]"
+      >
+        {displayName}
+      </p>
+      {showWallet ? (
+        <button
+          type="button"
+          onClick={() => void copyWallet()}
+          className="mt-1 inline-flex items-center gap-1.5 text-[13px] tabular-nums text-white/45 transition-colors hover:text-white/70"
+        >
+          {copied ? "Copied" : walletLabel}
+          {hasAddress && !copied ? (
+            <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" aria-hidden>
+              <rect x="5" y="5" width="8" height="8" rx="2" stroke="currentColor" strokeWidth="1.4" />
+              <path
+                d="M3 10.5V4.5A1.5 1.5 0 0 1 4.5 3h6"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+            </svg>
+          ) : null}
+        </button>
       ) : null}
     </div>
   );
@@ -4405,33 +4492,38 @@ function ProfileBalanceChart({
   totalPnl,
   roiPercent,
   history,
-  onDeposit,
+  actions,
 }: {
   balance: number;
   loading: boolean;
   totalPnl: number | null;
   roiPercent: number | null;
   history: LivelinePoint[];
-  onDeposit?: () => void;
+  actions?: ReactNode;
 }) {
+  const first = history[0];
+  const last = history[history.length - 1];
+  const windowSecs =
+    first && last ? Math.max(last.time - first.time, 60) : 60 * 60 * 24;
+  const trend = first && last ? last.value - first.value : 0;
+  const lineColor = trend < 0 ? "#FF375F" : "#00D54B";
+
   return (
-    <>
-      <header className="mb-2 mt-4">
-        <p
-          className={`text-[42px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSansCondensed.className}`}
-        >
-          {loading ? (
-            "—"
-          ) : (
-            <BalanceFlow
-              value={balance}
-              fractionClassName="text-white/40"
-            />
-          )}
-        </p>
-        {!loading && totalPnl !== null && (
-          <p
-            className={`mt-1.5 inline-flex items-baseline gap-1 text-[13px] font-semibold tabular-nums ${
+    <section className="mt-5 overflow-hidden rounded-[28px] bg-white/[0.08] px-5 pb-5 pt-4">
+      <p className="text-[13px] font-medium text-white/45">Portfolio</p>
+      <p
+        className={`mt-1 text-[44px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSansCondensed.className}`}
+      >
+        {loading ? (
+          "—"
+        ) : (
+          <BalanceFlow value={balance} fractionClassName="text-white/40" />
+        )}
+      </p>
+      {!loading && totalPnl !== null ? (
+        <p className="mt-2 flex items-baseline gap-1.5 text-[14px] font-semibold tabular-nums">
+          <span
+            className={`inline-flex items-baseline gap-1 ${
               totalPnl > 0
                 ? "text-[#00D54B]"
                 : totalPnl < 0
@@ -4446,19 +4538,20 @@ function ProfileBalanceChart({
                 <SignedPercentFlow value={roiPercent} />)
               </span>
             ) : null}
-          </p>
-        )}
-      </header>
+          </span>
+          <span className="font-medium text-white/40">All time</span>
+        </p>
+      ) : null}
       <div
-        className="-mx-5 h-[88px] w-[calc(100%+2.5rem)]"
+        className="-mx-5 mt-3 h-[104px] w-[calc(100%+2.5rem)]"
         aria-label="Portfolio value chart"
       >
         {!loading && history.length >= 2 ? (
           <Liveline
             data={history}
-            value={history[history.length - 1]?.value ?? balance}
+            value={last?.value ?? balance}
             theme="dark"
-            color="#00D54B"
+            color={lineColor}
             grid={false}
             badge={false}
             pulse={false}
@@ -4467,10 +4560,10 @@ function ProfileBalanceChart({
             fill
             paused
             showValue={false}
-            window={60 * 60 * 24 * Math.max(history.length - 1, 1)}
+            window={windowSecs}
             formatValue={(v) => formatUsd(v)}
             formatTime={() => ""}
-            padding={{ top: 6, right: 12, bottom: 6, left: 12 }}
+            padding={{ top: 8, right: 0, bottom: 4, left: 0 }}
             className="h-full w-full"
           />
         ) : (
@@ -4479,16 +4572,8 @@ function ProfileBalanceChart({
           />
         )}
       </div>
-      {onDeposit ? (
-        <button
-          type="button"
-          onClick={onDeposit}
-          className={`mt-4 w-full py-3 ${ui.pillSecondary}`}
-        >
-          Deposit
-        </button>
-      ) : null}
-    </>
+      {actions ? <div className="mt-4 flex gap-2">{actions}</div> : null}
+    </section>
   );
 }
 
@@ -5118,14 +5203,7 @@ export default function Api() {
   const [extraDepositUsd, setExtraDepositUsd] = useState(0);
   const skipUserTradesPersist = useRef(true);
   const skipCopyTradesPersist = useRef(true);
-  const seededCopyWallets = useRef(new Set<string>());
-  const copySimTick = useRef(0);
-  const copySimMarketsRef = useRef({
-    live: [] as PolymarketMarketData[],
-    trending: [] as PolymarketMarketData[],
-  });
   const copyTradesRef = useRef(copyTrades);
-  const ownWalletRef = useRef(demoProfile?.wallet ?? "");
 
   useEffect(() => {
     const cached = readOnboardingCache();
@@ -5137,7 +5215,12 @@ export default function Api() {
     if (Number.isFinite(deposits) && deposits > 0) {
       setExtraDepositUsd(deposits);
     }
-    setUserTrades(loadUserTrades());
+    let openKept = 0;
+    setUserTrades(
+      loadUserTrades().filter(
+        (item) => item.cashedOut || ++openKept <= MAX_PROFILE_POSITIONS,
+      ),
+    );
     setCopyTrades(loadCopyTrades());
   }, []);
 
@@ -5159,9 +5242,32 @@ export default function Api() {
 
   useEffect(() => {
     const controller = new AbortController();
+    let retryTimer: number | null = null;
+    let hasProfile = false;
+    let shownWallet: string | null = null;
 
-    const load = async () => {
-      setDemoProfileStatus("loading");
+    const show = (data: PolymarketDemoProfile) => {
+      hasProfile = true;
+      shownWallet = data.wallet.toLowerCase();
+      setDemoProfile({
+        ...data,
+        portfolioValue: PROFILE_BALANCE,
+        history: seedPortfolioHistory(PROFILE_BALANCE),
+      });
+      setDemoProfileStatus("ready");
+    };
+
+    try {
+      const cached = JSON.parse(
+        window.localStorage.getItem(DEMO_PROFILE_STORAGE_KEY) ?? "null",
+      ) as PolymarketDemoProfile | null;
+      if (cached?.wallet) show(cached);
+    } catch {
+      // Ignore a corrupt cache; the network load below replaces it.
+    }
+
+    const load = async (attempt: number) => {
+      if (!hasProfile) setDemoProfileStatus("loading");
       try {
         const res = await fetch("/api/polymarketscan/profile?limit=8", {
           signal: controller.signal,
@@ -5169,22 +5275,35 @@ export default function Api() {
         if (!res.ok) throw new Error("fetch failed");
         const data = (await res.json()) as PolymarketDemoProfile;
         if (controller.signal.aborted) return;
-        setDemoProfile({
-          ...data,
-          portfolioValue: PROFILE_BALANCE,
-          history: seedPortfolioHistory(PROFILE_BALANCE),
-        });
-        setDemoProfileStatus("ready");
+        // Keep one identity per browser so the profile doesn't swap wallets.
+        if (shownWallet && data.wallet.toLowerCase() !== shownWallet) return;
+        show(data);
+        try {
+          window.localStorage.setItem(
+            DEMO_PROFILE_STORAGE_KEY,
+            JSON.stringify(data),
+          );
+        } catch {
+          // Storage full or unavailable; the in-memory profile still works.
+        }
       } catch (error) {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || hasProfile) return;
         console.error("Failed to load demo profile:", error);
-        setDemoProfileStatus("error");
+        if (attempt < 3) {
+          retryTimer = window.setTimeout(
+            () => void load(attempt + 1),
+            2000 * (attempt + 1),
+          );
+        } else {
+          setDemoProfileStatus("error");
+        }
       }
     };
 
-    void load();
+    void load(0);
     return () => {
       controller.abort();
+      if (retryTimer !== null) window.clearTimeout(retryTimer);
     };
   }, []);
 
@@ -5829,44 +5948,6 @@ export default function Api() {
     });
   };
 
-  const seedCopiedTrades = async (rule: CopyTrade) => {
-    const ownWallet = demoProfile?.wallet;
-    if (!ownWallet) return;
-
-    let profile =
-      walletProfile &&
-      walletProfile.wallet.toLowerCase() === rule.wallet.toLowerCase()
-        ? walletProfile
-        : null;
-    if (!profile) {
-      try {
-        const res = await fetch(
-          `/api/polymarketscan/wallet/${encodeURIComponent(rule.wallet)}?limit=50`,
-        );
-        if (res.ok) {
-          profile = (await res.json()) as PolymarketWalletProfile;
-        }
-      } catch {
-        profile = null;
-      }
-    }
-
-    const sources = [
-      ...(profile ? sourcesFromWalletProfile(profile) : []),
-      ...sourcesFromFeedTrades(trades, rule),
-    ];
-    if (sources.length === 0) return;
-
-    setUserTrades((prev) =>
-      applyCopyFills({
-        existing: prev,
-        rule,
-        ownWallet,
-        sources,
-      }),
-    );
-  };
-
   const saveCopyTrade = (trade: CopyTrade) => {
     const key = trade.wallet.toLowerCase();
     const isNew = !copyTrades.some((item) => item.wallet.toLowerCase() === key);
@@ -5877,10 +5958,7 @@ export default function Api() {
       next[index] = trade;
       return next;
     });
-    if (isNew) {
-      void seedCopiedTrades(trade);
-      if (!isFollowing(trade.wallet)) toggleFollow(trade.wallet);
-    }
+    if (isNew && !isFollowing(trade.wallet)) toggleFollow(trade.wallet);
   };
 
   const stopCopyTrade = (wallet: string) => {
@@ -5945,7 +6023,6 @@ export default function Api() {
     setFollowedWallets(new Set());
     setUserTrades([]);
     setCopyTrades([]);
-    seededCopyWallets.current.clear();
     setProfileSubScreen(null);
     if (SHOW_ONBOARDING) setOnboardingOpen(true);
   };
@@ -6455,54 +6532,11 @@ export default function Api() {
   }, [liveMarkets, trendingMarkets]);
 
   useEffect(() => {
-    const ownWallet = demoProfile?.wallet;
-    if (!ownWallet || copyTrades.length === 0) return;
-
-    for (const rule of copyTrades) {
-      const key = rule.wallet.toLowerCase();
-      if (seededCopyWallets.current.has(key)) continue;
-      if (copiedTradesForWallet(userTrades, rule.wallet).length > 0) {
-        seededCopyWallets.current.add(key);
-        continue;
-      }
-      seededCopyWallets.current.add(key);
-      void seedCopiedTrades(rule);
-    }
-  }, [copyTrades, demoProfile?.wallet, userTrades]);
-
-  useEffect(() => {
-    const ownWallet = demoProfile?.wallet;
-    if (!ownWallet) return;
-    const active = copyTrades.filter((rule) => rule.status === "active");
-    if (active.length === 0 || trades.length === 0) return;
-
-    setUserTrades((prev) => {
-      let next = prev;
-      for (const rule of active) {
-        const sources = sourcesFromFeedTrades(trades, rule);
-        if (sources.length === 0) continue;
-        next = applyCopyFills({
-          existing: next,
-          rule,
-          ownWallet,
-          sources,
-        });
-      }
-      return next;
-    });
-  }, [copyTrades, demoProfile?.wallet, trades]);
-
-  useEffect(() => {
     if (marketBySlug.size === 0) return;
     setUserTrades((prev) => markCopiedToMarket(prev, marketBySlug));
   }, [marketBySlug]);
 
-  copySimMarketsRef.current = {
-    live: liveMarkets,
-    trending: trendingMarkets,
-  };
   copyTradesRef.current = copyTrades;
-  ownWalletRef.current = demoProfile?.wallet ?? "";
 
   const hasActiveCopy = copyTrades.some((rule) => rule.status === "active");
 
@@ -6511,37 +6545,17 @@ export default function Api() {
 
     const id = window.setInterval(() => {
       if (document.hidden) return;
-      copySimTick.current += 1;
-      const tick = copySimTick.current;
-      const now = Date.now();
-      const { live, trending } = copySimMarketsRef.current;
-      const pool = [...live, ...trending];
       const active = copyTradesRef.current.filter(
         (rule) => rule.status === "active",
       );
       if (active.length === 0) return;
-      const ownWallet = ownWalletRef.current || "0xcopy-sim";
-
-      setUserTrades((prev) => {
-        let next = tickCopiedMarks(
+      setUserTrades((prev) =>
+        tickCopiedMarks(
           prev,
           active.map((rule) => rule.wallet),
-          now,
-        );
-        if (tick % 6 === 0 && pool.length > 0) {
-          const rule = active[tick % active.length]!;
-          const source = simulateCopySource(rule, pool, next, now);
-          if (source) {
-            next = applyCopyFills({
-              existing: next,
-              rule,
-              ownWallet,
-              sources: [source],
-            });
-          }
-        }
-        return next;
-      });
+          Date.now(),
+        ),
+      );
     }, 4000);
 
     return () => window.clearInterval(id);
@@ -6758,6 +6772,47 @@ export default function Api() {
     return merged;
   }, [profileHistoryTrades, userHistoryTrades]);
 
+  /** Realized PnL per closed (SELL) history row, keyed like the row itself. */
+  const profileHistoryPnl = useMemo(() => {
+    const keyOf = (trade: PolymarketWalletTrade) =>
+      trade.txHash ??
+      `${trade.timestamp}-${trade.side}-${trade.outcome}-${trade.price}`;
+    const pnl = new Map<string, number>();
+    for (const item of userTrades) {
+      if (item.cashedOut && item.trade.side.toUpperCase() === "SELL") {
+        pnl.set(
+          item.trade.txHash ?? `${item.trade.timestamp}-${item.trade.side}-${item.trade.outcome}-${item.trade.price}`,
+          item.position.pnlUsd,
+        );
+      }
+    }
+    const holdings = new Map<string, { shares: number; cost: number }>();
+    const chronological = [...mergedProfileHistory].sort(
+      (a, b) => Date.parse(a.timestamp ?? "") - Date.parse(b.timestamp ?? ""),
+    );
+    for (const trade of chronological) {
+      const position = `${(trade.marketSlug ?? trade.marketTitle).toLowerCase()}-${trade.outcome.toLowerCase()}`;
+      const held = holdings.get(position) ?? { shares: 0, cost: 0 };
+      if (trade.side.toUpperCase() === "BUY") {
+        holdings.set(position, {
+          shares: held.shares + trade.size,
+          cost: held.cost + trade.size * trade.price,
+        });
+        continue;
+      }
+      if (held.shares <= 0) continue;
+      const avg = held.cost / held.shares;
+      const sold = Math.min(trade.size, held.shares);
+      const key = keyOf(trade);
+      if (!pnl.has(key)) pnl.set(key, sold * (trade.price - avg));
+      holdings.set(position, {
+        shares: held.shares - sold,
+        cost: held.cost - sold * avg,
+      });
+    }
+    return pnl;
+  }, [mergedProfileHistory, userTrades]);
+
   const walletPositions = walletProfile?.positions ?? [];
   const walletHistoryTrades = walletProfile?.recentTrades ?? [];
   const walletMarketImages = useMemo(() => {
@@ -6957,14 +7012,6 @@ export default function Api() {
                 wallet={selectedWallet ?? ""}
                 avatarUrl={walletAvatarUrl}
                 nameRef={stickyTitleRef}
-                trailing={
-                  selectedWallet ? (
-                    <FollowButton
-                      following={isFollowing(selectedWallet)}
-                      onClick={() => toggleFollow(selectedWallet)}
-                    />
-                  ) : null
-                }
               />
               <ProfileCountRow
                 following={walletProfileCounts.following}
@@ -6982,38 +7029,48 @@ export default function Api() {
                 totalPnl={walletProfile?.totalPnl ?? null}
                 roiPercent={walletProfile?.roiPercent ?? null}
                 history={walletHistory}
-              />
-              {selectedWallet && !isOwnSelectedWallet && (
-                <button
-                  type="button"
-                  onClick={() => openCopyTrade(selectedWallet, walletLabel)}
-                  className={`mt-4 flex w-full items-center justify-center gap-1.5 ${ui.pillSecondary}`}
-                >
-                  {copyButtonState(selectedWallet) === "copying" ? (
+                actions={
+                  selectedWallet && !isOwnSelectedWallet ? (
                     <>
-                      <svg
-                        viewBox="0 0 12 12"
-                        className="h-3.5 w-3.5"
-                        fill="none"
-                        aria-hidden
+                      <button
+                        type="button"
+                        aria-pressed={isFollowing(selectedWallet)}
+                        onClick={() => toggleFollow(selectedWallet)}
+                        className={`flex flex-1 items-center justify-center gap-1.5 ${
+                          isFollowing(selectedWallet)
+                            ? ui.pillSecondary
+                            : ui.pillPrimary
+                        }`}
                       >
-                        <path
-                          d="M2.5 6.2 4.8 8.5 9.5 3.5"
-                          stroke="currentColor"
-                          strokeWidth="1.6"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      Copying
+                        {isFollowing(selectedWallet) ? (
+                          <>
+                            <CheckGlyph />
+                            Following
+                          </>
+                        ) : (
+                          "Follow"
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openCopyTrade(selectedWallet, walletLabel)}
+                        className={`flex flex-1 items-center justify-center gap-1.5 ${ui.pillSecondary}`}
+                      >
+                        {copyButtonState(selectedWallet) === "copying" ? (
+                          <>
+                            <CheckGlyph />
+                            Copying
+                          </>
+                        ) : copyButtonState(selectedWallet) === "paused" ? (
+                          "Paused"
+                        ) : (
+                          "Copy trades"
+                        )}
+                      </button>
                     </>
-                  ) : copyButtonState(selectedWallet) === "paused" ? (
-                    "Copying paused"
-                  ) : (
-                    "Copy"
-                  )}
-                </button>
-              )}
+                  ) : null
+                }
+              />
             </header>
           ) : showingListDetail ? (
             <header className="mb-4 pt-9">
@@ -7130,7 +7187,9 @@ export default function Api() {
                     ? "—"
                     : (profileUsername ??
                       demoProfile?.displayName ??
-                      shortWallet(demoProfile?.wallet ?? ""))
+                      (demoProfile?.wallet
+                        ? shortWallet(demoProfile.wallet)
+                        : "You"))
                 }
                 wallet={
                   demoProfileStatus === "loading"
@@ -7172,7 +7231,15 @@ export default function Api() {
                 totalPnl={(demoProfile?.totalPnl ?? 0) + copiedOpenPnl}
                 roiPercent={demoProfile?.roiPercent ?? null}
                 history={portfolioHistory}
-                onDeposit={() => setDepositOpen(true)}
+                actions={
+                  <button
+                    type="button"
+                    onClick={() => setDepositOpen(true)}
+                    className={`flex-1 ${ui.pillPrimary}`}
+                  >
+                    Deposit
+                  </button>
+                }
               />
             </div>
           ) : section === "feed" ? (
@@ -8246,13 +8313,7 @@ export default function Api() {
                 </div>
               )}
 
-              {demoProfileStatus === "error" && (
-                <p className="text-sm text-white/55">
-                  Couldn&apos;t load a wallet profile right now.
-                </p>
-              )}
-
-              {demoProfileStatus === "ready" && demoProfile && (
+              {demoProfileStatus !== "loading" && (
                 <>
                   <section
                     aria-label={
@@ -8297,7 +8358,14 @@ export default function Api() {
                       />
                     </div>
 
-                    {profileTab === "positions" && (
+                    {profileTab === "positions" && profilePositions.length === 0 && (
+                      <p className="text-sm text-white/55">
+                        No open positions yet. Pick a market and place your
+                        first trade.
+                      </p>
+                    )}
+
+                    {profileTab === "positions" && profilePositions.length > 0 && (
                       <ul className="divide-y divide-white/[0.06]">
                         {profilePositions.map((position, index) => (
                           <li key={`${position.marketSlug ?? position.marketTitle}-${position.outcome}-${index}`}>
@@ -8325,7 +8393,8 @@ export default function Api() {
                     )}
 
                     {profileTab === "history" &&
-                      profileHistoryStatus === "ready" &&
+                      (profileHistoryStatus === "ready" ||
+                        profileHistoryStatus === "idle") &&
                       mergedProfileHistory.length === 0 && (
                         <p className="text-sm text-white/55">
                           No transactions yet.
@@ -8484,19 +8553,8 @@ export default function Api() {
           >
             {isBinaryMarket(selectedMarket) ? (
               <div className="pointer-events-auto flex gap-2.5">
-                {getMarketOddsSides(selectedMarket).map((side, index, sides) => {
-                  const tones = matchupTeamTones(selectedMarket);
-                  const { away, home } = resolveSportsSides(selectedMarket);
-                  const tone = tones
-                    ? nickMatch(side.label, home.name) &&
-                      !nickMatch(side.label, away.name)
-                      ? tones.home
-                      : nickMatch(side.label, away.name)
-                        ? tones.away
-                        : index === sides.length - 1
-                          ? tones.home
-                          : tones.away
-                    : null;
+                {getMarketOddsSides(selectedMarket).map((side) => {
+                  const tone = outcomeTeamTone(selectedMarket, side.label);
                   return (
                   <button
                     key={side.side}
@@ -8679,6 +8737,10 @@ export default function Api() {
                     >
                       <ProfileHistoryRow
                         trade={trade}
+                        pnlUsd={profileHistoryPnl.get(
+                          trade.txHash ??
+                            `${trade.timestamp}-${trade.side}-${trade.outcome}-${trade.price}`,
+                        )}
                         marketImage={
                           trade.marketSlug
                             ? profileMarketImages.get(trade.marketSlug)
@@ -8777,6 +8839,11 @@ export default function Api() {
                 ? marketBySlug.get(feedPositionTrade.trade.marketSlug)
                 : undefined
             }
+            outcomeTone={(label) => {
+              const slug = feedPositionTrade.trade.marketSlug;
+              const market = slug ? marketBySlug.get(slug) : undefined;
+              return market ? outcomeTeamTone(market, label) : null;
+            }}
             onClose={() => setFeedPositionTrade(null)}
             following={isFollowing(feedPositionTrade.trade.wallet)}
             onFollowToggle={() =>

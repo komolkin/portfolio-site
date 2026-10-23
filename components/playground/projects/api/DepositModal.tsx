@@ -15,14 +15,14 @@ const nfMaskStyle = {
 } as const;
 
 const WIN_SPARKLES = [
-  { top: "2%", left: "4%", size: 12, delay: "0ms", color: "#E8C44A" },
-  { top: "8%", right: "2%", size: 9, delay: "120ms", color: "#00D54B" },
+  { top: "2%", left: "4%", size: 12, delay: "0ms", color: "#FFFFFF" },
+  { top: "8%", right: "2%", size: 9, delay: "120ms", color: "#FFFFFFB3" },
   { top: "42%", left: "-2%", size: 7, delay: "220ms", color: "#FFFFFF" },
-  { top: "48%", right: "-4%", size: 11, delay: "80ms", color: "#E8C44A" },
-  { bottom: "6%", left: "10%", size: 8, delay: "180ms", color: "#00D54B" },
+  { top: "48%", right: "-4%", size: 11, delay: "80ms", color: "#FFFFFF" },
+  { bottom: "6%", left: "10%", size: 8, delay: "180ms", color: "#FFFFFFB3" },
   { bottom: "0%", right: "12%", size: 10, delay: "260ms", color: "#FFFFFF" },
-  { top: "-6%", left: "42%", size: 8, delay: "40ms", color: "#E8C44A" },
-  { bottom: "-8%", left: "48%", size: 7, delay: "300ms", color: "#00D54B" },
+  { top: "-6%", left: "42%", size: 8, delay: "40ms", color: "#FFFFFF" },
+  { bottom: "-8%", left: "48%", size: 7, delay: "300ms", color: "#FFFFFFB3" },
 ] as const;
 
 type Step = "amount" | "method" | "pay" | "processing" | "success";
@@ -252,7 +252,7 @@ function DepositedHero({ value }: { value: number }) {
           </span>
         ))}
         <p
-          className={`relative z-10 inline-flex items-baseline text-[52px] font-semibold leading-none tracking-tight text-[#00D54B] animate-[trade-win-pop_0.55s_cubic-bezier(0.32,0.72,0,1)_both] ${instrumentSansCondensed.className}`}
+          className={`relative z-10 inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight text-[#00D54B] animate-[trade-win-pop_0.55s_cubic-bezier(0.32,0.72,0,1)_both] ${instrumentSansCondensed.className}`}
         >
           $
           <NumberFlow
@@ -612,17 +612,18 @@ export default function DepositModal({
                   </h2>
                 </div>
 
-                <div className="text-center">
-                  <p className="text-[15px] font-medium text-white/55">
+                <div className="flex flex-1 flex-col items-center justify-center text-center">
+                  <p className="text-[15px] font-semibold text-white/55">
                     You deposit
                   </p>
                   <p
-                    className={`mt-2 text-[40px] font-semibold leading-none tracking-[-0.04em] ${instrumentSansCondensed.className}`}
+                    className={`mt-3 text-[64px] font-semibold leading-none tracking-tight ${instrumentSansCondensed.className}`}
                   >
                     {formatUsdMoney(amount)}
                   </p>
                 </div>
 
+                <div className="flex flex-col gap-4">
                 {method === "apple" && (
                   <div className="rounded-[20px] bg-white/[0.08] px-3.5 py-3.5">
                     <div className="flex items-center gap-3">
@@ -775,6 +776,7 @@ export default function DepositModal({
                     `Pay ${formatUsdMoney(amount)}`
                   )}
                 </button>
+                </div>
               </div>
             )}
 
@@ -794,14 +796,15 @@ export default function DepositModal({
             )}
 
             {step === "success" && receipt && (
-              <div className="flex h-full min-h-0 flex-col items-center overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-5 pt-6 text-center">
-                <div className="w-full">
+              <div className="flex h-full min-h-0 flex-col overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-5 pt-6 text-center">
+                <div className="flex flex-1 flex-col items-center justify-center">
                   <DepositedHero value={receipt.amount} />
-                  <p className="mt-1 text-[13px] text-white/45">
+                  <p className="mt-1 text-[14px] text-white/45">
                     Added to your balance
                   </p>
-
-                  <div className="mt-5 overflow-hidden rounded-[20px] bg-white/[0.08] text-left">
+                </div>
+                <div className="w-full">
+                  <div className="overflow-hidden rounded-[20px] bg-white/[0.08] text-left">
                     <div className="flex items-center gap-3 border-b border-white/[0.06] px-3.5 py-3">
                       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/[0.1] text-white">
                         {method ? <MethodGlyph id={method} /> : null}

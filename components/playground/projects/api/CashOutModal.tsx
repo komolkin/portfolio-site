@@ -17,14 +17,14 @@ const nfMaskStyle = {
 } as const;
 
 const WIN_SPARKLES = [
-  { top: "2%", left: "4%", size: 12, delay: "0ms", color: "#E8C44A" },
-  { top: "8%", right: "2%", size: 9, delay: "120ms", color: "#00D54B" },
+  { top: "2%", left: "4%", size: 12, delay: "0ms", color: "#FFFFFF" },
+  { top: "8%", right: "2%", size: 9, delay: "120ms", color: "#FFFFFFB3" },
   { top: "42%", left: "-2%", size: 7, delay: "220ms", color: "#FFFFFF" },
-  { top: "48%", right: "-4%", size: 11, delay: "80ms", color: "#E8C44A" },
-  { bottom: "6%", left: "10%", size: 8, delay: "180ms", color: "#00D54B" },
+  { top: "48%", right: "-4%", size: 11, delay: "80ms", color: "#FFFFFF" },
+  { bottom: "6%", left: "10%", size: 8, delay: "180ms", color: "#FFFFFFB3" },
   { bottom: "0%", right: "12%", size: 10, delay: "260ms", color: "#FFFFFF" },
-  { top: "-6%", left: "42%", size: 8, delay: "40ms", color: "#E8C44A" },
-  { bottom: "-8%", left: "48%", size: 7, delay: "300ms", color: "#00D54B" },
+  { top: "-6%", left: "42%", size: 8, delay: "40ms", color: "#FFFFFF" },
+  { bottom: "-8%", left: "48%", size: 7, delay: "300ms", color: "#FFFFFFB3" },
 ] as const;
 
 function formatUsdMoney(value: number): string {
@@ -118,7 +118,7 @@ function CashedOutHero({ value }: { value: number }) {
           </span>
         ))}
         <p
-          className={`relative z-10 inline-flex items-baseline text-[52px] font-semibold leading-none tracking-tight text-[#00D54B] animate-[trade-win-pop_0.55s_cubic-bezier(0.32,0.72,0,1)_both] ${instrumentSansCondensed.className}`}
+          className={`relative z-10 inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight text-[#00D54B] animate-[trade-win-pop_0.55s_cubic-bezier(0.32,0.72,0,1)_both] ${instrumentSansCondensed.className}`}
         >
           $
           <NumberFlow
@@ -288,7 +288,7 @@ export default function CashOutModal({
         role="dialog"
         aria-modal="true"
         aria-label={step === "confirm" ? "Cash out" : "Cashed out"}
-        className="absolute inset-x-0 bottom-0 flex max-h-[94%] flex-col overflow-hidden rounded-t-[1.75rem] shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
+        className="absolute inset-x-0 bottom-0 flex h-[94%] flex-col overflow-hidden rounded-t-[1.75rem] shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
         style={{
           backgroundColor: accent,
           transform: open
@@ -312,13 +312,24 @@ export default function CashOutModal({
           />
         </div>
 
-        <div className="min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-5">
-          <SheetPager step={step} direction={1}>
+        <div className="min-h-0 flex-1">
+          <SheetPager step={step} direction={1} fill>
           {step === "confirm" ? (
-            <div className="flex flex-col gap-4">
+            <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-5">
               <h2 className="text-[20px] font-semibold tracking-[-0.02em]">
                 Cash out
               </h2>
+
+              <div className="flex flex-1 flex-col items-center justify-center text-center">
+                <p className="text-[15px] font-semibold text-white/55">
+                  You receive
+                </p>
+                <p
+                  className={`mt-3 text-[64px] font-semibold leading-none tracking-tight ${instrumentSansCondensed.className}`}
+                >
+                  {formatUsdMoney(proceeds)}
+                </p>
+              </div>
 
               <div className="rounded-[20px] bg-white/[0.08] p-3.5">
                 <div className="flex items-center gap-3">
@@ -355,17 +366,6 @@ export default function CashOutModal({
                     {item.trade.outcome}
                   </span>
                 </div>
-              </div>
-
-              <div className="text-center">
-                <p className="text-[15px] font-medium text-white/55">
-                  You receive
-                </p>
-                <p
-                  className={`mt-2 text-[40px] font-semibold leading-none tracking-[-0.04em] ${instrumentSansCondensed.className}`}
-                >
-                  {formatUsdMoney(proceeds)}
-                </p>
               </div>
 
               <div className="rounded-[20px] bg-white/[0.08] px-3.5 py-1">
@@ -414,9 +414,10 @@ export default function CashOutModal({
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center pb-1 pt-2 text-center">
+            <div className="flex h-full min-h-0 flex-col overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-5 pt-2 text-center">
               {confirmed && (
-                <div className="w-full">
+                <>
+                <div className="flex flex-1 flex-col items-center justify-center">
                   <CashedOutHero value={confirmed.amountUsd} />
                   <p
                     className={`mt-1 text-[13px] font-semibold tabular-nums ${
@@ -431,8 +432,9 @@ export default function CashOutModal({
                       ? `${formatSignedUsdMoney(confirmed.pnlUsd)} profit`
                       : `${formatSignedUsdMoney(confirmed.pnlUsd)} loss`}
                   </p>
-
-                  <div className="mt-5 overflow-hidden rounded-[20px] bg-white/[0.08] text-left">
+                </div>
+                <div className="w-full">
+                  <div className="overflow-hidden rounded-[20px] bg-white/[0.08] text-left">
                     <div className="flex items-center gap-3 border-b border-white/[0.06] px-3.5 py-3">
                       {image ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -505,6 +507,7 @@ export default function CashOutModal({
                     Done
                   </button>
                 </div>
+                </>
               )}
             </div>
           )}
