@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { instrumentSansCondensed } from "@/lib/fonts";
 
 export const ui = {
   shell: "bg-black text-white",
@@ -477,7 +478,7 @@ export function AmountKeypad({
             type="button"
             aria-label={key === "back" ? "Delete" : key}
             onClick={() => onKey(key)}
-            className="flex h-[52px] items-center justify-center rounded-2xl text-[26px] font-medium tabular-nums text-white transition-colors active:bg-white/[0.06]"
+            className={`flex h-[52px] items-center justify-center rounded-2xl text-[26px] font-semibold text-white transition-colors active:bg-white/[0.06] ${instrumentSansCondensed.className}`}
           >
             {key === "back" ? <DeleteKeyIcon className="h-6 w-6" /> : key}
           </button>

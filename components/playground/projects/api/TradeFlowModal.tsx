@@ -8,7 +8,7 @@ import { instrumentSansCondensed } from "@/lib/fonts";
 import type { UserPlacedTrade } from "./userTrades";
 import type { PolymarketWalletPosition } from "@/lib/polymarketscan";
 import type { SharePositionPayload } from "./SharePositionModal";
-import { MessageComposer } from "./richMessage";
+import { GifThumb, MessageComposer } from "./richMessage";
 import { AmountKeypad, SheetPager, applyAmountKey, ui } from "./ui";
 
 const CLOSE_THRESHOLD_PX = 72;
@@ -230,10 +230,27 @@ function SlideToConfirm({
   return (
     <div
       ref={trackRef}
-      className="relative h-14 w-full select-none overflow-hidden rounded-full bg-[#16A34A] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]"
+      className="relative isolate h-14 w-full select-none overflow-hidden rounded-full bg-[#141416]"
     >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
+      >
+        <div className="live-preview-ember-glow-green absolute -inset-[35%]" />
+        <div className="live-preview-ember-edge-green absolute inset-0 rounded-[inherit]" />
+      </div>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[#16A34A]"
+        style={{
+          opacity: progress,
+          transition: dragging
+            ? "none"
+            : "opacity 0.3s cubic-bezier(0.32, 0.72, 0, 1)",
+        }}
+      />
       <span
-        className="pointer-events-none absolute inset-0 flex items-center justify-center text-[15px] font-semibold text-white"
+        className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-[15px] font-semibold text-white"
         style={{ opacity: Math.max(0, 1 - progress * 1.4) }}
       >
         {label}
@@ -268,7 +285,7 @@ function SlideToConfirm({
             confirm();
           }
         }}
-        className="absolute flex touch-none items-center justify-center rounded-full bg-white text-[#16A34A] shadow-[0_2px_8px_rgba(0,0,0,0.25)] outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+        className="absolute z-20 flex touch-none items-center justify-center rounded-full bg-white text-[#16A34A] shadow-[0_2px_8px_rgba(0,0,0,0.25)] outline-none focus-visible:ring-2 focus-visible:ring-white/60"
         style={{
           top: SLIDE_PAD_PX,
           left: SLIDE_PAD_PX,
@@ -641,12 +658,16 @@ export default function TradeFlowModal({
   const tradeSummary = () => (
     <div className="overflow-hidden rounded-[20px] bg-white/[0.08] text-left">
       <div className="flex items-center gap-3 border-b border-white/[0.06] px-3.5 py-3">
-        {market.image ? (
+        {team?.logo || market.image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={market.image}
+            src={team?.logo ?? market.image ?? ""}
             alt=""
-            className="h-11 w-11 shrink-0 rounded-xl object-cover"
+            className={
+              team?.logo
+                ? "h-11 w-11 shrink-0 rounded-xl bg-white/[0.06] object-contain p-1.5"
+                : "h-11 w-11 shrink-0 rounded-xl object-cover"
+            }
           />
         ) : (
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[12px] font-semibold text-white/40">
@@ -768,14 +789,13 @@ export default function TradeFlowModal({
 
                 <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
                   <p
-                    className="flex items-start font-semibold leading-none tracking-[-0.04em] text-white"
+                    className={`inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight text-white ${instrumentSansCondensed.className}`}
                     aria-live="polite"
                   >
-                    <span className="mt-[0.18em] text-[34px]">$</span>
+                    $
                     <NumberFlow
                       value={amount}
                       format={{ useGrouping: true, maximumFractionDigits: 0 }}
-                      className="text-[64px]"
                       style={nfMaskStyle}
                     />
                   </p>
@@ -786,7 +806,9 @@ export default function TradeFlowModal({
                     aria-hidden={!amountValid}
                   >
                     to win{" "}
-                    <span className="font-semibold tabular-nums text-[#00D54B]">
+                    <span
+                      className={`font-semibold text-[#00D54B] ${instrumentSansCondensed.className}`}
+                    >
                       {formatUsdCents(toWin)}
                     </span>
                   </p>
@@ -937,6 +959,31 @@ export default function TradeFlowModal({
                         {team?.name ?? outcome}
                       </span>
 
+                      {completed.trade.userCaption?.trim() ||
+                      completed.trade.userGifUrl ? (
+                        <div className="mt-4 w-full text-left">
+                          {completed.trade.userCaption?.trim() ? (
+                            <p className="text-[15px] leading-snug text-white">
+                              {completed.trade.userCaption.trim()}
+                            </p>
+                          ) : null}
+                          {completed.trade.userGifUrl ? (
+                            <div
+                              className={
+                                completed.trade.userCaption?.trim()
+                                  ? "mt-2"
+                                  : undefined
+                              }
+                            >
+                              <GifThumb
+                                url={completed.trade.userGifUrl}
+                                className="max-h-[140px]"
+                              />
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+
                       <div className="mt-5 w-full rounded-[18px] bg-white/[0.06] px-4 py-3.5 text-left">
                         <div className="flex items-center justify-between text-[12px]">
                           <span className="text-white/60">Cost</span>
@@ -955,7 +1002,7 @@ export default function TradeFlowModal({
                             To win
                           </span>
                           <span
-                            className={`text-[44px] font-bold leading-none tracking-tight text-white ${instrumentSansCondensed.className}`}
+                            className={`text-[44px] font-semibold leading-none tracking-tight text-white ${instrumentSansCondensed.className}`}
                           >
                             {formatUsdCents(toWin)}
                           </span>

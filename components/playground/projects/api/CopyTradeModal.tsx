@@ -541,7 +541,7 @@ export default function CopyTradeModal({
                           amountInputRef.current?.blur();
                         }
                       }}
-                      className="min-w-[2ch] bg-transparent text-right text-[34px] font-semibold leading-none tabular-nums tracking-tight text-white outline-none caret-[#00D54B]"
+                      className={`min-w-[2ch] bg-transparent text-right text-[34px] font-semibold leading-none tracking-tight text-white outline-none caret-[#00D54B] ${instrumentSansCondensed.className}`}
                     />
                     <span aria-hidden>{mode === "percent" ? "%" : "$"}</span>
                   </label>
@@ -700,7 +700,7 @@ export default function CopyTradeModal({
                           dailyCapInputRef.current?.blur();
                         }
                       }}
-                      className="min-w-[2ch] bg-transparent text-right text-[34px] font-semibold leading-none tabular-nums tracking-tight text-white outline-none caret-[#00D54B]"
+                      className={`min-w-[2ch] bg-transparent text-right text-[34px] font-semibold leading-none tracking-tight text-white outline-none caret-[#00D54B] ${instrumentSansCondensed.className}`}
                     />
                     {(dailyCapFocused || maxDailyUsd !== null) && (
                       <span aria-hidden>$</span>

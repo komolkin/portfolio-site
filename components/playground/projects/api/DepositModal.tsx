@@ -503,14 +503,13 @@ export default function DepositModal({
 
                 <div className="flex min-h-0 flex-1 items-center justify-center">
                   <p
-                    className="flex items-start font-semibold leading-none tracking-[-0.04em] text-white"
+                    className={`inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight text-white ${instrumentSansCondensed.className}`}
                     aria-live="polite"
                   >
-                    <span className="mt-[0.18em] text-[34px]">$</span>
+                    $
                     <NumberFlow
                       value={amount}
                       format={{ useGrouping: true, maximumFractionDigits: 0 }}
-                      className="text-[64px]"
                       style={nfMaskStyle}
                     />
                   </p>
