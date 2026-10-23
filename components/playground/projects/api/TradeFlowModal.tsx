@@ -8,7 +8,6 @@ import { instrumentSansCondensed } from "@/lib/fonts";
 import type { UserPlacedTrade } from "./userTrades";
 import type { PolymarketWalletPosition } from "@/lib/polymarketscan";
 import type { SharePositionPayload } from "./SharePositionModal";
-import { useImageAccent } from "./imageAccent";
 import { MessageComposer } from "./richMessage";
 import { SheetPager } from "./ui";
 
@@ -192,7 +191,6 @@ export default function TradeFlowModal({
   const [drawerOffset, setDrawerOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [open, setOpen] = useState(false);
-  const accent = useImageAccent(market.image);
   const dragStartY = useRef(0);
   const dragStartOffset = useRef(0);
   const closeTimerRef = useRef<number | null>(null);
@@ -365,9 +363,8 @@ export default function TradeFlowModal({
         role="dialog"
         aria-modal="true"
         aria-label={step === "form" ? "Place trade" : "Trade placed"}
-        className="absolute inset-x-0 bottom-0 flex h-[94%] flex-col overflow-hidden rounded-t-[1.75rem] shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
+        className="absolute inset-x-0 bottom-0 flex h-[94%] flex-col overflow-hidden rounded-t-[1.75rem] bg-[#111113] shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
         style={{
-          backgroundColor: accent,
           transform: open ? `translateY(${drawerOffset}px)` : "translateY(100%)",
           transition: isDragging
             ? "none"
@@ -605,7 +602,6 @@ export default function TradeFlowModal({
                 </div>
                 <div
                   className="shrink-0 border-t border-white/[0.06] px-5 pb-5 pt-3"
-                  style={{ backgroundColor: accent }}
                 >
                   <button
                     type="button"
@@ -715,7 +711,6 @@ export default function TradeFlowModal({
                 </div>
                 <div
                   className="shrink-0 border-t border-white/[0.06] px-5 pb-5 pt-3"
-                  style={{ backgroundColor: accent }}
                 >
                   <button
                     type="button"

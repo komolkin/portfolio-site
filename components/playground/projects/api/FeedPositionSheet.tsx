@@ -10,9 +10,7 @@ import type {
 } from "@/lib/polymarketscan";
 import { sportsOutcomeAbbr } from "@/lib/polymarketscan";
 import { instrumentSansCondensed } from "@/lib/fonts";
-import { useImageAccent } from "./imageAccent";
 import type { SharePositionPayload } from "./SharePositionModal";
-import { ActivityRow, ChipTabs } from "./ui";
 import UserAvatar from "./UserAvatar";
 
 const CLOSE_THRESHOLD_PX = 72;
@@ -55,30 +53,6 @@ function formatOdds(price: number): string {
   return `${Math.round(price * 100)}¢`;
 }
 
-function formatTimeAgo(timestamp: string | null): string | null {
-  if (!timestamp) return null;
-  const then = Date.parse(timestamp);
-  if (!Number.isFinite(then)) return null;
-
-  const seconds = Math.max(0, Math.floor((Date.now() - then) / 1000));
-  if (seconds < 60) return "Just now";
-
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
-
-  const years = Math.floor(days / 365);
-  return `${years}y ago`;
-}
-
 function hashString(value: string): number {
   let hash = 0;
   for (let i = 0; i < value.length; i++) {
@@ -108,38 +82,84 @@ function oppositeOutcome(outcome: string, marketTitle?: string): string {
 const CHART_PAD = { top: 28, right: 14, bottom: 36, left: 14 } as const;
 const MAX_CHART_MARKERS = 8;
 
-function seedChanceHistory(endPercent: number, seed: number): LivelinePoint[] {
-  const now = Math.floor(Date.now() / 1000);
-  const points: LivelinePoint[] = [];
-  const steps = 36;
-  const stepSecs = 60 * 30;
-  const clampedEnd = Math.max(4, Math.min(96, endPercent));
-  let value = Math.max(8, Math.min(88, clampedEnd * 0.58 + (seed % 14)));
+const CHART_RANGES = [
+  { id: "1h", label: "1H", secs: 60 * 60 },
+  { id: "6h", label: "6H", secs: 6 * 60 * 60 },
+  { id: "1d", label: "1D", secs: 24 * 60 * 60 },
+  { id: "1w", label: "1W", secs: 7 * 24 * 60 * 60 },
+  { id: "all", label: "All", secs: 30 * 24 * 60 * 60 },
+] as const;
 
-  for (let i = 0; i < steps; i++) {
-    const progress = i / (steps - 1);
-    const drift = (clampedEnd - value) * (0.05 + progress * 0.1);
-    const wave = Math.sin(i * 0.48 + (seed % 11)) * 4.2;
-    value = Math.max(4, Math.min(96, value + drift + wave));
-    points.push({
-      time: now - (steps - 1 - i) * stepSecs,
-      value: Math.round(value * 10) / 10,
-    });
-  }
+type ChartRangeId = (typeof CHART_RANGES)[number]["id"];
 
-  points[points.length - 1] = { time: now, value: clampedEnd };
-  return points;
+const CHART_STEPS = 96;
+
+function mulberry32(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
+/**
+ * Seeded market-like price path ending exactly at `endPercent`.
+ * Built backwards from "now" as a random walk with occasional jumps, so it
+ * reads like real order flow instead of a smooth wave.
+ */
+function seedChanceHistory(
+  endPercent: number,
+  seed: number,
+  rangeSecs: number,
+): LivelinePoint[] {
+  const now = Math.floor(Date.now() / 1000);
+  const stepSecs = rangeSecs / (CHART_STEPS - 1);
+  const rand = mulberry32(seed ^ Math.round(rangeSecs));
+  const end = Math.max(3, Math.min(97, endPercent));
+  // Longer windows wander further from today's price.
+  const volatility = 0.5 + Math.log10(rangeSecs / 3600 + 1) * 0.9;
+  const values: number[] = [end];
+  let value = end;
+  for (let i = 1; i < CHART_STEPS; i++) {
+    const noise = (rand() - 0.5) * 2 * volatility;
+    const jump = rand() < 0.04 ? (rand() - 0.5) * volatility * 9 : 0;
+    // Soft pull away from the 0/100 rails.
+    const rail = value < 8 ? 0.6 : value > 92 ? -0.6 : 0;
+    value = Math.max(2, Math.min(98, value + noise + jump + rail));
+    values.push(value);
+  }
+  values.reverse();
+  return values.map((v, i) => ({
+    time: Math.round(now - (CHART_STEPS - 1 - i) * stepSecs),
+    value: Math.round(v * 10) / 10,
+  }));
+}
+
+function formatChartTime(time: number, rangeSecs: number): string {
+  const date = new Date(time * 1000);
+  if (rangeSecs <= 24 * 60 * 60) {
+    return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  }
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+/** Mirrors liveline's internal range so overlay markers line up with the curve. */
 function livelineRange(
   points: LivelinePoint[],
   currentValue: number,
+  referenceValue?: number,
 ): { min: number; max: number } {
   let min = currentValue;
   let max = currentValue;
   for (const point of points) {
     min = Math.min(min, point.value);
     max = Math.max(max, point.value);
+  }
+  if (referenceValue !== undefined) {
+    min = Math.min(min, referenceValue);
+    max = Math.max(max, referenceValue);
   }
   const rawRange = max - min;
   const minRange = rawRange * 0.1 || 0.4;
@@ -212,8 +232,12 @@ function pinTradesOnHistory(
   const span = Math.max(1, t1 - t0);
   const used: number[] = [];
   const markers: Array<{ key: string; time: number; value: number }> = [];
+  // Trades outside the selected window are hidden rather than squashed onto the edge.
+  const visiblePins = pins.filter(
+    (pin) => pin.time == null || (pin.time >= t0 && pin.time <= t1),
+  );
 
-  for (const [pinIndex, pin] of pins.slice(0, MAX_CHART_MARKERS).entries()) {
+  for (const [pinIndex, pin] of visiblePins.slice(0, MAX_CHART_MARKERS).entries()) {
     const fallback = t0 + span * (0.22 + ((pinIndex * 0.19) % 0.56));
     let time =
       pin.time == null
@@ -365,11 +389,7 @@ export default function FeedPositionSheet({
   const [marketTrades, setMarketTrades] = useState<PolymarketWalletTrade[]>(
     () => [seedTrade],
   );
-  const [tradesStatus, setTradesStatus] = useState<"loading" | "ready" | "error">(
-    "loading",
-  );
   const [selectedTradeKey, setSelectedTradeKey] = useState(openedTradeKey);
-  const accent = useImageAccent(marketImage ?? null);
   const dragStartY = useRef(0);
   const dragStartOffset = useRef(0);
   const closeTimerRef = useRef<number | null>(null);
@@ -397,9 +417,15 @@ export default function FeedPositionSheet({
   const otherButtonLabel =
     (market ? sportsOutcomeAbbr(market, otherOutcome) : null) ?? otherOutcome;
   const chance = Math.round(Math.max(0, Math.min(1, markPrice)) * 100);
+  const [chartRangeId, setChartRangeId] = useState<ChartRangeId>("1d");
+  const chartRangeSecs =
+    CHART_RANGES.find((range) => range.id === chartRangeId)?.secs ??
+    CHART_RANGES[2].secs;
+  const entryChance = outcomeChance(trade.price, trade.outcome, trade.outcome);
+  const chartColor = markPrice >= trade.price ? "#00D54B" : "#FF375F";
   const baseHistory = useMemo(
-    () => seedChanceHistory(chance, seed),
-    [chance, seed],
+    () => seedChanceHistory(chance, seed, chartRangeSecs),
+    [chance, seed, chartRangeSecs],
   );
   const chartTrades = useMemo(() => {
     const seen = new Set(marketTrades.map(tradeItemKey));
@@ -416,8 +442,8 @@ export default function FeedPositionSheet({
     return pinTradesOnHistory(baseHistory, pins);
   }, [baseHistory, chartTrades, trade.outcome]);
   const chartRange = useMemo(
-    () => livelineRange(chanceHistory, chance),
-    [chanceHistory, chance],
+    () => livelineRange(chanceHistory, chance, entryChance),
+    [chanceHistory, chance, entryChance],
   );
   const chartSpan = Math.max(
     1,
@@ -460,7 +486,6 @@ export default function FeedPositionSheet({
     const controller = new AbortController();
 
     const load = async () => {
-      setTradesStatus("loading");
       try {
         const res = await fetch(
           `/api/polymarketscan/wallet/${encodeURIComponent(trade.wallet)}?limit=50`,
@@ -478,12 +503,10 @@ export default function FeedPositionSheet({
           ? filtered
           : [seedTrade, ...filtered];
         setMarketTrades(merged);
-        setTradesStatus("ready");
       } catch (error) {
         if (controller.signal.aborted) return;
         console.error("Failed to load market trades:", error);
         setMarketTrades([seedTrade]);
-        setTradesStatus("error");
       }
     };
 
@@ -529,9 +552,8 @@ export default function FeedPositionSheet({
         role="dialog"
         aria-modal="true"
         aria-label={`${handle}'s position`}
-        className="absolute inset-x-0 bottom-0 flex h-[94%] flex-col overflow-hidden rounded-t-[1.75rem] shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
+        className="absolute inset-x-0 bottom-0 flex max-h-[94%] flex-col overflow-hidden rounded-t-[1.75rem] bg-[#111113] shadow-[0_-12px_40px_rgba(0,0,0,0.45)]"
         style={{
-          backgroundColor: accent,
           transform: open ? `translateY(${drawerOffset}px)` : "translateY(100%)",
           transition: isDragging
             ? "none"
@@ -629,31 +651,33 @@ export default function FeedPositionSheet({
                   </p>
                 )}
               </div>
-              <p className="shrink-0 text-[12px] font-semibold tabular-nums text-white/80">
-                {chance}% Chance
-              </p>
             </div>
 
-            <div className="-mx-1 mt-2 h-[156px] overflow-visible" aria-label="Position chance chart">
+            <div className="-mx-1 mt-2 h-[168px] overflow-visible" aria-label="Position chance chart">
               {chanceHistory.length >= 2 ? (
                 <div className="relative h-full w-full isolate">
-                  <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+                  <div className="absolute inset-0 z-0 overflow-hidden">
                     <Liveline
                       data={chanceHistory}
                       value={chance}
                       theme="dark"
-                      color="#00D54B"
+                      color={chartColor}
                       grid={false}
                       badge={false}
                       pulse={false}
                       momentum={false}
-                      scrub={false}
+                      scrub
                       fill
                       paused
                       showValue={false}
-                      window={60 * 30 * Math.max(chanceHistory.length - 1, 1)}
-                      formatValue={(v) => `${Math.round(v)}%`}
-                      formatTime={() => ""}
+                      lineWidth={2}
+                      referenceLine={{
+                        value: entryChance,
+                        label: `Avg ${formatOdds(trade.price)}`,
+                      }}
+                      window={chartRangeSecs}
+                      formatValue={(v) => `${Math.round(v)}¢`}
+                      formatTime={(t) => formatChartTime(t, chartRangeSecs)}
                       padding={CHART_PAD}
                       className="h-full w-full"
                     />
@@ -706,7 +730,33 @@ export default function FeedPositionSheet({
               ) : null}
             </div>
 
-            <div className="mt-1 flex items-start justify-between gap-3">
+            <div
+              className="mt-1 flex items-center justify-between gap-1"
+              role="tablist"
+              aria-label="Chart range"
+            >
+              {CHART_RANGES.map((range) => {
+                const selected = range.id === chartRangeId;
+                return (
+                  <button
+                    key={range.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    onClick={() => setChartRangeId(range.id)}
+                    className={`h-7 flex-1 rounded-full text-[12px] font-semibold tabular-nums transition-colors duration-200 ${
+                      selected
+                        ? "bg-white/[0.14] text-white"
+                        : "text-white/45 hover:text-white/75"
+                    }`}
+                  >
+                    {range.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-3 flex items-start justify-between gap-3">
               <div>
                 <p
                   className={`text-[28px] font-semibold leading-none tracking-tight tabular-nums ${instrumentSansCondensed.className}`}
@@ -778,89 +828,9 @@ export default function FeedPositionSheet({
               Share
             </button>
           </section>
-
-          <div className="mt-4">
-            <ChipTabs
-              ariaLabel="Market trades"
-              value="trades"
-              onChange={() => {}}
-              tabs={
-                [
-                  {
-                    id: "trades",
-                    label: "Trades",
-                    count:
-                      marketTrades.length > 0 ? marketTrades.length : undefined,
-                  },
-                ] as const
-              }
-            />
-          </div>
-
-          {tradesStatus === "loading" && (
-            <div className="space-y-2 animate-pulse" aria-hidden>
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-[58px] rounded-xl bg-white/10" />
-              ))}
-            </div>
-          )}
-
-          {tradesStatus !== "loading" && marketTrades.length === 0 && (
-            <p className="text-[13px] text-white/45">
-              No trades in this market yet.
-            </p>
-          )}
-
-          {tradesStatus !== "loading" && marketTrades.length > 0 && (
-            <ul className="divide-y divide-white/[0.06]">
-              {marketTrades.map((item, index) => {
-                const isBuy = item.side.toUpperCase() === "BUY";
-                const timeAgo = formatTimeAgo(item.timestamp);
-                const amountUsd = item.size * item.price;
-                const key = tradeItemKey(item);
-                return (
-                  <li key={`${key}-${index}`}>
-                    <ActivityRow
-                      leading={
-                        marketImage ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={marketImage}
-                            alt=""
-                            className="h-11 w-11 rounded-2xl object-cover"
-                          />
-                        ) : (
-                          <div
-                            className={`flex h-11 w-11 items-center justify-center rounded-2xl text-[13px] font-semibold ${
-                              isBuy
-                                ? "bg-[#00D54B]/15 text-[#00D54B]"
-                                : "bg-[#FF375F]/15 text-[#FF375F]"
-                            }`}
-                          >
-                            {isBuy ? "B" : "S"}
-                          </div>
-                        )
-                      }
-                      title={item.marketTitle}
-                      subtitle={`${item.side} · ${item.outcome} · ${formatOdds(item.price)}${timeAgo ? ` · ${timeAgo}` : ""}`}
-                      trailing={
-                        <span className="text-[16px] font-semibold tabular-nums">
-                          {formatUsd(amountUsd)}
-                        </span>
-                      }
-                      onClick={() => setSelectedTradeKey(key)}
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          )}
         </div>
 
-        <div
-          className="shrink-0 px-5 pb-5 pt-3"
-          style={{ backgroundColor: accent }}
-        >
+        <div className="shrink-0 px-5 pb-5 pt-3">
           <div className="grid grid-cols-2 gap-2.5">
             <button
               type="button"

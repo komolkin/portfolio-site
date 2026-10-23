@@ -29,7 +29,7 @@ import { sportsOutcomeAbbr } from "@/lib/polymarketscan";
 import { instrumentSansCondensed } from "@/lib/fonts";
 import FeedPositionSheet, { FollowButton } from "./FeedPositionSheet";
 import Onboarding from "./Onboarding";
-import PositionsSheet from "./PositionsSheet";
+import PositionsSheet, { BubblyPositionCard } from "./PositionsSheet";
 import ReferralScreen from "./ReferralScreen";
 import SettingsScreen from "./SettingsScreen";
 import FollowListSheet, {
@@ -3232,53 +3232,71 @@ const SPORTS_CHART_RANGES: SportsChartRange[] = [
   "MAX",
 ];
 
-const SPORTS_RANGE_STEPS: Record<SportsChartRange, number> = {
-  "1H": 12,
-  "6H": 18,
-  "1D": 24,
-  "1W": 28,
-  "1M": 32,
-  MAX: 36,
+const SPORTS_RANGE_SECS: Record<SportsChartRange, number> = {
+  "1H": 60 * 60,
+  "6H": 6 * 60 * 60,
+  "1D": 24 * 60 * 60,
+  "1W": 7 * 24 * 60 * 60,
+  "1M": 30 * 24 * 60 * 60,
+  MAX: 90 * 24 * 60 * 60,
 };
 
-function seedSportsOddsSeries(
-  endPercent: number,
-  seed: number,
-  steps: number,
-): number[] {
-  const clampedEnd = Math.max(4, Math.min(96, endPercent));
-  let value = Math.max(8, Math.min(88, clampedEnd * 0.55 + (seed % 16)));
-  const points: number[] = [];
-  for (let i = 0; i < steps; i++) {
-    const progress = i / Math.max(1, steps - 1);
-    const drift = (clampedEnd - value) * (0.06 + progress * 0.12);
-    const wave = Math.sin(i * 0.42 + (seed % 9)) * 5.5;
-    value = Math.max(4, Math.min(96, value + drift + wave));
-    points.push(Math.round(value * 10) / 10);
-  }
-  points[points.length - 1] = clampedEnd;
-  return points;
+const SPORTS_CHART_STEPS = 96;
+
+function seededRandom(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-function seriesToPath(
-  values: number[],
-  width: number,
-  height: number,
-  padX: number,
-  padY: number,
-): string {
-  if (values.length === 0) return "";
-  const innerW = width - padX * 2;
-  const innerH = height - padY * 2;
-  return values
-    .map((value, index) => {
-      const x =
-        padX +
-        (values.length === 1 ? innerW / 2 : (index / (values.length - 1)) * innerW);
-      const y = padY + innerH * (1 - Math.max(0, Math.min(100, value)) / 100);
-      return `${index === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(" ");
+/**
+ * Seeded two-way odds history ending at `endPercent` now. Walked backwards
+ * from the current price with noise + occasional swings (scores, news).
+ */
+function sportsOddsHistory(
+  endPercent: number,
+  seed: number,
+  rangeSecs: number,
+): LivelinePoint[] {
+  const now = Math.floor(Date.now() / 1000);
+  const stepSecs = rangeSecs / (SPORTS_CHART_STEPS - 1);
+  const rand = seededRandom(seed ^ Math.round(rangeSecs));
+  const end = Math.max(3, Math.min(97, endPercent));
+  const volatility = 0.35 + Math.log10(rangeSecs / 3600 + 1) * 0.55;
+  const values: number[] = [end];
+  let value = end;
+  for (let i = 1; i < SPORTS_CHART_STEPS; i++) {
+    const noise = (rand() - 0.5) * 2 * volatility;
+    const swing = rand() < 0.05 ? (rand() - 0.5) * volatility * 10 : 0;
+    const rail = value < 8 ? 0.6 : value > 92 ? -0.6 : 0;
+    value = Math.max(2, Math.min(98, value + noise + swing + rail));
+    values.push(value);
+  }
+  values.reverse();
+  // Light smoothing keeps swings readable without flattening them; the last
+  // point stays pinned to today's price.
+  const smoothed = values.map((_, i) => {
+    const prev = values[Math.max(0, i - 1)]!;
+    const next = values[Math.min(values.length - 1, i + 1)]!;
+    return (prev + values[i]! * 2 + next) / 4;
+  });
+  smoothed[smoothed.length - 1] = end;
+  return smoothed.map((v, i) => ({
+    time: Math.round(now - (SPORTS_CHART_STEPS - 1 - i) * stepSecs),
+    value: Math.round(v * 10) / 10,
+  }));
+}
+
+function formatSportsChartTime(time: number, rangeSecs: number): string {
+  const date = new Date(time * 1000);
+  if (rangeSecs <= 24 * 60 * 60) {
+    return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  }
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function proxyImageSrc(src: string | null | undefined): string | null {
@@ -3303,7 +3321,7 @@ function LiveTeamMark({
   logo?: string | null;
   name: string;
   abbr?: string | null;
-  size?: "sm" | "md" | "lg" | "header";
+  size?: "sm" | "md" | "lg" | "header" | "hero";
   portrait?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
@@ -3311,7 +3329,9 @@ function LiveTeamMark({
   const face = portrait || /\.jpe?g(?:$|\?)/i.test(logo ?? "");
   const src = proxyImageSrc(logo);
   const box =
-    size === "header"
+    size === "hero"
+      ? "h-16 w-16 rounded-full text-[13px]"
+      : size === "header"
       ? "h-11 w-11 rounded-full text-[11px]"
       : size === "lg"
         ? "h-14 w-14 rounded-[10px] text-[12px]"
@@ -3319,15 +3339,22 @@ function LiveTeamMark({
           ? "h-7 w-7 rounded-full text-[9px]"
           : "h-10 w-10 rounded-[8px] text-[10px]";
   const img =
-    size === "header"
+    size === "hero"
+      ? "h-16 w-16"
+      : size === "header"
       ? "h-11 w-11"
       : size === "lg"
         ? "h-14 w-14"
         : size === "sm"
           ? "h-7 w-7"
           : "h-10 w-10";
+  // Team logos keep their own shape; only headshots get cropped to a circle.
   const round =
-    size === "sm" || size === "header" || face
+    size === "hero"
+      ? face
+        ? "rounded-full object-cover"
+        : "object-contain"
+      : size === "sm" || size === "header" || face
       ? "rounded-full object-cover"
       : "object-contain";
 
@@ -3530,80 +3557,98 @@ function LiveGameCard({
   );
 }
 
+const SPORTS_CHART_PAD = { top: 12, right: 8, bottom: 26, left: 4 } as const;
+
+/** Two-way odds history on liveline: both sides always sum to 100%. */
 function SportsOddsChart({
-  awayValues,
-  homeValues,
+  awayPct,
   awayColor,
   homeColor,
   awayLabel,
   homeLabel,
-  awayPct,
-  homePct,
+  seed,
+  range,
 }: {
-  awayValues: number[];
-  homeValues: number[];
+  awayPct: number;
   awayColor: string;
   homeColor: string;
   awayLabel: string;
   homeLabel: string;
-  awayPct: number;
-  homePct: number;
+  seed: number;
+  range: SportsChartRange;
 }) {
-  const width = 320;
-  const height = 118;
-  const padX = 8;
-  const padY = 10;
-  const awayPath = seriesToPath(awayValues, width, height, padX, padY);
-  const homePath = seriesToPath(homeValues, width, height, padX, padY);
+  const rangeSecs = SPORTS_RANGE_SECS[range];
+  const homePct = 100 - awayPct;
+  const awayData = useMemo(
+    () => sportsOddsHistory(awayPct, seed, rangeSecs),
+    [awayPct, seed, rangeSecs],
+  );
+  const homeData = useMemo(
+    () =>
+      awayData.map((point) => ({
+        time: point.time,
+        value: Math.round((100 - point.value) * 10) / 10,
+      })),
+    [awayData],
+  );
 
   return (
-    <div className="relative h-[118px] w-full pr-[3.75rem]">
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="h-full w-full"
-        preserveAspectRatio="none"
-        aria-hidden
-      >
-        <path
-          d={awayPath}
-          fill="none"
-          stroke={awayColor}
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
+    <div className="relative h-[156px] w-full">
+      <div className="api-odds-chart absolute inset-y-0 left-0 right-[3.75rem]">
+        <Liveline
+          data={awayData}
+          value={awayPct}
+          series={[
+            { id: "away", data: awayData, value: awayPct, color: awayColor },
+            { id: "home", data: homeData, value: homePct, color: homeColor },
+          ]}
+          theme="dark"
+          grid={false}
+          badge={false}
+          pulse={false}
+          momentum={false}
+          scrub
+          paused
+          showValue={false}
+          lineWidth={2}
+          window={rangeSecs}
+          formatValue={(v) => `${Math.round(v)}%`}
+          formatTime={(t) => formatSportsChartTime(t, rangeSecs)}
+          padding={SPORTS_CHART_PAD}
+          className="h-full w-full"
         />
-        <path
-          d={homePath}
-          fill="none"
-          stroke={homeColor}
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-      <div className="pointer-events-none absolute inset-y-0 right-0 flex flex-col justify-center gap-0.5 text-right">
+      </div>
+      <div className="pointer-events-none absolute inset-y-0 right-0 flex flex-col justify-center gap-0.5 pb-3 text-right">
         <p
-          className={`text-[15px] font-semibold leading-none tabular-nums ${instrumentSansCondensed.className}`}
+          className={`text-[18px] font-semibold leading-none tabular-nums ${instrumentSansCondensed.className}`}
           style={{ color: awayColor }}
         >
-          {Math.round(awayPct)}%
+          <NumberFlow
+            value={Math.round(awayPct)}
+            suffix="%"
+            trend={0}
+            style={nfMaskStyle}
+          />
         </p>
         <p className="text-[11px] font-semibold leading-none" style={{ color: awayColor }}>
           {awayLabel}
         </p>
         <p
-          className="mt-1.5 text-[11px] font-semibold leading-none"
+          className="mt-2 text-[11px] font-semibold leading-none"
           style={{ color: homeColor }}
         >
           {homeLabel}
         </p>
         <p
-          className={`text-[15px] font-semibold leading-none tabular-nums ${instrumentSansCondensed.className}`}
+          className={`text-[18px] font-semibold leading-none tabular-nums ${instrumentSansCondensed.className}`}
           style={{ color: homeColor }}
         >
-          {Math.round(homePct)}%
+          <NumberFlow
+            value={Math.round(homePct)}
+            suffix="%"
+            trend={0}
+            style={nfMaskStyle}
+          />
         </p>
       </div>
     </div>
@@ -3695,23 +3740,12 @@ function SportsOneTeamBoard({
   const no = odds.find((side) => side.side === "no") ?? odds[1];
   const yesPrice = yes?.price ?? market.yesPrice;
   const noPrice = no?.price ?? market.noPrice;
-  const yesPct = Math.max(1, Math.min(99, yesPrice * 100));
-  const noPct = Math.max(1, Math.min(99, noPrice * 100));
+  const yesPct = Math.max(
+    1,
+    Math.min(99, (yesPrice / Math.max(0.0001, yesPrice + noPrice)) * 100),
+  );
   const [range, setRange] = useState<SportsChartRange>("MAX");
   const seed = hashString(market.slug || market.marketId || market.title);
-  const steps = SPORTS_RANGE_STEPS[range];
-  const yesSeries = useMemo(
-    () => seedSportsOddsSeries(yesPct, seed, steps),
-    [yesPct, seed, steps],
-  );
-  const noSeries = useMemo(
-    () =>
-      seedSportsOddsSeries(noPct, seed + 17, steps).map((value, index) => {
-        const complement = 100 - (yesSeries[index] ?? yesPct);
-        return Math.round((value * 0.35 + complement * 0.65) * 10) / 10;
-      }),
-    [noPct, seed, steps, yesPct, yesSeries],
-  );
 
   return (
     <div className="flex flex-col gap-3">
@@ -3734,14 +3768,13 @@ function SportsOneTeamBoard({
       </div>
 
       <SportsOddsChart
-        awayValues={yesSeries}
-        homeValues={noSeries}
+        awayPct={yesPct}
         awayColor="#00D54B"
         homeColor="#FF5C5C"
         awayLabel={yes?.label ?? "Yes"}
         homeLabel={no?.label ?? "No"}
-        awayPct={yesPct}
-        homePct={noPct}
+        seed={seed}
+        range={range}
       />
 
       <SportsVolumeRow
@@ -3804,29 +3837,21 @@ function SportsMatchupBoard({ market }: { market: PolymarketMarketData }) {
   const [range, setRange] = useState<SportsChartRange>("MAX");
   const awayPrice = awayOdds?.price ?? market.yesPrice;
   const homePrice = homeOdds?.price ?? market.noPrice;
-  const awayPct = Math.max(1, Math.min(99, awayPrice * 100));
-  const homePct = Math.max(1, Math.min(99, homePrice * 100));
-  const awayColor = teamAccent(away.name, away.abbr, 0);
-  const homeColor = teamAccent(home.name, home.abbr, 1);
+  const awayPct = Math.max(
+    1,
+    Math.min(99, (awayPrice / Math.max(0.0001, awayPrice + homePrice)) * 100),
+  );
+  const tones = matchupTeamTones(market);
+  const awayColor = tones?.away.text ?? teamAccent(away.name, away.abbr, 0);
+  const homeColor = tones?.home.text ?? teamAccent(home.name, home.abbr, 1);
   const awayName = teamShortLabel(away.name);
   const homeName = teamShortLabel(home.name);
   const awayAbbr = teamAbbrLabel(away.name, away.abbr);
   const homeAbbr = teamAbbrLabel(home.name, home.abbr);
   const seed = hashString(market.slug || market.marketId || market.title);
-  const steps = SPORTS_RANGE_STEPS[range];
-  const awaySeries = useMemo(
-    () => seedSportsOddsSeries(awayPct, seed, steps),
-    [awayPct, seed, steps],
-  );
-  const homeSeries = useMemo(
-    () => seedSportsOddsSeries(homePct, seed + 17, steps).map((v, i) => {
-      const complement = 100 - (awaySeries[i] ?? awayPct);
-      return Math.round((v * 0.35 + complement * 0.65) * 10) / 10;
-    }),
-    [awaySeries, awayPct, homePct, seed, steps],
-  );
-
   const hasScore = away.score != null && home.score != null;
+  // NBA logos are recognizable on their own; skip the name + abbr labels.
+  const showSideLabels = (game?.league ?? "").toUpperCase() !== "NBA";
   const statusTop =
     game?.status === "final"
       ? "Final"
@@ -3847,26 +3872,36 @@ function SportsMatchupBoard({ market }: { market: PolymarketMarketData }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-2 px-0.5">
-        <div className="flex min-w-0 flex-col items-start gap-1.5">
+      <div
+        className={`grid grid-cols-[1fr_auto_1fr] gap-2 px-0.5 ${
+          showSideLabels ? "items-start" : "items-center"
+        }`}
+      >
+        <div
+          className={`flex min-w-0 flex-col gap-1.5 ${
+            showSideLabels ? "items-start" : "items-center"
+          }`}
+        >
           <LiveTeamMark
             logo={away.logo}
             name={away.name}
             abbr={away.abbr}
-            size="header"
+            size={showSideLabels ? "header" : "hero"}
             portrait={away.portrait}
           />
-          <div className="min-w-0">
-            <p className="truncate text-[15px] font-semibold leading-tight">
-              {awayName}
-            </p>
-            <p
-              className="mt-0.5 text-[13px] font-semibold leading-none tabular-nums"
-              style={{ color: awayColor }}
-            >
-              {awayAbbr}
-            </p>
-          </div>
+          {showSideLabels ? (
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-semibold leading-tight">
+                {awayName}
+              </p>
+              <p
+                className="mt-0.5 text-[13px] font-semibold leading-none tabular-nums"
+                style={{ color: awayColor }}
+              >
+                {awayAbbr}
+              </p>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex min-w-[5.5rem] flex-col items-center pt-0.5 text-center">
@@ -3899,37 +3934,42 @@ function SportsMatchupBoard({ market }: { market: PolymarketMarketData }) {
           ) : null}
         </div>
 
-        <div className="flex min-w-0 flex-col items-end gap-1.5 text-right">
+        <div
+          className={`flex min-w-0 flex-col gap-1.5 ${
+            showSideLabels ? "items-end text-right" : "items-center"
+          }`}
+        >
           <LiveTeamMark
             logo={home.logo}
             name={home.name}
             abbr={home.abbr}
-            size="header"
+            size={showSideLabels ? "header" : "hero"}
             portrait={home.portrait}
           />
-          <div className="min-w-0">
-            <p className="truncate text-[15px] font-semibold leading-tight">
-              {homeName}
-            </p>
-            <p
-              className="mt-0.5 text-[13px] font-semibold leading-none tabular-nums"
-              style={{ color: homeColor }}
-            >
-              {homeAbbr}
-            </p>
-          </div>
+          {showSideLabels ? (
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-semibold leading-tight">
+                {homeName}
+              </p>
+              <p
+                className="mt-0.5 text-[13px] font-semibold leading-none tabular-nums"
+                style={{ color: homeColor }}
+              >
+                {homeAbbr}
+              </p>
+            </div>
+          ) : null}
         </div>
       </div>
 
       <SportsOddsChart
-        awayValues={awaySeries}
-        homeValues={homeSeries}
+        awayPct={awayPct}
         awayColor={awayColor}
         homeColor={homeColor}
         awayLabel={awayName}
         homeLabel={homeName}
-        awayPct={awayPct}
-        homePct={homePct}
+        seed={seed}
+        range={range}
       />
 
       <div className="flex items-center justify-between gap-2">
@@ -3969,20 +4009,6 @@ function shortWallet(wallet: string): string {
   return `${wallet.slice(0, 6)}…${wallet.slice(-4)}`;
 }
 
-function ShareGlyph({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" className={className} aria-hidden>
-      <path
-        d="M8 10V3M8 3 5.5 5.5M8 3l2.5 2.5M3.5 9v3.5a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V9"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function MarketYourPosition({
   item,
   market,
@@ -4006,101 +4032,47 @@ function MarketYourPosition({
     ) ?? null;
   const markPrice = liveSide?.price ?? item.position.markPrice;
   const invested = item.trade.amountUsd;
-  const toWin = item.position.shares;
   const cashOut = item.position.shares * markPrice;
   const pnlUsd = cashOut - invested;
   const pnlPct = invested > 0 ? (pnlUsd / invested) * 100 : 0;
-  const progressPct = Math.round(Math.max(2, Math.min(98, markPrice * 100)));
   const image = item.position.image ?? market.image;
+  const position: PolymarketWalletPosition = {
+    ...item.position,
+    marketTitle: market.title,
+    outcome: item.trade.outcome,
+    avgPrice: item.trade.price,
+    markPrice,
+    valueUsd: cashOut,
+    pnlUsd,
+    image,
+  };
 
   return (
     <section aria-label="Your position">
       <h3 className={`mb-2.5 ${ui.section}`}>Your position</h3>
-      <div className="rounded-[20px] bg-white/[0.08] p-3.5">
-        <div className="flex items-center gap-2.5">
-          {image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={image}
-              alt=""
-              className="h-9 w-9 shrink-0 rounded-full object-cover"
-            />
-          ) : (
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-[11px] font-semibold text-white/40">
-              {item.trade.outcome.slice(0, 1).toUpperCase()}
-            </div>
-          )}
-          <p className="min-w-0 truncate text-[15px] font-semibold">
-            {item.trade.outcome}
-          </p>
-        </div>
-
-        <p className="mt-2.5 text-[15px] font-semibold tabular-nums">
-          <span className="text-white">{formatUsdPrecise(invested)}</span>
-          <span className="text-white/45"> → </span>
-          <span className="text-[#00D54B]">{formatUsdPrecise(toWin)}</span>
-        </p>
-
-        <div className="relative mt-3 h-7 overflow-hidden rounded-full bg-white/[0.08]">
-          <div
-            aria-hidden
-            className="absolute inset-y-0 left-0 w-[18%] opacity-90"
-            style={{
-              backgroundImage:
-                "repeating-linear-gradient(-45deg, #FF375F 0 5px, #FF8A9B 5px 10px)",
-            }}
-          />
-          <div
-            className="absolute inset-y-0 left-0 flex items-center justify-end rounded-full bg-[#00D54B] pr-2.5"
-            style={{ width: `${progressPct}%` }}
-          >
-            <span className="text-[11px] font-bold tabular-nums text-[#06381a]">
-              {progressPct}%
-            </span>
-          </div>
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-y-1 w-px border-l border-dashed border-black/35"
-            style={{ left: `${progressPct}%` }}
-          />
-        </div>
-
-        <div className="mt-3 flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="Share position"
-            onClick={() =>
-              onShare({
-                title: market.title,
-                subtitle: item.trade.outcome,
-                image,
-                handle,
-                wallet: item.trade.wallet,
-                timestamp: item.trade.timestamp,
-                invested,
-                entryPrice: item.trade.price,
-                markPrice,
-                currentValue: cashOut,
-                pnlUsd,
-                pnlPct,
-                exitLabel: "Now",
-                closed: false,
-                referralCode,
-              })
-            }
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-white transition-colors hover:bg-white/10"
-          >
-            <ShareGlyph className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={onCashOut}
-            className="flex h-11 min-w-0 flex-1 items-center justify-center rounded-full bg-white/[0.08] text-[14px] font-semibold text-white transition-colors hover:bg-white/10"
-          >
-            Cash out {formatUsdPrecise(cashOut)}
-          </button>
-        </div>
-      </div>
+      <BubblyPositionCard
+        position={position}
+        onCashOut={onCashOut}
+        onShare={() =>
+          onShare({
+            title: market.title,
+            subtitle: item.trade.outcome,
+            image,
+            handle,
+            wallet: item.trade.wallet,
+            timestamp: item.trade.timestamp,
+            invested,
+            entryPrice: item.trade.price,
+            markPrice,
+            currentValue: cashOut,
+            pnlUsd,
+            pnlPct,
+            exitLabel: "Now",
+            closed: false,
+            referralCode,
+          })
+        }
+      />
     </section>
   );
 }
@@ -8372,6 +8344,7 @@ export default function Api() {
             <BlurBackButton
               onClick={drillBack.onClick}
               label={drillBack.label}
+              circle={showingMarketDetail}
             />
           </div>
         )}
@@ -8384,9 +8357,7 @@ export default function Api() {
           !copyTradeTarget &&
           !depositOpen && (
             <div className={`absolute right-3.5 ${IOS_CHROME_TOP} z-30`}>
-              <BlurShareButton
-                onClick={() => void shareMarket()}
-              />
+              <BlurShareButton onClick={() => void shareMarket()} circle />
             </div>
           )}
 

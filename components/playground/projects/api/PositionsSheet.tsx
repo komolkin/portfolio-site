@@ -43,14 +43,17 @@ function positionInvested(position: PolymarketWalletPosition) {
   return Math.max(0, position.valueUsd - position.pnlUsd);
 }
 
-function BubblyPositionCard({
+export function BubblyPositionCard({
   position,
   onOpen,
   onCashOut,
+  onShare,
 }: {
   position: PolymarketWalletPosition;
-  onOpen: () => void;
+  /** Omit when already on the market page. */
+  onOpen?: () => void;
   onCashOut?: () => void;
+  onShare?: () => void;
 }) {
   const invested = positionInvested(position);
   const cashOut = Math.max(0, position.valueUsd);
@@ -82,7 +85,8 @@ function BubblyPositionCard({
         <button
           type="button"
           onClick={onOpen}
-          className="flex min-w-0 flex-1 flex-col items-start gap-2 text-left"
+          disabled={!onOpen}
+          className="flex min-w-0 flex-1 flex-col items-start gap-2 text-left disabled:cursor-default"
         >
           <p className="line-clamp-2 text-[16px] font-semibold leading-snug tracking-[0.2px] text-white">
             {position.marketTitle}
@@ -121,6 +125,7 @@ function BubblyPositionCard({
           <button
             type="button"
             aria-label="Share position"
+            onClick={onShare}
             className="relative mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full border border-white/10 transition-[transform,background-color] duration-150 ease-out hover:bg-white/[0.06] active:scale-[0.97]"
           >
             <span
@@ -143,7 +148,8 @@ function BubblyPositionCard({
       <button
         type="button"
         onClick={onOpen}
-        className="relative h-[72px] w-full overflow-hidden rounded-[14px] text-left"
+        disabled={!onOpen}
+        className="relative h-[72px] w-full overflow-hidden rounded-[14px] text-left disabled:cursor-default"
       >
         <div className="absolute inset-0 bg-white/[0.04]" />
         <div
@@ -245,8 +251,8 @@ function BubblyPositionCard({
             style={{ opacity: 0.35 + danger * 0.65 }}
           />
         ) : null}
-        <span className="relative inline-flex items-baseline">
-          <span>Cash Out </span>
+        <span className="relative inline-flex items-baseline gap-1">
+          <span>Cash Out</span>
           <span>{formatUsdPrecise(cashOut)}</span>
         </span>
       </button>
@@ -448,26 +454,6 @@ export default function PositionsSheet({
           )}
         </div>
       </div>
-      <style>{`
-        @keyframes positions-bubbly-hatch {
-          from { transform: translateX(0); }
-          to { transform: translateX(-10px); }
-        }
-        .positions-bubbly-hatch {
-          animation: positions-bubbly-hatch 2.8s linear infinite;
-        }
-        @keyframes positions-bubbly-danger {
-          0%, 100% { box-shadow: inset 0 0 12px #d42e3e; }
-          50% { box-shadow: inset 0 0 28px #ff4d5e; }
-        }
-        .positions-bubbly-danger {
-          animation: positions-bubbly-danger 0.7s ease-in-out infinite;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .positions-bubbly-hatch,
-          .positions-bubbly-danger { animation: none; }
-        }
-      `}</style>
     </div>
   );
 }
