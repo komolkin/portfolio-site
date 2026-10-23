@@ -94,6 +94,8 @@ export type PolymarketTradeWithPnl = {
   marketSlug: string;
   marketCategory: string | null;
   marketImage?: string | null;
+  /** Logo of the team this trade backed (ESPN), when the outcome is a team. */
+  outcomeLogo?: string | null;
   wallet: string;
   timestamp: string | null;
   txHash: string | null;
@@ -2993,10 +2995,21 @@ export async function getLatestTradesWithPnl(options?: {
         }
       }
 
-      const enriched = pool.map((trade) => ({
-        ...trade,
-        marketImage: imageBySlug.get(trade.marketSlug) ?? null,
-      }));
+      const catalog = await fetchEspnTeamCatalog().catch(
+        () => [] as EspnTeamLogo[],
+      );
+      const enriched = pool.map((trade) => {
+        const leagueHint = trade.marketSlug.split("-")[0]?.toUpperCase();
+        const team =
+          catalog.length > 0 && !/^(yes|no)$/i.test(trade.outcome.trim())
+            ? lookupTeamLogo(trade.outcome, catalog, leagueHint)
+            : null;
+        return {
+          ...trade,
+          marketImage: imageBySlug.get(trade.marketSlug) ?? null,
+          outcomeLogo: team?.logo ?? null,
+        };
+      });
       const withImages = enriched.filter((trade) => Boolean(trade.marketImage));
       const withoutImages = enriched.filter((trade) => !trade.marketImage);
 
@@ -3027,7 +3040,15 @@ export async function getLatestTradesWithPnl(options?: {
         }
       }
 
-      if (trades.length === 0) return lastGoodTradesByKey.get(key) ?? [];
+      if (trades.length === 0) {
+        const lastGood = lastGoodTradesByKey.get(key);
+        if (lastGood) return lastGood;
+        // No sports whales right now: fall back to the wider whale feed.
+        if (sportsOnly) {
+          return getLatestTradesWithPnl({ ...options, sportsOnly: false });
+        }
+        return [];
+      }
       lastGoodTradesByKey.set(key, trades);
       setCache(key, trades, 30_000);
       return trades;

@@ -2591,6 +2591,8 @@ const FLOAT_HANDLES = [
 ] as const;
 
 /** Synthetic feed trade so preview uspics open the same position sheet as the feed. */
+const FEED_TRADES_STORAGE_KEY = "api-playground-feed-trades-v1";
+
 const FLOAT_PNL_MIN = 450;
 const FLOAT_PNL_MAX = 2_239;
 
@@ -5398,6 +5400,19 @@ export default function Api() {
     let hasTrades = false;
     let emptyRetries = 0;
 
+    try {
+      const cached = JSON.parse(
+        window.localStorage.getItem(FEED_TRADES_STORAGE_KEY) ?? "null",
+      ) as PolymarketTradeWithPnl[] | null;
+      if (Array.isArray(cached) && cached.length > 0) {
+        hasTrades = true;
+        setTrades(cached);
+        setTradesStatus("ready");
+      }
+    } catch {
+      // Ignore unreadable cache; the network load below fills the feed.
+    }
+
     const load = async () => {
       if (!hasTrades) setTradesStatus("loading");
       let next: PolymarketTradeWithPnl[] | null = null;
@@ -5418,6 +5433,14 @@ export default function Api() {
         emptyRetries = 0;
         setTrades(next);
         setTradesStatus("ready");
+        try {
+          window.localStorage.setItem(
+            FEED_TRADES_STORAGE_KEY,
+            JSON.stringify(next),
+          );
+        } catch {
+          // Storage can be full or disabled; the in-memory feed still works.
+        }
       } else if (!hasTrades) {
         emptyRetries += 1;
         // Upstream sometimes returns nothing while rate limited; keep the

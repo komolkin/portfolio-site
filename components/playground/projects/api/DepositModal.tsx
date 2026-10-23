@@ -113,19 +113,6 @@ function BackIcon({ className }: { className?: string }) {
   );
 }
 
-function CloseIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" className={className} aria-hidden>
-      <path
-        d="M3.5 3.5l9 9M12.5 3.5l-9 9"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 function ChevronIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 16 16" fill="none" className={className} aria-hidden>
@@ -481,7 +468,7 @@ export default function DepositModal({
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel}
-        className={`absolute inset-x-0 bottom-0 top-[44px] flex flex-col overflow-hidden rounded-t-[1.75rem] ${ui.sheet} shadow-[0_-12px_40px_rgba(0,0,0,0.45)]`}
+        className={`absolute inset-x-0 bottom-0 flex h-[94%] flex-col overflow-hidden rounded-t-[1.75rem] ${ui.sheet} shadow-[0_-12px_40px_rgba(0,0,0,0.45)]`}
         style={{
           transform: open
             ? `translateY(${drawerOffset}px)`
@@ -492,30 +479,26 @@ export default function DepositModal({
         }}
       >
         <div
-          className="h-3 shrink-0 touch-none"
+          className="flex shrink-0 touch-none flex-col px-5 pb-1 pt-2"
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
-          aria-hidden
-        />
+        >
+          <span
+            aria-hidden
+            className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/30"
+          />
+        </div>
 
         <div className="min-h-0 flex-1">
           <SheetPager step={step} direction={stepDir} fill>
             {step === "amount" && (
               <div className="flex h-full min-h-0 flex-col px-5 pb-5">
-                <div className="relative flex h-14 shrink-0 items-center justify-center">
+                <div className="flex h-10 shrink-0 items-center justify-center">
                   <h2 className="text-[17px] font-semibold tracking-[-0.01em]">
                     Deposit
                   </h2>
-                  <button
-                    type="button"
-                    aria-label="Close"
-                    onClick={closeSheet}
-                    className="absolute right-0 flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.08] text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white"
-                  >
-                    <CloseIcon className="h-4 w-4" />
-                  </button>
                 </div>
 
                 <div className="flex min-h-0 flex-1 items-center justify-center">

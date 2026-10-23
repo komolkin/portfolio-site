@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Liveline, type LivelinePoint } from "liveline";
+import type { LivelinePoint } from "liveline";
 import type {
   PolymarketMarketData,
   PolymarketTradeWithPnl,
@@ -15,6 +15,83 @@ import type { SharePositionPayload } from "./SharePositionModal";
 import UserAvatar from "./UserAvatar";
 
 const CLOSE_THRESHOLD_PX = 72;
+
+function outcomeTeamLogo(
+  market: PolymarketMarketData | undefined,
+  outcome: string,
+): string | null {
+  const label = outcome.trim().toLowerCase();
+  if (!market || !label) return null;
+  const teams = [
+    market.liveGame?.away,
+    market.liveGame?.home,
+    ...(market.teams ?? []),
+  ];
+  for (const team of teams) {
+    const name = team?.name?.toLowerCase();
+    if (!name || !team?.logo) continue;
+    if (name === label || name.includes(label) || label.includes(name)) {
+      return team.logo;
+    }
+  }
+  return null;
+}
+
+function ChanceSparkline({
+  points,
+  range,
+  color,
+}: {
+  points: LivelinePoint[];
+  range: { min: number; max: number };
+  color: string;
+}) {
+  const first = points[0]?.time ?? 0;
+  const span = Math.max(1, (points.at(-1)?.time ?? 0) - first);
+  const height = Math.max(0.001, range.max - range.min);
+  const coords = points.map((point) => [
+    ((point.time - first) / span) * 1000,
+    ((range.max - point.value) / height) * 100,
+  ]);
+  const line = coords
+    .map(([x, y], index) => `${index === 0 ? "M" : "L"}${x!.toFixed(1)} ${y!.toFixed(2)}`)
+    .join(" ");
+  const area = `${line} L1000 100 L0 100 Z`;
+  const gradientId = `chance-fill-${color.replace("#", "")}`;
+  return (
+    <svg
+      viewBox="0 0 1000 100"
+      preserveAspectRatio="none"
+      className="absolute overflow-visible"
+      style={{
+        top: CHART_PAD.top,
+        right: CHART_PAD.right,
+        bottom: CHART_PAD.bottom,
+        left: CHART_PAD.left,
+        width: `calc(100% - ${CHART_PAD.left + CHART_PAD.right}px)`,
+        height: `calc(100% - ${CHART_PAD.top + CHART_PAD.bottom}px)`,
+      }}
+      aria-hidden
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.22" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${gradientId})`} />
+      <path
+        d={line}
+        fill="none"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
 
 function formatUsd(value: number): string {
   const abs = Math.abs(value);
@@ -80,7 +157,7 @@ function oppositeOutcome(outcome: string, marketTitle?: string): string {
   return "No";
 }
 
-const CHART_PAD = { top: 28, right: 14, bottom: 36, left: 14 } as const;
+const CHART_PAD = { top: 28, right: 14, bottom: 12, left: 14 } as const;
 const MAX_CHART_MARKERS = 8;
 
 const CHART_RANGES = [
@@ -136,14 +213,6 @@ function seedChanceHistory(
     time: Math.round(now - (CHART_STEPS - 1 - i) * stepSecs),
     value: Math.round(v * 10) / 10,
   }));
-}
-
-function formatChartTime(time: number, rangeSecs: number): string {
-  const date = new Date(time * 1000);
-  if (rangeSecs <= 24 * 60 * 60) {
-    return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  }
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 /** Mirrors liveline's internal range so overlay markers line up with the curve. */
@@ -220,6 +289,7 @@ function interpolateValue(points: LivelinePoint[], time: number): number {
 function pinTradesOnHistory(
   points: LivelinePoint[],
   pins: Array<{ key: string; time: number | null; value: number }>,
+  pinnedKey?: string,
 ): {
   points: LivelinePoint[];
   markers: Array<{ key: string; time: number; value: number }>;
@@ -234,9 +304,15 @@ function pinTradesOnHistory(
   const used: number[] = [];
   const markers: Array<{ key: string; time: number; value: number }> = [];
   // Trades outside the selected window are hidden rather than squashed onto the edge.
-  const visiblePins = pins.filter(
-    (pin) => pin.time == null || (pin.time >= t0 && pin.time <= t1),
-  );
+  // The opened position stays visible in every range, clamped to the edge.
+  const visiblePins = pins
+    .filter(
+      (pin) =>
+        pin.key === pinnedKey ||
+        pin.time == null ||
+        (pin.time >= t0 && pin.time <= t1),
+    )
+    .sort((a, b) => Number(b.key === pinnedKey) - Number(a.key === pinnedKey));
 
   for (const [pinIndex, pin] of visiblePins.slice(0, MAX_CHART_MARKERS).entries()) {
     const fallback = t0 + span * (0.22 + ((pinIndex * 0.19) % 0.56));
@@ -417,8 +493,18 @@ export default function FeedPositionSheet({
     (market ? sportsOutcomeAbbr(market, outcomeLabel) : null) ?? outcomeLabel;
   const otherButtonLabel =
     (market ? sportsOutcomeAbbr(market, otherOutcome) : null) ?? otherOutcome;
+  const tradedLogo =
+    outcomeTeamLogo(market, outcomeLabel) ?? trade.outcomeLogo ?? null;
   const chance = Math.round(Math.max(0, Math.min(1, markPrice)) * 100);
-  const [chartRangeId, setChartRangeId] = useState<ChartRangeId>("1d");
+  const [chartRangeId, setChartRangeId] = useState<ChartRangeId>(() => {
+    const opened = parseTradeTime(trade.timestamp);
+    if (opened == null) return "1d";
+    const age = Date.now() / 1000 - opened;
+    const fit = CHART_RANGES.find(
+      (range) => range.id !== "1h" && age <= range.secs * 0.9,
+    );
+    return fit?.id ?? "all";
+  });
   const chartRangeSecs =
     CHART_RANGES.find((range) => range.id === chartRangeId)?.secs ??
     CHART_RANGES[2].secs;
@@ -440,8 +526,8 @@ export default function FeedPositionSheet({
       time: parseTradeTime(item.timestamp),
       value: outcomeChance(item.price, item.outcome, trade.outcome),
     }));
-    return pinTradesOnHistory(baseHistory, pins);
-  }, [baseHistory, chartTrades, trade.outcome]);
+    return pinTradesOnHistory(baseHistory, pins, openedTradeKey);
+  }, [baseHistory, chartTrades, trade.outcome, openedTradeKey]);
   const chartRange = useMemo(
     () => livelineRange(chanceHistory, chance, entryChance),
     [chanceHistory, chance, entryChance],
@@ -630,7 +716,14 @@ export default function FeedPositionSheet({
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
           <section className="rounded-[20px] bg-white/[0.08] px-3.5 pb-3.5 pt-3.5">
             <div className="flex items-start gap-2.5">
-              {marketImage ? (
+              {tradedLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={tradedLogo}
+                  alt=""
+                  className="h-9 w-9 shrink-0 object-contain"
+                />
+              ) : marketImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={marketImage}
@@ -657,32 +750,27 @@ export default function FeedPositionSheet({
             <div className="-mx-1 mt-2 h-[168px] overflow-visible" aria-label="Position chance chart">
               {chanceHistory.length >= 2 ? (
                 <div className="relative h-full w-full isolate">
-                  <div className="absolute inset-0 z-0 overflow-hidden">
-                    <Liveline
-                      data={chanceHistory}
-                      value={chance}
-                      theme="dark"
-                      color={chartColor}
-                      grid={false}
-                      badge={false}
-                      pulse={false}
-                      momentum={false}
-                      scrub
-                      fill
-                      paused
-                      showValue={false}
-                      lineWidth={2}
-                      referenceLine={{
-                        value: entryChance,
-                        label: `Avg ${formatOdds(trade.price)}`,
-                      }}
-                      window={chartRangeSecs}
-                      formatValue={(v) => `${Math.round(v)}¢`}
-                      formatTime={(t) => formatChartTime(t, chartRangeSecs)}
-                      padding={CHART_PAD}
-                      className="h-full w-full"
-                    />
-                  </div>
+                  <ChanceSparkline
+                    points={chanceHistory}
+                    range={chartRange}
+                    color={chartColor}
+                  />
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute h-[2px] -translate-y-1/2"
+                    style={{
+                      left: CHART_PAD.left,
+                      right: CHART_PAD.right,
+                      backgroundImage:
+                        "radial-gradient(circle, rgba(255,255,255,0.45) 0.9px, transparent 1.2px)",
+                      backgroundSize: "6px 2px",
+                      backgroundRepeat: "repeat-x",
+                      top: `calc(${CHART_PAD.top}px + (100% - ${CHART_PAD.top + CHART_PAD.bottom}px) * ${
+                        (chartRange.max - (chanceHistory.at(-1)?.value ?? chance)) /
+                        Math.max(0.001, chartRange.max - chartRange.min)
+                      })`,
+                    }}
+                  />
                   {chartMarkers.map((marker) => {
                     const item = chartTrades.find(
                       (tradeItem) => tradeItemKey(tradeItem) === marker.key,
@@ -713,9 +801,22 @@ export default function FeedPositionSheet({
                         }}
                       >
                         <span
-                          className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-[#1c1c1e]"
-                          style={{ backgroundColor: ring }}
-                        />
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                        >
+                          {marker.key === openedTradeKey ? (
+                            <span
+                              className="absolute h-2.5 w-2.5 rounded-full motion-safe:animate-[entry-pulse_1.8s_cubic-bezier(0,0,0.2,1)_infinite]"
+                              style={{ backgroundColor: ring }}
+                            />
+                          ) : null}
+                          <span
+                            className={`relative rounded-full ring-2 ring-[#1c1c1e] ${
+                              marker.key === openedTradeKey ? "h-2.5 w-2.5" : "h-2 w-2"
+                            }`}
+                            style={{ backgroundColor: ring }}
+                          />
+                        </span>
                         {selected ? (
                           <span
                             className="absolute left-1/2 bottom-[calc(50%+8px)] -translate-x-1/2 rounded-full bg-black px-1.5 py-[3px] text-[10px] font-semibold tabular-nums leading-none"

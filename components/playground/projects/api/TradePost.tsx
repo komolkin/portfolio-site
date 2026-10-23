@@ -245,7 +245,14 @@ export default function TradePost({
           }}
         >
           <div className="flex items-center gap-3">
-            {marketImage ? (
+            {trade.outcomeLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={trade.outcomeLogo}
+                alt=""
+                className="h-12 w-12 shrink-0 object-contain"
+              />
+            ) : marketImage ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={marketImage}
