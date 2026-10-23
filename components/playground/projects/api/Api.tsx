@@ -2508,10 +2508,12 @@ function SportsMatchHeader({
 
 function PreviewActionPill({
   label,
+  price,
   color,
   onClick,
 }: {
   label: string;
+  price?: number;
   color: string;
   onClick: () => void;
 }) {
@@ -2525,7 +2527,15 @@ function PreviewActionPill({
       className="min-w-0 flex-1 rounded-full border border-white/20 bg-black/45 px-3 py-3 text-center text-[16px] font-semibold backdrop-blur-md transition-colors hover:bg-black/60"
       style={{ color }}
     >
-      <span className="block truncate">{label}</span>
+      <span className="block truncate">
+        {label}
+        {price != null ? (
+          <>
+            {" "}
+            <ChanceFlow price={price} />
+          </>
+        ) : null}
+      </span>
     </button>
   );
 }
@@ -3003,7 +3013,13 @@ function TrendingMarketCard({
     else onOpen(market);
   };
 
-  type Pill = { key: string; label: string; color: string; outcome?: string };
+  type Pill = {
+    key: string;
+    label: string;
+    price?: number;
+    color: string;
+    outcome?: string;
+  };
   let pills: Pill[] = [];
 
   if (isSportsMarket(market)) {
@@ -3027,19 +3043,22 @@ function TrendingMarketCard({
       ? [
           {
             key: "away",
-            label: `${awayAbbr} ${formatChancePct(awayPrice)}`,
+            label: awayAbbr,
+            price: awayPrice,
             color: tones?.away.text ?? "#C4B5FD",
             outcome: away.name,
           },
           {
             key: "draw",
-            label: `Draw ${formatChancePct(draw.price)}`,
+            label: "Draw",
+            price: draw.price,
             color: "#FFFFFF",
             outcome: draw.label,
           },
           {
             key: "home",
-            label: `${homeAbbr} ${formatChancePct(homePrice)}`,
+            label: homeAbbr,
+            price: homePrice,
             color: tones?.home.text ?? "#E8C44A",
             outcome: home.name,
           },
@@ -3047,13 +3066,15 @@ function TrendingMarketCard({
       : [
           {
             key: "away",
-            label: `${awayAbbr} ${formatChancePct(awayPrice)}`,
+            label: awayAbbr,
+            price: awayPrice,
             color: tones?.away.text ?? "#C4B5FD",
             outcome: away.name,
           },
           {
             key: "home",
-            label: `${homeAbbr} ${formatChancePct(homePrice)}`,
+            label: homeAbbr,
+            price: homePrice,
             color: tones?.home.text ?? "#E8C44A",
             outcome: home.name,
           },
@@ -3093,13 +3114,15 @@ function TrendingMarketCard({
       pills = [
         {
           key: "primary",
-          label: `${primaryLabel} ${formatChancePct(primary.price)}`,
+          label: primaryLabel,
+          price: primary.price,
           color: toneFor(primaryLabel),
           outcome: primary.label,
         },
         {
           key: "secondary",
-          label: `${secondaryLabel} ${formatChancePct(secondary.price)}`,
+          label: secondaryLabel,
+          price: secondary.price,
           color: toneFor(secondaryLabel),
           outcome: secondary.label,
         },
@@ -3118,7 +3141,8 @@ function TrendingMarketCard({
             ]
           : shown.map((outcome, index) => ({
               key: outcome.key,
-              label: `${formatOutcomeLabel(outcome.label)} ${formatChancePct(outcome.price)}`,
+              label: formatOutcomeLabel(outcome.label),
+              price: outcome.price,
               color: OUTCOME_BAR_COLORS[index % OUTCOME_BAR_COLORS.length],
               outcome: outcome.label,
             }));
@@ -3186,6 +3210,7 @@ function TrendingMarketCard({
               <PreviewActionPill
                 key={pill.key}
                 label={pill.label}
+                price={pill.price}
                 color={pill.color}
                 onClick={() => {
                   if (pill.outcome) openTrade(pill.outcome);
@@ -3276,11 +3301,6 @@ function teamShortLabel(name: string): string {
   return name.trim().split(/\s+/).at(-1) ?? name;
 }
 
-function teamAbbrLabel(name: string, abbr?: string | null): string {
-  if (abbr && abbr.trim()) return abbr.trim().toUpperCase().slice(0, 4);
-  return liveSideName(name);
-}
-
 function teamAccent(name: string, abbr: string | null | undefined, side: 0 | 1): string {
   const key = `${abbr ?? ""} ${name}`.toLowerCase();
   if (/knicks|nyk/.test(key)) return "#F58426";
@@ -3294,19 +3314,6 @@ function teamAccent(name: string, abbr: string | null | undefined, side: 0 | 1):
   if (/yankees|nyy/.test(key)) return "#0C2340";
   if (/dodgers|lad/.test(key)) return "#005A9C";
   return side === 0 ? "#F58426" : "#7EB6FF";
-}
-
-function leagueLogoUrl(league: string): string | null {
-  const key = league.trim().toUpperCase();
-  const map: Record<string, string> = {
-    NBA: "nba",
-    NFL: "nfl",
-    NHL: "nhl",
-    MLB: "mlb",
-  };
-  const slug = map[key];
-  if (!slug) return null;
-  return `https://a.espncdn.com/i/teamlogos/leagues/500/${slug}.png`;
 }
 
 function formatSportsDate(value: string | null | undefined): string | null {
@@ -3627,7 +3634,6 @@ function LiveGameCard({
                 const name =
                   sportsOutcomeAbbr(market, outcome.label) ??
                   (isDraw ? "Draw" : liveSideName(outcome.label));
-                const label = `${name} ${formatChancePct(outcome.price)}`;
                 const tone = isDraw
                   ? "text-white"
                   : nickMatch(outcome.label, away.name) || index === 0
@@ -3644,7 +3650,7 @@ function LiveGameCard({
                     }}
                     className={`min-w-0 flex-1 rounded-full border border-white/20 bg-black/45 py-3 text-[16px] font-semibold backdrop-blur-md transition-colors hover:bg-black/60 ${tone}`}
                   >
-                    {label}
+                    {name} <ChanceFlow price={outcome.price} />
                   </button>
                 );
               })}
@@ -3850,11 +3856,11 @@ function SportsOneTeamBoard({
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3 px-0.5">
         <LiveTeamMark
-          logo={team.logo}
+          logo={team.logo ?? market.image}
           name={team.name}
           abbr={team.abbr}
           size="header"
-          portrait={team.portrait}
+          portrait={team.logo ? team.portrait : false}
         />
         <div className="min-w-0">
           <p className="truncate text-[17px] font-semibold leading-tight">
@@ -3945,12 +3951,8 @@ function SportsMatchupBoard({ market }: { market: PolymarketMarketData }) {
   const homeColor = tones?.home.text ?? teamAccent(home.name, home.abbr, 1);
   const awayName = teamShortLabel(away.name);
   const homeName = teamShortLabel(home.name);
-  const awayAbbr = teamAbbrLabel(away.name, away.abbr);
-  const homeAbbr = teamAbbrLabel(home.name, home.abbr);
   const seed = hashString(market.slug || market.marketId || market.title);
   const hasScore = away.score != null && home.score != null;
-  // NBA logos are recognizable on their own; skip the name + abbr labels.
-  const showSideLabels = (game?.league ?? "").toUpperCase() !== "NBA";
   const statusTop =
     game?.status === "final"
       ? "Final"
@@ -3961,49 +3963,27 @@ function SportsMatchupBoard({ market }: { market: PolymarketMarketData }) {
           : market.isResolved
             ? "Final"
             : "Open";
-  const periodLabel =
+  const subLabel =
     game?.status === "live"
       ? formatLiveClock(game.clock, game.status)
-      : formatSportsDate(market.closesAt) ??
-        (game?.clock && game.status !== "final"
-          ? formatLiveClock(game.clock, game.status)
-          : null);
+      : game?.status === "final" || market.isResolved
+        ? null
+        : marketScheduleLabel(market) ?? formatSportsDate(market.closesAt);
 
   return (
     <div className="flex flex-col gap-3">
-      <div
-        className={`grid grid-cols-[1fr_auto_1fr] gap-2 px-0.5 ${
-          showSideLabels ? "items-start" : "items-center"
-        }`}
-      >
-        <div
-          className={`flex min-w-0 flex-col gap-1.5 ${
-            showSideLabels ? "items-start" : "items-center"
-          }`}
-        >
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-0.5">
+        <div className="flex min-w-0 flex-col items-center">
           <LiveTeamMark
             logo={away.logo}
             name={away.name}
             abbr={away.abbr}
-            size={showSideLabels ? "header" : "hero"}
+            size="hero"
             portrait={away.portrait}
           />
-          {showSideLabels ? (
-            <div className="min-w-0">
-              <p className="truncate text-[15px] font-semibold leading-tight">
-                {awayName}
-              </p>
-              <p
-                className="mt-0.5 text-[13px] font-semibold leading-none tabular-nums"
-                style={{ color: awayColor }}
-              >
-                {awayAbbr}
-              </p>
-            </div>
-          ) : null}
         </div>
 
-        <div className="flex min-w-[5.5rem] flex-col items-center pt-0.5 text-center">
+        <div className="flex min-w-[5.5rem] flex-col items-center text-center">
           <p
             className={`text-[12px] font-medium leading-none ${
               statusTop === "Live" ? "text-[#FF3B30]" : "text-white/45"
@@ -4011,53 +3991,34 @@ function SportsMatchupBoard({ market }: { market: PolymarketMarketData }) {
           >
             {statusTop}
           </p>
-          {hasScore ? (
-            <p
-              className={`mt-1.5 text-[42px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSansCondensed.className}`}
-            >
+          <p
+            className={`mt-1.5 text-[42px] font-semibold leading-none tracking-tight tabular-nums ${
+              hasScore ? "text-white" : "text-white/30"
+            } ${instrumentSansCondensed.className}`}
+          >
+            {hasScore ? (
               <LiveScoreFlow away={away.score!} home={home.score!} />
-            </p>
-          ) : null}
-          {periodLabel ? (
-            <p
-              className={`text-[13px] font-semibold leading-none tabular-nums text-white ${
-                hasScore ? "mt-1.5 text-white/55" : "mt-1.5"
-              }`}
-            >
-              {game?.status === "live" ? (
-                <LivePeriodFlow clock={game.clock} status={game.status} />
-              ) : (
-                periodLabel
-              )}
-            </p>
-          ) : null}
+            ) : (
+              "vs"
+            )}
+          </p>
+          <p className="mt-1.5 min-h-[13px] text-[13px] font-semibold leading-none tabular-nums text-white/55">
+            {game?.status === "live" ? (
+              <LivePeriodFlow clock={game.clock} status={game.status} />
+            ) : (
+              subLabel
+            )}
+          </p>
         </div>
 
-        <div
-          className={`flex min-w-0 flex-col gap-1.5 ${
-            showSideLabels ? "items-end text-right" : "items-center"
-          }`}
-        >
+        <div className="flex min-w-0 flex-col items-center">
           <LiveTeamMark
             logo={home.logo}
             name={home.name}
             abbr={home.abbr}
-            size={showSideLabels ? "header" : "hero"}
+            size="hero"
             portrait={home.portrait}
           />
-          {showSideLabels ? (
-            <div className="min-w-0">
-              <p className="truncate text-[15px] font-semibold leading-tight">
-                {homeName}
-              </p>
-              <p
-                className="mt-0.5 text-[13px] font-semibold leading-none tabular-nums"
-                style={{ color: homeColor }}
-              >
-                {homeAbbr}
-              </p>
-            </div>
-          ) : null}
         </div>
       </div>
 
@@ -5037,6 +4998,9 @@ export default function Api() {
   const stickyMarketFadeRef = useRef<HTMLDivElement>(null);
   const [section, setSection] = useState<SectionId>("explore");
   const [feedPastHero, setFeedPastHero] = useState(false);
+  const [feedScrolled, setFeedScrolled] = useState(false);
+  const [exploreHeaderHeight, setExploreHeaderHeight] = useState(0);
+  const exploreHeaderRef = useRef<HTMLDivElement>(null);
   const [feedPageIndex, setFeedPageIndex] = useState(0);
   const [positionsOpen, setPositionsOpen] = useState(false);
   const [liveMarkets, setLiveMarkets] = useState<PolymarketMarketData[]>([]);
@@ -5974,6 +5938,16 @@ export default function Api() {
       ? [featured, f1, epl, ...rest, mlb]
       : [f1, epl, ...rest, mlb];
   }, [liveMarkets, trendingMarkets]);
+  useEffect(() => {
+    const el = exploreHeaderRef.current;
+    if (!isExploreFeed || !el) return;
+    const measure = () => setExploreHeaderHeight(el.offsetHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isExploreFeed]);
+
   const homeFeedClips = useMemo(
     () => assignUniqueClips(homeFeedMarkets),
     [homeFeedMarkets],
@@ -5982,6 +5956,7 @@ export default function Api() {
   useEffect(() => {
     if (!isExploreFeed) {
       setFeedPastHero(false);
+      setFeedScrolled(false);
       setFeedPageIndex(0);
       return;
     }
@@ -5994,6 +5969,7 @@ export default function Api() {
       const page = Math.max(1, scroller.clientHeight);
       const index = Math.round(scroller.scrollTop / page);
       setFeedPastHero(index > 0);
+      setFeedScrolled(scroller.scrollTop > 12);
       setFeedPageIndex(index);
     };
     const onScroll = () => {
@@ -6045,21 +6021,9 @@ export default function Api() {
         ? (profileUsername ??
           demoProfile?.displayName ??
           (demoProfile?.wallet ? shortWallet(demoProfile.wallet) : null))
-        : section === "explore" && !showingDrillDown
-          ? demoProfileStatus === "loading"
-            ? "—"
-            : formatUsd(
-                PROFILE_BALANCE +
-                  extraDepositUsd +
-                  userTrades.reduce((sum, item) => {
-                    if (!item.copiedFrom || item.cashedOut) return sum;
-                    if (item.trade.side.toUpperCase() === "SELL") return sum;
-                    return sum + item.position.pnlUsd;
-                  }, 0),
-              )
-          : section === "feed" && !showingDrillDown
-            ? "Feed"
-            : null;
+        : section === "feed" && !showingDrillDown
+          ? "Feed"
+          : null;
 
   useEffect(() => {
     const nav = stickyNavRef.current;
@@ -6824,7 +6788,6 @@ export default function Api() {
           aria-label="Open profile"
         >
           <p
-            ref={stickyTitleRef as React.RefObject<HTMLParagraphElement>}
             className={`text-[32px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSansCondensed.className}`}
           >
             {demoProfileStatus === "loading" ? (
@@ -7546,10 +7509,25 @@ export default function Api() {
           )}
 
           {isExploreFeed && (
+            <div
+              ref={exploreHeaderRef}
+              className={`absolute inset-x-5 top-[52px] z-0 origin-top transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                feedScrolled ? "pointer-events-none" : ""
+              }`}
+              style={{
+                opacity: feedScrolled ? 0 : 1,
+                transform: feedScrolled ? "scale(0.92)" : "scale(1)",
+              }}
+            >
+              {exploreHeader}
+            </div>
+          )}
+
+          {isExploreFeed && (
             <section
               ref={feedSnapRef}
               aria-label="Market previews"
-              className="-mx-5 min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-y-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="pointer-events-none relative z-[1] -mx-5 min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-y-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
               {marketsStatus === "loading" &&
                 Array.from({ length: 3 }).map((_, i) => (
@@ -7558,14 +7536,16 @@ export default function Api() {
                     className="flex h-full min-h-full snap-start snap-always flex-col px-5"
                     aria-hidden
                   >
-                    {i === 0 ? exploreHeader : null}
+                    {i === 0 ? (
+                      <div aria-hidden className="shrink-0" style={{ height: exploreHeaderHeight }} />
+                    ) : null}
                     <div className="min-h-0 w-full flex-1 animate-pulse rounded-[24px] bg-white/10" />
                   </div>
                 ))}
 
               {marketsStatus === "error" && (
                 <div className="px-5">
-                  {exploreHeader}
+                  <div aria-hidden className="shrink-0" style={{ height: exploreHeaderHeight }} />
                   <p className="text-sm text-white/55">
                     Couldn&apos;t load markets.
                   </p>
@@ -7574,7 +7554,7 @@ export default function Api() {
 
               {marketsStatus === "ready" && homeFeedMarkets.length === 0 && (
                 <div className="px-5">
-                  {exploreHeader}
+                  <div aria-hidden className="shrink-0" style={{ height: exploreHeaderHeight }} />
                   <p className="text-sm text-white/55">No markets right now.</p>
                 </div>
               )}
@@ -7597,8 +7577,10 @@ export default function Api() {
                         containIntrinsicSize: "auto 640px",
                       }}
                     >
-                      {isFirst ? exploreHeader : null}
-                      <div className="min-h-0 flex-1 pb-1">
+                      {isFirst ? (
+                        <div aria-hidden className="shrink-0" style={{ height: exploreHeaderHeight }} />
+                      ) : null}
+                      <div className="pointer-events-auto min-h-0 flex-1 pb-1">
                         {isFeaturedLive ? (
                           <LiveGameCard
                             market={market}
@@ -8393,27 +8375,7 @@ export default function Api() {
               !copyTradeTarget &&
               !depositOpen && (
                 <div className={`absolute inset-x-0 ${IOS_CHROME_TOP} flex justify-center px-16`}>
-                  <div className="flex h-10 min-w-0 max-w-full items-center gap-1.5">
-                    {(() => {
-                      const photo = selectedMarket?.image;
-                      const league =
-                        selectedMarket?.liveGame?.league ??
-                        selectedMarket?.category ??
-                        "";
-                      const logo = photo ?? leagueLogoUrl(league);
-                      return logo ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={logo}
-                          alt=""
-                          className={
-                            photo
-                              ? "h-5 w-5 shrink-0 rounded-full object-cover"
-                              : "h-5 w-5 shrink-0 object-contain"
-                          }
-                        />
-                      ) : null;
-                    })()}
+                  <div className="flex h-10 min-w-0 max-w-full items-center">
                     <p className="min-w-0 truncate text-[15px] font-semibold tracking-[-0.02em]">
                       {selectedMarket?.title ?? "Market"}
                     </p>
