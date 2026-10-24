@@ -1,22 +1,24 @@
 "use client";
 
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
-const MAX_POOL = 48;
-const SWAP_MS = 1400;
-const FADE_MS = 600;
-const ASPECTS = [3 / 4, 4 / 5, 1, 4 / 3, 3 / 2] as const;
+const MAX_POOL = 24;
+const ASPECTS = [3 / 4, 4 / 5, 1, 4 / 3] as const;
 
-/** Farther layers are smaller, dimmer and slower — the parallax reads as depth. */
+/**
+ * Two viewport-tall copies, stacked. The layer is exactly 200% so a -50%
+ * translate loops without a seam, and the bitmap stays under typical GPU
+ * texture limits on a retina phone (a taller layer was being repainted).
+ */
 const LAYERS = [
-  { count: 10, width: [16, 24], opacity: 0.38, duration: 60 },
-  { count: 8, width: [24, 34], opacity: 0.62, duration: 40 },
-  { count: 6, width: [34, 46], opacity: 0.9, duration: 26 },
+  { count: 8, width: [16, 24], opacity: 0.4, duration: 44 },
+  { count: 6, width: [24, 34], opacity: 0.66, duration: 30 },
+  { count: 5, width: [34, 46], opacity: 0.92, duration: 20 },
 ] as const;
 
-/** Every Nth tile is a team logo when logos are available. */
 const LOGO_EVERY = 3;
-const MAX_LOGOS = 40;
+const MAX_LOGOS = 16;
+const THUMB_WIDTH = 280;
 
 type Tile = {
   src: string;
@@ -49,9 +51,6 @@ function imageKey(src: string): string {
   }
 }
 
-const THUMB_WIDTH = 500;
-
-/** Tiles are ~170px wide at most; request Wikimedia thumbnails instead of 960px+ originals. */
 function thumbnailSrc(src: string): string {
   const resized = src.replace(/\/(\d{3,4})px-([^/]+)$/, (match, width, file) =>
     Number(width) > THUMB_WIDTH ? `/${THUMB_WIDTH}px-${file}` : match,
@@ -63,15 +62,6 @@ function thumbnailSrc(src: string): string {
   if (!original) return src;
   const [, base, a, ab, file] = original;
   return `${base}/thumb/${a}/${ab}/${file}/${THUMB_WIDTH}px-${file}`;
-}
-
-function preload(src: string): Promise<void> {
-  const img = new Image();
-  img.decoding = "async";
-  img.src = src;
-  return img.decode().catch(() => {
-    throw new Error("preload failed");
-  });
 }
 
 function uniqueSources(images: string[]): string[] {
@@ -102,7 +92,6 @@ function mulberry32(seed: number) {
 function buildLayers(pool: string[], logoPool: string[]): Tile[][] {
   const rand = mulberry32(0x5eed);
   const total = LAYERS.reduce((sum, layer) => sum + layer.count, 0);
-  // Never show the same image twice: shrink every layer when the pool is small.
   const scale = Math.min(1, (pool.length + logoPool.length) / total);
   let cursor = 0;
   let logoCursor = 0;
@@ -118,15 +107,14 @@ function buildLayers(pool: string[], logoPool: string[]): Tile[][] {
       const width =
         (layer.width[0] + rand() * (layer.width[1] - layer.width[0])) *
         (logo ? 0.75 : 1);
-      // Alternate columns so each layer spreads across the screen.
       const column = (i + depth) % 3;
-      const centerX = ((column + 0.5) / 3) * 100 + (rand() - 0.5) * 24;
+      const centerX = ((column + 0.5) / 3) * 100 + (rand() - 0.5) * 22;
       const aspect = ASPECTS[Math.floor(rand() * ASPECTS.length)]!;
       tiles.push({
         src: logo ? logoPool[logoCursor++]! : pool[cursor++]!,
         logo,
         left: centerX - width / 2,
-        top: (i / count) * 100 + rand() * (60 / count),
+        top: (i / count) * 100 + rand() * (40 / count),
         width,
         aspect: logo ? 1 : aspect,
       });
@@ -135,63 +123,6 @@ function buildLayers(pool: string[], logoPool: string[]): Tile[][] {
   });
 }
 
-const TileImage = memo(function TileImage({
-  tile,
-  src,
-}: {
-  tile: Tile;
-  src: string;
-}) {
-  const [current, setCurrent] = useState(src);
-  const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    if (src === current) return;
-    setVisible(false);
-    const swap = window.setTimeout(() => {
-      setCurrent(src);
-      requestAnimationFrame(() => setVisible(true));
-    }, FADE_MS);
-    return () => window.clearTimeout(swap);
-  }, [src, current]);
-
-  return (
-    <div
-      className={`absolute ${
-        tile.logo
-          ? "[filter:drop-shadow(0_6px_16px_rgba(0,0,0,0.55))]"
-          : "overflow-hidden rounded-[6px] bg-white/[0.06]"
-      }`}
-      style={{
-        left: `${tile.left}%`,
-        top: `${tile.top}%`,
-        width: `${tile.width}%`,
-        aspectRatio: tile.aspect,
-      }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={current}
-        alt=""
-        draggable={false}
-        decoding="async"
-        className={`h-full w-full transition-[opacity,transform] ease-out ${
-          tile.logo ? "object-contain" : "object-cover"
-        }`}
-        style={{
-          opacity: visible ? 1 : 0,
-          transform: visible ? "scale(1)" : "scale(1.08)",
-          transitionDuration: `${FADE_MS}ms`,
-        }}
-        onError={(e) => {
-          const cell = e.currentTarget.parentElement;
-          if (cell) cell.style.visibility = "hidden";
-        }}
-      />
-    </div>
-  );
-});
-
 export default function MarketRiver({
   images,
   logos = [],
@@ -199,6 +130,7 @@ export default function MarketRiver({
   images: string[];
   logos?: string[];
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const pool = useMemo(() => uniqueSources(images), [images]);
   const logoPool = useMemo(
     () => [...new Set(logos)].slice(0, MAX_LOGOS),
@@ -209,69 +141,31 @@ export default function MarketRiver({
       pool.length + logoPool.length > 0 ? buildLayers(pool, logoPool) : [],
     [pool, logoPool],
   );
-  const flatTiles = useMemo(() => layers.flat(), [layers]);
-  const [srcs, setSrcs] = useState<string[]>([]);
-  const srcsRef = useRef<string[]>([]);
 
   useEffect(() => {
-    setSrcs(flatTiles.map((tile) => tile.src));
-  }, [flatTiles]);
-
-  useEffect(() => {
-    srcsRef.current = srcs;
-  }, [srcs]);
-
-  useEffect(() => {
-    if (pool.length + logoPool.length < 2) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    let cancelled = false;
-    const id = window.setInterval(() => {
-      const current = srcsRef.current;
-      if (document.hidden || current.length === 0) return;
-      const used = new Set(current);
-      const index = Math.floor(Math.random() * current.length);
-      const source = flatTiles[index]?.logo ? logoPool : pool;
-      const unused = source.filter((src) => !used.has(src));
-      if (unused.length === 0) return;
-      const incoming = unused[Math.floor(Math.random() * unused.length)]!;
-      // Swap only once decoded so the fade never reveals an empty tile.
-      preload(incoming)
-        .then(() => {
-          if (cancelled) return;
-          setSrcs((prev) => {
-            if (prev.includes(incoming) || index >= prev.length) return prev;
-            const next = [...prev];
-            next[index] = incoming;
-            return next;
-          });
-        })
-        .catch(() => {});
-    }, SWAP_MS);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
+    const root = rootRef.current;
+    if (!root) return;
+    const sync = () => {
+      root.dataset.paused = document.hidden ? "true" : "false";
     };
-  }, [pool, logoPool, flatTiles]);
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => document.removeEventListener("visibilitychange", sync);
+  }, []);
 
   if (layers.length === 0) return null;
-  let flatIndex = 0;
-  const offsets = layers.map((tiles) => {
-    const start = flatIndex;
-    flatIndex += tiles.length;
-    return start;
-  });
 
   return (
     <div
-      className="absolute inset-0 overflow-hidden bg-black [contain:strict]"
+      ref={rootRef}
+      className="market-river pointer-events-none absolute inset-0 overflow-hidden bg-black [contain:strict]"
       aria-hidden
     >
       {layers.map((tiles, depth) => (
         <div
           key={depth}
-          className="market-river-layer absolute inset-x-0 top-0 will-change-transform [backface-visibility:hidden]"
+          className="market-river-layer absolute inset-x-0 top-0 h-[200%] [contain:strict]"
           style={{
-            height: "280%",
             opacity: LAYERS[depth]!.opacity,
             animationName: "market-river-rise",
             animationDuration: `${LAYERS[depth]!.duration}s`,
@@ -279,18 +173,33 @@ export default function MarketRiver({
             animationIterationCount: "infinite",
           }}
         >
-          {/* Two identical copies so the upward loop is seamless. */}
           {[0, 1].map((copy) => (
             <div
               key={copy}
               className="absolute inset-x-0 h-1/2"
               style={{ top: `${copy * 50}%` }}
             >
-              {tiles.map((tile, i) => (
-                <TileImage
-                  key={i}
-                  tile={tile}
-                  src={srcs[offsets[depth]! + i] ?? tile.src}
+              {tiles.map((tile, index) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={`${copy}-${index}`}
+                  src={tile.src}
+                  alt=""
+                  draggable={false}
+                  decoding="async"
+                  fetchPriority="low"
+                  className={`absolute ${
+                    tile.logo ? "object-contain" : "rounded-[6px] object-cover"
+                  }`}
+                  style={{
+                    left: `${tile.left}%`,
+                    top: `${tile.top}%`,
+                    width: `${tile.width}%`,
+                    aspectRatio: tile.aspect,
+                  }}
+                  onError={(event) => {
+                    event.currentTarget.style.visibility = "hidden";
+                  }}
                 />
               ))}
             </div>
@@ -301,7 +210,7 @@ export default function MarketRiver({
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.6) 9%, rgba(0,0,0,0.1) 26%, rgba(0,0,0,0.12) 45%, rgba(0,0,0,0.75) 66%, #000 84%)",
+            "linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.55) 10%, rgba(0,0,0,0.08) 28%, rgba(0,0,0,0.12) 46%, rgba(0,0,0,0.72) 68%, #000 84%)",
         }}
       />
       <style>{`
@@ -311,6 +220,9 @@ export default function MarketRiver({
         }
         @media (prefers-reduced-motion: reduce) {
           .market-river-layer { animation: none !important; }
+        }
+        .market-river[data-paused="true"] .market-river-layer {
+          animation-play-state: paused;
         }
       `}</style>
     </div>

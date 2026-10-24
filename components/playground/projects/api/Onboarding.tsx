@@ -7,11 +7,56 @@ import { FollowButton } from "./FeedPositionSheet";
 import MarketRiver from "./MarketRiver";
 import UserAvatar from "./UserAvatar";
 
-type OnboardingStep = "welcome" | "invite" | "follow";
+type OnboardingStep = "welcome" | "invite" | "in" | "follow";
 
 const STEP_EASE = [0.22, 1, 0.36, 1] as const;
 const INVITE_LENGTH = 6;
 const INVITE_CODE = "111111";
+
+function GoogleMark() {
+  return (
+    <svg viewBox="0 0 18 18" className="h-[18px] w-[18px]" aria-hidden>
+      <path
+        fill="#4285F4"
+        d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z"
+      />
+      <path
+        fill="#34A853"
+        d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z"
+      />
+    </svg>
+  );
+}
+
+function WalletGlyph() {
+  return (
+    <svg viewBox="0 0 20 20" className="h-[18px] w-[18px]" fill="none" aria-hidden>
+      <rect
+        x="2.25"
+        y="4.75"
+        width="15.5"
+        height="11.5"
+        rx="2.25"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M2.25 8.25h15.5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <circle cx="14.25" cy="12.15" r="1" fill="currentColor" />
+    </svg>
+  );
+}
 
 function TermsNote() {
   return (
@@ -129,7 +174,7 @@ export default function Onboarding({
   const [inviteError, setInviteError] = useState(false);
 
   const submitInvite = () => {
-    if (inviteCode === INVITE_CODE) setStep("follow");
+    if (inviteCode === INVITE_CODE) setStep("in");
     else setInviteError(true);
   };
   const suggested = useMemo(
@@ -140,7 +185,9 @@ export default function Onboarding({
   const finish = () => onComplete(null);
 
   const back = () => {
-    setStep(step === "follow" ? "invite" : "welcome");
+    if (step === "follow") setStep("in");
+    else if (step === "in") setStep("invite");
+    else setStep("welcome");
   };
 
   return (
@@ -156,9 +203,9 @@ export default function Onboarding({
             key="river"
             className="absolute inset-0"
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.06 }}
-            transition={{ duration: 0.5, ease: STEP_EASE }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.45, ease: STEP_EASE }}
           >
             <MarketRiver images={marketImages} logos={teamLogos} />
           </motion.div>
@@ -206,7 +253,7 @@ export default function Onboarding({
             </svg>
           </button>
           <div className="flex gap-1.5" aria-hidden>
-            {(["invite", "follow"] as const).map((id) => (
+            {(["invite", "in", "follow"] as const).map((id) => (
               <span
                 key={id}
                 className={`h-1 w-6 rounded-full ${
@@ -289,6 +336,35 @@ export default function Onboarding({
         </div>
       )}
 
+
+      {step === "in" && (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em]">
+            You&apos;re in
+          </h1>
+          <p className="mt-3 max-w-[280px] text-[14px] leading-relaxed text-white/55">
+            Sign in to copy traders and track your positions.
+          </p>
+          <div className="mt-auto flex flex-col gap-2.5">
+            <button
+              type="button"
+              onClick={() => setStep("follow")}
+              className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full bg-white text-[15px] font-semibold text-black"
+            >
+              <GoogleMark />
+              Continue with Google
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep("follow")}
+              className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full bg-white/[0.1] text-[15px] font-semibold text-white"
+            >
+              <WalletGlyph />
+              Connect wallet
+            </button>
+          </div>
+        </div>
+      )}
 
       {step === "follow" && (
         <div className="flex min-h-0 flex-1 flex-col">

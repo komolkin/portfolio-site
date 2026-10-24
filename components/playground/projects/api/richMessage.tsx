@@ -394,3 +394,86 @@ export function MessageComposer({
     </div>
   );
 }
+
+export function TakeComposer({
+  open,
+  text,
+  gifUrl,
+  onOpen,
+  onClose,
+  onTextChange,
+  onGifChange,
+  onExited,
+  placeholder = "Share why you're taking this trade…",
+}: {
+  open: boolean;
+  text: string;
+  gifUrl: string | null;
+  onOpen: () => void;
+  onClose: () => void;
+  onTextChange: (value: string) => void;
+  onGifChange: (url: string | null) => void;
+  onExited: () => void;
+  placeholder?: string;
+}) {
+  const [focus, setFocus] = useState(false);
+  const onExitedRef = useRef(onExited);
+  onExitedRef.current = onExited;
+
+  useEffect(() => {
+    if (!open) setFocus(false);
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (open) setFocus(true);
+    else onExitedRef.current();
+  }, [open]);
+
+  const onTransitionEnd = (event: React.TransitionEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return;
+    if (event.propertyName !== "grid-template-rows") return;
+    if (open) setFocus(true);
+    else onExited();
+  };
+
+  return (
+    <div className="flex flex-col">
+      <div
+        className={`grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ${
+          open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+        }`}
+        onTransitionEnd={onTransitionEnd}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <MessageComposer
+            text={text}
+            gifUrl={gifUrl}
+            onTextChange={onTextChange}
+            onGifChange={onGifChange}
+            placeholder={placeholder}
+            autoFocus={focus}
+          />
+          <div className="mt-1.5 flex items-center justify-between gap-3 pb-0.5">
+            <p className="text-[11px] text-white/35">
+              {text.trim() || gifUrl ? "Your trade will appear in the Feed." : ""}
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="shrink-0 rounded-full px-2.5 py-1 text-[12px] font-medium text-white/55 transition-colors hover:bg-white/[0.06] hover:text-white/80"
+            >
+              Remove take
+            </button>
+          </div>
+        </div>
+      </div>
+      {open ? null : (
+        <button
+          type="button"
+          onClick={onOpen}
+          className="self-center rounded-full px-3 py-1.5 text-[13px] font-medium text-white/55 transition-colors hover:bg-white/[0.06] hover:text-white/80"
+        >
+          + Add a take
+        </button>
+      )}
+    </div>
+  );
+}

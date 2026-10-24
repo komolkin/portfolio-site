@@ -755,6 +755,35 @@ function optimisticMarketFromOpen(
   };
 }
 
+function storedTradeFromPosition(
+  position: PolymarketWalletPosition,
+  wallet: string,
+): StoredUserTrade {
+  const invested = Math.max(0, position.valueUsd - position.pnlUsd);
+  const slug = position.marketSlug ?? position.marketTitle;
+  return {
+    trade: {
+      side: "BUY",
+      outcome: position.outcome,
+      price: position.avgPrice,
+      amountUsd: invested,
+      marketTitle: position.marketTitle,
+      marketSlug: slug,
+      marketCategory: null,
+      marketImage: position.image,
+      wallet,
+      timestamp: new Date(0).toISOString(),
+      txHash: `position-${slug}-${position.outcome}`,
+      totalPnl: null,
+      winRate: null,
+      tradeCount: null,
+      userCaption: null,
+      userGifUrl: null,
+    },
+    position,
+  };
+}
+
 function marketFromFeedTrade(
   trade: PolymarketTradeWithPnl,
   cached: PolymarketMarketData | undefined,
@@ -5186,6 +5215,8 @@ export default function Api() {
     null,
   );
   const [cashOutItem, setCashOutItem] = useState<StoredUserTrade | null>(null);
+  const [cashOutMarket, setCashOutMarket] =
+    useState<PolymarketMarketData | null>(null);
   const [userTrades, setUserTrades] = useState<StoredUserTrade[]>([]);
   const [copyTrades, setCopyTrades] = useState<CopyTrade[]>([]);
   const [copyTradeTarget, setCopyTradeTarget] = useState<{
@@ -6307,6 +6338,7 @@ export default function Api() {
     setTradeFlowMarket(null);
     setTradeFlowOutcome(null);
     setCashOutItem(null);
+    setCashOutMarket(null);
   };
 
   const shareMarket = async () => {
@@ -6604,8 +6636,19 @@ export default function Api() {
   }, [feedFriendsOnly, feedTrades, demoProfile?.wallet, followedWallets]);
 
   const profilePositions = useMemo(() => {
+    const closedKeys = new Set(
+      userTrades
+        .filter(
+          (item) =>
+            item.cashedOut || item.trade.side.toUpperCase() === "SELL",
+        )
+        .map(
+          (item) =>
+            `${(item.trade.marketSlug || item.trade.marketTitle).toLowerCase()}|${item.trade.outcome.trim().toLowerCase()}`,
+        ),
+    );
     const userPositions = userTrades
-      .filter((item) => !item.cashedOut)
+      .filter((item) => !item.cashedOut && item.trade.side.toUpperCase() !== "SELL")
       .map((item) => item.position);
     if (!demoProfile) return userPositions;
     const seen = new Set(
@@ -6618,7 +6661,8 @@ export default function Api() {
     for (const position of demoProfile.positions) {
       if (merged.length >= MAX_PROFILE_POSITIONS) break;
       const key = `${position.marketSlug ?? position.marketTitle}-${position.outcome}`;
-      if (!seen.has(key)) merged.push(position);
+      const closedKey = `${(position.marketSlug || position.marketTitle).toLowerCase()}|${position.outcome.trim().toLowerCase()}`;
+      if (!seen.has(key) && !closedKeys.has(closedKey)) merged.push(position);
     }
     return merged;
   }, [demoProfile, userTrades]);
@@ -6708,7 +6752,13 @@ export default function Api() {
 
   const cashOutMarketPosition = (
     item: StoredUserTrade,
-    result: { price: number; amountUsd: number; pnlUsd: number },
+    result: {
+      price: number;
+      amountUsd: number;
+      pnlUsd: number;
+      userCaption?: string | null;
+      userGifUrl?: string | null;
+    },
   ) => {
     const key =
       item.trade.txHash ?? `${item.trade.timestamp}-${item.trade.outcome}`;
@@ -6720,8 +6770,8 @@ export default function Api() {
         amountUsd: result.amountUsd,
         timestamp: new Date().toISOString(),
         txHash: `local-cashout-${Date.now()}`,
-        userCaption: null,
-        userGifUrl: null,
+        userCaption: result.userCaption ?? null,
+        userGifUrl: result.userGifUrl ?? null,
       },
       position: {
         ...item.position,
@@ -6741,6 +6791,55 @@ export default function Api() {
         return rowKey === key ? { ...row, cashedOut: true } : row;
       }),
     ]);
+  };
+
+  const beginCashOut = (position: PolymarketWalletPosition) => {
+    const posSlug = (position.marketSlug ?? "").toLowerCase();
+    const posTitle = position.marketTitle.trim().toLowerCase();
+    const posOutcome = position.outcome.trim().toLowerCase();
+    const match =
+      userTrades.find((item) => {
+        if (item.cashedOut || item.trade.side.toUpperCase() === "SELL") {
+          return false;
+        }
+        const slug = (item.trade.marketSlug ?? "").toLowerCase();
+        const title = item.trade.marketTitle.trim().toLowerCase();
+        const sameMarket = (posSlug && slug === posSlug) || title === posTitle;
+        return sameMarket && item.trade.outcome.trim().toLowerCase() === posOutcome;
+      }) ?? null;
+    const local = findLocalMarket(
+      [...liveMarkets, ...trendingMarkets, ...searchResults],
+      position.marketSlug ?? "",
+      position.marketTitle,
+    );
+    const market =
+      local ??
+      (selectedMarket &&
+      ((posSlug &&
+        (selectedMarket.slug || selectedMarket.marketId).toLowerCase() ===
+          posSlug) ||
+        selectedMarket.title.trim().toLowerCase() === posTitle)
+        ? selectedMarket
+        : null) ??
+      optimisticMarketFromOpen(
+        position.marketSlug ?? position.marketTitle,
+        position.marketTitle,
+        {
+          image: position.image,
+          price: position.markPrice,
+          outcome: position.outcome,
+        },
+      );
+    const withImage =
+      position.image && !market.image ? { ...market, image: position.image } : market;
+    setCashOutItem(
+      match ??
+        storedTradeFromPosition(
+          position,
+          demoProfile?.wallet ?? LOCAL_TRADER_WALLET,
+        ),
+    );
+    setCashOutMarket(withImage);
   };
 
   const userHistoryTrades = useMemo(
@@ -7005,7 +7104,7 @@ export default function Api() {
           }
         >
           {showingWalletProfile ? (
-            <header className="mb-4 pt-9">
+            <header className="mb-4 pt-12">
               <ProfileIdentityHeader
                 seed={selectedWallet ?? "wallet"}
                 name={walletLabel ?? shortWallet(selectedWallet ?? "")}
@@ -7073,7 +7172,7 @@ export default function Api() {
               />
             </header>
           ) : showingListDetail ? (
-            <header className="mb-4 pt-9">
+            <header className="mb-4 pt-12">
               <h2 className={ui.title}>
                 {listDetail?.name ?? "Squad"}
               </h2>
@@ -7153,7 +7252,7 @@ export default function Api() {
             </header>
             )
           ) : showingProfileSubScreen ? (
-            <header className="mb-4 pt-9">
+            <header className="mb-4 pt-12">
               <h2 className={ui.title}>
                 {profileSubScreen === "referral" ? "Referrals" : "Settings"}
               </h2>
@@ -7844,7 +7943,7 @@ export default function Api() {
                       market={selectedMarket}
                       handle={ownShareHandle}
                       referralCode={referralCode}
-                      onCashOut={() => setCashOutItem(marketUserPosition)}
+                      onCashOut={() => beginCashOut(marketUserPosition.position)}
                       onShare={setSharePosition}
                     />
                   )}
@@ -8520,7 +8619,7 @@ export default function Api() {
             <BlurBackButton
               onClick={drillBack.onClick}
               label={drillBack.label}
-              circle={showingMarketDetail}
+              circle
             />
           </div>
         )}
@@ -8774,34 +8873,7 @@ export default function Api() {
                 },
               );
             }}
-            onCashOut={(position) => {
-              const match = userTrades.find((item) => {
-                if (item.cashedOut) return false;
-                const slug = (item.trade.marketSlug ?? "").toLowerCase();
-                const title = item.trade.marketTitle.trim().toLowerCase();
-                const posSlug = (position.marketSlug ?? "").toLowerCase();
-                const posTitle = position.marketTitle.trim().toLowerCase();
-                const sameMarket =
-                  (posSlug && slug === posSlug) || title === posTitle;
-                return (
-                  sameMarket &&
-                  item.trade.outcome.trim().toLowerCase() ===
-                    position.outcome.trim().toLowerCase()
-                );
-              });
-              if (match) setCashOutItem(match);
-              else {
-                openMarketBySlug(
-                  position.marketSlug ?? "",
-                  position.marketTitle,
-                  {
-                    image: position.image,
-                    price: position.markPrice,
-                    outcome: position.outcome,
-                  },
-                );
-              }
-            }}
+            onCashOut={beginCashOut}
           />
         )}
         {SHOW_ONBOARDING && onboardingOpen && (
@@ -8900,13 +8972,16 @@ export default function Api() {
             onShare={setSharePosition}
           />
         )}
-        {cashOutItem && selectedMarket && (
+        {cashOutItem && cashOutMarket && (
           <CashOutModal
             item={cashOutItem}
-            market={selectedMarket}
+            market={cashOutMarket}
             handle={ownShareHandle}
             referralCode={referralCode}
-            onClose={() => setCashOutItem(null)}
+            onClose={() => {
+              setCashOutItem(null);
+              setCashOutMarket(null);
+            }}
             onConfirm={(result) => cashOutMarketPosition(cashOutItem, result)}
             onShare={setSharePosition}
           />

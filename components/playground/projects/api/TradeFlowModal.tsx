@@ -8,7 +8,7 @@ import { instrumentSansCondensed } from "@/lib/fonts";
 import type { UserPlacedTrade } from "./userTrades";
 import type { PolymarketWalletPosition } from "@/lib/polymarketscan";
 import type { SharePositionPayload } from "./SharePositionModal";
-import { GifThumb, MessageComposer } from "./richMessage";
+import { GifThumb, TakeComposer } from "./richMessage";
 import { AmountKeypad, SheetPager, applyAmountKey, ui } from "./ui";
 
 const CLOSE_THRESHOLD_PX = 72;
@@ -871,43 +871,19 @@ export default function TradeFlowModal({
                     <div className="flex flex-col gap-3">
                       {tradeSummary()}
 
-                      {takeOpen ? (
-                        <div>
-                          <MessageComposer
-                            text={takeMessage}
-                            gifUrl={takeGif}
-                            onTextChange={setTakeMessage}
-                            onGifChange={setTakeGif}
-                            placeholder="Share why you're taking this trade…"
-                          />
-                          <div className="mt-1.5 flex items-center justify-between gap-3">
-                            <p className="text-[11px] text-white/35">
-                              {takeMessage.trim() || takeGif
-                                ? "Your trade will appear in the Feed."
-                                : ""}
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setTakeOpen(false);
-                                setTakeMessage("");
-                                setTakeGif(null);
-                              }}
-                              className="shrink-0 rounded-full px-2.5 py-1 text-[12px] font-medium text-white/55 transition-colors hover:bg-white/[0.06] hover:text-white/80"
-                            >
-                              Remove take
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setTakeOpen(true)}
-                          className="self-center rounded-full px-3 py-1.5 text-[13px] font-medium text-white/55 transition-colors hover:bg-white/[0.06] hover:text-white/80"
-                        >
-                          + Add a take
-                        </button>
-                      )}
+                      <TakeComposer
+                        open={takeOpen}
+                        text={takeMessage}
+                        gifUrl={takeGif}
+                        onOpen={() => setTakeOpen(true)}
+                        onClose={() => setTakeOpen(false)}
+                        onTextChange={setTakeMessage}
+                        onGifChange={setTakeGif}
+                        onExited={() => {
+                          setTakeMessage("");
+                          setTakeGif(null);
+                        }}
+                      />
                     </div>
                   </div>
                 </div>

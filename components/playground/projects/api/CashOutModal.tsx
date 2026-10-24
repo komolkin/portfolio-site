@@ -8,6 +8,7 @@ import { instrumentSansCondensed } from "@/lib/fonts";
 import type { StoredUserTrade } from "./userTrades";
 import type { SharePositionPayload } from "./SharePositionModal";
 import { useImageAccent } from "./imageAccent";
+import { GifThumb, TakeComposer } from "./richMessage";
 import { SheetPager, ui } from "./ui";
 
 const CLOSE_THRESHOLD_PX = 72;
@@ -162,6 +163,8 @@ export default function CashOutModal({
     price: number;
     amountUsd: number;
     pnlUsd: number;
+    userCaption: string | null;
+    userGifUrl: string | null;
   }) => void;
   onShare: (payload: SharePositionPayload) => void;
 }) {
@@ -171,7 +174,12 @@ export default function CashOutModal({
     price: number;
     amountUsd: number;
     pnlUsd: number;
+    userCaption: string | null;
+    userGifUrl: string | null;
   } | null>(null);
+  const [takeOpen, setTakeOpen] = useState(false);
+  const [takeMessage, setTakeMessage] = useState("");
+  const [takeGif, setTakeGif] = useState<string | null>(null);
   const [drawerOffset, setDrawerOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef(0);
@@ -214,6 +222,8 @@ export default function CashOutModal({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("textarea, input")) return;
       if (e.key === "Escape") closeSheetRef.current();
     };
     document.addEventListener("keydown", onKey);
@@ -221,7 +231,13 @@ export default function CashOutModal({
   }, []);
 
   const confirmCashOut = () => {
-    const result = { price: markPrice, amountUsd: proceeds, pnlUsd };
+    const result = {
+      price: markPrice,
+      amountUsd: proceeds,
+      pnlUsd,
+      userCaption: takeMessage.trim() || null,
+      userGifUrl: takeGif,
+    };
     setConfirmed(result);
     onConfirm(result);
     setStep("success");
@@ -251,7 +267,7 @@ export default function CashOutModal({
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest("button")) return;
+    if ((e.target as HTMLElement).closest("button, textarea, input")) return;
     setIsDragging(true);
     dragStartY.current = e.clientY;
     dragStartOffset.current = drawerOffset;
@@ -276,7 +292,7 @@ export default function CashOutModal({
   };
 
   return (
-    <div className="absolute inset-0 z-40">
+    <div className="absolute inset-0 z-50">
       <div
         className={`absolute inset-0 ${ui.backdrop} transition-opacity duration-300 ${
           open ? "opacity-100" : "opacity-0"
@@ -400,6 +416,21 @@ export default function CashOutModal({
                 </div>
               </div>
 
+              <TakeComposer
+                open={takeOpen}
+                text={takeMessage}
+                gifUrl={takeGif}
+                onOpen={() => setTakeOpen(true)}
+                onClose={() => setTakeOpen(false)}
+                onTextChange={setTakeMessage}
+                onGifChange={setTakeGif}
+                onExited={() => {
+                  setTakeMessage("");
+                  setTakeGif(null);
+                }}
+                placeholder="Share why you're cashing out…"
+              />
+
               <div className="pt-1">
                 <button
                   type="button"
@@ -460,6 +491,23 @@ export default function CashOutModal({
                         Sold
                       </span>
                     </div>
+                    {confirmed.userCaption || confirmed.userGifUrl ? (
+                      <div className="border-b border-white/[0.06] px-3.5 py-3">
+                        {confirmed.userCaption ? (
+                          <p className="text-[14px] leading-snug text-white">
+                            {confirmed.userCaption}
+                          </p>
+                        ) : null}
+                        {confirmed.userGifUrl ? (
+                          <div className={confirmed.userCaption ? "mt-2" : undefined}>
+                            <GifThumb
+                              url={confirmed.userGifUrl}
+                              className="max-h-[140px]"
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
                     <dl className="flex flex-col gap-1.5 px-3.5 py-3 text-[13px]">
                       <div className="flex items-center justify-between">
                         <dt className="text-white/45">Proceeds</dt>
