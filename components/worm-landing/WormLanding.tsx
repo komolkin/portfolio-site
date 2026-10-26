@@ -31,6 +31,72 @@ const NAV_IDS = ["markets", "leaderboard", "feed", "copy", "how"] as const;
 type NavId = (typeof NAV_IDS)[number];
 const TITLE_WORDS = ["follow", "share", "earn", "copy"] as const;
 
+/** Same pool as the API onboarding river — NBA teams interleaved with leagues. */
+const CLOSING_NBA_LOGOS = [
+  "lal",
+  "bos",
+  "gs",
+  "mia",
+  "chi",
+  "ny",
+  "dal",
+  "den",
+  "phx",
+  "mil",
+  "okc",
+  "phi",
+  "lac",
+  "cle",
+  "sa",
+  "min",
+  "hou",
+  "mem",
+  "sac",
+  "ind",
+].map((abbr) => `https://a.espncdn.com/i/teamlogos/nba/500/${abbr}.png`);
+
+const CLOSING_LEAGUE_LOGOS = [
+  "https://a.espncdn.com/i/teamlogos/leagues/500/nba.png",
+  "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
+  "https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png",
+  "https://a.espncdn.com/i/leaguelogos/soccer/500/2.png",
+  "https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png",
+  "https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png",
+  "https://a.espncdn.com/i/leaguelogos/soccer/500/15.png",
+  "https://a.espncdn.com/i/teamlogos/leagues/500/wnba.png",
+  "https://a.espncdn.com/i/leaguelogos/soccer/500/10.png",
+  "https://a.espncdn.com/i/teamlogos/leagues/500/mls.png",
+];
+
+function buildClosingLogoPool(): string[] {
+  const teams = [...CLOSING_NBA_LOGOS];
+  const leagues = [...CLOSING_LEAGUE_LOGOS];
+  const mixed: string[] = [];
+  while (teams.length > 0 || leagues.length > 0) {
+    mixed.push(...teams.splice(0, 2));
+    if (leagues.length > 0) mixed.push(leagues.shift()!);
+  }
+  return mixed;
+}
+
+/** Fixed slots around the title — keep the center clear for copy + CTA. */
+const CLOSING_LOGO_SLOTS = [
+  { x: 6, y: 10, size: 46, rotate: -12 },
+  { x: 18, y: 28, size: 38, rotate: 8 },
+  { x: 4, y: 48, size: 42, rotate: -4 },
+  { x: 14, y: 68, size: 36, rotate: 14 },
+  { x: 8, y: 86, size: 40, rotate: -9 },
+  { x: 88, y: 12, size: 44, rotate: 10 },
+  { x: 78, y: 30, size: 36, rotate: -7 },
+  { x: 92, y: 46, size: 40, rotate: 6 },
+  { x: 80, y: 64, size: 42, rotate: -11 },
+  { x: 90, y: 84, size: 38, rotate: 9 },
+  { x: 28, y: 6, size: 34, rotate: -6 },
+  { x: 68, y: 8, size: 34, rotate: 5 },
+  { x: 32, y: 90, size: 36, rotate: 8 },
+  { x: 64, y: 88, size: 38, rotate: -8 },
+] as const;
+
 const MARKETS = [
   {
     title: "Lakers vs. Celtics",
@@ -471,6 +537,130 @@ function WordLetters({
         </span>
       ))}
     </span>
+  );
+}
+
+function shuffleInPlace<T>(items: T[], rand: () => number): T[] {
+  for (let i = items.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rand() * (i + 1));
+    const tmp = items[i]!;
+    items[i] = items[j]!;
+    items[j] = tmp;
+  }
+  return items;
+}
+
+function ClosingLogoField({
+  scrollRoot,
+}: {
+  scrollRoot: RefObject<HTMLElement | null>;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  const [tokens, setTokens] = useState<
+    { src: string; delay: number; key: string }[]
+  >([]);
+
+  const reshuffle = useCallback(() => {
+    const pool = buildClosingLogoPool();
+    const rand = () => Math.random();
+    const picks = shuffleInPlace([...pool], rand).slice(
+      0,
+      CLOSING_LOGO_SLOTS.length,
+    );
+    setTokens(
+      picks.map((src, index) => ({
+        src,
+        key: `${src}-${index}-${Math.floor(rand() * 1e6)}`,
+        delay: 0.04 + rand() * 0.55,
+      })),
+    );
+  }, []);
+
+  useEffect(() => {
+    reshuffle();
+  }, [reshuffle]);
+
+  useEffect(() => {
+    const el = rootRef.current;
+    const root = scrollRoot.current;
+    if (!el || !root) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry) return;
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.28) {
+          setVisible(true);
+          return;
+        }
+        if (!entry.isIntersecting) {
+          setVisible(false);
+          reshuffle();
+        }
+      },
+      {
+        root,
+        threshold: [0, 0.2, 0.28, 0.45],
+        rootMargin: "0px 0px -8% 0px",
+      },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [scrollRoot, reshuffle]);
+
+  return (
+    <div
+      ref={rootRef}
+      aria-hidden
+      className="pointer-events-none absolute inset-0 overflow-hidden"
+    >
+      {tokens.map((token, index) => {
+        const slot = CLOSING_LOGO_SLOTS[index];
+        if (!slot) return null;
+        return (
+          <motion.img
+            key={token.key}
+            src={token.src}
+            alt=""
+            width={slot.size}
+            height={slot.size}
+            draggable={false}
+            className="absolute object-contain select-none"
+            style={{
+              left: `${slot.x}%`,
+              top: `${slot.y}%`,
+              width: slot.size,
+              height: slot.size,
+              marginLeft: -slot.size / 2,
+              marginTop: -slot.size / 2,
+            }}
+            initial={false}
+            animate={
+              visible
+                ? {
+                    opacity: 0.72,
+                    scale: 1,
+                    rotate: slot.rotate,
+                    y: 0,
+                    filter: "blur(0px)",
+                  }
+                : {
+                    opacity: 0,
+                    scale: 0.55,
+                    rotate: slot.rotate * 1.6,
+                    y: 18,
+                    filter: "blur(6px)",
+                  }
+            }
+            transition={{
+              duration: 0.7,
+              delay: visible ? token.delay : 0,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+          />
+        );
+      })}
+    </div>
   );
 }
 
@@ -1517,8 +1707,9 @@ export function WormLanding() {
           </div>
         </section>
 
-        <section className="">
-          <div className="mx-auto max-w-[760px] px-5 py-24 text-center sm:px-8 md:py-32">
+        <section className="relative overflow-hidden">
+          <ClosingLogoField scrollRoot={scrollRef} />
+          <div className="relative z-10 mx-auto max-w-[760px] px-5 py-24 text-center sm:px-8 md:py-32">
             <RotatingTitle
               as="h2"
               className="text-[clamp(40px,6vw,68px)]"
