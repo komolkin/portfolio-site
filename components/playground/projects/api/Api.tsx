@@ -277,7 +277,7 @@ const MLB_BREWERS_LOGO =
 function createDemoLiveMarket(): PolymarketMarketData {
   return {
     marketId: DEMO_LIVE_MARKET_ID,
-    title: "Lakers vs. Celtics",
+    title: "Lakers vs. Warriors",
     slug: DEMO_LIVE_MARKET_ID,
     category: "Sports",
     yesPrice: 0.54,
@@ -297,7 +297,7 @@ function createDemoLiveMarket(): PolymarketMarketData {
         slug: DEMO_LIVE_MARKET_ID,
       },
       {
-        label: "Celtics",
+        label: "Warriors",
         price: 0.46,
         marketId: DEMO_LIVE_MARKET_ID,
         slug: DEMO_LIVE_MARKET_ID,
@@ -317,12 +317,12 @@ function createDemoLiveMarket(): PolymarketMarketData {
         altColor: "#fdb927",
       },
       home: {
-        name: "Celtics",
+        name: "Warriors",
         score: 81,
-        abbr: "BOS",
-        logo: "https://a.espncdn.com/i/teamlogos/nba/500-dark/bos.png",
-        color: "#008348",
-        altColor: "#ffffff",
+        abbr: "GSW",
+        logo: "https://a.espncdn.com/i/teamlogos/nba/500-dark/gs.png",
+        color: "#1D428A",
+        altColor: "#ffc72c",
       },
     },
     teams: [
@@ -334,11 +334,11 @@ function createDemoLiveMarket(): PolymarketMarketData {
         altColor: "#fdb927",
       },
       {
-        name: "Celtics",
-        abbr: "BOS",
-        logo: "https://a.espncdn.com/i/teamlogos/nba/500-dark/bos.png",
-        color: "#008348",
-        altColor: "#ffffff",
+        name: "Warriors",
+        abbr: "GSW",
+        logo: "https://a.espncdn.com/i/teamlogos/nba/500-dark/gs.png",
+        color: "#1D428A",
+        altColor: "#ffc72c",
       },
     ],
     rules:
@@ -1340,6 +1340,17 @@ function outcomeTeamTone(
   return index === sides.length - 1 ? tones.home : tones.away;
 }
 
+/** Soft glass volume tinted with the outcome's active color. */
+function teamPillVolumeStyle(accent: string): CSSProperties {
+  return {
+    color: accent,
+    borderColor: hexToRgba(accent, 0.4),
+    backgroundColor: "rgba(0,0,0,0.42)",
+    backgroundImage: `linear-gradient(165deg, ${hexToRgba(accent, 0.38)} 0%, ${hexToRgba(accent, 0.14)} 42%, rgba(0,0,0,0.28) 100%)`,
+    boxShadow: `inset 0 1px 0 ${hexToRgba(accent, 0.5)}, inset 0 -12px 20px ${hexToRgba(accent, 0.1)}, 0 1px 0 rgba(255,255,255,0.06)`,
+  };
+}
+
 function ChanceFlow({
   price,
   className,
@@ -1840,7 +1851,12 @@ const ALL_HIGHLIGHT_SRCS = HIGHLIGHT_CLIPS.map((c) => c.src).filter(
   (src) => src !== LUKA_FEATURE_CLIP,
 );
 
-type MarketClipRef = { src: string; startRatio: number };
+type MarketClipRef = {
+  src: string;
+  startRatio: number;
+  /** When set, play this many seconds (or full duration if larger). Featured clips use a longer window. */
+  windowSec?: number;
+};
 
 function marketClipHaystack(market: PolymarketMarketData): string {
   const teams = (market.teams ?? [])
@@ -1947,7 +1963,11 @@ function assignUniqueClips(
 
     if (id === DEMO_LIVE_MARKET_ID || market.slug === DEMO_LIVE_MARKET_ID) {
       usedSrc.add(LUKA_FEATURE_CLIP);
-      assigned.set(id, { src: LUKA_FEATURE_CLIP, startRatio: 0 });
+      assigned.set(id, {
+        src: LUKA_FEATURE_CLIP,
+        startRatio: 0,
+        windowSec: 22,
+      });
       continue;
     }
 
@@ -2002,7 +2022,7 @@ function sportClipForMarket(market: PolymarketMarketData): MarketClipRef | null 
     market.marketId === DEMO_LIVE_MARKET_ID ||
     market.slug === DEMO_LIVE_MARKET_ID
   ) {
-    return { src: LUKA_FEATURE_CLIP, startRatio: 0 };
+    return { src: LUKA_FEATURE_CLIP, startRatio: 0, windowSec: 22 };
   }
   if (
     market.marketId === DEMO_F1_MARKET_ID ||
@@ -2058,8 +2078,12 @@ function MarketClip({
       onLoadedMetadata={(event) => {
         const video = event.currentTarget;
         if (!Number.isFinite(video.duration) || video.duration <= 1) return;
-        // Play a short moment window so reused sources still feel distinct.
-        const windowSec = Math.min(8, Math.max(3.5, video.duration * 0.45));
+        // Featured clips can run longer; others keep a short moment window.
+        const requested = clip.windowSec;
+        const windowSec =
+          typeof requested === "number" && requested > 0
+            ? Math.min(video.duration, requested)
+            : Math.min(8, Math.max(3.5, video.duration * 0.45));
         const start = Math.min(
           video.duration * startRatio,
           Math.max(0, video.duration - windowSec),
@@ -2364,7 +2388,8 @@ function MatchSideVisual({
   const [failed, setFailed] = useState(false);
   const label =
     (abbr ?? liveSideName(name)).slice(0, 3).toUpperCase() || "?";
-  const isTeamLogo = Boolean(image && /teamlogos\//i.test(image));
+  const isTeamLogo = isTeamLogoSrc(image);
+  const logoScale = isTeamLogo ? teamLogoVisualScale(name, abbr, image) : 1;
 
   if (name === "—") {
     return <span className="mx-auto block h-12 w-12" aria-hidden />;
@@ -2372,13 +2397,16 @@ function MatchSideVisual({
 
   // Shared middle box — team logos scaled slightly so they match headshot weight.
   return (
-    <div className="mx-auto flex h-12 w-12 items-center justify-center">
+    <div className="mx-auto flex h-12 w-12 shrink-0 items-center justify-center">
       {image && !failed ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={image}
           alt=""
           onError={() => setFailed(true)}
+          style={
+            logoScale !== 1 ? { transform: `scale(${logoScale})` } : undefined
+          }
           className={
             isTeamLogo
               ? "h-[82%] w-[82%] object-contain"
@@ -2585,8 +2613,8 @@ function PreviewActionPill({
         event.stopPropagation();
         onClick();
       }}
-      className="min-w-0 flex-1 rounded-full border border-white/20 bg-black/45 px-3 py-3 text-center text-[16px] font-semibold backdrop-blur-md transition-colors hover:bg-black/60"
-      style={{ color }}
+      className="min-w-0 flex-1 rounded-full border px-3 py-3 text-center text-[16px] font-semibold backdrop-blur-md transition-[filter,opacity] hover:brightness-110"
+      style={teamPillVolumeStyle(color)}
     >
       <span className="block truncate">
         {label}
@@ -3354,6 +3382,31 @@ function teamAccent(name: string, abbr: string | null | undefined, side: 0 | 1):
   return side === 0 ? "#F58426" : "#7EB6FF";
 }
 
+/** True for ESPN team marks, including image-proxy encoded URLs. */
+function isTeamLogoSrc(src: string | null | undefined): boolean {
+  if (!src) return false;
+  try {
+    const raw = src.includes("url=")
+      ? decodeURIComponent(src.slice(src.indexOf("url=") + 4))
+      : src;
+    return /teamlogos\//i.test(raw);
+  } catch {
+    return /teamlogos/i.test(src);
+  }
+}
+
+/** Optical scale so logos that fill the ESPN canvas match padded marks (e.g. Lakers). */
+function teamLogoVisualScale(
+  name: string,
+  abbr?: string | null,
+  src?: string | null,
+): number {
+  const key = `${abbr ?? ""} ${name} ${src ?? ""}`.toLowerCase();
+  // GSW bridge mark fills the asset a bit more — nudge it down only slightly.
+  if (/warriors|\bgsw\b|gs\.png|(^|[^a-z])gs([^a-z]|$)/.test(key)) return 0.84;
+  return 1;
+}
+
 function formatSportsDate(value: string | null | undefined): string | null {
   if (!value) return null;
   const then = Date.parse(value);
@@ -3472,6 +3525,9 @@ function LiveTeamMark({
   const label = (abbr ?? liveSideName(name)).slice(0, 3).toUpperCase();
   const face = portrait || /\.jpe?g(?:$|\?)/i.test(logo ?? "");
   const src = proxyImageSrc(logo);
+  const isTeamLogo = isTeamLogoSrc(logo);
+  const logoScale =
+    !face && isTeamLogo ? teamLogoVisualScale(name, abbr, logo) : 1;
   const box =
     size === "hero"
       ? "h-16 w-16 rounded-full text-[13px]"
@@ -3518,6 +3574,7 @@ function LiveTeamMark({
       src={src}
       alt=""
       onError={() => setFailed(true)}
+      style={logoScale !== 1 ? { transform: `scale(${logoScale})` } : undefined}
       className={`${img} ${round}`}
     />
   );
@@ -3672,11 +3729,13 @@ function LiveGameCard({
                 const name =
                   sportsOutcomeAbbr(market, outcome.label) ??
                   (isDraw ? "Draw" : liveSideName(outcome.label));
-                const tone = isDraw
-                  ? "text-white"
-                  : nickMatch(outcome.label, away.name) || index === 0
-                    ? "text-[#C4B5FD]"
-                    : "text-[#E8C44A]";
+                const teamTone = outcomeTeamTone(market, outcome.label);
+                const accent = isDraw
+                  ? "#FFFFFF"
+                  : (teamTone?.text ??
+                    (nickMatch(outcome.label, away.name) || index === 0
+                      ? "#C4B5FD"
+                      : "#E8C44A"));
                 return (
                   <button
                     key={`${outcome.marketId}-${outcome.label}`}
@@ -3686,7 +3745,8 @@ function LiveGameCard({
                       event.stopPropagation();
                       onTrade(market, outcome.label);
                     }}
-                    className={`min-w-0 flex-1 rounded-full border border-white/20 bg-black/45 py-3 text-[16px] font-semibold backdrop-blur-md transition-colors hover:bg-black/60 ${tone}`}
+                    className="min-w-0 flex-1 rounded-full border py-3 text-[16px] font-semibold backdrop-blur-md transition-[filter,opacity] hover:brightness-110"
+                    style={teamPillVolumeStyle(accent)}
                   >
                     {name} <ChanceFlow price={outcome.price} />
                   </button>
@@ -5289,7 +5349,7 @@ export default function Api({
               slug: DEMO_LIVE_MARKET_ID,
             },
             {
-              label: "Celtics",
+              label: "Warriors",
               price: noPrice,
               marketId: DEMO_LIVE_MARKET_ID,
               slug: DEMO_LIVE_MARKET_ID,

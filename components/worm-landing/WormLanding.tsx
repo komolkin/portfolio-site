@@ -1269,8 +1269,20 @@ export function WormLanding() {
         open={downloadOpen}
         onClose={() => setDownloadOpen(false)}
       />
-      <header ref={headerRef} className="sticky top-0 z-50 bg-[#f6f5f2]">
-        <div className="mx-auto flex max-w-[1120px] flex-col gap-2 px-5 py-4 sm:px-8 sm:py-4">
+      <header ref={headerRef} className="sticky top-0 z-50">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-[calc(100%+2.75rem)]"
+        >
+          <div className="worm-header-blur">
+            <i />
+            <i />
+            <i />
+            <i />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-b from-white via-white/80 to-transparent" />
+        </div>
+        <div className="relative mx-auto flex max-w-[1120px] flex-col gap-2 px-5 py-4 sm:px-8 sm:py-4">
           <div className="relative flex h-12 items-center justify-between sm:h-16">
             <a
               href="#top"

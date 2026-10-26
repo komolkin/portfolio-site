@@ -780,6 +780,46 @@ body > * {
   -webkit-mask-image: linear-gradient(var(--pb-dir), transparent 60%, #000 80%);
 }
 
+/* Landing header: progressive blur + soft white fade over scrolling content. */
+.worm-header-blur {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.worm-header-blur > i {
+  position: absolute;
+  inset: 0;
+}
+
+.worm-header-blur > i:nth-child(1) {
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 35%, transparent 70%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 35%, transparent 70%);
+}
+
+.worm-header-blur > i:nth-child(2) {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 25%, transparent 55%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 25%, transparent 55%);
+}
+
+.worm-header-blur > i:nth-child(3) {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 18%, transparent 42%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 18%, transparent 42%);
+}
+
+.worm-header-blur > i:nth-child(4) {
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 12%, transparent 32%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 12%, transparent 32%);
+}
+
 @keyframes api-market-enter {
   from {
     opacity: 0;
