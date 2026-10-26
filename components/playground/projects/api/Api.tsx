@@ -7614,7 +7614,7 @@ export default function Api({
                 Array.from({ length: 3 }).map((_, i) => (
                   <div
                     key={i}
-                    className="flex h-full min-h-full snap-start snap-always flex-col px-5 py-6"
+                    className="flex h-full min-h-full snap-start snap-always flex-col px-1 py-6"
                     aria-hidden
                   >
                     {i === 0 ? (
@@ -7652,7 +7652,7 @@ export default function Api({
                   return (
                     <div
                       key={market.marketId}
-                      className="flex h-full min-h-full snap-start snap-always flex-col px-5 py-6"
+                      className="flex h-full min-h-full snap-start snap-always flex-col px-1 py-6"
                       style={{
                         contentVisibility: cardActive ? "visible" : "auto",
                         containIntrinsicSize: "auto 640px",
