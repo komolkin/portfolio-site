@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   useCallback,
@@ -488,7 +487,7 @@ function DownloadModal({
 
 function Phone() {
   return (
-    <div className="mx-auto w-[min(340px,78vw)] sm:w-[min(380px,62vw)]">
+    <div className="mx-auto w-[min(318px,74vw)] sm:w-[min(348px,54vw)]">
       {/* Full device — tall enough that the bottom sits just past the first viewport. */}
       <div
         className="mx-auto h-[calc(100svh-8.5rem)] max-h-[760px] min-h-[560px] w-full rounded-[48px] p-[6px] sm:rounded-[52px] md:h-[calc(100svh-9.5rem)] md:rounded-[56px] md:p-[6.5px]"
@@ -1768,12 +1767,14 @@ export function WormLanding() {
                   </button>
                 </li>
                 <li>
-                  <Link
-                    href="/"
+                  <a
+                    href="https://worm.wtf"
+                    target="_blank"
+                    rel="noreferrer"
                     className="rounded-full transition-opacity hover:text-[#141416] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#141416]"
                   >
-                    Portfolio
-                  </Link>
+                    Web App
+                  </a>
                 </li>
               </ul>
             </div>
