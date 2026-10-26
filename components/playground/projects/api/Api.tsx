@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -2042,7 +2043,30 @@ function MarketClip({
   active?: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const seekingRef = useRef(false);
   const startRatio = Math.max(0, Math.min(0.85, clip.startRatio));
+
+  const ensurePlaying = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !active || document.hidden) return;
+    if (video.paused || video.ended) {
+      void video.play().catch(() => {});
+    }
+  }, [active]);
+
+  const restartWindow = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || seekingRef.current) return;
+    const start = Number(video.dataset.momentStart);
+    if (!Number.isFinite(start)) return;
+    seekingRef.current = true;
+    try {
+      video.currentTime = start;
+    } catch {
+      seekingRef.current = false;
+      ensurePlaying();
+    }
+  }, [ensurePlaying]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -2051,27 +2075,28 @@ function MarketClip({
       video.pause();
       return;
     }
-    void video.play().catch(() => {});
-  }, [active, clip.src]);
+    ensurePlaying();
+  }, [active, clip.src, ensurePlaying]);
 
   useEffect(() => {
     const onVis = () => {
       const video = videoRef.current;
       if (!video) return;
       if (document.hidden || !active) video.pause();
-      else void video.play().catch(() => {});
+      else ensurePlaying();
     };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
-  }, [active]);
+  }, [active, ensurePlaying]);
 
   return (
     <video
       ref={videoRef}
       src={clip.src}
       muted
+      loop
       playsInline
-      preload="metadata"
+      preload={active ? "auto" : "metadata"}
       disablePictureInPicture
       controls={false}
       tabIndex={-1}
@@ -2088,19 +2113,39 @@ function MarketClip({
           video.duration * startRatio,
           Math.max(0, video.duration - windowSec),
         );
+        const end = Math.min(video.duration, start + windowSec);
+        // Native `loop` covers full-file windows; moment windows seek manually.
+        const useNativeLoop = start <= 0.05 && end >= video.duration - 0.15;
         video.dataset.momentStart = String(start);
-        video.dataset.momentEnd = String(start + windowSec);
-        video.currentTime = start;
-        if (active && !document.hidden) void video.play().catch(() => {});
+        video.dataset.momentEnd = String(end);
+        video.dataset.nativeLoop = useNativeLoop ? "1" : "0";
+        video.loop = useNativeLoop;
+        if (start > 0.05) {
+          seekingRef.current = true;
+          video.currentTime = start;
+        }
+        ensurePlaying();
       }}
-      onTimeUpdate={(event) => {
+      onSeeked={() => {
+        seekingRef.current = false;
+        ensurePlaying();
+      }}
+      onEnded={() => {
+        // Fallback if native loop is off or browser drops it mid-window.
         if (!active) return;
+        restartWindow();
+        ensurePlaying();
+      }}
+      onWaiting={() => ensurePlaying()}
+      onTimeUpdate={(event) => {
+        if (!active || seekingRef.current) return;
         const video = event.currentTarget;
+        if (video.dataset.nativeLoop === "1") return;
         const end = Number(video.dataset.momentEnd);
         const start = Number(video.dataset.momentStart);
         if (!Number.isFinite(end) || !Number.isFinite(start)) return;
-        if (video.currentTime >= end - 0.05) {
-          video.currentTime = start;
+        if (video.currentTime >= end - 0.08) {
+          restartWindow();
         }
       }}
       className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
