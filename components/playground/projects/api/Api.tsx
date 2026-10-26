@@ -5025,10 +5025,19 @@ export default function Api({
     const show = (data: PolymarketDemoProfile) => {
       hasProfile = true;
       shownWallet = data.wallet.toLowerCase();
+      // Demo balance is fixed — keep PnL/ROI in a believable band for that
+      // balance (API lifetime PnL on the seed wallet can be huge).
+      const rawRoi =
+        typeof data.roiPercent === "number" ? data.roiPercent : 8.1;
+      const roiPercent = Math.min(18, Math.max(-12, rawRoi));
+      const totalPnl =
+        Math.round(PROFILE_BALANCE * (roiPercent / 100) * 100) / 100;
       setDemoProfile({
         ...data,
         portfolioValue: PROFILE_BALANCE,
         history: seedPortfolioHistory(PROFILE_BALANCE),
+        totalPnl,
+        roiPercent: Math.round(roiPercent * 10) / 10,
       });
       setDemoProfileStatus("ready");
     };
@@ -6742,6 +6751,13 @@ export default function Api({
     openFollowList(kind, people);
   };
 
+  const exploreHeaderPnl =
+    demoProfile?.roiPercent != null
+      ? profileBalance * (demoProfile.roiPercent / 100) + copiedOpenPnl
+      : demoProfile?.totalPnl != null
+        ? demoProfile.totalPnl + copiedOpenPnl
+        : null;
+
   const exploreHeader = (
     <header className="mb-4 shrink-0 pt-2">
       <div className="flex items-start justify-between gap-3">
@@ -6763,20 +6779,18 @@ export default function Api({
               />
             )}
           </p>
-          {demoProfileStatus === "ready" &&
-            demoProfile &&
-            demoProfile.totalPnl !== null && (
+          {demoProfileStatus === "ready" && exploreHeaderPnl !== null && (
               <p
                 className={`mt-1.5 inline-flex items-baseline gap-1 text-[13px] font-semibold tabular-nums ${
-                  demoProfile.totalPnl > 0
+                  exploreHeaderPnl > 0
                     ? "text-[#00D54B]"
-                    : demoProfile.totalPnl < 0
+                    : exploreHeaderPnl < 0
                       ? "text-[#FF375F]"
                       : "text-white/45"
                 }`}
               >
-                <SignedUsdFlow value={demoProfile.totalPnl} />
-                {demoProfile.roiPercent !== null ? (
+                <SignedUsdFlow value={exploreHeaderPnl} />
+                {demoProfile?.roiPercent != null ? (
                   <span className="inline-flex items-baseline">
                     (
                     <SignedPercentFlow value={demoProfile.roiPercent} />)
