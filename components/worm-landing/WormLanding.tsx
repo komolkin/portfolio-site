@@ -776,21 +776,122 @@ const REFERRAL_FEE_SHARE = 0.3;
 /** Rough monthly volume turnover so 1 trader × $1,000 ≈ $16.77. */
 const REFERRAL_MONTHLY_MULT = 5.59;
 const REFERRAL_PLATFORM_FEE = 0.01;
-function formatReferralUsd(value: number) {
-  return value.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+const REFERRAL_TRADERS_START = 1;
+const REFERRAL_TRADERS_MID = 25;
+const REFERRAL_AVG_START = 100;
+const REFERRAL_AVG_MID = 5000;
+
+function easeOutCubic(t: number) {
+  return 1 - (1 - t) ** 3;
 }
 
-function ReferralCalculator() {
-  const [traders, setTraders] = useState(1);
-  const [avgTrade, setAvgTrade] = useState(1000);
+function ReferralCalculator({
+  scrollRoot,
+}: {
+  scrollRoot: RefObject<HTMLDivElement | null>;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [traders, setTraders] = useState(REFERRAL_TRADERS_START);
+  const [avgTrade, setAvgTrade] = useState(REFERRAL_AVG_START);
+  const animRef = useRef<number | null>(null);
+  const playedRef = useRef(false);
+  const userTouchRef = useRef(false);
+
+  const stopAnim = useCallback(() => {
+    if (animRef.current != null) {
+      window.cancelAnimationFrame(animRef.current);
+      animRef.current = null;
+    }
+  }, []);
+
+  const playDemo = useCallback(() => {
+    stopAnim();
+    userTouchRef.current = false;
+    setTraders(REFERRAL_TRADERS_START);
+    setAvgTrade(REFERRAL_AVG_START);
+    const duration = 2200;
+    const started = performance.now();
+
+    const tick = (now: number) => {
+      if (userTouchRef.current) {
+        animRef.current = null;
+        return;
+      }
+      const t = Math.min(1, (now - started) / duration);
+      const eased = easeOutCubic(t);
+      setTraders(
+        Math.round(
+          REFERRAL_TRADERS_START +
+            (REFERRAL_TRADERS_MID - REFERRAL_TRADERS_START) * eased,
+        ),
+      );
+      setAvgTrade(
+        Math.round(
+          (REFERRAL_AVG_START +
+            (REFERRAL_AVG_MID - REFERRAL_AVG_START) * eased) /
+            100,
+        ) * 100,
+      );
+      if (t < 1) {
+        animRef.current = window.requestAnimationFrame(tick);
+      } else {
+        animRef.current = null;
+      }
+    };
+
+    animRef.current = window.requestAnimationFrame(tick);
+  }, [stopAnim]);
+
+  useEffect(() => {
+    const el = rootRef.current;
+    const root = scrollRoot.current;
+    if (!el || !root) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry) return;
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.4) {
+          if (playedRef.current) return;
+          playedRef.current = true;
+          playDemo();
+          return;
+        }
+        if (!entry.isIntersecting) {
+          playedRef.current = false;
+          stopAnim();
+          userTouchRef.current = false;
+          setTraders(REFERRAL_TRADERS_START);
+          setAvgTrade(REFERRAL_AVG_START);
+        }
+      },
+      {
+        root,
+        threshold: [0, 0.25, 0.4, 0.6],
+        rootMargin: "0px 0px -10% 0px",
+      },
+    );
+
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      stopAnim();
+    };
+  }, [playDemo, scrollRoot, stopAnim]);
+
+  const onUserEdit = () => {
+    userTouchRef.current = true;
+    stopAnim();
+  };
 
   const earnings =
     traders * avgTrade * REFERRAL_PLATFORM_FEE * REFERRAL_FEE_SHARE * REFERRAL_MONTHLY_MULT;
+  const earningsAbs = Math.abs(earnings);
+  let earningsWhole = Math.floor(earningsAbs);
+  let earningsCents = Math.round((earningsAbs - earningsWhole) * 100);
+  if (earningsCents >= 100) {
+    earningsWhole += 1;
+    earningsCents = 0;
+  }
   const bars = Array.from({ length: 28 }, (_, index) => {
     const t = (index + 1) / 28;
     const curve = t * t;
@@ -799,15 +900,21 @@ function ReferralCalculator() {
   });
 
   return (
-    <div className="mx-auto mt-10 max-w-[760px] rounded-[28px] bg-white p-5 sm:p-7">
+    <div
+      ref={rootRef}
+      className="mx-auto mt-10 max-w-[760px] rounded-[28px] bg-white p-5 sm:p-7"
+    >
       <div>
         <p className="text-[13px] font-medium text-[#5e5c56]">
           Potential earnings
         </p>
         <p
-          className={`mt-1 text-[clamp(40px,6vw,56px)] font-semibold leading-none tracking-[-0.04em] tabular-nums ${instrumentSansCondensed.className}`}
+          className={`mt-1 inline-flex items-baseline text-[clamp(40px,6vw,56px)] font-semibold leading-none tracking-[-0.04em] tabular-nums ${instrumentSansCondensed.className}`}
         >
-          {formatReferralUsd(earnings)}
+          <span>${earningsWhole.toLocaleString("en-US")}</span>
+          <span className="text-[#8a8882]">
+            .{earningsCents.toString().padStart(2, "0")}
+          </span>
         </p>
       </div>
 
@@ -848,7 +955,11 @@ function ReferralCalculator() {
             max={50}
             step={1}
             value={traders}
-            onChange={(event) => setTraders(Number(event.target.value))}
+            onPointerDown={onUserEdit}
+            onChange={(event) => {
+              onUserEdit();
+              setTraders(Number(event.target.value));
+            }}
             className="mt-4 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#d9d6cf] accent-[#141416] [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#141416]"
           />
         </label>
@@ -870,7 +981,11 @@ function ReferralCalculator() {
             max={10000}
             step={100}
             value={avgTrade}
-            onChange={(event) => setAvgTrade(Number(event.target.value))}
+            onPointerDown={onUserEdit}
+            onChange={(event) => {
+              onUserEdit();
+              setAvgTrade(Number(event.target.value));
+            }}
             className="mt-4 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#d9d6cf] accent-[#141416] [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#141416]"
           />
           <span className="mt-2 block text-[12px] text-[#8a8882]">
@@ -1329,7 +1444,7 @@ export function WormLanding() {
                 invites.
               </p>
             </div>
-            <ReferralCalculator />
+            <ReferralCalculator scrollRoot={scrollRef} />
           </div>
         </section>
 
