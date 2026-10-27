@@ -9,8 +9,8 @@ export type StreamingWord = {
   delayIndex: number;
 };
 
-const WORD_STAGGER = 0.07;
-const WORD_DURATION = 0.42;
+export const WORD_STAGGER = 0.07;
+export const WORD_DURATION = 0.42;
 
 export function splitWords(text: string): string[] {
   return text.trim().split(/\s+/).filter(Boolean);

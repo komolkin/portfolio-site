@@ -33,6 +33,7 @@ import Onboarding from "./Onboarding";
 import PositionsSheet, { BubblyPositionCard } from "./PositionsSheet";
 import MarketTopTraders from "./MarketTopTraders";
 import ReferralScreen from "./ReferralScreen";
+import MarketInsightsPager from "./MarketInsightsPager";
 import SettingsScreen from "./SettingsScreen";
 import FollowListSheet, {
   type FollowListPerson,
@@ -110,7 +111,7 @@ const FEED_EDGE_MASK =
   "linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.35) 8px, rgba(0,0,0,0.8) 16px, #000 24px, #000 calc(100% - 24px), rgba(0,0,0,0.8) calc(100% - 16px), rgba(0,0,0,0.35) calc(100% - 8px), transparent 100%)";
 /** Lets trading work before (or without) the remote demo profile loading. */
 const LOCAL_TRADER_WALLET = "0x000000000000000000000000000000000000d3a0";
-const SHOW_ONBOARDING = true;
+const SHOW_ONBOARDING = false;
 const ONBOARDING_DONE_KEY = "playground-api-onboarded";
 const ONBOARDING_USERNAME_KEY = "playground-api-username";
 const ONBOARDING_FOLLOWS_KEY = "playground-api-follows";
@@ -2970,17 +2971,17 @@ function FloatingTopPositions({
   return (
     <div
       ref={rootRef}
-      className="pointer-events-none absolute inset-x-0 bottom-full mb-1 h-[160px] overflow-visible"
+      className="pointer-events-none relative mb-1 h-[220px] w-full overflow-visible"
     >
       {bubbles.map((bubble) => {
         const pnl = Math.round(livePnl[bubble.id] ?? bubble.pnl);
         return (
           <div
             key={bubble.id}
-            className={`absolute transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+            className={`absolute origin-center transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.34,1.45,0.64,1)] ${
               show
-                ? "opacity-100 translate-y-0 scale-100"
-                : "opacity-0 translate-y-5 scale-90"
+                ? "opacity-100 scale-100"
+                : "opacity-0 scale-50"
             }`}
             style={{
               ...(bubble.side === 0
@@ -3167,6 +3168,7 @@ function TrendingMarketCard({
   height = FEATURED_MARKET_PREVIEW_HEIGHT,
   clip: clipOverride = null,
   active = true,
+  autoSwipeInsights = false,
 }: {
   market: PolymarketMarketData;
   onOpen: (market: PolymarketMarketData) => void;
@@ -3178,6 +3180,8 @@ function TrendingMarketCard({
   clip?: MarketClipRef | null;
   /** When false, skip video decode / timers / float motion. */
   active?: boolean;
+  /** Landing embed: auto-flip buttons ↔ insights. */
+  autoSwipeInsights?: boolean;
 }) {
   const odds = previewOdds(market);
   const clip = clipOverride ?? sportClipForMarket(market);
@@ -3374,27 +3378,33 @@ function TrendingMarketCard({
           </div>
         )}
 
-        <div className="relative mt-auto">
-          <FloatingTopPositions
-            market={market}
-            onOpenPosition={onOpenPosition}
-            active={active}
-          />
-          <div className="flex gap-2">
-            {pills.map((pill) => (
-              <PreviewActionPill
-                key={pill.key}
-                label={pill.label}
-                price={pill.price}
-                color={pill.color}
-                onClick={() => {
-                  if (pill.outcome) openTrade(pill.outcome);
-                  else onOpen(market);
-                }}
-              />
-            ))}
+        <MarketInsightsPager
+          market={market}
+          enabled={Boolean(clip)}
+          autoSwipe={autoSwipeInsights && active}
+        >
+          <div className="relative">
+            <FloatingTopPositions
+              market={market}
+              onOpenPosition={onOpenPosition}
+              active={active}
+            />
+            <div className="flex gap-2">
+              {pills.map((pill) => (
+                <PreviewActionPill
+                  key={pill.key}
+                  label={pill.label}
+                  price={pill.price}
+                  color={pill.color}
+                  onClick={() => {
+                    if (pill.outcome) openTrade(pill.outcome);
+                    else onOpen(market);
+                  }}
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        </MarketInsightsPager>
       </div>
     </div>
   );
@@ -3667,6 +3677,7 @@ function LiveGameCard({
   height = FEATURED_MARKET_PREVIEW_HEIGHT,
   clip: clipOverride = null,
   active = true,
+  autoSwipeInsights = false,
 }: {
   market: PolymarketMarketData;
   onOpen: (market: PolymarketMarketData) => void;
@@ -3677,6 +3688,7 @@ function LiveGameCard({
   height?: number;
   clip?: MarketClipRef | null;
   active?: boolean;
+  autoSwipeInsights?: boolean;
 }) {
   const { game, away, home, awayOdds, homeOdds } = resolveSportsSides(market);
   const accent = useImageAccent(
@@ -3794,43 +3806,49 @@ function LiveGameCard({
         <SportsMatchHeader market={market} active={active} />
 
         {onTrade ? (
-          <div className="relative mt-auto">
-            <FloatingTopPositions
-              market={market}
-              onOpenPosition={onOpenPosition}
-              active={active}
-            />
-            <div className="flex gap-2">
-              {tradeOutcomes.map((outcome, index) => {
-                const isDraw = /draw/i.test(outcome.label);
-                const name =
-                  sportsOutcomeAbbr(market, outcome.label) ??
-                  (isDraw ? "Draw" : liveSideName(outcome.label));
-                const teamTone = outcomeTeamTone(market, outcome.label);
-                const accent = isDraw
-                  ? "#FFFFFF"
-                  : (teamTone?.text ??
-                    (nickMatch(outcome.label, away.name) || index === 0
-                      ? "#C4B5FD"
-                      : "#E8C44A"));
-                return (
-                  <button
-                    key={`${outcome.marketId}-${outcome.label}`}
-                    type="button"
-                    data-sfx="press"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onTrade(market, outcome.label);
-                    }}
-                    className="min-w-0 flex-1 rounded-full border py-3 text-[16px] font-semibold backdrop-blur-md transition-[filter,opacity] hover:brightness-110"
-                    style={teamPillVolumeStyle(accent)}
-                  >
-                    {name} <ChanceFlow price={outcome.price} />
-                  </button>
-                );
-              })}
+          <MarketInsightsPager
+            market={market}
+            enabled={Boolean(clip)}
+            autoSwipe={autoSwipeInsights && active}
+          >
+            <div className="relative">
+              <FloatingTopPositions
+                market={market}
+                onOpenPosition={onOpenPosition}
+                active={active}
+              />
+              <div className="flex gap-2">
+                {tradeOutcomes.map((outcome, index) => {
+                  const isDraw = /draw/i.test(outcome.label);
+                  const name =
+                    sportsOutcomeAbbr(market, outcome.label) ??
+                    (isDraw ? "Draw" : liveSideName(outcome.label));
+                  const teamTone = outcomeTeamTone(market, outcome.label);
+                  const accent = isDraw
+                    ? "#FFFFFF"
+                    : (teamTone?.text ??
+                      (nickMatch(outcome.label, away.name) || index === 0
+                        ? "#C4B5FD"
+                        : "#E8C44A"));
+                  return (
+                    <button
+                      key={`${outcome.marketId}-${outcome.label}`}
+                      type="button"
+                      data-sfx="press"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onTrade(market, outcome.label);
+                      }}
+                      className="min-w-0 flex-1 rounded-full border py-3 text-[16px] font-semibold backdrop-blur-md transition-[filter,opacity] hover:brightness-110"
+                      style={teamPillVolumeStyle(accent)}
+                    >
+                      {name} <ChanceFlow price={outcome.price} />
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          </MarketInsightsPager>
         ) : null}
       </div>
     </div>
@@ -7124,8 +7142,8 @@ export default function Api({
       <article
         className={
           embed
-            ? "relative flex h-full w-full min-h-0 flex-col overflow-hidden bg-black text-white transition-[background-color] duration-100 motion-safe:[&_button]:origin-center motion-safe:[&_button]:transition-[transform,color,background-color,border-color,opacity] motion-safe:[&_button]:duration-150 motion-safe:[&_button]:ease-out motion-safe:[&_button:active]:scale-[0.96]"
-            : "relative flex h-[740px] w-full max-w-[360px] flex-col overflow-hidden rounded-[32px] bg-black text-white transition-[background-color] duration-100 motion-safe:[&_button]:origin-center motion-safe:[&_button]:transition-[transform,color,background-color,border-color,opacity] motion-safe:[&_button]:duration-150 motion-safe:[&_button]:ease-out motion-safe:[&_button:active]:scale-[0.96]"
+            ? "relative flex h-full w-full min-h-0 select-none flex-col overflow-hidden bg-black text-white transition-[background-color] duration-100 [&_input]:select-text [&_textarea]:select-text motion-safe:[&_button]:origin-center motion-safe:[&_button]:transition-[transform,color,background-color,border-color,opacity] motion-safe:[&_button]:duration-150 motion-safe:[&_button]:ease-out motion-safe:[&_button:active]:scale-[0.96]"
+            : "relative flex h-[740px] w-full max-w-[360px] select-none flex-col overflow-hidden rounded-[32px] bg-black text-white transition-[background-color] duration-100 [&_input]:select-text [&_textarea]:select-text motion-safe:[&_button]:origin-center motion-safe:[&_button]:transition-[transform,color,background-color,border-color,opacity] motion-safe:[&_button]:duration-150 motion-safe:[&_button]:ease-out motion-safe:[&_button:active]:scale-[0.96]"
         }
         style={
           showingMarketDetail ? { backgroundColor: marketAccent } : undefined
@@ -7666,6 +7684,7 @@ export default function Api({
                             featured
                             fill
                             active={cardActive}
+                            autoSwipeInsights={embed}
                             clip={homeFeedClips.get(market.marketId) ?? null}
                             onOpen={openMarket}
                             onTrade={openTradeFlow}
@@ -7676,6 +7695,7 @@ export default function Api({
                             market={market}
                             fill
                             active={cardActive}
+                            autoSwipeInsights={embed}
                             clip={homeFeedClips.get(market.marketId) ?? null}
                             onOpen={openMarket}
                             onTrade={openTradeFlow}
