@@ -204,23 +204,45 @@ function clearOnboardingCache() {
   storageRemove(ONBOARDING_FOLLOWS_KEY);
 }
 
+function portfolioSeedRand(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 function seedPortfolioHistory(endValue: number): LivelinePoint[] {
   const now = Math.floor(Date.now() / 1000);
-  const points: LivelinePoint[] = [];
-  // ~90 days at 3h steps so 1D / 1W / 1M scrub windows have enough points.
-  const steps = 720;
-  const stepSecs = 60 * 60 * 3;
-  let value = endValue * 0.72;
+  // ~90 days at 6h — enough for scrub ranges without a synthetic sawtooth.
+  const steps = 360;
+  const stepSecs = 60 * 60 * 6;
+  const start = endValue * 0.76;
+  const rand = portfolioSeedRand(Math.round(endValue * 97) ^ 0x9e3779b9);
 
+  // Sparse irregular control offsets → smooth organic dips/rallies.
+  const controlCount = 14;
+  const controls: number[] = [];
+  for (let c = 0; c < controlCount; c++) {
+    const edge = c === 0 || c === controlCount - 1;
+    controls.push(edge ? 0 : (rand() - 0.46) * endValue * 0.09);
+  }
+
+  const points: LivelinePoint[] = [];
   for (let i = 0; i < steps; i++) {
-    const progress = i / (steps - 1);
-    const drift = (endValue - value) * (0.012 + progress * 0.03);
-    const wave = Math.sin(i * 0.18) * endValue * 0.01;
-    const noise = Math.sin(i * 0.7 + 0.4) * endValue * 0.006;
-    value = Math.max(endValue * 0.62, value + drift + wave + noise);
+    const t = i / (steps - 1);
+    const eased = t * t * (3 - 2 * t);
+    const cf = t * (controlCount - 1);
+    const ci = Math.min(controlCount - 2, Math.floor(cf));
+    const ct = cf - ci;
+    const smooth = ct * ct * (3 - 2 * ct);
+    const wobble = controls[ci]! + (controls[ci + 1]! - controls[ci]!) * smooth;
+    const value = start + (endValue - start) * eased + wobble;
     points.push({
       time: now - (steps - 1 - i) * stepSecs,
-      value: Math.round(value * 100) / 100,
+      value: Math.round(Math.max(endValue * 0.62, value) * 100) / 100,
     });
   }
 

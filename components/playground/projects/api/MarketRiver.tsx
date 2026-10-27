@@ -146,7 +146,7 @@ export default function MarketRiver({
     const root = rootRef.current;
     if (!root) return;
     const sync = () => {
-      root.dataset.paused = document.hidden ? "true" : "false";
+      root.classList.toggle("is-paused", document.hidden);
     };
     sync();
     document.addEventListener("visibilitychange", sync);
@@ -221,7 +221,7 @@ export default function MarketRiver({
         @media (prefers-reduced-motion: reduce) {
           .market-river-layer { animation: none !important; }
         }
-        .market-river[data-paused="true"] .market-river-layer {
+        .market-river.is-paused .market-river-layer {
           animation-play-state: paused;
         }
       `}</style>

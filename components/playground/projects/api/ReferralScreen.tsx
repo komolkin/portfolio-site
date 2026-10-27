@@ -81,11 +81,11 @@ export default function ReferralScreen({
         <div className="col-span-2 flex items-center gap-3 rounded-[20px] bg-white/[0.08] px-4 py-3.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={IMG_REFERRAL_COINS}
+            src={`${IMG_REFERRAL_COINS}?v=3`}
             alt=""
-            width={63}
-            height={41}
-            className="pointer-events-none h-[41px] w-[63px] shrink-0 object-contain select-none"
+            width={56}
+            height={56}
+            className="pointer-events-none h-14 w-14 shrink-0 object-contain select-none"
             draggable={false}
           />
           <div className="min-w-0 flex-1">
