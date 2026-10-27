@@ -176,8 +176,8 @@ const FAQS = [
     a: "Worm is a social prediction app. You trade a curated list of markets, mostly sports, and you do it next to other traders — follow them, copy them, or answer their takes in the feed.",
   },
   {
-    q: "Who can join?",
-    a: "Worm is invite-only. After a valid code, you continue with Google or connect a wallet.",
+    q: "How can I join?",
+    a: "Worm is invite-only. Follow all the Worm social accounts — we can randomly share the codes there.",
   },
   {
     q: "What can I trade?",
