@@ -26,7 +26,7 @@ import type {
   PolymarketWalletTrade,
 } from "@/lib/polymarketscan";
 import { sportsOutcomeAbbr } from "@/lib/polymarketscan";
-import { instrumentSansCondensed } from "@/lib/fonts";
+import { instrumentSans } from "@/lib/fonts";
 import FeedPositionSheet from "./FeedPositionSheet";
 import Onboarding from "./Onboarding";
 import PositionsSheet, { BubblyPositionCard } from "./PositionsSheet";
@@ -89,7 +89,7 @@ const nfMaskStyle = {
 type SectionId = "explore" | "search" | "feed" | "profile";
 type ProfileSubScreen = "referral" | "settings";
 type ListDetailTab = "trades" | "wallets";
-type LeaderboardTab = "traders" | "friends" | "lists";
+type LeaderboardCategory = "all" | "sports" | "crypto" | "politics";
 type LeaderboardPeriod = "24h" | "week" | "month";
 type MarketDetailTab = "trades" | "traders" | "rules";
 type ProfileTab = "positions" | "history" | "copying";
@@ -249,10 +249,11 @@ function seedPnlHistory(endValue: number, salt = 0): LivelinePoint[] {
   return points;
 }
 
-const LEADERBOARD_SCOPE_OPTIONS = [
-  { id: "traders", label: "Top traders" },
-  { id: "friends", label: "Friends" },
-  { id: "lists", label: "Squads" },
+const LEADERBOARD_CATEGORY_OPTIONS = [
+  { id: "all", label: "All categories" },
+  { id: "sports", label: "Sports" },
+  { id: "crypto", label: "Crypto" },
+  { id: "politics", label: "Politics" },
 ] as const;
 
 const LEADERBOARD_PERIOD_OPTIONS = [
@@ -260,6 +261,14 @@ const LEADERBOARD_PERIOD_OPTIONS = [
   { id: "week", label: "Week" },
   { id: "month", label: "Month" },
 ] as const;
+
+const LEADERBOARD_CATEGORY_KEYS = ["sports", "crypto", "politics"] as const;
+
+function walletLeaderboardCategory(
+  wallet: string,
+): (typeof LEADERBOARD_CATEGORY_KEYS)[number] {
+  return LEADERBOARD_CATEGORY_KEYS[hashString(wallet) % 3]!;
+}
 
 const DEMO_LIVE_MARKET_ID = "demo-live-lal-bos";
 const DEMO_F1_MARKET_ID = "demo-f1-ver-nor";
@@ -2497,7 +2506,7 @@ function SportsMatchHeader({
   }, [showScore, market, active]);
 
   // Shared middle size for live scores and countdown timers.
-  const matchValueClass = `text-[32px] font-semibold tabular-nums leading-none tracking-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] ${instrumentSansCondensed.className}`;
+  const matchValueClass = `text-[32px] font-semibold tabular-nums leading-none tracking-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] ${instrumentSans.className}`;
 
   if (showScore) {
     const period = game
@@ -3700,7 +3709,7 @@ function LiveGameCard({
               ) : null}
             </div>
             <p
-              className={`text-[28px] font-semibold tabular-nums leading-none tracking-tight text-white ${instrumentSansCondensed.className}`}
+              className={`text-[28px] font-semibold tabular-nums leading-none tracking-tight text-white ${instrumentSans.className}`}
             >
               {hasScore ? (
                 <LiveScoreFlow away={away.score!} home={home.score!} />
@@ -3868,7 +3877,7 @@ function SportsOddsChart({
       </div>
       <div className="pointer-events-none absolute inset-y-0 right-0 flex flex-col justify-center gap-0.5 pb-3 text-right">
         <p
-          className={`text-[18px] font-semibold leading-none tabular-nums ${instrumentSansCondensed.className}`}
+          className={`text-[18px] font-semibold leading-none tabular-nums ${instrumentSans.className}`}
           style={{ color: awayColor }}
         >
           <NumberFlow
@@ -3888,7 +3897,7 @@ function SportsOddsChart({
           {homeLabel}
         </p>
         <p
-          className={`text-[18px] font-semibold leading-none tabular-nums ${instrumentSansCondensed.className}`}
+          className={`text-[18px] font-semibold leading-none tabular-nums ${instrumentSans.className}`}
           style={{ color: homeColor }}
         >
           <NumberFlow
@@ -3952,7 +3961,7 @@ function SportsTeamsList({
                   {team.name}
                 </p>
                 <p
-                  className={`shrink-0 text-[18px] font-semibold tabular-nums ${instrumentSansCondensed.className}`}
+                  className={`shrink-0 text-[18px] font-semibold tabular-nums ${instrumentSans.className}`}
                 >
                   <ChanceFlow price={price} />
                 </p>
@@ -4137,7 +4146,7 @@ function SportsMatchupBoard({ market }: { market: PolymarketMarketData }) {
           <p
             className={`mt-1.5 text-[42px] font-semibold leading-none tracking-tight tabular-nums ${
               hasScore ? "text-white" : "text-white/30"
-            } ${instrumentSansCondensed.className}`}
+            } ${instrumentSans.className}`}
           >
             {hasScore ? (
               <LiveScoreFlow away={away.score!} home={home.score!} />
@@ -4641,7 +4650,7 @@ function ProfileBalanceChart({
     <section className="mt-5 overflow-hidden rounded-[28px] bg-white/[0.08] px-5 pb-5 pt-4">
       <p className="text-[13px] font-medium text-white/45">Portfolio</p>
       <p
-        className={`mt-1 text-[44px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSansCondensed.className}`}
+        className={`mt-1 text-[44px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSans.className}`}
       >
         {loading ? (
           "—"
@@ -4721,7 +4730,7 @@ function ListPnlChart({
     <>
       <header className="mb-2 mt-4">
         <p
-          className={`text-[42px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSansCondensed.className}`}
+          className={`text-[42px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSans.className}`}
         >
           {loading || pnl === null ? (
             "—"
@@ -4764,37 +4773,6 @@ function ListPnlChart({
         )}
       </div>
     </>
-  );
-}
-
-function FeedItemSkeleton() {
-  return (
-    <li className="border-b border-white/[0.06] py-5 first:pt-0">
-      <div className="flex items-start gap-3">
-        <div className="h-10 w-10 shrink-0 rounded-full bg-white/10" />
-        <div className="min-w-0 flex-1">
-          <div className="h-4 w-[78%] rounded bg-white/10" />
-          <div className="mt-2 h-4 w-[62%] rounded bg-white/10" />
-          <div className="mt-3 rounded-[20px] bg-white/[0.08] p-3.5">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 shrink-0 rounded-2xl bg-white/10" />
-              <div className="min-w-0 flex-1">
-                <div className="h-3.5 w-[70%] rounded bg-white/10" />
-                <div className="mt-2 h-3 w-16 rounded bg-white/10" />
-              </div>
-            </div>
-            <div className="mt-3 flex justify-between">
-              <div className="h-5 w-16 rounded bg-white/10" />
-              <div className="h-5 w-12 rounded bg-white/10" />
-            </div>
-          </div>
-          <div className="mt-3 flex items-center gap-5">
-            <div className="h-3.5 w-14 rounded bg-white/10" />
-            <div className="h-3.5 w-8 rounded bg-white/10" />
-          </div>
-        </div>
-      </div>
-    </li>
   );
 }
 
@@ -4978,8 +4956,8 @@ export default function Api({
   const [marketPhotoPool, setMarketPhotoPool] = useState<string[]>([]);
   const [marketActivity, setMarketActivity] =
     useState<PolymarketMarketActivity | null>(null);
-  const [leaderboardTab, setLeaderboardTab] =
-    useState<LeaderboardTab>("traders");
+  const [leaderboardCategory, setLeaderboardCategory] =
+    useState<LeaderboardCategory>("all");
   const [leaderboardPeriod, setLeaderboardPeriod] =
     useState<LeaderboardPeriod>("24h");
   const [profileTab, setProfileTab] = useState<ProfileTab>("positions");
@@ -4993,9 +4971,6 @@ export default function Api({
   >("idle");
   const [leaderboardWallets, setLeaderboardWallets] = useState<
     PolymarketLeaderboardWallet[]
-  >([]);
-  const [leaderboardLists, setLeaderboardLists] = useState<
-    PolymarketWatchList[]
   >([]);
   const [listDetail, setListDetail] = useState<PolymarketWatchListDetail | null>(
     null,
@@ -5049,7 +5024,6 @@ export default function Api({
   >("idle");
   const [feedPositionTrade, setFeedPositionTrade] =
     useState<FeedPositionSelection | null>(null);
-  const [feedFriendsOnly, setFeedFriendsOnly] = useState(false);
   const [followedWallets, setFollowedWallets] = useState<Set<string>>(
     () => new Set(),
   );
@@ -5525,27 +5499,17 @@ export default function Api({
     const load = async () => {
       setLeaderboardStatus("loading");
       try {
-        const [walletsRes, listsRes] = await Promise.all([
-          fetch("/api/polymarketscan/leaderboard?type=wallets&limit=15", {
-            signal: controller.signal,
-          }),
-          fetch("/api/polymarketscan/leaderboard?type=lists&limit=15", {
-            signal: controller.signal,
-          }),
-        ]);
-        if (!walletsRes.ok || !listsRes.ok) throw new Error("fetch failed");
+        const walletsRes = await fetch(
+          "/api/polymarketscan/leaderboard?type=wallets&limit=15",
+          { signal: controller.signal },
+        );
+        if (!walletsRes.ok) throw new Error("fetch failed");
         const walletsData = (await walletsRes.json()) as {
           wallets?: PolymarketLeaderboardWallet[];
-        };
-        const listsData = (await listsRes.json()) as {
-          lists?: PolymarketWatchList[];
         };
         if (controller.signal.aborted) return;
         setLeaderboardWallets(
           Array.isArray(walletsData.wallets) ? walletsData.wallets : [],
-        );
-        setLeaderboardLists(
-          Array.isArray(listsData.lists) ? listsData.lists : [],
         );
         setLeaderboardStatus("ready");
       } catch (error) {
@@ -5773,7 +5737,7 @@ export default function Api({
           ),
   );
   const showingListDetail =
-    (section === "explore" || section === "search") &&
+    (section === "explore" || section === "search" || section === "feed") &&
     selectedListId !== null &&
     selectedWallet === null &&
     selectedMarketSlug === null;
@@ -6032,7 +5996,7 @@ export default function Api({
           demoProfile?.displayName ??
           (demoProfile?.wallet ? shortWallet(demoProfile.wallet) : null))
         : section === "feed" && !showingDrillDown
-          ? "Feed"
+          ? "Top traders"
           : null;
 
   useEffect(() => {
@@ -6271,17 +6235,21 @@ export default function Api({
     ? (listDetail?.name ?? "List")
     : selectedMarketSlug
       ? "Market"
+      : section === "feed"
+        ? "Top traders"
+        : section === "search"
+          ? "Search"
+          : "Back";
+  const listBackLabel =
+    section === "feed"
+      ? "Top traders"
       : section === "search"
         ? "Search"
-        : "Back";
-  const listBackLabel =
-    section === "search"
-      ? "Search"
-      : "Squads";
+        : "Squads";
   const marketBackLabel = selectedListId
     ? (listDetail?.name ?? "Squad")
     : section === "feed"
-      ? "Feed"
+      ? "Top traders"
       : section === "search"
         ? "Search"
         : "Explore";
@@ -6452,47 +6420,13 @@ export default function Api({
     return () => window.clearInterval(id);
   }, [hasActiveCopy]);
 
-  const friendLeaderboard = useMemo(() => {
-    const known = new Map(
-      leaderboardWallets.map((wallet) => [
-        wallet.wallet.toLowerCase(),
-        wallet,
-      ]),
+  const visibleLeaderboardWallets = useMemo(() => {
+    if (leaderboardCategory === "all") return leaderboardWallets;
+    return leaderboardWallets.filter(
+      (wallet) =>
+        walletLeaderboardCategory(wallet.wallet) === leaderboardCategory,
     );
-    return [...followedWallets]
-      .map((addr) => known.get(addr))
-      .filter((wallet): wallet is PolymarketLeaderboardWallet => Boolean(wallet))
-      .sort((a, b) => b.totalPnl - a.totalPnl);
-  }, [followedWallets, leaderboardWallets]);
-
-  const userFeedTrades = useMemo(
-    () =>
-      userTrades
-        .map((item) => item.trade)
-        .filter(
-          (trade) =>
-            Boolean(trade.userCaption?.trim()) || Boolean(trade.userGifUrl),
-        ),
-    [userTrades],
-  );
-
-  const feedTrades = useMemo(() => {
-    const ownWallet = demoProfile?.wallet?.toLowerCase();
-    const apiTrades = trades.filter(
-      (trade) => !ownWallet || trade.wallet.toLowerCase() !== ownWallet,
-    );
-    return [...userFeedTrades, ...apiTrades];
-  }, [demoProfile?.wallet, trades, userFeedTrades]);
-
-  const visibleFeedTrades = useMemo(() => {
-    if (!feedFriendsOnly) return feedTrades;
-    const ownWallet = demoProfile?.wallet?.toLowerCase();
-    return feedTrades.filter((trade) => {
-      const wallet = trade.wallet.toLowerCase();
-      if (ownWallet && wallet === ownWallet) return true;
-      return followedWallets.has(wallet);
-    });
-  }, [feedFriendsOnly, feedTrades, demoProfile?.wallet, followedWallets]);
+  }, [leaderboardCategory, leaderboardWallets]);
 
   const profilePositions = useMemo(() => {
     const closedKeys = new Set(
@@ -6880,7 +6814,7 @@ export default function Api({
           aria-label="Open profile"
         >
           <p
-            className={`text-[32px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSansCondensed.className}`}
+            className={`text-[32px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSans.className}`}
           >
             {demoProfileStatus === "loading" ? (
               "—"
@@ -6944,14 +6878,16 @@ export default function Api({
             (marketsStatus === "loading" || listsStatus === "loading")) ||
           (section === "search" &&
             !showingDrillDown &&
-            leaderboardStatus === "loading") ||
+            searchStatus === "loading") ||
           (showingListDetail && listDetailStatus === "loading") ||
           (showingWalletProfile && walletStatus === "loading") ||
           (showingMarketDetail && marketStatus === "loading") ||
           (section === "profile" &&
             !showingDrillDown &&
             demoProfileStatus === "loading") ||
-          (section === "feed" && tradesStatus === "loading")
+          (section === "feed" &&
+            !showingDrillDown &&
+            leaderboardStatus === "loading")
         }
       >
         {!showingMarketDetail && (
@@ -7221,305 +7157,109 @@ export default function Api({
               />
             </div>
           ) : section === "feed" ? (
-            <header className="mb-4 flex items-start justify-between gap-3">
+            <header className="mb-4">
               <h2
                 ref={stickyTitleRef as RefObject<HTMLHeadingElement>}
                 className={ui.title}
               >
-                Feed
+                Top traders
               </h2>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={feedFriendsOnly}
-                onClick={() => setFeedFriendsOnly((on) => !on)}
-                className="mt-1.5 flex shrink-0 items-center gap-2"
-              >
-                <span
-                  className={`text-[13px] font-semibold ${
-                    feedFriendsOnly ? "text-white" : "text-white/45"
-                  }`}
-                >
-                  Friends only
-                </span>
-                <span
-                  aria-hidden
-                  className={`relative h-5 w-9 rounded-full transition-colors ${
-                    feedFriendsOnly ? "bg-[#00D54B]" : "bg-white/15"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                      feedFriendsOnly ? "translate-x-4" : "translate-x-0"
-                    }`}
-                  />
-                </span>
-              </button>
             </header>
           ) : null}
 
-          {section === "search" && !showingDrillDown && (
-            <div className="flex flex-col gap-6">
-              <section aria-label="Leaderboard">
-                    <div className="flex flex-col gap-4">
-                      <div className="flex items-center gap-4">
-                        <FilterDropdown
-                          ariaLabel="Leaderboard scope"
-                          value={leaderboardTab}
-                          onChange={setLeaderboardTab}
-                          options={LEADERBOARD_SCOPE_OPTIONS}
-                        />
-                        <FilterDropdown
-                          ariaLabel="Leaderboard period"
-                          value={leaderboardPeriod}
-                          onChange={setLeaderboardPeriod}
-                          options={LEADERBOARD_PERIOD_OPTIONS}
-                        />
-                      </div>
+          {section === "feed" && !showingDrillDown && (
+            <section aria-label="Top traders">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                  <FilterDropdown
+                    ariaLabel="Leaderboard category"
+                    value={leaderboardCategory}
+                    onChange={setLeaderboardCategory}
+                    options={LEADERBOARD_CATEGORY_OPTIONS}
+                  />
+                  <FilterDropdown
+                    ariaLabel="Leaderboard period"
+                    value={leaderboardPeriod}
+                    onChange={setLeaderboardPeriod}
+                    options={LEADERBOARD_PERIOD_OPTIONS}
+                  />
+                </div>
 
-                      {leaderboardTab === "traders" && (
-                        <>
-                          {leaderboardStatus === "loading" && (
-                            <div
-                              className="space-y-2.5 animate-pulse"
-                              aria-hidden
-                            >
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <div
-                                  key={i}
-                                  className="h-[64px] rounded-xl bg-white/10"
-                                />
-                              ))}
-                            </div>
-                          )}
-                          {leaderboardStatus === "error" && (
-                            <p className="text-sm text-white/55">
-                              Couldn&apos;t load leaderboard. Try again in a
-                              moment.
-                            </p>
-                          )}
-                          {leaderboardStatus === "ready" &&
-                            leaderboardWallets.length === 0 && (
-                              <p className="text-sm text-white/55">
-                                No wallet leaderboard entries yet.
-                              </p>
-                            )}
-                          {leaderboardStatus === "ready" &&
-                            leaderboardWallets.length > 0 && (
-                              <ol className="divide-y divide-white/[0.06]">
-                                {leaderboardWallets.map((wallet, index) => {
-                                  const pnlPositive = wallet.totalPnl >= 0;
-                                  return (
-                                    <li key={wallet.wallet}>
-                                      <ActivityRow
-                                        leading={
-                                          <div className="flex items-center gap-2.5">
-                                            <RankBadge rank={index + 1} />
-                                            <UserAvatar
-                                              seed={wallet.wallet}
-                                              label={
-                                                wallet.displayName ??
-                                                wallet.wallet
-                                              }
-                                              className="h-11 w-11 text-[13px]"
-                                            />
-                                          </div>
-                                        }
-                                        title={
-                                          wallet.displayName ??
-                                          shortWallet(wallet.wallet)
-                                        }
-                                        subtitle={`${leaderboardWinRate(wallet)}% win rate`}
-                                        trailing={
-                                          <span
-                                            className={`text-[16px] font-semibold tabular-nums ${
-                                              pnlPositive
-                                                ? "text-[#00D54B]"
-                                                : "text-[#FF375F]"
-                                            }`}
-                                          >
-                                            {formatSignedUsd(wallet.totalPnl)}
-                                          </span>
-                                        }
-                                        onClick={() =>
-                                          openWallet(
-                                            wallet.wallet,
-                                            wallet.displayName,
-                                          )
-                                        }
-                                      />
-                                    </li>
-                                  );
-                                })}
-                              </ol>
-                            )}
-                        </>
-                      )}
-
-                      {leaderboardTab === "friends" && (
-                        <>
-                          {followedWallets.size === 0 && (
-                            <p className="text-sm text-white/55">
-                              Follow traders to see their ranking here.
-                            </p>
-                          )}
-                          {followedWallets.size > 0 &&
-                            friendLeaderboard.length === 0 &&
-                            leaderboardStatus === "loading" && (
-                              <div
-                                className="space-y-2.5 animate-pulse"
-                                aria-hidden
-                              >
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                  <div
-                                    key={i}
-                                    className="h-[64px] rounded-xl bg-white/10"
+                {leaderboardStatus === "loading" && (
+                  <div className="space-y-2.5 animate-pulse" aria-hidden>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="h-[64px] rounded-xl bg-white/10" />
+                    ))}
+                  </div>
+                )}
+                {leaderboardStatus === "error" && (
+                  <p className="text-sm text-white/55">
+                    Couldn&apos;t load leaderboard. Try again in a moment.
+                  </p>
+                )}
+                {leaderboardStatus === "ready" &&
+                  visibleLeaderboardWallets.length === 0 && (
+                    <p className="text-sm text-white/55">
+                      {leaderboardCategory === "all"
+                        ? "No wallet leaderboard entries yet."
+                        : "No traders in this category yet."}
+                    </p>
+                  )}
+                {leaderboardStatus === "ready" &&
+                  visibleLeaderboardWallets.length > 0 && (
+                    <ol className="divide-y divide-white/[0.06]">
+                      {visibleLeaderboardWallets.map((wallet, index) => {
+                        const pnlPositive = wallet.totalPnl >= 0;
+                        return (
+                          <li key={wallet.wallet}>
+                            <ActivityRow
+                              leading={
+                                <div className="flex items-center gap-2.5">
+                                  <RankBadge rank={index + 1} />
+                                  <UserAvatar
+                                    seed={wallet.wallet}
+                                    label={
+                                      wallet.displayName ?? wallet.wallet
+                                    }
+                                    className="h-11 w-11 text-[13px]"
                                   />
-                                ))}
-                              </div>
-                            )}
-                          {followedWallets.size > 0 &&
-                            friendLeaderboard.length === 0 &&
-                            leaderboardStatus !== "loading" && (
-                              <p className="text-sm text-white/55">
-                                None of the people you follow are on the
-                                leaderboard yet.
-                              </p>
-                            )}
-                          {friendLeaderboard.length > 0 && (
-                            <ol className="divide-y divide-white/[0.06]">
-                              {friendLeaderboard.map((wallet, index) => {
-                                const pnlPositive = wallet.totalPnl >= 0;
-                                return (
-                                  <li key={wallet.wallet}>
-                                    <ActivityRow
-                                      leading={
-                                        <div className="flex items-center gap-2.5">
-                                          <RankBadge rank={index + 1} />
-                                          <UserAvatar
-                                            seed={wallet.wallet}
-                                            label={
-                                              wallet.displayName ??
-                                              wallet.wallet
-                                            }
-                                            className="h-11 w-11 text-[13px]"
-                                          />
-                                        </div>
-                                      }
-                                      title={
-                                        wallet.displayName ??
-                                        shortWallet(wallet.wallet)
-                                      }
-                                      subtitle={`${leaderboardWinRate(wallet)}% win rate`}
-                                      trailing={
-                                        <span
-                                          className={`text-[16px] font-semibold tabular-nums ${
-                                            pnlPositive
-                                              ? "text-[#00D54B]"
-                                              : "text-[#FF375F]"
-                                          }`}
-                                        >
-                                          {formatSignedUsd(wallet.totalPnl)}
-                                        </span>
-                                      }
-                                      onClick={() =>
-                                        openWallet(
-                                          wallet.wallet,
-                                          wallet.displayName,
-                                        )
-                                      }
-                                    />
-                                  </li>
-                                );
-                              })}
-                            </ol>
-                          )}
-                        </>
-                      )}
+                                </div>
+                              }
+                              title={
+                                wallet.displayName ?? shortWallet(wallet.wallet)
+                              }
+                              subtitle={`${leaderboardWinRate(wallet)}% win rate`}
+                              trailing={
+                                <span
+                                  className={`text-[16px] font-semibold tabular-nums ${
+                                    pnlPositive
+                                      ? "text-[#00D54B]"
+                                      : "text-[#FF375F]"
+                                  }`}
+                                >
+                                  {formatSignedUsd(wallet.totalPnl)}
+                                </span>
+                              }
+                              onClick={() =>
+                                openWallet(wallet.wallet, wallet.displayName)
+                              }
+                            />
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  )}
+              </div>
+            </section>
+          )}
 
-                      {leaderboardTab === "lists" && (
-                        <>
-                          {leaderboardStatus === "loading" && (
-                            <div
-                              className="space-y-2.5 animate-pulse"
-                              aria-hidden
-                            >
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <div
-                                  key={i}
-                                  className="h-[64px] rounded-xl bg-white/10"
-                                />
-                              ))}
-                            </div>
-                          )}
-                          {leaderboardStatus === "error" && (
-                            <p className="text-sm text-white/55">
-                              Couldn&apos;t load leaderboard. Try again in a
-                              moment.
-                            </p>
-                          )}
-                          {leaderboardStatus === "ready" &&
-                            leaderboardLists.length === 0 && (
-                              <p className="text-sm text-white/55">
-                                No squad leaderboard entries yet.
-                              </p>
-                            )}
-                          {leaderboardStatus === "ready" &&
-                            leaderboardLists.length > 0 && (
-                              <ol className="divide-y divide-white/[0.06]">
-                                {[...leaderboardLists]
-                                  .sort(
-                                    (a, b) =>
-                                      b.aggregatedPnl - a.aggregatedPnl,
-                                  )
-                                  .map((list, index) => {
-                                    const pnlPositive =
-                                      list.aggregatedPnl >= 0;
-                                    return (
-                                      <li key={list.id}>
-                                        <ActivityRow
-                                          leading={
-                                            <div className="flex items-center gap-2.5">
-                                              <RankBadge rank={index + 1} />
-                                              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.1] text-[13px] font-semibold">
-                                                {list.name
-                                                  .slice(0, 1)
-                                                  .toUpperCase()}
-                                              </div>
-                                            </div>
-                                          }
-                                          title={list.name}
-                                          subtitle={`${list.walletCount} ${
-                                            list.walletCount === 1
-                                              ? "wallet"
-                                              : "wallets"
-                                          }`}
-                                          trailing={
-                                            <span
-                                              className={`text-[16px] font-semibold tabular-nums ${
-                                                pnlPositive
-                                                  ? "text-[#00D54B]"
-                                                  : "text-[#FF375F]"
-                                              }`}
-                                            >
-                                              {formatSignedUsd(
-                                                list.aggregatedPnl,
-                                              )}
-                                            </span>
-                                          }
-                                          onClick={() => openList(list.id)}
-                                        />
-                                      </li>
-                                    );
-                                  })}
-                              </ol>
-                            )}
-                        </>
-                      )}
-                    </div>
-              </section>
-
-              <div className="flex flex-col gap-2.5">
+          {section === "search" && !showingDrillDown && (
+            <div className="flex flex-col gap-2.5">
+              {searchStatus === "idle" && (
+                <p className="text-sm text-white/55">
+                  Search markets by name or category.
+                </p>
+              )}
               {searchStatus === "loading" && (
                 <div className="space-y-2.5 animate-pulse" aria-hidden>
                   {Array.from({ length: 4 }).map((_, i) => (
@@ -7581,7 +7321,6 @@ export default function Api({
                   ))}
                 </ul>
               )}
-              </div>
             </div>
           )}
 
@@ -7741,7 +7480,7 @@ export default function Api({
                                   {outcome.label}
                                 </p>
                                 <p
-                                  className={`shrink-0 text-[22px] font-semibold tabular-nums ${instrumentSansCondensed.className}`}
+                                  className={`shrink-0 text-[22px] font-semibold tabular-nums ${instrumentSans.className}`}
                                 >
                                   <ChanceFlow price={outcome.price} />
                                 </p>
@@ -7774,7 +7513,7 @@ export default function Api({
                               {left.label}
                             </p>
                             <p
-                              className={`mt-1 text-[40px] font-semibold leading-none tracking-[-0.05em] tabular-nums ${instrumentSansCondensed.className}`}
+                              className={`mt-1 text-[40px] font-semibold leading-none tracking-[-0.05em] tabular-nums ${instrumentSans.className}`}
                             >
                               <OddsCentsFlow price={left.price} />
                             </p>
@@ -7784,7 +7523,7 @@ export default function Api({
                               {right.label}
                             </p>
                             <p
-                              className={`mt-1 text-[40px] font-semibold leading-none tracking-[-0.05em] tabular-nums text-white/55 ${instrumentSansCondensed.className}`}
+                              className={`mt-1 text-[40px] font-semibold leading-none tracking-[-0.05em] tabular-nums text-white/55 ${instrumentSans.className}`}
                             >
                               <OddsCentsFlow price={right.price} />
                             </p>
@@ -8207,58 +7946,6 @@ export default function Api({
                   </section>
                 </div>
               )}
-            </>
-          )}
-
-          {section === "feed" && !showingDrillDown && (
-            <>
-              {tradesStatus === "loading" && userFeedTrades.length === 0 && (
-                <ul className="flex flex-col gap-5 animate-pulse" aria-hidden>
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <FeedItemSkeleton key={i} />
-                  ))}
-                </ul>
-              )}
-              {tradesStatus === "error" && userFeedTrades.length === 0 && (
-                <p className="text-sm text-white/55">
-                  Couldn&apos;t load feed. Try again in a moment.
-                </p>
-              )}
-              {tradesStatus === "ready" && visibleFeedTrades.length === 0 && (
-                <p className="text-sm text-white/55">
-                  {feedFriendsOnly
-                    ? followedWallets.size === 0
-                      ? "Follow people to see their trades here."
-                      : "No trades from friends yet."
-                    : "No recent trades in the feed."}
-                </p>
-              )}
-              {(tradesStatus === "ready" || userFeedTrades.length > 0) &&
-                visibleFeedTrades.length > 0 && (
-                  <ul className="flex flex-col">
-                    {visibleFeedTrades.map((trade) => (
-                      <li
-                        key={`${trade.txHash ?? trade.timestamp}-${trade.wallet}-${trade.outcome}`}
-                        className="border-b border-white/[0.06] py-5 first:pt-0 last:border-b-0"
-                      >
-                        <TradePost
-                          trade={trade}
-                          handle={resolveFeedHandle(trade.wallet)}
-                          caption={feedCaption(trade)}
-                          gifUrl={captionGifForTrade(trade)}
-                          marketImage={
-                            trade.marketSlug
-                              ? marketImageBySlug.get(trade.marketSlug)
-                              : undefined
-                          }
-                          onOpenWallet={(wallet) => openWallet(wallet, null)}
-                          onOpenTrade={() => setFeedPositionTrade({ trade })}
-                          currentUser={commentAuthor}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                )}
             </>
           )}
 

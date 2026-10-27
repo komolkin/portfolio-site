@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import NumberFlow from "@number-flow/react";
-import { instrumentSansCondensed } from "@/lib/fonts";
+import { instrumentSans } from "@/lib/fonts";
 import { AmountKeypad, SheetPager, applyAmountKey, ui } from "./ui";
 
 const CLOSE_THRESHOLD_PX = 72;
@@ -252,7 +252,7 @@ function DepositedHero({ value }: { value: number }) {
           </span>
         ))}
         <p
-          className={`relative z-10 inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight text-[#00D54B] animate-[trade-win-pop_0.55s_cubic-bezier(0.32,0.72,0,1)_both] ${instrumentSansCondensed.className}`}
+          className={`relative z-10 inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight text-[#00D54B] animate-[trade-win-pop_0.55s_cubic-bezier(0.32,0.72,0,1)_both] ${instrumentSans.className}`}
         >
           $
           <NumberFlow
@@ -503,7 +503,7 @@ export default function DepositModal({
 
                 <div className="flex min-h-0 flex-1 items-center justify-center">
                   <p
-                    className={`inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight text-white ${instrumentSansCondensed.className}`}
+                    className={`inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight text-white ${instrumentSans.className}`}
                     aria-live="polite"
                   >
                     $
@@ -616,7 +616,7 @@ export default function DepositModal({
                     You deposit
                   </p>
                   <p
-                    className={`mt-3 text-[64px] font-semibold leading-none tracking-tight ${instrumentSansCondensed.className}`}
+                    className={`mt-3 text-[64px] font-semibold leading-none tracking-tight ${instrumentSans.className}`}
                   >
                     {formatUsdMoney(amount)}
                   </p>

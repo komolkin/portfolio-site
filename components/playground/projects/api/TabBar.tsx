@@ -10,7 +10,7 @@ const TABS: readonly { id: TabId; label: string }[] = [
   { id: "explore", label: "Home" },
   { id: "search", label: "Search" },
   { id: "positions", label: "Positions" },
-  { id: "feed", label: "Feed" },
+  { id: "feed", label: "Top traders" },
   { id: "profile", label: "Profile" },
 ];
 
@@ -84,32 +84,32 @@ export function SearchTabIcon({ active }: { active: boolean }) {
   );
 }
 
-function FeedTabIcon({ active }: { active: boolean }) {
+function TradersTabIcon({ active }: { active: boolean }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className="h-[28px] w-[28px]" aria-hidden>
       {active ? (
         <>
-          <rect x="4" y="5" width="16" height="14" rx="3" fill="currentColor" />
           <path
-            d="M8 10h8M8 14h5"
-            stroke="#000000"
+            d="M5 19V11.5h3.2V19H5Zm5.4 0V7h3.2v12h-3.2Zm5.4 0V13.5H19V19h-3.2Z"
+            fill="currentColor"
+          />
+          <path
+            d="M4.5 19.75h15"
+            stroke="currentColor"
             strokeWidth="1.6"
             strokeLinecap="round"
           />
         </>
       ) : (
         <>
-          <rect
-            x="4"
-            y="5"
-            width="16"
-            height="14"
-            rx="3"
+          <path
+            d="M5.5 18.5V12h2.2v6.5H5.5Zm5.4 0V7.5h2.2v11H10.9Zm5.4 0V14h2.2v4.5h-2.2Z"
             stroke="currentColor"
             strokeWidth="1.6"
+            strokeLinejoin="round"
           />
           <path
-            d="M8 10h8M8 14h5"
+            d="M4.5 19.75h15"
             stroke="currentColor"
             strokeWidth="1.6"
             strokeLinecap="round"
@@ -214,7 +214,7 @@ function TabIcon({ id, active }: { id: TabId; active: boolean }) {
     case "positions":
       return null;
     case "feed":
-      return <FeedTabIcon active={active} />;
+      return <TradersTabIcon active={active} />;
     case "profile":
       return <ProfileTabIcon active={active} />;
   }

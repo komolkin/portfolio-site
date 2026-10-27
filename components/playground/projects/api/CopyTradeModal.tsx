@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { instrumentSansCondensed } from "@/lib/fonts";
+import { instrumentSans } from "@/lib/fonts";
 import UserAvatar from "./UserAvatar";
 import {
   copiedEntryPnl,
@@ -488,7 +488,7 @@ export default function CopyTradeModal({
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-[12px] font-medium text-white/45">Amount</p>
                   <label
-                    className={`inline-flex cursor-text items-baseline text-[34px] font-semibold leading-none tabular-nums tracking-tight text-white ${instrumentSansCondensed.className}`}
+                    className={`inline-flex cursor-text items-baseline text-[34px] font-semibold leading-none tabular-nums tracking-tight text-white ${instrumentSans.className}`}
                     onClick={() => amountInputRef.current?.focus()}
                   >
                     <input
@@ -541,7 +541,7 @@ export default function CopyTradeModal({
                           amountInputRef.current?.blur();
                         }
                       }}
-                      className={`min-w-[2ch] bg-transparent text-right text-[34px] font-semibold leading-none tracking-tight text-white outline-none caret-[#00D54B] ${instrumentSansCondensed.className}`}
+                      className={`min-w-[2ch] bg-transparent text-right text-[34px] font-semibold leading-none tracking-tight text-white outline-none caret-[#00D54B] ${instrumentSans.className}`}
                     />
                     <span aria-hidden>{mode === "percent" ? "%" : "$"}</span>
                   </label>
@@ -638,7 +638,7 @@ export default function CopyTradeModal({
                     </p>
                   </div>
                   <label
-                    className={`inline-flex shrink-0 cursor-text items-baseline text-[34px] font-semibold leading-none tabular-nums tracking-tight text-white ${instrumentSansCondensed.className}`}
+                    className={`inline-flex shrink-0 cursor-text items-baseline text-[34px] font-semibold leading-none tabular-nums tracking-tight text-white ${instrumentSans.className}`}
                     onClick={() => dailyCapInputRef.current?.focus()}
                   >
                     <input
@@ -700,7 +700,7 @@ export default function CopyTradeModal({
                           dailyCapInputRef.current?.blur();
                         }
                       }}
-                      className={`min-w-[2ch] bg-transparent text-right text-[34px] font-semibold leading-none tracking-tight text-white outline-none caret-[#00D54B] ${instrumentSansCondensed.className}`}
+                      className={`min-w-[2ch] bg-transparent text-right text-[34px] font-semibold leading-none tracking-tight text-white outline-none caret-[#00D54B] ${instrumentSans.className}`}
                     />
                     {(dailyCapFocused || maxDailyUsd !== null) && (
                       <span aria-hidden>$</span>

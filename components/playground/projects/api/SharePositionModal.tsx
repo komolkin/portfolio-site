@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Liveline, type LivelinePoint } from "liveline";
-import { instrumentSansCondensed } from "@/lib/fonts";
+import { instrumentSans } from "@/lib/fonts";
 import { hexToRgba, useImageAccent } from "./imageAccent";
 import UserAvatar from "./UserAvatar";
 
@@ -405,7 +405,7 @@ export default function SharePositionModal({
                   }`}
                 >
                   <span
-                    className={`text-[26px] leading-none tracking-tight ${instrumentSansCondensed.className}`}
+                    className={`text-[26px] leading-none tracking-tight ${instrumentSans.className}`}
                   >
                     {formatSignedUsd(payload.pnlUsd)}
                   </span>

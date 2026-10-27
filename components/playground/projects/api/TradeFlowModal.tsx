@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import NumberFlow from "@number-flow/react";
 import type { PolymarketMarketData } from "@/lib/polymarketscan";
 import { getMarketOddsSides } from "@/lib/polymarketscan";
-import { instrumentSansCondensed } from "@/lib/fonts";
+import { instrumentSans } from "@/lib/fonts";
 import type { UserPlacedTrade } from "./userTrades";
 import type { PolymarketWalletPosition } from "@/lib/polymarketscan";
 import type { SharePositionPayload } from "./SharePositionModal";
@@ -354,7 +354,7 @@ function ToWinHero({ value }: { value: number }) {
           </span>
         ))}
         <p
-          className={`relative z-10 inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight text-[#00D54B] animate-[trade-win-pop_0.55s_cubic-bezier(0.32,0.72,0,1)_both] ${instrumentSansCondensed.className}`}
+          className={`relative z-10 inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight text-[#00D54B] animate-[trade-win-pop_0.55s_cubic-bezier(0.32,0.72,0,1)_both] ${instrumentSans.className}`}
         >
           $
           <NumberFlow
@@ -789,7 +789,7 @@ export default function TradeFlowModal({
 
                 <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
                   <p
-                    className={`inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight text-white ${instrumentSansCondensed.className}`}
+                    className={`inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight text-white ${instrumentSans.className}`}
                     aria-live="polite"
                   >
                     $
@@ -807,7 +807,7 @@ export default function TradeFlowModal({
                   >
                     to win{" "}
                     <span
-                      className={`font-semibold text-[#00D54B] ${instrumentSansCondensed.className}`}
+                      className={`font-semibold text-[#00D54B] ${instrumentSans.className}`}
                     >
                       {formatUsdCents(toWin)}
                     </span>
@@ -978,7 +978,7 @@ export default function TradeFlowModal({
                             To win
                           </span>
                           <span
-                            className={`text-[44px] font-semibold leading-none tracking-tight text-white ${instrumentSansCondensed.className}`}
+                            className={`text-[44px] font-semibold leading-none tracking-tight text-white ${instrumentSans.className}`}
                           >
                             {formatUsdCents(toWin)}
                           </span>

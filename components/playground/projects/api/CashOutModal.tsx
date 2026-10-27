@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import NumberFlow from "@number-flow/react";
 import type { PolymarketMarketData } from "@/lib/polymarketscan";
 import { getMarketOddsSides } from "@/lib/polymarketscan";
-import { instrumentSansCondensed } from "@/lib/fonts";
+import { instrumentSans } from "@/lib/fonts";
 import type { StoredUserTrade } from "./userTrades";
 import type { SharePositionPayload } from "./SharePositionModal";
 import { useImageAccent } from "./imageAccent";
@@ -119,7 +119,7 @@ function CashedOutHero({ value }: { value: number }) {
           </span>
         ))}
         <p
-          className={`relative z-10 inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight text-[#00D54B] animate-[trade-win-pop_0.55s_cubic-bezier(0.32,0.72,0,1)_both] ${instrumentSansCondensed.className}`}
+          className={`relative z-10 inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight text-[#00D54B] animate-[trade-win-pop_0.55s_cubic-bezier(0.32,0.72,0,1)_both] ${instrumentSans.className}`}
         >
           $
           <NumberFlow
@@ -341,7 +341,7 @@ export default function CashOutModal({
                   You receive
                 </p>
                 <p
-                  className={`mt-3 text-[64px] font-semibold leading-none tracking-tight ${instrumentSansCondensed.className}`}
+                  className={`mt-3 text-[64px] font-semibold leading-none tracking-tight ${instrumentSans.className}`}
                 >
                   {formatUsdMoney(proceeds)}
                 </p>

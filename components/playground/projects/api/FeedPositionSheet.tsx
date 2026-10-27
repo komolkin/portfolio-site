@@ -9,7 +9,7 @@ import type {
   PolymarketWalletTrade,
 } from "@/lib/polymarketscan";
 import { sportsOutcomeAbbr } from "@/lib/polymarketscan";
-import { instrumentSansCondensed } from "@/lib/fonts";
+import { instrumentSans } from "@/lib/fonts";
 import { ui } from "./ui";
 import type { SharePositionPayload } from "./SharePositionModal";
 import UserAvatar from "./UserAvatar";
@@ -805,7 +805,7 @@ export default function FeedPositionSheet({
             </div>
 
             <p
-              className={`mt-1.5 text-[38px] font-semibold leading-none tracking-tight tabular-nums ${instrumentSansCondensed.className}`}
+              className={`mt-1.5 text-[38px] font-semibold leading-none tracking-tight tabular-nums ${instrumentSans.className}`}
             >
               {formatUsdMoney(currentValue)}
             </p>

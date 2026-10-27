@@ -13,7 +13,7 @@ import {
   type MouseEvent,
   type RefObject,
 } from "react";
-import { instrumentSansCondensed } from "@/lib/fonts";
+import { instrumentSans } from "@/lib/fonts";
 
 const ApiApp = dynamic(
   () => import("@/components/playground/projects/api/Api"),
@@ -925,7 +925,7 @@ function LeaderboardCard({
             <span
               className={`text-[22px] font-semibold leading-none ${
                 trader.pnl < 0 ? "text-[#e11d48]" : "text-[#0d9a42]"
-              } ${instrumentSansCondensed.className}`}
+              } ${instrumentSans.className}`}
             >
               {money(trader.pnl)}
             </span>
@@ -1098,7 +1098,7 @@ function ReferralCalculator({
           Potential earnings
         </p>
         <p
-          className={`mt-1 inline-flex items-baseline text-[clamp(40px,6vw,56px)] font-semibold leading-none tracking-[-0.04em] tabular-nums ${instrumentSansCondensed.className}`}
+          className={`mt-1 inline-flex items-baseline text-[clamp(40px,6vw,56px)] font-semibold leading-none tracking-[-0.04em] tabular-nums ${instrumentSans.className}`}
         >
           <span>${earningsWhole.toLocaleString("en-US")}</span>
           <span className="text-[#8a8882]">
@@ -1133,7 +1133,7 @@ function ReferralCalculator({
               Traders you invite
             </span>
             <span
-              className={`text-[22px] font-semibold tabular-nums leading-none ${instrumentSansCondensed.className}`}
+              className={`text-[22px] font-semibold tabular-nums leading-none ${instrumentSans.className}`}
             >
               {traders}
             </span>
@@ -1159,7 +1159,7 @@ function ReferralCalculator({
               Their avg. trade
             </span>
             <span
-              className={`text-[22px] font-semibold tabular-nums leading-none ${instrumentSansCondensed.className}`}
+              className={`text-[22px] font-semibold tabular-nums leading-none ${instrumentSans.className}`}
             >
               ${avgTrade.toLocaleString("en-US")}
             </span>
@@ -1572,7 +1572,7 @@ export function WormLanding() {
                       {market.pick}
                     </span>
                     <span
-                      className={`block text-[18px] font-semibold leading-none ${instrumentSansCondensed.className}`}
+                      className={`block text-[18px] font-semibold leading-none ${instrumentSans.className}`}
                     >
                       {market.price}
                     </span>
@@ -1608,7 +1608,7 @@ export function WormLanding() {
             <div className="rounded-[28px] bg-[#141416] p-6 text-white sm:p-8">
               <p className="text-[13px] text-white/50">Copying cole</p>
               <p
-                className={`mt-3 text-[56px] font-semibold leading-none tracking-[-0.04em] ${instrumentSansCondensed.className}`}
+                className={`mt-3 text-[56px] font-semibold leading-none tracking-[-0.04em] ${instrumentSans.className}`}
               >
                 $25
               </p>

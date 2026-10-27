@@ -3,7 +3,7 @@
 import NumberFlow from "@number-flow/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { PolymarketWalletPosition } from "@/lib/polymarketscan";
-import { instrumentSansCondensed } from "@/lib/fonts";
+import { instrumentSans } from "@/lib/fonts";
 import { ChipTabs, ui } from "./ui";
 
 type PositionsTab = "active" | "orders" | "history";
@@ -107,7 +107,7 @@ export function BubblyPositionCard({
           <div className="flex min-w-[72px] flex-col items-end text-right leading-[1.2]">
             <span className="text-[11px] font-normal text-white/55">PnL</span>
             <p
-              className={`text-[28px] font-semibold tabular-nums ${instrumentSansCondensed.className}`}
+              className={`text-[28px] font-semibold tabular-nums ${instrumentSans.className}`}
               style={{ color: pnl < 0 ? PNL_DOWN : PNL_UP }}
             >
               <span className="inline-flex items-baseline justify-end">
@@ -162,7 +162,7 @@ export function BubblyPositionCard({
           }}
         />
         <div
-          className={`pointer-events-none absolute top-0.5 z-20 w-max max-w-none -translate-x-full pr-1.5 text-right text-[28px] font-semibold leading-[1.2] whitespace-nowrap text-white ${instrumentSansCondensed.className}`}
+          className={`pointer-events-none absolute top-0.5 z-20 w-max max-w-none -translate-x-full pr-1.5 text-right text-[28px] font-semibold leading-[1.2] whitespace-nowrap text-white ${instrumentSans.className}`}
           style={{
             left: `max(3.25rem, ${(priceCents / TRACK_CENTS) * 100}%)`,
             transition: "left 700ms ease-out",
