@@ -155,20 +155,59 @@ const BOARDS: Record<
     { name: "cole", market: "Verstappen", pnl: 960 },
     { name: "nia", market: "Man City", pnl: 640 },
     { name: "jules", market: "Brewers", pnl: -180 },
+    { name: "reed", market: "Celtics", pnl: -420 },
   ],
   Week: [
     { name: "cole", market: "Verstappen", pnl: 6420 },
     { name: "mira", market: "Lakers", pnl: 4180 },
     { name: "nia", market: "Man City", pnl: 2210 },
     { name: "jules", market: "Rays", pnl: 860 },
+    { name: "reed", market: "Celtics", pnl: 410 },
   ],
   Month: [
     { name: "nia", market: "Man City", pnl: 18420 },
     { name: "cole", market: "Verstappen", pnl: 12110 },
     { name: "mira", market: "Lakers", pnl: 9640 },
     { name: "jules", market: "Brewers", pnl: 2400 },
+    { name: "reed", market: "Celtics", pnl: 1280 },
   ],
 };
+
+/** Same gold / silver / bronze rank chips as the in-app leaderboard. */
+const RANK_MEDALS: Record<number, { face: string; text: string }> = {
+  1: {
+    face: "radial-gradient(circle at 35% 30%, #f7d77a 0%, #d9a73a 55%, #a87a1f 100%)",
+    text: "#4a3308",
+  },
+  2: {
+    face: "radial-gradient(circle at 35% 30%, #d8d8dc 0%, #9a9aa0 55%, #6c6c72 100%)",
+    text: "#2a2a2e",
+  },
+  3: {
+    face: "radial-gradient(circle at 35% 30%, #e7a77a 0%, #b8703f 55%, #864a22 100%)",
+    text: "#3b1e0b",
+  },
+};
+
+function RankBadge({ rank }: { rank: number }) {
+  const medal = RANK_MEDALS[rank];
+  if (!medal) {
+    return (
+      <span className="w-6 text-center text-[13px] font-semibold tabular-nums text-[#5e5c56]">
+        {rank}
+      </span>
+    );
+  }
+  return (
+    <span
+      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] font-bold tabular-nums shadow-[inset_0_1px_0_rgba(255,255,255,0.45),inset_0_-1px_1px_rgba(0,0,0,0.25),0_1px_2px_rgba(0,0,0,0.18)]"
+      style={{ background: medal.face, color: medal.text }}
+      aria-label={`Rank ${rank}`}
+    >
+      {rank}
+    </span>
+  );
+}
 
 const FAQS = [
   {
@@ -987,9 +1026,7 @@ function LeaderboardCard({
             key={trader.name}
             className="flex items-center gap-3 border-b border-black/[0.06] px-4 py-4 last:border-b-0 sm:px-6"
           >
-            <span className="w-5 text-[13px] font-semibold text-[#5e5c56]">
-              {index + 1}
-            </span>
+            <RankBadge rank={index + 1} />
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#141416] text-[13px] font-semibold uppercase text-white">
               {trader.name.slice(0, 1)}
             </span>
