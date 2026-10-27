@@ -1745,7 +1745,7 @@ export function WormLanding() {
 
         <section className="">
           <div className="mx-auto max-w-[760px] px-5 py-14 sm:px-8 md:py-20">
-            <h2 className="text-[clamp(32px,4vw,48px)] font-semibold tracking-[-0.04em]">
+            <h2 className="text-center text-[clamp(32px,4vw,48px)] font-semibold tracking-[-0.04em]">
               Questions
             </h2>
             <div className="mt-5 divide-y divide-black/[0.08]">
