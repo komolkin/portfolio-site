@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -206,16 +207,17 @@ function clearOnboardingCache() {
 function seedPortfolioHistory(endValue: number): LivelinePoint[] {
   const now = Math.floor(Date.now() / 1000);
   const points: LivelinePoint[] = [];
-  const steps = 48;
-  const stepSecs = 60 * 60 * 12; // 12h steps ≈ 24 days
+  // ~90 days at 3h steps so 1D / 1W / 1M scrub windows have enough points.
+  const steps = 720;
+  const stepSecs = 60 * 60 * 3;
   let value = endValue * 0.72;
 
   for (let i = 0; i < steps; i++) {
     const progress = i / (steps - 1);
-    const drift = (endValue - value) * (0.04 + progress * 0.08);
-    const wave = Math.sin(i * 0.55) * endValue * 0.012;
-    const noise = Math.sin(i * 1.7 + 0.4) * endValue * 0.008;
-    value = Math.max(endValue * 0.65, value + drift + wave + noise);
+    const drift = (endValue - value) * (0.012 + progress * 0.03);
+    const wave = Math.sin(i * 0.18) * endValue * 0.01;
+    const noise = Math.sin(i * 0.7 + 0.4) * endValue * 0.006;
+    value = Math.max(endValue * 0.62, value + drift + wave + noise);
     points.push({
       time: now - (steps - 1 - i) * stepSecs,
       value: Math.round(value * 100) / 100,
@@ -4624,6 +4626,221 @@ function ProfileIdentityHeader({
   );
 }
 
+const PORTFOLIO_RANGE_OPTIONS = [
+  { id: "1d", label: "1D" },
+  { id: "1w", label: "1W" },
+  { id: "1m", label: "1M" },
+  { id: "3m", label: "3M" },
+  { id: "all", label: "All time" },
+] as const;
+
+type PortfolioRangeId = (typeof PORTFOLIO_RANGE_OPTIONS)[number]["id"];
+
+const PORTFOLIO_RANGE_SECS: Record<PortfolioRangeId, number | null> = {
+  "1d": 24 * 60 * 60,
+  "1w": 7 * 24 * 60 * 60,
+  "1m": 30 * 24 * 60 * 60,
+  "3m": 90 * 24 * 60 * 60,
+  all: null,
+};
+
+function filterPortfolioHistory(
+  history: LivelinePoint[],
+  range: PortfolioRangeId,
+): LivelinePoint[] {
+  if (history.length < 2) return history;
+  const secs = PORTFOLIO_RANGE_SECS[range];
+  if (secs == null) return history;
+  const end = history[history.length - 1]!.time;
+  const start = end - secs;
+  const sliced = history.filter((point) => point.time >= start);
+  if (sliced.length >= 2) return sliced;
+  return history.slice(-2);
+}
+
+function PortfolioSparkline({
+  data,
+  color,
+  onScrub,
+}: {
+  data: LivelinePoint[];
+  color: string;
+  onScrub: (value: number | null) => void;
+}) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const fillId = useId().replace(/:/g, "");
+  const [size, setSize] = useState({ w: 1, h: 104 });
+  const [scrubIdx, setScrubIdx] = useState<number | null>(null);
+  const scrubbingRef = useRef(false);
+
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const sync = () => {
+      const rect = el.getBoundingClientRect();
+      setSize({ w: Math.max(1, rect.width), h: Math.max(1, rect.height) });
+    };
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const padT = 8;
+  const padB = 4;
+  const values = data.map((p) => p.value);
+  const minV = Math.min(...values);
+  const maxV = Math.max(...values);
+  const span = Math.max(maxV - minV, 1);
+  const chartH = Math.max(1, size.h - padT - padB);
+
+  const points = data.map((point, i) => {
+    const x =
+      data.length <= 1 ? 0 : (i / (data.length - 1)) * size.w;
+    const y = padT + (1 - (point.value - minV) / span) * chartH;
+    return { x, y, value: point.value };
+  });
+
+  const lineD = points
+    .map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
+    .join(" ");
+  const fillD =
+    points.length >= 2
+      ? `${lineD} L${points[points.length - 1]!.x.toFixed(2)} ${size.h} L${points[0]!.x.toFixed(2)} ${size.h} Z`
+      : "";
+
+  const indexAtX = (clientX: number) => {
+    const el = svgRef.current;
+    if (!el || points.length === 0) return null;
+    const rect = el.getBoundingClientRect();
+    const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+    const t = rect.width <= 0 ? 1 : x / rect.width;
+    return Math.round(t * (points.length - 1));
+  };
+
+  const applyScrub = (clientX: number) => {
+    const idx = indexAtX(clientX);
+    if (idx == null) return;
+    const clamped = Math.max(0, Math.min(points.length - 1, idx));
+    setScrubIdx(clamped);
+    onScrub(points[clamped]!.value);
+  };
+
+  const clearScrub = () => {
+    scrubbingRef.current = false;
+    setScrubIdx(null);
+    onScrub(null);
+  };
+
+  const scrubPoint = scrubIdx != null ? points[scrubIdx] : null;
+  const clipId = `${fillId}-active`;
+  const isScrubbing = scrubPoint != null;
+
+  return (
+    <svg
+      ref={svgRef}
+      viewBox={`0 0 ${size.w} ${size.h}`}
+      preserveAspectRatio="none"
+      className="h-full w-full touch-none"
+      aria-hidden
+      onPointerDown={(event) => {
+        // Touch needs capture so scrub continues while dragging.
+        if (event.pointerType === "touch") {
+          scrubbingRef.current = true;
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }
+        applyScrub(event.clientX);
+      }}
+      onPointerMove={(event) => {
+        // Desktop: scrub on hover. Touch: only while dragging.
+        if (event.pointerType === "touch" && !scrubbingRef.current) return;
+        applyScrub(event.clientX);
+      }}
+      onPointerUp={() => {
+        if (scrubbingRef.current) clearScrub();
+      }}
+      onPointerCancel={clearScrub}
+      onPointerLeave={(event) => {
+        if (event.pointerType === "touch") return;
+        clearScrub();
+      }}
+    >
+      <defs>
+        <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.28" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+        {isScrubbing ? (
+          <clipPath id={clipId}>
+            <rect x={0} y={0} width={scrubPoint.x} height={size.h} />
+          </clipPath>
+        ) : null}
+      </defs>
+      {/* Full series — dimmed while scrubbing so the future side stays visible but quiet */}
+      {fillD ? (
+        <path
+          d={fillD}
+          fill={`url(#${fillId})`}
+          opacity={isScrubbing ? 0.22 : 1}
+        />
+      ) : null}
+      {lineD ? (
+        <path
+          d={lineD}
+          fill="none"
+          stroke={color}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+          opacity={isScrubbing ? 0.22 : 1}
+        />
+      ) : null}
+      {/* Bright past (left of scrub) */}
+      {isScrubbing && fillD ? (
+        <path
+          d={fillD}
+          fill={`url(#${fillId})`}
+          clipPath={`url(#${clipId})`}
+        />
+      ) : null}
+      {isScrubbing && lineD ? (
+        <path
+          d={lineD}
+          fill="none"
+          stroke={color}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+          clipPath={`url(#${clipId})`}
+        />
+      ) : null}
+      {scrubPoint ? (
+        <>
+          <line
+            x1={scrubPoint.x}
+            y1={padT}
+            x2={scrubPoint.x}
+            y2={size.h - padB}
+            stroke="rgba(255,255,255,0.35)"
+            strokeWidth={1}
+            strokeDasharray="4 4"
+            vectorEffect="non-scaling-stroke"
+          />
+          <circle
+            cx={scrubPoint.x}
+            cy={scrubPoint.y}
+            r={4}
+            fill={color}
+            vectorEffect="non-scaling-stroke"
+          />
+        </>
+      ) : null}
+    </svg>
+  );
+}
+
 function ProfileBalanceChart({
   balance,
   loading,
@@ -4639,70 +4856,91 @@ function ProfileBalanceChart({
   history: LivelinePoint[];
   actions?: ReactNode;
 }) {
-  const first = history[0];
-  const last = history[history.length - 1];
-  const windowSecs =
-    first && last ? Math.max(last.time - first.time, 60) : 60 * 60 * 24;
+  const [range, setRange] = useState<PortfolioRangeId>("all");
+  const [scrubValue, setScrubValue] = useState<number | null>(null);
+
+  const visibleHistory = useMemo(
+    () => filterPortfolioHistory(history, range),
+    [history, range],
+  );
+  const first = visibleHistory[0];
+  const last = visibleHistory[visibleHistory.length - 1];
   const trend = first && last ? last.value - first.value : 0;
   const lineColor = trend < 0 ? "#FF375F" : "#00D54B";
 
+  const rangePnl =
+    range === "all"
+      ? totalPnl
+      : first && last
+        ? Math.round((last.value - first.value) * 100) / 100
+        : null;
+  const rangeRoi =
+    range === "all"
+      ? roiPercent
+      : first && last && first.value !== 0
+        ? Math.round(((last.value - first.value) / Math.abs(first.value)) * 1000) /
+          10
+        : null;
+
+  const displayBalance = scrubValue ?? balance;
+
   return (
-    <section className="mt-5 overflow-hidden rounded-[28px] bg-white/[0.08] px-5 pb-5 pt-4">
+    // Match home video-market side inset (px-1): page is px-5, so -mx-4 → 4px edges.
+    <section className="-mx-4 mt-5 overflow-hidden rounded-[28px] bg-white/[0.08] px-5 pb-5 pt-4">
       <p className="text-[13px] font-medium text-white/45">Portfolio</p>
       <p
-        className={`mt-1 text-[44px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSans.className}`}
+        className={`mt-1 text-[36px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSans.className}`}
       >
         {loading ? (
           "—"
         ) : (
-          <BalanceFlow value={balance} fractionClassName="text-white/40" />
+          <BalanceFlow
+            value={displayBalance}
+            fractionClassName="text-white/40"
+          />
         )}
       </p>
-      {!loading && totalPnl !== null ? (
-        <p className="mt-2 flex items-baseline gap-1.5 text-[14px] font-semibold tabular-nums">
+      {!loading && rangePnl !== null ? (
+        <div className="mt-2 flex items-baseline gap-1.5 text-[14px] font-semibold tabular-nums">
           <span
             className={`inline-flex items-baseline gap-1 ${
-              totalPnl > 0
+              rangePnl > 0
                 ? "text-[#00D54B]"
-                : totalPnl < 0
+                : rangePnl < 0
                   ? "text-[#FF375F]"
                   : "text-white/45"
             }`}
           >
-            <SignedUsdFlow value={totalPnl} />
-            {roiPercent !== null ? (
+            <SignedUsdFlow value={rangePnl} />
+            {rangeRoi !== null ? (
               <span className="inline-flex items-baseline">
                 (
-                <SignedPercentFlow value={roiPercent} />)
+                <SignedPercentFlow value={rangeRoi} />)
               </span>
             ) : null}
           </span>
-          <span className="font-medium text-white/40">All time</span>
-        </p>
+          <FilterDropdown
+            ariaLabel="Portfolio timeframe"
+            value={range}
+            onChange={(id) => {
+              setScrubValue(null);
+              setRange(id);
+            }}
+            options={PORTFOLIO_RANGE_OPTIONS}
+            menuAlign="left"
+            triggerClassName="inline-flex items-center gap-0.5 text-[14px] font-medium text-white/40"
+          />
+        </div>
       ) : null}
       <div
         className="-mx-5 mt-3 h-[104px] w-[calc(100%+2.5rem)]"
         aria-label="Portfolio value chart"
       >
-        {!loading && history.length >= 2 ? (
-          <Liveline
-            data={history}
-            value={last?.value ?? balance}
-            theme="dark"
+        {!loading && visibleHistory.length >= 2 ? (
+          <PortfolioSparkline
+            data={visibleHistory}
             color={lineColor}
-            grid={false}
-            badge={false}
-            pulse={false}
-            momentum={false}
-            scrub
-            fill
-            paused
-            showValue={false}
-            window={windowSecs}
-            formatValue={(v) => formatUsd(v)}
-            formatTime={() => ""}
-            padding={{ top: 8, right: 0, bottom: 4, left: 0 }}
-            className="h-full w-full"
+            onScrub={setScrubValue}
           />
         ) : (
           <div

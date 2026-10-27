@@ -134,11 +134,15 @@ export function FilterDropdown<T extends string>({
   onChange,
   options,
   ariaLabel,
+  triggerClassName,
+  menuAlign = "left",
 }: {
   value: T;
   onChange: (id: T) => void;
   options: readonly { id: T; label: string }[];
   ariaLabel: string;
+  triggerClassName?: string;
+  menuAlign?: "left" | "right";
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -169,7 +173,10 @@ export function FilterDropdown<T extends string>({
         aria-expanded={open}
         data-sfx="click"
         onClick={() => setOpen((prev) => !prev)}
-        className="inline-flex max-w-full items-center gap-1 text-[15px] font-semibold tracking-[-0.02em] text-white"
+        className={
+          triggerClassName ??
+          "inline-flex max-w-full items-center gap-1 text-[15px] font-semibold tracking-[-0.02em] text-white"
+        }
       >
         <span className="truncate">{active?.label}</span>
         <svg
@@ -193,7 +200,9 @@ export function FilterDropdown<T extends string>({
         <div
           role="listbox"
           aria-label={ariaLabel}
-          className="absolute left-0 top-[calc(100%+6px)] z-30 min-w-[148px] overflow-hidden rounded-2xl bg-[#1c1c1e] py-1 shadow-[0_12px_40px_rgba(0,0,0,0.55)] ring-1 ring-white/10"
+          className={`absolute top-[calc(100%+6px)] z-30 min-w-[148px] overflow-hidden rounded-2xl bg-[#1c1c1e] py-1 shadow-[0_12px_40px_rgba(0,0,0,0.55)] ring-1 ring-white/10 ${
+            menuAlign === "right" ? "right-0" : "left-0"
+          }`}
         >
           {options.map((option) => {
             const selected = option.id === value;
