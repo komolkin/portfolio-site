@@ -283,7 +283,7 @@ function CopyShowcaseCard() {
 
 const NAV = [
   { id: "markets", label: "Markets" },
-  { id: "leaderboard", label: "Top traders" },
+  { id: "leaderboard", label: "Top performers" },
   { id: "feed", label: "Feed" },
   { id: "copy", label: "Copy" },
   { id: "how", label: "How it works" },
@@ -978,7 +978,7 @@ function LeaderboardCard({
   return (
     <div className="w-full overflow-hidden rounded-[28px] bg-white">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-black/[0.06] px-4 py-4 sm:px-6">
-        <p className="text-[15px] font-semibold">Top traders</p>
+        <p className="text-[15px] font-semibold">Top performers</p>
         <PeriodTabs period={period} onPeriodChange={onPeriodChange} />
       </div>
       <ol>

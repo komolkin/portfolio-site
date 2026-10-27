@@ -2799,11 +2799,10 @@ function tradeFromFloatBubble(
   };
 }
 
-/** Deterministic “top positions” stickers per market — 1–3 per side, corner-hugged, no overlap. */
+/** Deterministic “top positions” stickers per market — 3 left, 2 right, corner-hugged. */
 function buildFloatPositions(marketId: string): FloatPositionBubble[] {
-  const root = hashString(marketId);
-  const leftCount = 1 + (root % 3);
-  const rightCount = 1 + ((root >>> 5) % 3);
+  const leftCount = 3;
+  const rightCount = 2;
   const raw: FloatPositionBubble[] = [];
   const usedPhotoKeys = new Set<string>();
   const usedHandles = new Set<string>();
@@ -6256,7 +6255,7 @@ export default function Api({
           demoProfile?.displayName ??
           (demoProfile?.wallet ? shortWallet(demoProfile.wallet) : null))
         : section === "feed" && !showingDrillDown
-          ? "Top traders"
+          ? "Top performers"
           : null;
 
   useEffect(() => {
@@ -6496,20 +6495,20 @@ export default function Api({
     : selectedMarketSlug
       ? "Market"
       : section === "feed"
-        ? "Top traders"
+        ? "Top performers"
         : section === "search"
           ? "Search"
           : "Back";
   const listBackLabel =
     section === "feed"
-      ? "Top traders"
+      ? "Top performers"
       : section === "search"
         ? "Search"
         : "Squads";
   const marketBackLabel = selectedListId
     ? (listDetail?.name ?? "Squad")
     : section === "feed"
-      ? "Top traders"
+      ? "Top performers"
       : section === "search"
         ? "Search"
         : "Explore";
@@ -7422,13 +7421,13 @@ export default function Api({
                 ref={stickyTitleRef as RefObject<HTMLHeadingElement>}
                 className={ui.title}
               >
-                Top traders
+                Top performers
               </h2>
             </header>
           ) : null}
 
           {section === "feed" && !showingDrillDown && (
-            <section aria-label="Top traders">
+            <section aria-label="Top performers">
               <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-4">
                   <FilterDropdown
@@ -7843,7 +7842,7 @@ export default function Api({
                         },
                         {
                           id: "traders",
-                          label: "Top traders",
+                          label: "Top performers",
                         },
                         { id: "rules", label: "Rules" },
                       ] as const

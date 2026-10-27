@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 /** Figma node 21436:14848 — neon $ coin cluster for referrals hero. */
 const IMG_REFERRAL_COINS = "/playground/api/referral-coins.png";
@@ -32,7 +32,10 @@ function CopyIcon({ className }: { className?: string }) {
   );
 }
 
-const STEPS = [
+const STEPS: {
+  title: string;
+  body: ReactNode;
+}[] = [
   {
     title: "Share your link",
     body: "Send your invite link to friends who trade on Polymarket.",
@@ -43,9 +46,14 @@ const STEPS = [
   },
   {
     title: "You both earn",
-    body: "Get 10% of their trading fees for the first 30 days.",
+    body: (
+      <>
+        Get <span className="font-medium text-[#00D54B]">10%</span> of their
+        trading fees for the first 30 days.
+      </>
+    ),
   },
-] as const;
+];
 
 export default function ReferralScreen({
   username,
@@ -79,13 +87,14 @@ export default function ReferralScreen({
     <div className="flex flex-col gap-4 pb-2">
       <div className="grid grid-cols-2 gap-2.5">
         <div className="col-span-2 flex items-center gap-3 rounded-[20px] bg-white/[0.08] px-4 py-3.5">
+          {/* Asset is authored ~4:3; square slot was squashing the coins. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`${IMG_REFERRAL_COINS}?v=3`}
+            src={`${IMG_REFERRAL_COINS}?v=4`}
             alt=""
-            width={56}
-            height={56}
-            className="pointer-events-none h-14 w-14 shrink-0 object-contain select-none"
+            width={80}
+            height={60}
+            className="pointer-events-none h-[60px] w-20 shrink-0 object-fill select-none"
             draggable={false}
           />
           <div className="min-w-0 flex-1">
@@ -149,18 +158,26 @@ export default function ReferralScreen({
         <h3 className="mb-2.5 text-[17px] font-semibold tracking-[-0.02em]">
           How it works
         </h3>
-        <ol className="flex flex-col gap-2">
+        <ol className="overflow-hidden rounded-[20px] bg-white/[0.08]">
           {STEPS.map((step, index) => (
             <li
               key={step.title}
-              className="flex gap-3 rounded-[20px] bg-white/[0.08] px-3.5 py-3"
+              className="relative flex gap-3.5 px-3.5 py-3.5"
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-[11px] font-semibold tabular-nums text-white/70">
+              {index < STEPS.length - 1 ? (
+                <span
+                  aria-hidden
+                  className="absolute bottom-0 left-[25px] top-9 w-px bg-white/10"
+                />
+              ) : null}
+              <span className="relative z-[1] flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-[12px] font-semibold tabular-nums text-black">
                 {index + 1}
               </span>
-              <div className="min-w-0">
-                <p className="text-[13px] font-semibold">{step.title}</p>
-                <p className="mt-0.5 text-[12px] leading-relaxed text-white/45">
+              <div className="min-w-0 pt-0.5">
+                <p className="text-[14px] font-semibold leading-snug">
+                  {step.title}
+                </p>
+                <p className="mt-1 text-[12px] leading-relaxed text-white/50">
                   {step.body}
                 </p>
               </div>

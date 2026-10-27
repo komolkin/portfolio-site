@@ -10,7 +10,7 @@ const TABS: readonly { id: TabId; label: string }[] = [
   { id: "explore", label: "Home" },
   { id: "search", label: "Search" },
   { id: "positions", label: "Positions" },
-  { id: "feed", label: "Top traders" },
+  { id: "feed", label: "Top performers" },
   { id: "profile", label: "Profile" },
 ];
 

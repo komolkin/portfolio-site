@@ -44,7 +44,7 @@ export function ChipTabs<T extends string>({
   onChange: (id: T) => void;
   ariaLabel: string;
   underline?: boolean;
-  /** Equal-width tabs with a full-bleed underline (reference: Markets / Top traders). */
+  /** Equal-width tabs with a full-bleed underline (reference: Markets / Top performers). */
   fullWidth?: boolean;
 }) {
   const listRef = useRef<HTMLDivElement>(null);

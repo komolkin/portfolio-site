@@ -372,7 +372,7 @@ export default function Onboarding({
             Who to follow
           </h1>
           <p className="mt-3 text-[14px] leading-relaxed text-white/55">
-            Top traders from the leaderboard. You can unfollow anytime.
+            Top performers from the leaderboard. You can unfollow anytime.
           </p>
           <div className="mt-5 min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {tradersStatus === "loading" && (
