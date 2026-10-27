@@ -2,51 +2,12 @@
 
 import { useMemo, useState } from "react";
 
+/** Figma node 21436:14848 — neon $ coin cluster for referrals hero. */
+const IMG_REFERRAL_COINS = "/playground/api/referral-coins.png";
+
 function shortWallet(wallet: string): string {
   if (wallet.length < 10) return wallet;
   return `${wallet.slice(0, 6)}…${wallet.slice(-4)}`;
-}
-
-function ReferralIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <path
-        d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M4 12h16M12 22V7"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7Z"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7Z"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M2 7h20v5H2V7Z"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
 }
 
 function CopyIcon({ className }: { className?: string }) {
@@ -101,7 +62,7 @@ export default function ReferralScreen({
     return "invite";
   }, [username, wallet]);
 
-  const referralLink = `polymarket.app/r/${referralCode}`;
+  const referralLink = `worm.wtf/r/${referralCode}`;
 
   const copyLink = async () => {
     try {
@@ -116,28 +77,32 @@ export default function ReferralScreen({
 
   return (
     <div className="flex flex-col gap-4 pb-2">
-      <div className="rounded-[20px] bg-white/[0.08] p-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] bg-[#00D54B]/15 text-[#00D54B]">
-            <ReferralIcon className="h-5 w-5" />
-          </div>
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="col-span-2 flex items-center gap-3 rounded-[20px] bg-white/[0.08] px-4 py-3.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={IMG_REFERRAL_COINS}
+            alt=""
+            width={63}
+            height={41}
+            className="pointer-events-none h-[41px] w-[63px] shrink-0 object-contain select-none"
+            draggable={false}
+          />
           <div className="min-w-0 flex-1">
             <p className="text-[15px] font-semibold leading-snug">
               Invite friends, earn rewards
             </p>
-            <p className="mt-1 text-[12px] leading-relaxed text-white/50">
+            <p className="mt-1.5 text-[12px] leading-[1.1] text-white/50">
               Share your link and earn a cut when people you refer start trading.
             </p>
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-2.5">
         <div className="rounded-[20px] bg-white/[0.08] px-3.5 py-3">
           <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-white/45">
             Invited
           </p>
-          <p className="mt-1 text-[22px] font-semibold tabular-nums tracking-[-0.02em]">
+          <p className="mt-1 text-[22px] font-semibold leading-none tabular-nums tracking-[-0.02em]">
             3
           </p>
         </div>
@@ -145,7 +110,7 @@ export default function ReferralScreen({
           <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-white/45">
             Earned
           </p>
-          <p className="mt-1 text-[22px] font-semibold tabular-nums tracking-[-0.02em] text-[#00D54B]">
+          <p className="mt-1 text-[22px] font-semibold leading-none tabular-nums tracking-[-0.02em] text-[#00D54B]">
             $24.00
           </p>
         </div>
