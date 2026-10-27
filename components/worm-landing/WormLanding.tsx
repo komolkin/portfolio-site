@@ -204,7 +204,7 @@ function money(value: number) {
 
 const NAV = [
   { id: "markets", label: "Markets" },
-  { id: "leaderboard", label: "Leaderboard" },
+  { id: "leaderboard", label: "Top traders" },
   { id: "feed", label: "Feed" },
   { id: "copy", label: "Copy" },
   { id: "how", label: "How it works" },

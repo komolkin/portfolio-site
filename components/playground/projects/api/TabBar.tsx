@@ -88,33 +88,17 @@ function TradersTabIcon({ active }: { active: boolean }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className="h-[28px] w-[28px]" aria-hidden>
       {active ? (
-        <>
-          <path
-            d="M5 19V11.5h3.2V19H5Zm5.4 0V7h3.2v12h-3.2Zm5.4 0V13.5H19V19h-3.2Z"
-            fill="currentColor"
-          />
-          <path
-            d="M4.5 19.75h15"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-        </>
+        <path
+          d="M5 19V11.5h3.2V19H5Zm5.4 0V7h3.2v12h-3.2Zm5.4 0V13.5H19V19h-3.2Z"
+          fill="currentColor"
+        />
       ) : (
-        <>
-          <path
-            d="M5.5 18.5V12h2.2v6.5H5.5Zm5.4 0V7.5h2.2v11H10.9Zm5.4 0V14h2.2v4.5h-2.2Z"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M4.5 19.75h15"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-        </>
+        <path
+          d="M5.5 18.5V12h2.2v6.5H5.5Zm5.4 0V7.5h2.2v11H10.9Zm5.4 0V14h2.2v4.5h-2.2Z"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinejoin="round"
+        />
       )}
     </svg>
   );
