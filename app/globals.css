@@ -780,6 +780,23 @@ body > * {
   -webkit-mask-image: linear-gradient(var(--pb-dir), transparent 60%, #000 80%);
 }
 
+/* Landing copy section: soft 3D showcase card shadow. */
+.worm-copy-showcase {
+  box-shadow:
+    0 2px 4px rgba(20, 20, 22, 0.08),
+    0 18px 40px rgba(20, 20, 22, 0.18),
+    0 40px 80px rgba(20, 20, 22, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .worm-copy-showcase {
+    box-shadow:
+      0 12px 32px rgba(20, 20, 22, 0.16),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+}
+
 /* Landing header: progressive blur + soft white fade over scrolling content. */
 .worm-header-blur {
   position: absolute;

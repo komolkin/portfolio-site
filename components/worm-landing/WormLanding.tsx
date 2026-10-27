@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   useCallback,
   useEffect,
@@ -200,6 +200,85 @@ const FAQS = [
 function money(value: number) {
   const formatted = Math.abs(value).toLocaleString("en-US");
   return value < 0 ? `−$${formatted}` : `+$${formatted}`;
+}
+
+function CopyShowcaseCard() {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <div
+      className="relative mx-auto w-full max-w-[420px] md:mx-0 md:max-w-none"
+      style={{ perspective: 1200 }}
+    >
+      <motion.div
+        className="worm-copy-showcase relative rounded-[28px] bg-[#141416] p-6 text-white sm:p-8"
+        style={{
+          transformStyle: "preserve-3d",
+          transformOrigin: "50% 50%",
+        }}
+        animate={
+          reduceMotion
+            ? undefined
+            : {
+                rotateX: [5, -4, 3, 5],
+                rotateY: [-8, 7, -5, -8],
+                y: [0, -8, -3, 0],
+              }
+        }
+        transition={
+          reduceMotion
+            ? undefined
+            : {
+                duration: 9,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }
+        }
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-[28px]"
+        >
+          <motion.div
+            className="absolute -left-1/4 -top-1/3 h-[140%] w-[70%] rotate-12 bg-gradient-to-br from-white/[0.14] via-white/[0.03] to-transparent"
+            animate={
+              reduceMotion
+                ? undefined
+                : { x: ["-8%", "28%", "-8%"], opacity: [0.55, 0.85, 0.55] }
+            }
+            transition={
+              reduceMotion
+                ? undefined
+                : { duration: 9, repeat: Infinity, ease: "easeInOut" }
+            }
+          />
+        </div>
+        <div className="relative">
+          <p className="text-[13px] text-white/50">Copying cole</p>
+          <p
+            className={`mt-3 text-[56px] font-semibold leading-none tracking-[-0.04em] ${instrumentSans.className}`}
+          >
+            $25
+          </p>
+          <p className="mt-2 text-[15px] text-white/55">per trade</p>
+          <dl className="mt-8 divide-y divide-white/10 text-[15px]">
+            <div className="flex items-center justify-between py-3">
+              <dt className="text-white/55">Size</dt>
+              <dd className="font-semibold">Fixed</dd>
+            </div>
+            <div className="flex items-center justify-between py-3">
+              <dt className="text-white/55">Copy exits</dt>
+              <dd className="font-semibold text-[#00D54B]">On</dd>
+            </div>
+            <div className="flex items-center justify-between py-3">
+              <dt className="text-white/55">Max a day</dt>
+              <dd className="font-semibold">$200</dd>
+            </div>
+          </dl>
+        </div>
+      </motion.div>
+    </div>
+  );
 }
 
 const NAV = [
@@ -1605,37 +1684,15 @@ export function WormLanding() {
                 their takes in the feed.
               </p>
             </div>
-            <div className="rounded-[28px] bg-[#141416] p-6 text-white sm:p-8">
-              <p className="text-[13px] text-white/50">Copying cole</p>
-              <p
-                className={`mt-3 text-[56px] font-semibold leading-none tracking-[-0.04em] ${instrumentSans.className}`}
-              >
-                $25
-              </p>
-              <p className="mt-2 text-[15px] text-white/55">per trade</p>
-              <dl className="mt-8 divide-y divide-white/10 text-[15px]">
-                <div className="flex items-center justify-between py-3">
-                  <dt className="text-white/55">Size</dt>
-                  <dd className="font-semibold">Fixed</dd>
-                </div>
-                <div className="flex items-center justify-between py-3">
-                  <dt className="text-white/55">Copy exits</dt>
-                  <dd className="font-semibold text-[#00D54B]">On</dd>
-                </div>
-                <div className="flex items-center justify-between py-3">
-                  <dt className="text-white/55">Max a day</dt>
-                  <dd className="font-semibold">$200</dd>
-                </div>
-              </dl>
-            </div>
+            <CopyShowcaseCard />
           </div>
         </section>
 
         <section
           id="how"
-          className="scroll-mt-28 sm:scroll-mt-16 md:scroll-mt-0"
+          className="flex scroll-mt-28 sm:scroll-mt-16 md:min-h-svh md:scroll-mt-0 md:items-center"
         >
-          <div className="mx-auto w-full max-w-[1120px] px-5 py-20 sm:px-8 md:py-28">
+          <div className="mx-auto w-full max-w-[1120px] px-5 py-20 sm:px-8 md:py-0">
             <div className="mx-auto max-w-[720px] text-center">
               <h2 className="text-balance text-[clamp(32px,4vw,48px)] font-semibold leading-[1.05] tracking-[-0.04em]">
                 Bring traders. Get paid.
