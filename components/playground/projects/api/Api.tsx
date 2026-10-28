@@ -675,6 +675,36 @@ function hashString(value: string): number {
   return Math.abs(hash);
 }
 
+/** Stretch a short trade pool into a longer feed with stable unique keys. */
+function expandFeedTrades(
+  trades: PolymarketTradeWithPnl[],
+  salt: string,
+  target: number,
+): PolymarketTradeWithPnl[] {
+  if (trades.length === 0) return trades;
+  if (trades.length >= target) return trades.slice(0, target);
+
+  const out: PolymarketTradeWithPnl[] = [...trades];
+  let i = 0;
+  while (out.length < target) {
+    const base = trades[i % trades.length]!;
+    const n = out.length;
+    const jitter = 0.82 + ((hashString(`${salt}-${base.wallet}-${n}`) % 35) / 100);
+    out.push({
+      ...base,
+      amountUsd: Math.max(1, Math.round(base.amountUsd * jitter * 100) / 100),
+      txHash: `${base.txHash ?? "feed"}-${salt}-${n}`,
+      timestamp: base.timestamp
+        ? new Date(
+            Date.parse(base.timestamp) - n * 47 * 60_000,
+          ).toISOString()
+        : base.timestamp,
+    });
+    i += 1;
+  }
+  return out;
+}
+
 function titlesClose(a: string, b: string): boolean {
   const left = a.trim().toLowerCase();
   const right = b.trim().toLowerCase();
@@ -1356,6 +1386,15 @@ function matchupTeamTones(
   return { away: toneFromRgb(awayFinal), home: toneFromRgb(homeRgb) };
 }
 
+function labelMatchesTeam(
+  label: string,
+  team: { name: string; abbr?: string | null },
+): boolean {
+  if (nickMatch(label, team.name)) return true;
+  if (team.abbr && nickMatch(label, team.abbr)) return true;
+  return false;
+}
+
 /** Team fill for one outcome's trade button, matching the market page CTA. */
 function outcomeTeamTone(
   market: PolymarketMarketData,
@@ -1364,15 +1403,20 @@ function outcomeTeamTone(
   const tones = matchupTeamTones(market);
   if (!tones) return null;
   const { away, home } = resolveSportsSides(market);
-  if (nickMatch(label, home.name) && !nickMatch(label, away.name)) {
-    return tones.home;
-  }
-  if (nickMatch(label, away.name)) return tones.away;
+  const matchesHome = labelMatchesTeam(label, home);
+  const matchesAway = labelMatchesTeam(label, away);
+  if (matchesHome && !matchesAway) return tones.home;
+  if (matchesAway && !matchesHome) return tones.away;
+
   const sides = getMarketOddsSides(market);
   const index = sides.findIndex(
-    (side) => side.label.trim().toLowerCase() === label.trim().toLowerCase(),
+    (side) =>
+      side.label.trim().toLowerCase() === label.trim().toLowerCase() ||
+      nickMatch(label, side.label),
   );
-  return index === sides.length - 1 ? tones.home : tones.away;
+  // Never collapse both buttons onto the same tone when the label is unknown.
+  if (index < 0) return null;
+  return index >= Math.ceil(sides.length / 2) ? tones.home : tones.away;
 }
 
 /** Soft glass volume tinted with the outcome's active color. */
@@ -5053,6 +5097,37 @@ function ListPnlChart({
   );
 }
 
+function FeedItemSkeleton() {
+  return (
+    <li className="border-b border-white/[0.06] py-5 first:pt-0">
+      <div className="flex items-start gap-3">
+        <div className="h-10 w-10 shrink-0 rounded-full bg-white/10" />
+        <div className="min-w-0 flex-1">
+          <div className="h-4 w-[78%] rounded bg-white/10" />
+          <div className="mt-2 h-4 w-[62%] rounded bg-white/10" />
+          <div className="mt-3 rounded-[20px] bg-white/[0.08] p-3.5">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 shrink-0 rounded-2xl bg-white/10" />
+              <div className="min-w-0 flex-1">
+                <div className="h-3.5 w-[70%] rounded bg-white/10" />
+                <div className="mt-2 h-3 w-16 rounded bg-white/10" />
+              </div>
+            </div>
+            <div className="mt-3 flex justify-between">
+              <div className="h-5 w-16 rounded bg-white/10" />
+              <div className="h-5 w-12 rounded bg-white/10" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-center gap-5">
+            <div className="h-3.5 w-14 rounded bg-white/10" />
+            <div className="h-3.5 w-8 rounded bg-white/10" />
+          </div>
+        </div>
+      </div>
+    </li>
+  );
+}
+
 function ReferralIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -5301,6 +5376,7 @@ export default function Api({
   >("idle");
   const [feedPositionTrade, setFeedPositionTrade] =
     useState<FeedPositionSelection | null>(null);
+  const [feedFriendsOnly, setFeedFriendsOnly] = useState(false);
   const [followedWallets, setFollowedWallets] = useState<Set<string>>(
     () => new Set(),
   );
@@ -5699,7 +5775,7 @@ export default function Api({
       if (!hasTrades) setTradesStatus("loading");
       let next: PolymarketTradeWithPnl[] | null = null;
       try {
-        const res = await fetch("/api/polymarketscan/trades?limit=30&sports=1", {
+        const res = await fetch("/api/polymarketscan/trades?limit=80&sports=1", {
           cache: "no-store",
         });
         if (!res.ok) throw new Error("fetch failed");
@@ -6273,7 +6349,9 @@ export default function Api({
           demoProfile?.displayName ??
           (demoProfile?.wallet ? shortWallet(demoProfile.wallet) : null))
         : section === "feed" && !showingDrillDown
-          ? "Top performers"
+          ? feedFriendsOnly
+            ? "Following"
+            : "For you"
           : null;
 
   useEffect(() => {
@@ -6513,20 +6591,20 @@ export default function Api({
     : selectedMarketSlug
       ? "Market"
       : section === "feed"
-        ? "Top performers"
+        ? "Feed"
         : section === "search"
           ? "Search"
           : "Back";
   const listBackLabel =
     section === "feed"
-      ? "Top performers"
+      ? "Feed"
       : section === "search"
         ? "Search"
         : "Squads";
   const marketBackLabel = selectedListId
     ? (listDetail?.name ?? "Squad")
     : section === "feed"
-      ? "Top performers"
+      ? "Feed"
       : section === "search"
         ? "Search"
         : "Explore";
@@ -6704,6 +6782,59 @@ export default function Api({
         walletLeaderboardCategory(wallet.wallet) === leaderboardCategory,
     );
   }, [leaderboardCategory, leaderboardWallets]);
+
+  const userFeedTrades = useMemo(
+    () =>
+      userTrades
+        .map((item) => item.trade)
+        .filter(
+          (trade) =>
+            Boolean(trade.userCaption?.trim()) || Boolean(trade.userGifUrl),
+        ),
+    [userTrades],
+  );
+
+  const feedTrades = useMemo(() => {
+    const ownWallet = demoProfile?.wallet?.toLowerCase();
+    const apiTrades = trades.filter(
+      (trade) => !ownWallet || trade.wallet.toLowerCase() !== ownWallet,
+    );
+    return [...userFeedTrades, ...apiTrades];
+  }, [demoProfile?.wallet, trades, userFeedTrades]);
+
+  const forYouFeedTrades = useMemo(() => {
+    // Discovery feed — one half of posts, expanded so the list feels long.
+    const pool = feedTrades.filter((trade) => {
+      const key = `${trade.txHash ?? trade.timestamp ?? ""}-${trade.wallet}-${trade.outcome}`;
+      return hashString(key) % 2 === 0;
+    });
+    return expandFeedTrades(pool.length >= 6 ? pool : feedTrades, "for-you", 48);
+  }, [feedTrades]);
+
+  const followingFeedTrades = useMemo(() => {
+    const ownWallet = demoProfile?.wallet?.toLowerCase();
+    const fromFollows = feedTrades.filter((trade) => {
+      const wallet = trade.wallet.toLowerCase();
+      if (ownWallet && wallet === ownWallet) return true;
+      return followedWallets.has(wallet);
+    });
+    // Opposite half of posts (or follows) so the tab never mirrors For you.
+    const alternate = feedTrades.filter((trade) => {
+      const key = `${trade.txHash ?? trade.timestamp ?? ""}-${trade.wallet}-${trade.outcome}`;
+      return hashString(key) % 2 === 1;
+    });
+    const pool =
+      followedWallets.size > 0 && fromFollows.length > 0
+        ? fromFollows
+        : alternate.length >= 6
+          ? alternate
+          : [...feedTrades].reverse();
+    return expandFeedTrades(pool, "following", 48);
+  }, [feedTrades, demoProfile?.wallet, followedWallets]);
+
+  const visibleFeedTrades = feedFriendsOnly
+    ? followingFeedTrades
+    : forYouFeedTrades;
 
   const profilePositions = useMemo(() => {
     const closedKeys = new Set(
@@ -7155,7 +7286,7 @@ export default function Api({
             (marketsStatus === "loading" || listsStatus === "loading")) ||
           (section === "search" &&
             !showingDrillDown &&
-            searchStatus === "loading") ||
+            (searchStatus === "loading" || leaderboardStatus === "loading")) ||
           (showingListDetail && listDetailStatus === "loading") ||
           (showingWalletProfile && walletStatus === "loading") ||
           (showingMarketDetail && marketStatus === "loading") ||
@@ -7164,7 +7295,7 @@ export default function Api({
             demoProfileStatus === "loading") ||
           (section === "feed" &&
             !showingDrillDown &&
-            leaderboardStatus === "loading")
+            tradesStatus === "loading")
         }
       >
         {!showingMarketDetail && (
@@ -7434,171 +7565,250 @@ export default function Api({
               />
             </div>
           ) : section === "feed" ? (
-            <header className="mb-4">
-              <h2
-                ref={stickyTitleRef as RefObject<HTMLHeadingElement>}
-                className={ui.title}
+            <header className="mb-6">
+              <div
+                ref={stickyTitleRef as RefObject<HTMLDivElement>}
+                role="tablist"
+                aria-label="Feed"
+                className="flex items-center gap-6"
               >
-                Top performers
-              </h2>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={!feedFriendsOnly}
+                  onClick={() => setFeedFriendsOnly(false)}
+                  className={`text-[30px] font-semibold leading-[1.25] tracking-[-0.04em] transition-colors ${
+                    !feedFriendsOnly ? "text-white" : "text-white/40"
+                  }`}
+                >
+                  For you
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={feedFriendsOnly}
+                  onClick={() => setFeedFriendsOnly(true)}
+                  className={`text-[30px] font-semibold leading-[1.25] tracking-[-0.04em] transition-colors ${
+                    feedFriendsOnly ? "text-white" : "text-white/40"
+                  }`}
+                >
+                  Following
+                </button>
+              </div>
             </header>
           ) : null}
 
-          {section === "feed" && !showingDrillDown && (
-            <section aria-label="Top performers">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-4">
-                  <FilterDropdown
-                    ariaLabel="Leaderboard category"
-                    value={leaderboardCategory}
-                    onChange={setLeaderboardCategory}
-                    options={LEADERBOARD_CATEGORY_OPTIONS}
-                  />
-                  <FilterDropdown
-                    ariaLabel="Leaderboard period"
-                    value={leaderboardPeriod}
-                    onChange={setLeaderboardPeriod}
-                    options={LEADERBOARD_PERIOD_OPTIONS}
-                  />
-                </div>
+          {section === "search" && !showingDrillDown && (
+            <div className="flex flex-col gap-6">
+              <section aria-label="Top performers">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-4">
+                    <FilterDropdown
+                      ariaLabel="Leaderboard category"
+                      value={leaderboardCategory}
+                      onChange={setLeaderboardCategory}
+                      options={LEADERBOARD_CATEGORY_OPTIONS}
+                    />
+                    <FilterDropdown
+                      ariaLabel="Leaderboard period"
+                      value={leaderboardPeriod}
+                      onChange={setLeaderboardPeriod}
+                      options={LEADERBOARD_PERIOD_OPTIONS}
+                    />
+                  </div>
 
-                {leaderboardStatus === "loading" && (
+                  {leaderboardStatus === "loading" && (
+                    <div className="space-y-2.5 animate-pulse" aria-hidden>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="h-[64px] rounded-xl bg-white/10"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {leaderboardStatus === "error" && (
+                    <p className="text-sm text-white/55">
+                      Couldn&apos;t load leaderboard. Try again in a moment.
+                    </p>
+                  )}
+                  {leaderboardStatus === "ready" &&
+                    visibleLeaderboardWallets.length === 0 && (
+                      <p className="text-sm text-white/55">
+                        {leaderboardCategory === "all"
+                          ? "No wallet leaderboard entries yet."
+                          : "No traders in this category yet."}
+                      </p>
+                    )}
+                  {leaderboardStatus === "ready" &&
+                    visibleLeaderboardWallets.length > 0 && (
+                      <ol className="divide-y divide-white/[0.06]">
+                        {visibleLeaderboardWallets.map((wallet, index) => {
+                          const pnlPositive = wallet.totalPnl >= 0;
+                          return (
+                            <li key={wallet.wallet}>
+                              <ActivityRow
+                                leading={
+                                  <div className="flex items-center gap-2.5">
+                                    <RankBadge rank={index + 1} />
+                                    <UserAvatar
+                                      seed={wallet.wallet}
+                                      label={
+                                        wallet.displayName ?? wallet.wallet
+                                      }
+                                      className="h-11 w-11 text-[13px]"
+                                    />
+                                  </div>
+                                }
+                                title={
+                                  wallet.displayName ??
+                                  shortWallet(wallet.wallet)
+                                }
+                                subtitle={`${leaderboardWinRate(wallet)}% win rate`}
+                                trailing={
+                                  <span
+                                    className={`text-[16px] font-semibold tabular-nums ${
+                                      pnlPositive
+                                        ? "text-[#00D54B]"
+                                        : "text-[#FF375F]"
+                                    }`}
+                                  >
+                                    {formatSignedUsd(wallet.totalPnl)}
+                                  </span>
+                                }
+                                onClick={() =>
+                                  openWallet(wallet.wallet, wallet.displayName)
+                                }
+                              />
+                            </li>
+                          );
+                        })}
+                      </ol>
+                    )}
+                </div>
+              </section>
+
+              <div className="flex flex-col gap-2.5">
+                {searchStatus === "loading" && (
                   <div className="space-y-2.5 animate-pulse" aria-hidden>
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className="h-[64px] rounded-xl bg-white/10" />
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-[64px] rounded-xl bg-white/10"
+                      />
                     ))}
                   </div>
                 )}
-                {leaderboardStatus === "error" && (
+                {searchStatus === "error" && (
                   <p className="text-sm text-white/55">
-                    Couldn&apos;t load leaderboard. Try again in a moment.
+                    Couldn&apos;t search right now.
                   </p>
                 )}
-                {leaderboardStatus === "ready" &&
-                  visibleLeaderboardWallets.length === 0 && (
-                    <p className="text-sm text-white/55">
-                      {leaderboardCategory === "all"
-                        ? "No wallet leaderboard entries yet."
-                        : "No traders in this category yet."}
-                    </p>
-                  )}
-                {leaderboardStatus === "ready" &&
-                  visibleLeaderboardWallets.length > 0 && (
-                    <ol className="divide-y divide-white/[0.06]">
-                      {visibleLeaderboardWallets.map((wallet, index) => {
-                        const pnlPositive = wallet.totalPnl >= 0;
-                        return (
-                          <li key={wallet.wallet}>
-                            <ActivityRow
-                              leading={
-                                <div className="flex items-center gap-2.5">
-                                  <RankBadge rank={index + 1} />
-                                  <UserAvatar
-                                    seed={wallet.wallet}
-                                    label={
-                                      wallet.displayName ?? wallet.wallet
-                                    }
-                                    className="h-11 w-11 text-[13px]"
-                                  />
-                                </div>
-                              }
-                              title={
-                                wallet.displayName ?? shortWallet(wallet.wallet)
-                              }
-                              subtitle={`${leaderboardWinRate(wallet)}% win rate`}
-                              trailing={
-                                <span
-                                  className={`text-[16px] font-semibold tabular-nums ${
-                                    pnlPositive
-                                      ? "text-[#00D54B]"
-                                      : "text-[#FF375F]"
-                                  }`}
-                                >
-                                  {formatSignedUsd(wallet.totalPnl)}
-                                </span>
-                              }
-                              onClick={() =>
-                                openWallet(wallet.wallet, wallet.displayName)
-                              }
-                            />
-                          </li>
-                        );
-                      })}
-                    </ol>
-                  )}
+                {searchStatus === "ready" && searchResults.length === 0 && (
+                  <p className="text-sm text-white/55">No markets found.</p>
+                )}
+                {searchStatus === "ready" && searchResults.length > 0 && (
+                  <ul className="flex flex-col gap-2.5">
+                    {searchResults.map((market) => (
+                      <li key={market.marketId}>
+                        <button
+                          type="button"
+                          onClick={() => openMarket(market)}
+                          className="w-full rounded-[20px] bg-white/[0.08] p-3.5 text-left transition-colors hover:bg-white/[0.1]"
+                        >
+                          <div className="flex items-start gap-3">
+                            {proxyImageSrc(market.image) ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={proxyImageSrc(market.image)!}
+                                alt=""
+                                className="h-12 w-12 shrink-0 rounded-2xl object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-[12px] font-semibold text-white/40">
+                                M
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              {market.category ? (
+                                <p className="text-[11px] font-medium text-white/40">
+                                  {market.category}
+                                </p>
+                              ) : null}
+                              <p className="line-clamp-2 text-[15px] font-semibold leading-snug">
+                                {market.title}
+                              </p>
+                              <p className="mt-1 text-[12px] text-white/45">
+                                {formatUsd(
+                                  market.volumeUsd || market.volume24h,
+                                )}{" "}
+                                Vol
+                                {(market.relatedMarketCount ?? 1) > 1
+                                  ? ` · ${market.relatedMarketCount} Markets`
+                                  : ""}
+                              </p>
+                            </div>
+                          </div>
+                          <MarketOddsPreview market={market} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
-            </section>
+            </div>
           )}
 
-          {section === "search" && !showingDrillDown && (
-            <div className="flex flex-col gap-2.5">
-              {searchStatus === "idle" && (
-                <p className="text-sm text-white/55">
-                  Search markets by name or category.
-                </p>
-              )}
-              {searchStatus === "loading" && (
-                <div className="space-y-2.5 animate-pulse" aria-hidden>
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="h-[64px] rounded-xl bg-white/10" />
-                  ))}
-                </div>
-              )}
-              {searchStatus === "error" && (
-                <p className="text-sm text-white/55">
-                  Couldn&apos;t search right now.
-                </p>
-              )}
-              {searchStatus === "ready" && searchResults.length === 0 && (
-                <p className="text-sm text-white/55">No markets found.</p>
-              )}
-              {searchStatus === "ready" && searchResults.length > 0 && (
-                <ul className="flex flex-col gap-2.5">
-                  {searchResults.map((market) => (
-                    <li key={market.marketId}>
-                      <button
-                        type="button"
-                        onClick={() => openMarket(market)}
-                        className="w-full rounded-[20px] bg-white/[0.08] p-3.5 text-left transition-colors hover:bg-white/[0.1]"
-                      >
-                        <div className="flex items-start gap-3">
-                          {proxyImageSrc(market.image) ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={proxyImageSrc(market.image)!}
-                              alt=""
-                              className="h-12 w-12 shrink-0 rounded-2xl object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-[12px] font-semibold text-white/40">
-                              M
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            {market.category ? (
-                              <p className="text-[11px] font-medium text-white/40">
-                                {market.category}
-                              </p>
-                            ) : null}
-                            <p className="line-clamp-2 text-[15px] font-semibold leading-snug">
-                              {market.title}
-                            </p>
-                            <p className="mt-1 text-[12px] text-white/45">
-                              {formatUsd(market.volumeUsd || market.volume24h)}{" "}
-                              Vol
-                              {(market.relatedMarketCount ?? 1) > 1
-                                ? ` · ${market.relatedMarketCount} Markets`
-                                : ""}
-                            </p>
-                          </div>
-                        </div>
-                        <MarketOddsPreview market={market} />
-                      </button>
-                    </li>
+          {section === "feed" && !showingDrillDown && (
+            <>
+              {tradesStatus === "loading" && userFeedTrades.length === 0 && (
+                <ul className="flex flex-col gap-5 animate-pulse" aria-hidden>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <FeedItemSkeleton key={i} />
                   ))}
                 </ul>
               )}
-            </div>
+              {tradesStatus === "error" && userFeedTrades.length === 0 && (
+                <p className="text-sm text-white/55">
+                  Couldn&apos;t load feed. Try again in a moment.
+                </p>
+              )}
+              {tradesStatus === "ready" && visibleFeedTrades.length === 0 && (
+                <p className="text-sm text-white/55">
+                  {feedFriendsOnly
+                    ? followedWallets.size === 0
+                      ? "Follow people to see their trades here."
+                      : "No trades from people you follow yet."
+                    : "No recent trades for you yet."}
+                </p>
+              )}
+              {(tradesStatus === "ready" || userFeedTrades.length > 0) &&
+                visibleFeedTrades.length > 0 && (
+                  <ul className="flex flex-col gap-6">
+                    {visibleFeedTrades.map((trade) => (
+                      <li
+                        key={`${trade.txHash ?? trade.timestamp}-${trade.wallet}-${trade.outcome}`}
+                        className="border-b border-white/[0.08] pb-6 last:border-b-0 last:pb-0"
+                      >
+                        <TradePost
+                          trade={trade}
+                          handle={resolveFeedHandle(trade.wallet)}
+                          caption={feedCaption(trade)}
+                          gifUrl={captionGifForTrade(trade)}
+                          marketImage={
+                            trade.marketSlug
+                              ? marketImageBySlug.get(trade.marketSlug)
+                              : undefined
+                          }
+                          onOpenWallet={(wallet) => openWallet(wallet, null)}
+                          onOpenTrade={() => setFeedPositionTrade({ trade })}
+                          currentUser={commentAuthor}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+            </>
           )}
 
           {isExploreFeed && (

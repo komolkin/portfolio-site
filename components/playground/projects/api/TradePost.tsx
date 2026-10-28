@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import type { PolymarketTradeWithPnl } from "@/lib/polymarketscan";
 import UserAvatar from "./UserAvatar";
 import { GifThumb, MessageComposer, pickGif, REACTION_GIFS } from "./richMessage";
-import { useImageAccent } from "./imageAccent";
 import {
   loadUserComments,
   saveUserComments,
@@ -32,8 +31,14 @@ function formatSignedPercent(value: number): string {
   return "0%";
 }
 
-function formatOdds(price: number): string {
-  return `${Math.round(price * 100)}¢`;
+function formatOddsPercent(price: number): string {
+  return `${Math.round(Math.max(0, Math.min(1, price)) * 100)}%`;
+}
+
+function outcomeTint(seed: number): string {
+  // Bright labels for dark UI — don't reuse card-background accents.
+  const palette = ["#6CBAEA", "#FF585C", "#00D54B", "#A78BFA", "#F5A524"];
+  return palette[seed % palette.length]!;
 }
 
 function formatTimeAgo(timestamp: string | null): string | null {
@@ -142,7 +147,6 @@ export default function TradePost({
   onOpenTrade: () => void;
   lifted?: boolean;
 }) {
-  const accent = useImageAccent(marketImage ?? null);
   const key = tradeKey(trade);
   const seed = hashString(
     `${trade.wallet}-${trade.txHash ?? trade.timestamp ?? ""}`,
@@ -195,6 +199,13 @@ export default function TradePost({
     setDraftGif(null);
   };
 
+  const tint = outcomeTint(seed);
+  const pctLabel =
+    potentialPct !== null
+      ? formatSignedPercent(isBuy ? potentialPct : -potentialPct * 0.35)
+      : null;
+  const pctPositive = pctLabel?.startsWith("+") ?? false;
+
   return (
     <div className="flex items-start gap-3">
       <button
@@ -206,25 +217,29 @@ export default function TradePost({
         <UserAvatar seed={trade.wallet} label={handle} className="h-10 w-10" />
       </button>
       <div className="min-w-0 flex-1">
-        <p className="text-[15px] leading-snug text-white">
-          <button
-            type="button"
-            onClick={() => onOpenWallet(trade.wallet)}
-            className="font-semibold hover:underline"
-          >
-            {handle}
-          </button>{" "}
-          {isBuy ? "bought" : "sold"}{" "}
-          <span className="font-semibold tabular-nums">
-            {formatUsdPrecise(trade.amountUsd)}
-          </span>{" "}
-          {outcomeLabel}
-        </p>
-        <p className="mt-0.5 text-[13px] leading-snug text-white/35">
-          {timeAgo}
-        </p>
+        <div className="flex flex-col gap-0.5">
+          <p className="text-[14px] leading-[1.25] text-white">
+            <button
+              type="button"
+              onClick={() => onOpenWallet(trade.wallet)}
+              className="font-semibold"
+            >
+              {handle}
+            </button>{" "}
+            <span className="font-normal text-white/60">
+              {isBuy ? "bought" : "sold"}
+            </span>{" "}
+            <span className="font-semibold" style={{ color: tint }}>
+              {outcomeLabel}
+            </span>{" "}
+            <span className="font-normal text-white/60">
+              at {formatOddsPercent(trade.price)}
+            </span>
+          </p>
+          <p className="text-[12px] leading-[1.25] text-white/40">{timeAgo}</p>
+        </div>
         {caption.trim() ? (
-          <p className="mt-1.5 text-[15px] leading-snug text-white">{caption}</p>
+          <p className="mt-2 text-[14px] leading-[1.25] text-white">{caption}</p>
         ) : null}
         {gifUrl ? (
           <div className="mt-2">
@@ -237,72 +252,56 @@ export default function TradePost({
           onClick={onOpenTrade}
           className={
             lifted
-              ? "mt-3 w-full rounded-[20px] p-3.5 text-left"
-              : "mt-3 w-full rounded-[20px] p-3.5 text-left transition-[filter,background-color] duration-500 hover:brightness-110"
+              ? "mt-2 flex h-20 w-full items-center gap-3 rounded-2xl bg-[#1d1d1d] px-4 text-left"
+              : "mt-2 flex h-20 w-full items-center gap-3 rounded-2xl bg-[#1d1d1d] px-4 text-left transition-colors hover:bg-[#242424]"
           }
-          style={{
-            backgroundColor: lifted ? "rgba(255, 255, 255, 0.08)" : accent,
-          }}
         >
-          <div className="flex items-center gap-3">
-            {trade.outcomeLogo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={trade.outcomeLogo}
-                alt=""
-                className="h-12 w-12 shrink-0 object-contain"
-              />
-            ) : marketImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={marketImage}
-                alt=""
-                className="h-12 w-12 shrink-0 rounded-lg object-cover"
-              />
-            ) : (
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white/10 text-[13px] font-semibold text-white/40">
-                {trade.marketTitle.slice(0, 1).toUpperCase()}
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="line-clamp-2 text-[14px] font-semibold leading-snug text-white">
-                {trade.marketTitle}
-              </p>
-              <p className="mt-1 text-[12px] text-white/45">
-                {outcomeLabel} · {formatOdds(trade.price)}
-              </p>
+          {trade.outcomeLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={trade.outcomeLogo}
+              alt=""
+              className="h-12 w-12 shrink-0 rounded-[5px] object-contain"
+            />
+          ) : marketImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={marketImage}
+              alt=""
+              className="h-12 w-12 shrink-0 rounded-[5px] object-cover"
+            />
+          ) : (
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[5px] bg-white/10 text-[13px] font-semibold text-white/40">
+              {trade.marketTitle.slice(0, 1).toUpperCase()}
             </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[14px] font-semibold leading-[1.25] text-white">
+              {trade.marketTitle}
+            </p>
+            <p className="mt-1 truncate text-[14px] leading-[1.25] text-white/40">
+              {outcomeLabel}
+            </p>
           </div>
-          <div className="mt-3 flex items-end justify-between border-t border-white/[0.08] pt-3">
-            <p className="text-[20px] font-semibold tabular-nums leading-none">
+          <div className="shrink-0 text-right">
+            <p className="text-[16px] font-semibold tabular-nums leading-[1.25] text-white">
               {formatUsdPrecise(trade.amountUsd)}
             </p>
             <p
-              className={`text-[15px] font-semibold tabular-nums leading-none ${
-                potentialPct === null
+              className={`mt-0.5 text-[14px] font-semibold tabular-nums leading-[1.25] ${
+                pctLabel === null
                   ? "invisible"
-                  : isBuy
+                  : pctPositive
                     ? "text-[#00D54B]"
                     : "text-[#FF375F]"
               }`}
             >
-              {potentialPct !== null ? formatSignedPercent(potentialPct) : "0%"}
+              {pctLabel ?? "0%"}
             </p>
           </div>
         </button>
 
-        <div className="mt-3 flex items-center gap-5 text-[13px] text-white/40">
-          <button
-            type="button"
-            onClick={() => setOpen((prev) => !prev)}
-            aria-expanded={open}
-            className={`inline-flex items-center gap-1.5 ${open ? "text-white" : ""}`}
-          >
-            <ReplyIcon className="h-4 w-4" />
-            {replyCount > 0
-              ? `${replyCount} ${replyCount === 1 ? "reply" : "replies"}`
-              : "Reply"}
-          </button>
+        <div className="mt-2 flex items-center gap-4 text-[14px]">
           <button
             type="button"
             onClick={() => {
@@ -311,10 +310,23 @@ export default function TradePost({
                 return !prev;
               });
             }}
-            className={`inline-flex items-center gap-1.5 ${liked ? "text-[#ff3b30]" : ""}`}
+            className={`inline-flex items-center gap-1 ${
+              liked ? "text-[#ff3b30]" : "text-white"
+            }`}
           >
-            <HeartIcon className="h-4 w-4" filled={liked} />
-            {likeCount}
+            <HeartIcon className="h-5 w-5" filled={liked} />
+            <span className="font-semibold">{likeCount}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setOpen((prev) => !prev)}
+            aria-expanded={open}
+            className={`inline-flex items-center gap-1 font-semibold ${
+              open ? "text-white" : "text-white/60"
+            }`}
+          >
+            <ReplyIcon className="h-5 w-5" />
+            {replyCount > 0 ? replyCount : "Reply"}
           </button>
         </div>
 

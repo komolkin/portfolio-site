@@ -933,37 +933,53 @@ export default function FeedPositionSheet({
 
         <div className="shrink-0 px-5 pb-5 pt-3">
           <div className="flex gap-2.5">
-            {[
-              { outcome: outcomeLabel, label: outcomeButtonLabel, cents: chance, pill: ui.pillYes },
-              {
-                outcome: otherOutcome,
-                label: otherButtonLabel,
-                cents: Math.max(0, 100 - chance),
-                pill: ui.pillNo,
-              },
-            ].map((side) => {
-              const tone = outcomeTone?.(side.outcome) ?? null;
-              return (
-                <button
-                  key={side.outcome}
-                  type="button"
-                  data-sfx="press"
-                  disabled={!onTrade}
-                  onClick={() => onTrade?.(side.outcome)}
-                  className={`min-w-0 flex-1 overflow-hidden px-3 ${side.pill}`}
-                  style={
-                    tone
-                      ? { backgroundColor: tone.fill, color: tone.ink }
-                      : undefined
-                  }
-                >
-                  <span className="flex min-w-0 items-baseline justify-center gap-1">
-                    <span className="min-w-0 truncate">{side.label}</span>
-                    <span className="shrink-0 tabular-nums">{side.cents}¢</span>
-                  </span>
-                </button>
+            {(() => {
+              const sides = [
+                {
+                  outcome: outcomeLabel,
+                  label: outcomeButtonLabel,
+                  cents: chance,
+                  pill: ui.pillYes,
+                },
+                {
+                  outcome: otherOutcome,
+                  label: otherButtonLabel,
+                  cents: Math.max(0, 100 - chance),
+                  pill: ui.pillNo,
+                },
+              ] as const;
+              const tones = sides.map(
+                (side) => outcomeTone?.(side.outcome) ?? null,
               );
-            })}
+              const sameFill =
+                Boolean(tones[0]?.fill) &&
+                tones[0]?.fill === tones[1]?.fill;
+              return sides.map((side, index) => {
+                const tone = sameFill ? null : tones[index];
+                return (
+                  <button
+                    key={`${side.outcome}-${index}`}
+                    type="button"
+                    data-sfx="press"
+                    disabled={!onTrade}
+                    onClick={() => onTrade?.(side.outcome)}
+                    className={`min-w-0 flex-1 overflow-hidden px-3 ${side.pill}`}
+                    style={
+                      tone
+                        ? { backgroundColor: tone.fill, color: tone.ink }
+                        : undefined
+                    }
+                  >
+                    <span className="flex min-w-0 items-baseline justify-center gap-1">
+                      <span className="min-w-0 truncate">{side.label}</span>
+                      <span className="shrink-0 tabular-nums">
+                        {side.cents}¢
+                      </span>
+                    </span>
+                  </button>
+                );
+              });
+            })()}
           </div>
         </div>
       </div>
