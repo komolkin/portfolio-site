@@ -242,7 +242,7 @@ export default function SettingsScreen({
           <div className="border-t border-white/[0.06]">
             <div className="flex items-center gap-3 px-3.5 py-3">
               <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-medium">Feed activity</p>
+                <p className="text-[15px] font-medium">Pulse activity</p>
                 <p className="mt-0.5 text-[11px] text-white/40">
                   Show your trades in the public feed
                 </p>
@@ -250,7 +250,7 @@ export default function SettingsScreen({
               <Toggle
                 checked={feedActivity}
                 onChange={setFeedActivity}
-                label="Feed activity"
+                label="Pulse activity"
               />
             </div>
           </div>

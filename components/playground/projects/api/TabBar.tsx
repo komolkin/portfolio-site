@@ -10,7 +10,7 @@ const TABS: readonly { id: TabId; label: string }[] = [
   { id: "explore", label: "Home" },
   { id: "search", label: "Search" },
   { id: "positions", label: "Positions" },
-  { id: "feed", label: "Feed" },
+  { id: "feed", label: "Pulse" },
   { id: "profile", label: "Profile" },
 ];
 
@@ -84,37 +84,25 @@ export function SearchTabIcon({ active }: { active: boolean }) {
   );
 }
 
-function FeedTabIcon({ active }: { active: boolean }) {
+function PulseTabIcon({ active }: { active: boolean }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className="h-[28px] w-[28px]" aria-hidden>
       {active ? (
-        <>
-          <rect x="4" y="5" width="16" height="14" rx="3" fill="currentColor" />
-          <path
-            d="M8 10h8M8 14h5"
-            stroke="#000000"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-        </>
+        <path
+          d="M3.5 12h3.2l1.7-4.2 2.4 9.4L14 7.8l1.6 4.2H20.5"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       ) : (
-        <>
-          <rect
-            x="4"
-            y="5"
-            width="16"
-            height="14"
-            rx="3"
-            stroke="currentColor"
-            strokeWidth="1.6"
-          />
-          <path
-            d="M8 10h8M8 14h5"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-        </>
+        <path
+          d="M3.5 12h3.2l1.7-4.2 2.4 9.4L14 7.8l1.6 4.2H20.5"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       )}
     </svg>
   );
@@ -214,7 +202,7 @@ function TabIcon({ id, active }: { id: TabId; active: boolean }) {
     case "positions":
       return null;
     case "feed":
-      return <FeedTabIcon active={active} />;
+      return <PulseTabIcon active={active} />;
     case "profile":
       return <ProfileTabIcon active={active} />;
   }

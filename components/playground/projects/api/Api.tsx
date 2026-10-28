@@ -12,6 +12,7 @@ import {
   type RefObject,
 } from "react";
 import NumberFlow from "@number-flow/react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Liveline, type LivelinePoint } from "liveline";
 import type {
   PolymarketDemoProfile,
@@ -63,7 +64,9 @@ import {
 import UserAvatar from "./UserAvatar";
 import TabBar, {
   SearchTabIcon,
+  TAB_BAR_BOTTOM,
   TAB_BAR_CONTENT_INSET,
+  TAB_BAR_HEIGHT,
   type TabId,
 } from "./TabBar";
 import {
@@ -5099,32 +5102,37 @@ function ListPnlChart({
 
 function FeedItemSkeleton() {
   return (
-    <li className="border-b border-white/[0.06] py-5 first:pt-0">
+    <li className="py-3">
       <div className="flex items-start gap-3">
-        <div className="h-10 w-10 shrink-0 rounded-full bg-white/10" />
+        <div className="h-9 w-9 shrink-0 rounded-full bg-white/10" />
         <div className="min-w-0 flex-1">
-          <div className="h-4 w-[78%] rounded bg-white/10" />
-          <div className="mt-2 h-4 w-[62%] rounded bg-white/10" />
-          <div className="mt-3 rounded-[20px] bg-white/[0.08] p-3.5">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 shrink-0 rounded-2xl bg-white/10" />
-              <div className="min-w-0 flex-1">
-                <div className="h-3.5 w-[70%] rounded bg-white/10" />
-                <div className="mt-2 h-3 w-16 rounded bg-white/10" />
-              </div>
-            </div>
-            <div className="mt-3 flex justify-between">
-              <div className="h-5 w-16 rounded bg-white/10" />
-              <div className="h-5 w-12 rounded bg-white/10" />
-            </div>
-          </div>
-          <div className="mt-3 flex items-center gap-5">
-            <div className="h-3.5 w-14 rounded bg-white/10" />
-            <div className="h-3.5 w-8 rounded bg-white/10" />
+          <div className="h-4 w-[88%] rounded bg-white/10" />
+          <div className="mt-2 h-4 w-[55%] rounded bg-white/10" />
+          <div className="mt-3 flex items-center gap-4">
+            <div className="h-3.5 w-12 rounded bg-white/10" />
+            <div className="h-3.5 w-12 rounded bg-white/10" />
+            <div className="h-3.5 w-12 rounded bg-white/10" />
           </div>
         </div>
       </div>
     </li>
+  );
+}
+
+function FeedPlayIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className={className} aria-hidden>
+      <path d="M6.5 4.8v10.4L15.2 10 6.5 4.8Z" />
+    </svg>
+  );
+}
+
+function FeedPauseIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className={className} aria-hidden>
+      <rect x="5.5" y="4.5" width="3.2" height="11" rx="1" />
+      <rect x="11.3" y="4.5" width="3.2" height="11" rx="1" />
+    </svg>
   );
 }
 
@@ -5376,7 +5384,12 @@ export default function Api({
   >("idle");
   const [feedPositionTrade, setFeedPositionTrade] =
     useState<FeedPositionSelection | null>(null);
-  const [feedFriendsOnly, setFeedFriendsOnly] = useState(false);
+  const [feedLivePlaying, setFeedLivePlaying] = useState(true);
+  const [liveFeedItems, setLiveFeedItems] = useState<
+    Array<TradePostTrade & { liveId: string }>
+  >([]);
+  const liveFeedCursorRef = useRef(0);
+  const liveFeedBottomRef = useRef<HTMLDivElement | null>(null);
   const [followedWallets, setFollowedWallets] = useState<Set<string>>(
     () => new Set(),
   );
@@ -6349,9 +6362,7 @@ export default function Api({
           demoProfile?.displayName ??
           (demoProfile?.wallet ? shortWallet(demoProfile.wallet) : null))
         : section === "feed" && !showingDrillDown
-          ? feedFriendsOnly
-            ? "Following"
-            : "For you"
+          ? "Pulse"
           : null;
 
   useEffect(() => {
@@ -6591,20 +6602,20 @@ export default function Api({
     : selectedMarketSlug
       ? "Market"
       : section === "feed"
-        ? "Feed"
+        ? "Pulse"
         : section === "search"
           ? "Search"
           : "Back";
   const listBackLabel =
     section === "feed"
-      ? "Feed"
+      ? "Pulse"
       : section === "search"
         ? "Search"
         : "Squads";
   const marketBackLabel = selectedListId
     ? (listDetail?.name ?? "Squad")
     : section === "feed"
-      ? "Feed"
+      ? "Pulse"
       : section === "search"
         ? "Search"
         : "Explore";
@@ -6802,39 +6813,83 @@ export default function Api({
     return [...userFeedTrades, ...apiTrades];
   }, [demoProfile?.wallet, trades, userFeedTrades]);
 
-  const forYouFeedTrades = useMemo(() => {
-    // Discovery feed — one half of posts, expanded so the list feels long.
-    const pool = feedTrades.filter((trade) => {
-      const key = `${trade.txHash ?? trade.timestamp ?? ""}-${trade.wallet}-${trade.outcome}`;
-      return hashString(key) % 2 === 0;
-    });
-    return expandFeedTrades(pool.length >= 6 ? pool : feedTrades, "for-you", 48);
-  }, [feedTrades]);
+  const feedPoolTrades = useMemo(
+    () => expandFeedTrades(feedTrades, "live", 64),
+    [feedTrades],
+  );
 
-  const followingFeedTrades = useMemo(() => {
-    const ownWallet = demoProfile?.wallet?.toLowerCase();
-    const fromFollows = feedTrades.filter((trade) => {
-      const wallet = trade.wallet.toLowerCase();
-      if (ownWallet && wallet === ownWallet) return true;
-      return followedWallets.has(wallet);
+  // Seed a short chat history once the pool is ready.
+  useEffect(() => {
+    if (feedPoolTrades.length === 0) {
+      setLiveFeedItems([]);
+      liveFeedCursorRef.current = 0;
+      return;
+    }
+    setLiveFeedItems((prev) => {
+      if (prev.length > 0) return prev;
+      const seedCount = Math.min(8, feedPoolTrades.length);
+      liveFeedCursorRef.current = seedCount;
+      return feedPoolTrades.slice(0, seedCount).map((trade, index) => ({
+        ...trade,
+        liveId: `seed-${trade.txHash ?? trade.timestamp ?? index}-${index}`,
+      }));
     });
-    // Opposite half of posts (or follows) so the tab never mirrors For you.
-    const alternate = feedTrades.filter((trade) => {
-      const key = `${trade.txHash ?? trade.timestamp ?? ""}-${trade.wallet}-${trade.outcome}`;
-      return hashString(key) % 2 === 1;
-    });
-    const pool =
-      followedWallets.size > 0 && fromFollows.length > 0
-        ? fromFollows
-        : alternate.length >= 6
-          ? alternate
-          : [...feedTrades].reverse();
-    return expandFeedTrades(pool, "following", 48);
-  }, [feedTrades, demoProfile?.wallet, followedWallets]);
+  }, [feedPoolTrades]);
 
-  const visibleFeedTrades = feedFriendsOnly
-    ? followingFeedTrades
-    : forYouFeedTrades;
+  useEffect(() => {
+    if (
+      section !== "feed" ||
+      showingDrillDown ||
+      feedPositionTrade ||
+      !feedLivePlaying
+    ) {
+      return;
+    }
+    if (feedPoolTrades.length === 0) return;
+
+    const pushNext = () => {
+      const index = liveFeedCursorRef.current % feedPoolTrades.length;
+      const base = feedPoolTrades[index]!;
+      liveFeedCursorRef.current += 1;
+      const n = liveFeedCursorRef.current;
+      const next: TradePostTrade & { liveId: string } = {
+        ...base,
+        amountUsd: Math.max(
+          1,
+          Math.round(
+            base.amountUsd *
+              (0.78 + (hashString(`${base.wallet}-${n}`) % 40) / 100) *
+              100,
+          ) / 100,
+        ),
+        txHash: `${base.txHash ?? "live"}-stream-${n}`,
+        timestamp: new Date().toISOString(),
+        liveId: `live-${n}-${base.wallet}`,
+      };
+      setLiveFeedItems((prev) => [...prev, next].slice(-48));
+    };
+
+    const id = window.setInterval(pushNext, 1600);
+    return () => window.clearInterval(id);
+  }, [
+    section,
+    showingDrillDown,
+    feedPositionTrade,
+    feedLivePlaying,
+    feedPoolTrades,
+  ]);
+
+  useEffect(() => {
+    if (section !== "feed" || showingDrillDown || !feedLivePlaying) return;
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+    // Scroll the list end above the floating Live + tab bar (paddingBottom),
+    // not merely into the raw viewport bottom under those overlays.
+    scroller.scrollTo({
+      top: scroller.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [liveFeedItems, section, showingDrillDown, feedLivePlaying]);
 
   const profilePositions = useMemo(() => {
     const closedKeys = new Set(
@@ -7320,7 +7375,13 @@ export default function Api({
           }`}
           style={
             !showingDrillDown && !showingProfileSubScreen
-              ? { paddingBottom: TAB_BAR_CONTENT_INSET }
+              ? {
+                  // Flow: clear floating Live control + tab bar.
+                  paddingBottom:
+                    section === "feed"
+                      ? TAB_BAR_BOTTOM + TAB_BAR_HEIGHT + 12 + 52
+                      : TAB_BAR_CONTENT_INSET,
+                }
               : showingMarketDetail
                 ? { paddingBottom: TAB_BAR_CONTENT_INSET }
                 : undefined
@@ -7565,36 +7626,13 @@ export default function Api({
               />
             </div>
           ) : section === "feed" ? (
-            <header className="mb-6">
-              <div
-                ref={stickyTitleRef as RefObject<HTMLDivElement>}
-                role="tablist"
-                aria-label="Feed"
-                className="flex items-center gap-6"
+            <header className="mb-5">
+              <h1
+                ref={stickyTitleRef as RefObject<HTMLHeadingElement>}
+                className="text-[30px] font-semibold leading-[1.25] tracking-[-0.04em] text-white"
               >
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={!feedFriendsOnly}
-                  onClick={() => setFeedFriendsOnly(false)}
-                  className={`text-[30px] font-semibold leading-[1.25] tracking-[-0.04em] transition-colors ${
-                    !feedFriendsOnly ? "text-white" : "text-white/40"
-                  }`}
-                >
-                  For you
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={feedFriendsOnly}
-                  onClick={() => setFeedFriendsOnly(true)}
-                  className={`text-[30px] font-semibold leading-[1.25] tracking-[-0.04em] transition-colors ${
-                    feedFriendsOnly ? "text-white" : "text-white/40"
-                  }`}
-                >
-                  Following
-                </button>
-              </div>
+                Pulse
+              </h1>
             </header>
           ) : null}
 
@@ -7761,53 +7799,66 @@ export default function Api({
 
           {section === "feed" && !showingDrillDown && (
             <>
-              {tradesStatus === "loading" && userFeedTrades.length === 0 && (
-                <ul className="flex flex-col gap-5 animate-pulse" aria-hidden>
-                  {Array.from({ length: 3 }).map((_, i) => (
+              {tradesStatus === "loading" && liveFeedItems.length === 0 && (
+                <ul className="flex flex-col animate-pulse" aria-hidden>
+                  {Array.from({ length: 4 }).map((_, i) => (
                     <FeedItemSkeleton key={i} />
                   ))}
                 </ul>
               )}
-              {tradesStatus === "error" && userFeedTrades.length === 0 && (
+              {tradesStatus === "error" && liveFeedItems.length === 0 && (
                 <p className="text-sm text-white/55">
-                  Couldn&apos;t load feed. Try again in a moment.
+                  Couldn&apos;t load Pulse. Try again in a moment.
                 </p>
               )}
-              {tradesStatus === "ready" && visibleFeedTrades.length === 0 && (
-                <p className="text-sm text-white/55">
-                  {feedFriendsOnly
-                    ? followedWallets.size === 0
-                      ? "Follow people to see their trades here."
-                      : "No trades from people you follow yet."
-                    : "No recent trades for you yet."}
-                </p>
-              )}
-              {(tradesStatus === "ready" || userFeedTrades.length > 0) &&
-                visibleFeedTrades.length > 0 && (
-                  <ul className="flex flex-col gap-6">
-                    {visibleFeedTrades.map((trade) => (
-                      <li
-                        key={`${trade.txHash ?? trade.timestamp}-${trade.wallet}-${trade.outcome}`}
-                        className="border-b border-white/[0.08] pb-6 last:border-b-0 last:pb-0"
-                      >
-                        <TradePost
-                          trade={trade}
-                          handle={resolveFeedHandle(trade.wallet)}
-                          caption={feedCaption(trade)}
-                          gifUrl={captionGifForTrade(trade)}
-                          marketImage={
-                            trade.marketSlug
-                              ? marketImageBySlug.get(trade.marketSlug)
-                              : undefined
-                          }
-                          onOpenWallet={(wallet) => openWallet(wallet, null)}
-                          onOpenTrade={() => setFeedPositionTrade({ trade })}
-                          currentUser={commentAuthor}
-                        />
-                      </li>
-                    ))}
-                  </ul>
+              {tradesStatus === "ready" &&
+                feedPoolTrades.length === 0 &&
+                liveFeedItems.length === 0 && (
+                  <p className="text-sm text-white/55">
+                    No recent trades yet. Check back in a moment.
+                  </p>
                 )}
+              {liveFeedItems.length > 0 && (
+                <div className="flex min-h-[calc(100%-0.5rem)] flex-col justify-end">
+                  <ul className="flex flex-col gap-5">
+                    <AnimatePresence initial={false}>
+                      {liveFeedItems.map((trade) => (
+                        <motion.li
+                          key={trade.liveId}
+                          layout
+                          initial={{ opacity: 0, y: 18 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 420,
+                            damping: 32,
+                            mass: 0.7,
+                          }}
+                        >
+                          <TradePost
+                            variant="message"
+                            trade={trade}
+                            handle={resolveFeedHandle(trade.wallet)}
+                            caption=""
+                            gifUrl={null}
+                            marketImage={
+                              trade.marketImage ??
+                              (trade.marketSlug
+                                ? marketImageBySlug.get(trade.marketSlug)
+                                : undefined) ??
+                              undefined
+                            }
+                            onOpenWallet={(wallet) => openWallet(wallet, null)}
+                            onOpenTrade={() => setFeedPositionTrade({ trade })}
+                            currentUser={commentAuthor}
+                          />
+                        </motion.li>
+                      ))}
+                    </AnimatePresence>
+                  </ul>
+                  <div ref={liveFeedBottomRef} aria-hidden className="h-px" />
+                </div>
+              )}
             </>
           )}
 
@@ -8803,6 +8854,32 @@ export default function Api({
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black from-15% via-black/55 to-transparent" />
             </div>
+            {section === "feed" && (
+              <div
+                className="pointer-events-none absolute inset-x-0 z-[11] flex justify-center px-5"
+                style={{
+                  bottom: TAB_BAR_BOTTOM + TAB_BAR_HEIGHT + 12,
+                }}
+              >
+                <button
+                  type="button"
+                  data-sfx="press"
+                  onClick={() => setFeedLivePlaying((prev) => !prev)}
+                  aria-pressed={feedLivePlaying}
+                  aria-label={
+                    feedLivePlaying ? "Pause live pulse" : "Play live pulse"
+                  }
+                  className="pointer-events-auto inline-flex h-10 items-center gap-1.5 rounded-full bg-white/[0.12] px-4 text-[13px] font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:bg-white/[0.18]"
+                >
+                  {feedLivePlaying ? (
+                    <FeedPauseIcon className="h-4 w-4" />
+                  ) : (
+                    <FeedPlayIcon className="h-4 w-4" />
+                  )}
+                  {feedLivePlaying ? "Live" : "Paused"}
+                </button>
+              </div>
+            )}
             <TabBar
               activeTab={positionsOpen ? "positions" : section}
               onChange={handleSectionChange}
@@ -8888,9 +8965,11 @@ export default function Api({
             }
             avatarUrl={feedPositionTrade.avatarUrl}
             marketImage={
-              feedPositionTrade.trade.marketSlug
+              feedPositionTrade.trade.marketImage ??
+              (feedPositionTrade.trade.marketSlug
                 ? marketImageBySlug.get(feedPositionTrade.trade.marketSlug)
-                : undefined
+                : undefined) ??
+              undefined
             }
             volume24h={
               feedPositionTrade.trade.marketSlug

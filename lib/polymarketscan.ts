@@ -2878,6 +2878,56 @@ function isSportsTrade(trade: AgentWhaleTradeRaw): boolean {
   return (trade.market_category ?? "").trim().toLowerCase() === "sports";
 }
 
+/** Resolve a market card image for a trade (agent detail, then title photo). */
+async function resolveTradeMarketImage(trade: {
+  marketSlug: string;
+  marketTitle: string;
+  marketCategory: string | null;
+}): Promise<string | null> {
+  const slug = trade.marketSlug.trim();
+  const title = trade.marketTitle.trim();
+  const cacheKey = `trade-market-image:${slug || title.toLowerCase()}`;
+  const cached = getCached<string>(cacheKey);
+  if (cached !== null) return cached || null;
+
+  const detail =
+    (slug
+      ? await getMarketData({ slug, query: title || null })
+      : null) ??
+    (title ? await getMarketData({ query: title }) : null);
+  if (detail?.image) {
+    setCache(cacheKey, detail.image, 10 * 60_000);
+    return detail.image;
+  }
+
+  // Closed/missing markets often 404 on the agent — derive a photo from the title.
+  if (title) {
+    const stub: PolymarketMarketData = {
+      marketId: slug || title,
+      title,
+      slug: slug || title.toLowerCase().replace(/\s+/g, "-"),
+      category: trade.marketCategory,
+      yesPrice: 0.5,
+      noPrice: 0.5,
+      volumeUsd: 0,
+      volume24h: 0,
+      liquidityUsd: 0,
+      image: null,
+      closesAt: null,
+      isResolved: false,
+      price24hChange: null,
+    };
+    const photo = await photoForQueries(await sportsPhotoQueries(stub));
+    if (photo) {
+      setCache(cacheKey, photo, TITLE_PHOTO_TTL_MS);
+      return photo;
+    }
+  }
+
+  setCache(cacheKey, "", 5 * 60_000);
+  return null;
+}
+
 /** Latest whale trades from wallets with positive lifetime PnL. */
 export async function getLatestTradesWithPnl(options?: {
   limit?: number;
@@ -2885,7 +2935,7 @@ export async function getLatestTradesWithPnl(options?: {
   /** Only include trades whose wallet has total PnL > 0. Default true. */
   positivePnlOnly?: boolean;
 }): Promise<PolymarketTradeWithPnl[]> {
-  const limit = Math.min(Math.max(options?.limit ?? 30, 1), 40);
+  const limit = Math.min(Math.max(options?.limit ?? 30, 1), 80);
   const sportsOnly = options?.sportsOnly ?? true;
   const positivePnlOnly = options?.positivePnlOnly ?? true;
   const key = `trades:${sportsOnly ? "sports" : "all"}:${positivePnlOnly ? "pos" : "any"}:${limit}`;
@@ -2985,17 +3035,28 @@ export async function getLatestTradesWithPnl(options?: {
         }
       }
 
-      const uniqueSlugs = [
-        ...new Set(pool.map((trade) => trade.marketSlug).filter(Boolean)),
+      const uniqueMarkets = [
+        ...new Map(
+          pool
+            .filter((trade) => trade.marketSlug || trade.marketTitle)
+            .map((trade) => [
+              trade.marketSlug || trade.marketTitle.toLowerCase(),
+              trade,
+            ]),
+        ).values(),
       ].slice(0, 50);
-      const details = await Promise.all(
-        uniqueSlugs.map((slug) => getMarketData({ slug })),
+      const imageEntries = await Promise.all(
+        uniqueMarkets.map(async (trade) => {
+          const image = await resolveTradeMarketImage(trade);
+          return [
+            trade.marketSlug || trade.marketTitle.toLowerCase(),
+            image,
+          ] as const;
+        }),
       );
       const imageBySlug = new Map<string, string>();
-      for (const detail of details) {
-        if (detail?.slug && detail.image) {
-          imageBySlug.set(detail.slug, detail.image);
-        }
+      for (const [key, image] of imageEntries) {
+        if (image) imageBySlug.set(key, image);
       }
 
       const catalog = await fetchEspnTeamCatalog().catch(
@@ -3007,9 +3068,10 @@ export async function getLatestTradesWithPnl(options?: {
           catalog.length > 0 && !/^(yes|no)$/i.test(trade.outcome.trim())
             ? lookupTeamLogo(trade.outcome, catalog, leagueHint)
             : null;
+        const imageKey = trade.marketSlug || trade.marketTitle.toLowerCase();
         return {
           ...trade,
-          marketImage: imageBySlug.get(trade.marketSlug) ?? null,
+          marketImage: imageBySlug.get(imageKey) ?? null,
           outcomeLogo: team?.logo ?? null,
         };
       });

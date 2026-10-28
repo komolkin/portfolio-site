@@ -453,7 +453,7 @@ export function TakeComposer({
           />
           <div className="mt-1.5 flex items-center justify-between gap-3 pb-0.5">
             <p className="text-[11px] text-white/35">
-              {text.trim() || gifUrl ? "Your trade will appear in the Feed." : ""}
+              {text.trim() || gifUrl ? "Your trade will appear in Pulse." : ""}
             </p>
             <button
               type="button"

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { PolymarketTradeWithPnl } from "@/lib/polymarketscan";
 import UserAvatar from "./UserAvatar";
 import { GifThumb, MessageComposer, pickGif, REACTION_GIFS } from "./richMessage";
+import { useImageAccent } from "./imageAccent";
 import {
   loadUserComments,
   saveUserComments,
@@ -23,6 +24,22 @@ function formatUsdPrecise(value: number): string {
   })}`;
 }
 
+function formatSignedUsdCompact(value: number): string {
+  const abs = Math.abs(value);
+  const core =
+    abs >= 1_000_000
+      ? `$${(abs / 1_000_000).toFixed(1)}M`
+      : abs >= 1_000
+        ? `$${Math.round(abs).toLocaleString("en-US")}`
+        : `$${abs.toLocaleString("en-US", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })}`;
+  if (value > 0) return `+${core}`;
+  if (value < 0) return `-${core}`;
+  return core;
+}
+
 function formatSignedPercent(value: number): string {
   const abs = Math.abs(value);
   const formatted = `${abs >= 10 ? abs.toFixed(0) : abs.toFixed(1)}%`;
@@ -36,7 +53,6 @@ function formatOddsPercent(price: number): string {
 }
 
 function outcomeTint(seed: number): string {
-  // Bright labels for dark UI — don't reuse card-background accents.
   const palette = ["#6CBAEA", "#FF585C", "#00D54B", "#A78BFA", "#F5A524"];
   return palette[seed % palette.length]!;
 }
@@ -126,6 +142,26 @@ export function captionGifForTrade(trade: TradePostTrade): string | null {
   return pickGif(seed).url;
 }
 
+function tradeMoveStats(trade: TradePostTrade, seed: number) {
+  const isBuy = trade.side.toUpperCase() === "BUY";
+  const potentialPct = tradePotentialReturnPct(trade.price);
+  const pct =
+    potentialPct !== null
+      ? isBuy
+        ? potentialPct
+        : -potentialPct * 0.35
+      : isBuy
+        ? 12 + (seed % 28)
+        : -(8 + (seed % 18));
+  const dollar = trade.amountUsd * (Math.abs(pct) / 100) * (isBuy ? 1 : 0.6);
+  return {
+    isBuy,
+    pct,
+    dollar: isBuy ? dollar : -dollar,
+    up: pct >= 0,
+  };
+}
+
 export default function TradePost({
   trade,
   handle,
@@ -136,6 +172,7 @@ export default function TradePost({
   onOpenWallet,
   onOpenTrade,
   lifted = false,
+  variant = "social",
 }: {
   trade: TradePostTrade;
   handle: string;
@@ -146,6 +183,8 @@ export default function TradePost({
   onOpenWallet: (wallet: string) => void;
   onOpenTrade: () => void;
   lifted?: boolean;
+  /** `message` = live chat line; `social` = card + likes/reply. */
+  variant?: "message" | "social";
 }) {
   const key = tradeKey(trade);
   const seed = hashString(
@@ -157,6 +196,9 @@ export default function TradePost({
   const [draft, setDraft] = useState("");
   const [draftGif, setDraftGif] = useState<string | null>(null);
   const [userComments, setUserComments] = useState<TradeComment[]>([]);
+  const accent = useImageAccent(
+    variant === "social" ? (marketImage ?? null) : null,
+  );
 
   useEffect(() => {
     setUserComments(loadUserComments().filter((item) => item.tradeKey === key));
@@ -171,13 +213,15 @@ export default function TradePost({
     [seeded, userComments],
   );
 
-  const isBuy = trade.side.toUpperCase() === "BUY";
   const timeAgo = formatTimeAgo(trade.timestamp) ?? "Just now";
-  const potentialPct = tradePotentialReturnPct(trade.price);
   const outcomeLabel =
     trade.outcome.trim().length > 0 ? trade.outcome.trim() : "—";
   const likeCount = 1 + (seed % 12) + likeBump;
   const replyCount = comments.length;
+  const move = tradeMoveStats(trade, seed);
+  const tint = outcomeTint(seed);
+  const pctLabel = formatSignedPercent(move.pct);
+  const pctPositive = move.up;
 
   const submitComment = () => {
     if (!currentUser) return;
@@ -199,12 +243,77 @@ export default function TradePost({
     setDraftGif(null);
   };
 
-  const tint = outcomeTint(seed);
-  const pctLabel =
-    potentialPct !== null
-      ? formatSignedPercent(isBuy ? potentialPct : -potentialPct * 0.35)
-      : null;
-  const pctPositive = pctLabel?.startsWith("+") ?? false;
+  if (variant === "message") {
+    const marketThumb = marketImage || trade.marketImage || null;
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onOpenTrade}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onOpenTrade();
+          }
+        }}
+        className="flex w-full cursor-pointer items-start gap-3 rounded-2xl text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
+      >
+        <div className="mt-0.5 shrink-0 overflow-hidden rounded-[10px]">
+          {marketThumb ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={marketThumb}
+              alt=""
+              className="h-9 w-9 object-cover"
+            />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center bg-white/10 text-[12px] font-semibold text-white/45">
+              {trade.marketTitle.slice(0, 1).toUpperCase()}
+            </div>
+          )}
+        </div>
+        <p className="min-w-0 flex-1 text-[16px] leading-[1.35] text-white">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenWallet(trade.wallet);
+            }}
+            className="font-semibold"
+          >
+            {handle}
+          </button>{" "}
+          <span className="text-white/55">
+            just {move.isBuy ? "bought" : "sold"}
+          </span>{" "}
+          <span className="font-semibold" style={{ color: tint }}>
+            {outcomeLabel}
+          </span>{" "}
+          <span className="text-white/55">
+            at {formatOddsPercent(trade.price)} and {move.up ? "up" : "down"}
+          </span>{" "}
+          <span
+            className={`font-semibold tabular-nums ${
+              move.up ? "text-[#00D54B]" : "text-[#FF375F]"
+            }`}
+          >
+            {formatSignedUsdCompact(move.dollar)}
+          </span>{" "}
+          <span
+            className={`tabular-nums ${
+              move.up ? "text-[#00D54B]/80" : "text-[#FF375F]/80"
+            }`}
+          >
+            ({Math.abs(move.pct) >= 10
+              ? Math.abs(move.pct).toFixed(0)
+              : Math.abs(move.pct).toFixed(1)}
+            %)
+          </span>
+          <span className="text-white/55">.</span>
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-start gap-3">
@@ -227,7 +336,7 @@ export default function TradePost({
               {handle}
             </button>{" "}
             <span className="font-normal text-white/60">
-              {isBuy ? "bought" : "sold"}
+              {move.isBuy ? "bought" : "sold"}
             </span>{" "}
             <span className="font-semibold" style={{ color: tint }}>
               {outcomeLabel}
@@ -253,7 +362,12 @@ export default function TradePost({
           className={
             lifted
               ? "mt-2 flex h-20 w-full items-center gap-3 rounded-2xl bg-[#1d1d1d] px-4 text-left"
-              : "mt-2 flex h-20 w-full items-center gap-3 rounded-2xl bg-[#1d1d1d] px-4 text-left transition-colors hover:bg-[#242424]"
+              : "mt-2 flex h-20 w-full items-center gap-3 rounded-2xl px-4 text-left transition-[filter,background-color] duration-500 hover:brightness-110"
+          }
+          style={
+            lifted
+              ? undefined
+              : { backgroundColor: accent || "rgba(255,255,255,0.08)" }
           }
         >
           {trade.outcomeLogo ? (
@@ -289,14 +403,10 @@ export default function TradePost({
             </p>
             <p
               className={`mt-0.5 text-[14px] font-semibold tabular-nums leading-[1.25] ${
-                pctLabel === null
-                  ? "invisible"
-                  : pctPositive
-                    ? "text-[#00D54B]"
-                    : "text-[#FF375F]"
+                pctPositive ? "text-[#00D54B]" : "text-[#FF375F]"
               }`}
             >
-              {pctLabel ?? "0%"}
+              {pctLabel}
             </p>
           </div>
         </button>
