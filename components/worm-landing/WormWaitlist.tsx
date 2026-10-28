@@ -65,6 +65,14 @@ function markDoneInStorage() {
   window.dispatchEvent(new Event(DONE_EVENT));
 }
 
+function clearDoneFromStorage() {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 function WormInLink() {
   const prefersReducedMotion = useReducedMotion();
   const [index, setIndex] = useState(0);
@@ -209,27 +217,48 @@ function Spinner() {
   );
 }
 
-function EarlyAccessForm() {
-  const [done, setDone] = useState(false);
+function WaitlistSuccess() {
+  return (
+    <div className="mx-auto flex max-w-[420px] flex-col items-center text-center">
+      <div
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-black text-white"
+        aria-hidden
+      >
+        <CheckMark />
+      </div>
+      <h3 className="mt-5 text-[28px] font-semibold tracking-[-0.035em] text-[#141416] sm:text-[32px]">
+        You&apos;re on the list
+      </h3>
+      <p className="mt-2 text-pretty text-[18px] font-medium leading-[1.3] tracking-[-0.02em] text-[#5e5c56] sm:text-[20px]">
+        We&apos;ll reach out when early access opens on iOS. For now you can use
+        Worm in from your favourite AI app or the{" "}
+        <a
+          href="https://www.worm.wtf/"
+          target="_blank"
+          rel="noreferrer"
+          className="font-medium text-[#141416] hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#141416]"
+        >
+          Web App
+        </a>
+        .
+      </p>
+    </div>
+  );
+}
+
+function EarlyAccessForm({ onDone }: { onDone: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setDone(readDoneFromStorage());
-    const onDone = () => setDone(true);
-    window.addEventListener(DONE_EVENT, onDone);
-    return () => window.removeEventListener(DONE_EVENT, onDone);
-  }, []);
-
-  useEffect(() => {
-    if (!expanded || done) return;
+    if (!expanded) return;
     const id = window.requestAnimationFrame(() => {
       inputRef.current?.focus();
     });
     return () => window.cancelAnimationFrame(id);
-  }, [expanded, done]);
+  }, [expanded]);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -252,8 +281,8 @@ function EarlyAccessForm() {
     try {
       // UI-ready; wire to /api/waitlist when backend exists.
       await new Promise((resolve) => window.setTimeout(resolve, 450));
-      setDone(true);
       markDoneInStorage();
+      onDone();
     } catch {
       setError("Network error. Try again.");
     } finally {
@@ -261,27 +290,8 @@ function EarlyAccessForm() {
     }
   }
 
-  if (done) {
-    return (
-      <div className="mx-auto mt-10 flex max-w-[320px] flex-col items-center text-center sm:mt-12">
-        <div
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-black text-white"
-          aria-hidden
-        >
-          <CheckMark />
-        </div>
-        <h3 className="mt-5 text-[18px] font-semibold tracking-[-0.02em] text-[#141416]">
-          You&apos;re on the list
-        </h3>
-        <p className="mt-2 text-[15px] leading-relaxed text-[#5e5c56]">
-          We&apos;ll reach out when early access opens on iOS.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="mt-10 flex flex-col items-center sm:mt-12">
+    <div className="flex flex-col items-center">
       <div className="relative flex w-full max-w-[400px] items-center justify-center">
         <div className="relative">
           <button
@@ -520,6 +530,15 @@ function RotatingTitle() {
 }
 
 export function WormWaitlist() {
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    setDone(readDoneFromStorage());
+    const onDone = () => setDone(true);
+    window.addEventListener(DONE_EVENT, onDone);
+    return () => window.removeEventListener(DONE_EVENT, onDone);
+  }, []);
+
   return (
     <div className="fixed inset-0 z-[80] overflow-y-auto overscroll-y-contain bg-[#f6f5f2] text-[#141416] [scrollbar-gutter:stable]">
       <header className="sticky top-0 z-50">
@@ -539,6 +558,11 @@ export function WormWaitlist() {
           <a
             href="/waitlist"
             aria-label="Worm"
+            onClick={(event) => {
+              event.preventDefault();
+              clearDoneFromStorage();
+              setDone(false);
+            }}
             className={`relative z-10 flex shrink-0 items-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#141416] ${PRESS}`}
           >
             <img
@@ -551,6 +575,14 @@ export function WormWaitlist() {
           </a>
           <div className="relative z-10 flex items-center gap-4 sm:gap-5">
             <WormInLink />
+            <a
+              href="https://www.worm.wtf/"
+              target="_blank"
+              rel="noreferrer"
+              className={`text-[15px] font-semibold tracking-[-0.015em] text-[#141416] hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#141416] ${PRESS}`}
+            >
+              Web App
+            </a>
             <a
               href="https://x.com/wormwtf"
               target="_blank"
@@ -566,8 +598,32 @@ export function WormWaitlist() {
 
       <main className="relative flex min-h-[calc(100svh-5rem)] flex-col items-center justify-center px-5 pb-16 pt-8 text-center sm:px-8">
         <div className="mx-auto w-full max-w-[760px]">
-          <RotatingTitle />
-          <EarlyAccessForm />
+          <AnimatePresence mode="wait" initial={false}>
+            {!done ? (
+              <motion.div
+                key="signup"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <div className="mb-10 sm:mb-12">
+                  <RotatingTitle />
+                </div>
+                <EarlyAccessForm onDone={() => setDone(true)} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="success"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <WaitlistSuccess />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </main>
     </div>
