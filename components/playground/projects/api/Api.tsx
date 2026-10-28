@@ -6365,12 +6365,16 @@ export default function Api({
           ? "Pulse"
           : null;
 
+  const pulseStickyAlways =
+    section === "feed" && !showingDrillDown && stickyTitle === "Pulse";
+
   useEffect(() => {
     const nav = stickyNavRef.current;
     const marketFade = stickyMarketFadeRef.current;
-    if (nav) nav.style.opacity = "0";
+    if (nav) nav.style.opacity = pulseStickyAlways ? "1" : "0";
     if (marketFade) marketFade.style.opacity = "0";
     if (!stickyTitle && !marketFade) return;
+    if (pulseStickyAlways) return;
     const scroller = scrollRef.current;
     if (!scroller) return;
 
@@ -6427,6 +6431,7 @@ export default function Api({
     };
   }, [
     stickyTitle,
+    pulseStickyAlways,
     showingMarketDetail,
     showingWalletProfile,
     showingOwnProfile,
@@ -7625,15 +7630,6 @@ export default function Api({
                 }
               />
             </div>
-          ) : section === "feed" ? (
-            <header className="mb-5">
-              <h1
-                ref={stickyTitleRef as RefObject<HTMLHeadingElement>}
-                className="text-[30px] font-semibold leading-[1.25] tracking-[-0.04em] text-white"
-              >
-                Pulse
-              </h1>
-            </header>
           ) : null}
 
           {section === "search" && !showingDrillDown && (
@@ -8699,8 +8695,10 @@ export default function Api({
           <div
             key={`${section}-${showingOwnProfile ? "me" : showingWalletProfile ? "wallet" : showingMarketDetail ? "market" : "page"}`}
             ref={stickyNavRef}
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 z-20 opacity-0"
+            aria-hidden={!pulseStickyAlways}
+            className={`pointer-events-none absolute inset-x-0 top-0 z-20 ${
+              pulseStickyAlways ? "opacity-100" : "opacity-0"
+            }`}
           >
             {showingMarketDetail ? null : (
               <div className="h-[96px] bg-gradient-to-b from-black from-[42%] via-black/75 to-transparent" />
