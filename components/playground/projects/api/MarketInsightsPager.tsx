@@ -179,6 +179,9 @@ function RecentInsightsStream({
   active: boolean;
 }) {
   const [index, setIndex] = useState(0);
+  // Unique remount id per beat — Framer can skip `initial` when `key={index}`
+  // revisits 0 after a loop.
+  const [playId, setPlayId] = useState(0);
   const count = sentences.length;
   const sentence = sentences[index] ?? "";
   const activeRef = useRef(active);
@@ -193,9 +196,9 @@ function RecentInsightsStream({
     if (!active || count === 0 || !sentence) return [] as StreamingWord[];
     const delayIndex = { current: 0 };
     const next: StreamingWord[] = [];
-    pushTextWords(next, `insight-${index}`, sentence, delayIndex);
+    pushTextWords(next, `insight-${playId}`, sentence, delayIndex);
     return next;
-  }, [active, count, index, sentence]);
+  }, [active, count, playId, sentence]);
 
   useEffect(() => {
     if (!active || count === 0 || words.length === 0) return;
@@ -204,15 +207,16 @@ function RecentInsightsStream({
     const id = window.setTimeout(() => {
       if (!activeRef.current) return;
       setIndex((i) => (i + 1) % count);
+      setPlayId((id) => id + 1);
     }, streamMs + HOLD_MS);
     return () => window.clearTimeout(id);
-  }, [active, count, index, words.length]);
+  }, [active, count, playId, words.length]);
 
   if (!active || count === 0 || words.length === 0) return null;
 
   return (
     <span aria-live="polite" className="inline">
-      <StreamingWords key={index} words={words} />
+      <StreamingWords key={playId} words={words} />
     </span>
   );
 }
@@ -240,6 +244,8 @@ export default function MarketInsightsPager({
   const [progress, setProgress] = useState(0);
   const progressRef = useRef(0);
   const settleTimerRef = useRef(0);
+  const easeResetTimerRef = useRef(0);
+  const snapRafRef = useRef(0);
   const autoPausedUntilRef = useRef(0);
   const dragRef = useRef<{
     pointerId: number;
@@ -255,9 +261,21 @@ export default function MarketInsightsPager({
     setProgress(clamped);
   }, []);
 
+  const cancelPendingSnap = useCallback(() => {
+    window.clearTimeout(easeResetTimerRef.current);
+    if (snapRafRef.current) {
+      window.cancelAnimationFrame(snapRafRef.current);
+      snapRafRef.current = 0;
+    }
+  }, []);
+
   const snapTo = useCallback(
     (next: 0 | 1, durationMs = 200) => {
       const root = rootRef.current;
+      cancelPendingSnap();
+
+      // Commit transition duration before changing progress — otherwise the
+      // browser often applies opacity/transform with the previous 0ms ease.
       root?.style.setProperty("--insight-ease", `${durationMs}ms`);
       root?.style.setProperty(
         "--insight-ease-fn",
@@ -265,18 +283,30 @@ export default function MarketInsightsPager({
           ? "cubic-bezier(0.22, 1, 0.36, 1)"
           : "ease-out",
       );
-      setProgressBoth(next);
-      window.setTimeout(() => {
-        root?.style.setProperty("--insight-ease", "0ms");
-        root?.style.setProperty("--insight-ease-fn", "ease-out");
-      }, durationMs + 40);
+
+      snapRafRef.current = window.requestAnimationFrame(() => {
+        snapRafRef.current = window.requestAnimationFrame(() => {
+          snapRafRef.current = 0;
+          setProgressBoth(next);
+          easeResetTimerRef.current = window.setTimeout(() => {
+            root?.style.setProperty("--insight-ease", "0ms");
+            root?.style.setProperty("--insight-ease-fn", "ease-out");
+          }, durationMs + 40);
+        });
+      });
     },
-    [setProgressBoth],
+    [cancelPendingSnap, setProgressBoth],
   );
 
   useEffect(() => {
+    cancelPendingSnap();
+    const root = rootRef.current;
+    root?.style.setProperty("--insight-ease", "0ms");
+    root?.style.setProperty("--insight-ease-fn", "ease-out");
     setProgressBoth(0);
-  }, [market.marketId, setProgressBoth]);
+  }, [cancelPendingSnap, market.marketId, setProgressBoth]);
+
+  useEffect(() => () => cancelPendingSnap(), [cancelPendingSnap]);
 
   // Landing phone: flip sides every 8s (pause briefly after manual input).
   useEffect(() => {
@@ -305,6 +335,7 @@ export default function MarketInsightsPager({
       autoPausedUntilRef.current = Date.now() + AUTO_SWIPE_MS;
 
       const width = Math.max(1, root.clientWidth);
+      cancelPendingSnap();
       root.style.setProperty("--insight-ease", "0ms");
       setProgressBoth(progressRef.current + rawX / width);
 
@@ -319,7 +350,7 @@ export default function MarketInsightsPager({
       window.clearTimeout(settleTimerRef.current);
       root.removeEventListener("wheel", onWheel, true);
     };
-  }, [enabled, setProgressBoth, snapTo]);
+  }, [cancelPendingSnap, enabled, setProgressBoth, snapTo]);
 
   const pauseAutoSwipe = useCallback(() => {
     autoPausedUntilRef.current = Date.now() + AUTO_SWIPE_MS;
@@ -350,6 +381,7 @@ export default function MarketInsightsPager({
       drag.axis = Math.abs(dx) > Math.abs(dy) * 1.05 ? "h" : "v";
       if (drag.axis === "h") {
         root.setPointerCapture(event.pointerId);
+        cancelPendingSnap();
         root.style.setProperty("--insight-ease", "0ms");
       }
     }
