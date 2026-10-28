@@ -1599,7 +1599,7 @@ export function WormLanding() {
                 scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
                 history.replaceState(null, "", "#top");
               }}
-              className="relative z-10 flex shrink-0 items-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#141416]"
+              className={`relative z-10 flex shrink-0 items-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#141416] ${PRESS}`}
             >
               <img
                 src="/worm/logo-mark.png"
