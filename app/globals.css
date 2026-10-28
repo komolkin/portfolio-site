@@ -797,6 +797,28 @@ body > * {
   }
 }
 
+/* Shine border on the waitlist early-access pill (static, from Pler). */
+.worm-early-access-ring {
+  z-index: 1;
+  border: 2px solid transparent;
+  background: linear-gradient(
+      153deg,
+      rgba(255, 255, 255, 0.4) 2.12%,
+      rgba(255, 255, 255, 0.0001) 39%,
+      rgba(255, 255, 255, 0.0001) 54.33%,
+      rgba(255, 255, 255, 0.1) 93.02%
+    )
+    border-box;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) padding-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask:
+    linear-gradient(#fff 0 0) padding-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
 /* Landing header: progressive blur + soft white fade over scrolling content. */
 .worm-header-blur {
   position: absolute;
