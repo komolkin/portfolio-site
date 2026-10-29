@@ -8568,7 +8568,7 @@ export default function Api({
                         },
                         {
                           id: "traders",
-                          label: "Top performers",
+                          label: "Top positions",
                         },
                         { id: "rules", label: "Rules" },
                       ] as const
