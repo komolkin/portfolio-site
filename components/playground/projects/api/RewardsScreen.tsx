@@ -376,13 +376,10 @@ export default function RewardsScreen({
       <section aria-labelledby="revenue-share-heading">
         <h2
           id="revenue-share-heading"
-          className="mb-2 text-[17px] font-semibold tracking-[-0.02em] text-white"
+          className="mb-3 text-[17px] font-semibold tracking-[-0.02em] text-white"
         >
           Revenue Share
         </h2>
-        <p className="mb-3 text-[14px] leading-snug text-white/50">
-          Earn points and 50% of your referrals&apos; fees
-        </p>
         <div className="flex items-center gap-2 rounded-full bg-white/[0.08] py-1.5 pl-4 pr-1.5 ring-1 ring-white/[0.06]">
           <p className="min-w-0 flex-1 truncate text-[13px] text-white/70">
             {referralLink}

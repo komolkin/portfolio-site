@@ -326,7 +326,8 @@ export default function TradePost({
           </span>{" "}
           <span className="font-semibold tabular-nums text-white">
             {formatUsdPrecise(trade.amountUsd)}
-          </span>{" "}
+          </span>
+          <br />
           <span className="font-semibold" style={{ color: tint }}>
             {outcomeLabel}
           </span>{" "}
