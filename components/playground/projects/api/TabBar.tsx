@@ -88,21 +88,37 @@ function PulseTabIcon({ active }: { active: boolean }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className="h-[28px] w-[28px]" aria-hidden>
       {active ? (
-        <path
-          d="M3.5 12h3.2l1.7-4.2 2.4 9.4L14 7.8l1.6 4.2H20.5"
-          stroke="currentColor"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        <>
+          <circle cx="12" cy="12" r="2.4" fill="currentColor" />
+          <path
+            d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6"
+            stroke="currentColor"
+            strokeWidth="2.1"
+            strokeLinecap="round"
+          />
+          <path
+            d="M5.4 5.4a9.3 9.3 0 0 0 0 13.2M18.6 5.4a9.3 9.3 0 0 1 0 13.2"
+            stroke="currentColor"
+            strokeWidth="2.1"
+            strokeLinecap="round"
+          />
+        </>
       ) : (
-        <path
-          d="M3.5 12h3.2l1.7-4.2 2.4 9.4L14 7.8l1.6 4.2H20.5"
-          stroke="currentColor"
-          strokeWidth="1.7"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        <>
+          <circle cx="12" cy="12" r="2.1" stroke="currentColor" strokeWidth="1.7" />
+          <path
+            d="M8.3 8.3a5.2 5.2 0 0 0 0 7.4M15.7 8.3a5.2 5.2 0 0 1 0 7.4"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+          />
+          <path
+            d="M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+          />
+        </>
       )}
     </svg>
   );
