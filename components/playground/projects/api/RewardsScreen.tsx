@@ -383,8 +383,7 @@ export default function RewardsScreen({
         <p className="mb-3 text-[14px] leading-snug text-white/50">
           Earn points and 50% of your referrals&apos; fees
         </p>
-        <div className="flex items-center gap-2 rounded-full bg-white/[0.08] p-1.5 ring-1 ring-white/[0.06]">
-          <UserAvatar seed={youSeed} label={youLabel} className="h-8 w-8 shrink-0" />
+        <div className="flex items-center gap-2 rounded-full bg-white/[0.08] py-1.5 pl-4 pr-1.5 ring-1 ring-white/[0.06]">
           <p className="min-w-0 flex-1 truncate text-[13px] text-white/70">
             {referralLink}
           </p>

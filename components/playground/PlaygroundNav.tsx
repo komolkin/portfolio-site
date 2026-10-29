@@ -116,7 +116,7 @@ export default function PlaygroundNav({ activeProject }: PlaygroundNavProps) {
     >
       {/* Trigger */}
       <div
-        className={`absolute inset-x-0 bottom-0 flex justify-center px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-2 transition-[opacity,transform] duration-200 ease-out ${
+        className={`absolute inset-x-0 bottom-0 flex justify-end pl-4 pr-8 pb-[max(2rem,env(safe-area-inset-bottom))] pt-2 transition-[opacity,transform] duration-200 ease-out ${
           mobileNavVisible && !open
             ? "pointer-events-auto translate-y-0 opacity-100"
             : "pointer-events-none translate-y-full opacity-0"

@@ -8247,7 +8247,7 @@ export default function Api({
                 )}
               {liveFeedItems.length > 0 && (
                 <div className="flex min-h-[calc(100%-0.5rem)] flex-col justify-end">
-                  <ul className="flex flex-col gap-3">
+                  <ul className="flex flex-col gap-3 pt-10">
                     <AnimatePresence initial={false}>
                       {liveFeedItems.map((trade) => (
                         <motion.li
