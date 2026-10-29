@@ -130,48 +130,56 @@ function AirdropTabIcon({ active }: { active: boolean }) {
       {active ? (
         <>
           <path
-            d="M3.5 11.6C4.35 5.7 7.6 3 12 3s7.65 2.7 8.5 8.6H3.5Z"
+            d="M3.5 11.5C4.35 5.6 7.6 2.9 12 2.9s7.65 2.7 8.5 8.6H3.5Z"
             fill="currentColor"
           />
+          {/* Shrouds stop at crate top so they don't ghost through the box. */}
           <path
-            d="M6.25 11.6 10.1 16M17.75 11.6 13.9 16M12 11.6V16"
+            d="M6.4 11.5 9.9 15.2M17.6 11.5 14.1 15.2M12 11.5v3.7"
             stroke="currentColor"
-            strokeWidth="1.75"
+            strokeWidth="1.7"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
           <rect
-            x="8.35"
-            y="15.35"
-            width="7.3"
-            height="5.4"
-            rx="1.5"
+            x="8.4"
+            y="15.15"
+            width="7.2"
+            height="5.35"
+            rx="1.45"
             fill="currentColor"
           />
         </>
       ) : (
         <>
           <path
-            d="M3.5 11.6C4.35 5.7 7.6 3 12 3s7.65 2.7 8.5 8.6"
+            d="M3.5 11.5C4.35 5.6 7.6 2.9 12 2.9s7.65 2.7 8.5 8.6"
             stroke="currentColor"
-            strokeWidth="1.7"
+            strokeWidth="1.65"
+            strokeLinecap="round"
+          />
+          {/* Canopy chord — horizontal line where the wires attach. */}
+          <path
+            d="M3.5 11.5h17"
+            stroke="currentColor"
+            strokeWidth="1.65"
             strokeLinecap="round"
           />
           <path
-            d="M6.25 11.6 10.1 16M17.75 11.6 13.9 16M12 11.6V16"
+            d="M6.4 11.5 9.9 15.2M17.6 11.5 14.1 15.2M12 11.5v3.7"
             stroke="currentColor"
-            strokeWidth="1.55"
+            strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
           <rect
-            x="8.35"
-            y="15.35"
-            width="7.3"
-            height="5.4"
-            rx="1.5"
+            x="8.4"
+            y="15.15"
+            width="7.2"
+            height="5.35"
+            rx="1.45"
             stroke="currentColor"
-            strokeWidth="1.7"
+            strokeWidth="1.65"
           />
         </>
       )}

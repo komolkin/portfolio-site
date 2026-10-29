@@ -258,20 +258,6 @@ function ClockIcon({ className }: { className?: string }) {
   );
 }
 
-function ChevronIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" className={className} aria-hidden>
-      <path
-        d="M6 3.5 10.5 8 6 12.5"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function RankBadge({ rank }: { rank: number }) {
   const medal = RANK_MEDALS[rank];
   if (!medal) {
@@ -390,10 +376,9 @@ export default function RewardsScreen({
       <section aria-labelledby="revenue-share-heading">
         <h2
           id="revenue-share-heading"
-          className="mb-2 flex items-center gap-0.5 text-[17px] font-semibold tracking-[-0.02em] text-white"
+          className="mb-2 text-[17px] font-semibold tracking-[-0.02em] text-white"
         >
           Revenue Share
-          <ChevronIcon className="h-4 w-4 text-white/45" />
         </h2>
         <p className="mb-3 text-[14px] leading-snug text-white/50">
           Earn points and 50% of your referrals&apos; fees
@@ -412,7 +397,11 @@ export default function RewardsScreen({
           </button>
         </div>
         <p className="mt-3 text-[13px] text-white/40">
-          US$0 Earnings · 0 Referrals
+          $0 Earnings
+          <span className="mx-2 text-white/25" aria-hidden>
+            ·
+          </span>
+          0 Referrals
         </p>
       </section>
 
@@ -420,10 +409,9 @@ export default function RewardsScreen({
         <div className="flex items-center justify-between gap-3">
           <h2
             id="leaderboard-heading"
-            className="flex min-w-0 items-center gap-0.5 text-[18px] font-semibold tracking-[-0.02em] text-white"
+            className="min-w-0 text-[18px] font-semibold tracking-[-0.02em] text-white"
           >
             Points Leaderboard
-            <ChevronIcon className="h-4 w-4 text-white/45" />
           </h2>
           <p className="inline-flex shrink-0 items-center gap-1 text-[12px] font-medium tabular-nums text-white/45">
             <ClockIcon className="h-3.5 w-3.5" />
