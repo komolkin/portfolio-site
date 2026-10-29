@@ -2,16 +2,15 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { LiquidGlass } from "simple-liquid-glass";
-import UserAvatar from "./UserAvatar";
 
-export type TabId = "explore" | "search" | "positions" | "feed" | "profile";
+export type TabId = "explore" | "search" | "positions" | "feed" | "rewards";
 
 const TABS: readonly { id: TabId; label: string }[] = [
   { id: "explore", label: "Home" },
   { id: "search", label: "Search" },
   { id: "positions", label: "Positions" },
   { id: "feed", label: "Pulse" },
-  { id: "profile", label: "Profile" },
+  { id: "rewards", label: "Rewards" },
 ];
 
 /** Matches Figma Navigation — Main sections (node 5436:9157). */
@@ -124,31 +123,55 @@ function PulseTabIcon({ active }: { active: boolean }) {
   );
 }
 
-function ProfileTabIcon({ active }: { active: boolean }) {
+/** Airdrop — dome canopy, shrouds, crate. */
+function AirdropTabIcon({ active }: { active: boolean }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className="h-[28px] w-[28px]" aria-hidden>
       {active ? (
         <>
-          <circle cx="12" cy="8" r="3.5" fill="currentColor" />
           <path
-            d="M5 19.5c1.6-3.2 4-4.8 7-4.8s5.4 1.6 7 4.8"
+            d="M3.5 11.6C4.35 5.7 7.6 3 12 3s7.65 2.7 8.5 8.6H3.5Z"
+            fill="currentColor"
+          />
+          <path
+            d="M6.25 11.6 10.1 16M17.75 11.6 13.9 16M12 11.6V16"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <rect
+            x="8.35"
+            y="15.35"
+            width="7.3"
+            height="5.4"
+            rx="1.5"
             fill="currentColor"
           />
         </>
       ) : (
         <>
-          <circle
-            cx="12"
-            cy="8"
-            r="3.5"
+          <path
+            d="M3.5 11.6C4.35 5.7 7.6 3 12 3s7.65 2.7 8.5 8.6"
             stroke="currentColor"
-            strokeWidth="1.6"
+            strokeWidth="1.7"
+            strokeLinecap="round"
           />
           <path
-            d="M5.5 19c1.5-3 3.8-4.5 6.5-4.5s5 1.5 6.5 4.5"
+            d="M6.25 11.6 10.1 16M17.75 11.6 13.9 16M12 11.6V16"
             stroke="currentColor"
-            strokeWidth="1.6"
+            strokeWidth="1.55"
             strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <rect
+            x="8.35"
+            y="15.35"
+            width="7.3"
+            height="5.4"
+            rx="1.5"
+            stroke="currentColor"
+            strokeWidth="1.7"
           />
         </>
       )}
@@ -224,8 +247,8 @@ function TabIcon({ id, active }: { id: TabId; active: boolean }) {
       return null;
     case "feed":
       return <PulseTabIcon active={active} />;
-    case "profile":
-      return <ProfileTabIcon active={active} />;
+    case "rewards":
+      return <AirdropTabIcon active={active} />;
   }
 }
 
@@ -309,13 +332,12 @@ function TabBarGlass({ children }: { children: ReactNode }) {
 }
 
 export type TabBarProps = {
-  activeTab: TabId;
+  /** `null` when a non-tab screen (e.g. own profile) is open. */
+  activeTab: TabId | null;
   onChange: (id: TabId) => void;
   positionCount: number;
   positionsPnl: number;
   positionsInvested: number;
-  profileSeed: string | null;
-  profileLabel: string | null;
   /** Shrink when the explore feed scrolls past the hero. */
   compact?: boolean;
 };
@@ -326,14 +348,10 @@ export default function TabBar({
   positionCount,
   positionsPnl,
   positionsInvested,
-  profileSeed,
-  profileLabel,
   compact = false,
 }: TabBarProps) {
-  const activeIndex = Math.max(
-    0,
-    TABS.findIndex((tab) => tab.id === activeTab),
-  );
+  const activeIndex = TABS.findIndex((tab) => tab.id === activeTab);
+  const hasActiveTab = activeIndex >= 0;
 
   return (
     <nav
@@ -353,10 +371,11 @@ export default function TabBar({
           >
             <div
               aria-hidden
-              className="absolute top-1.5 bottom-1.5 left-1.5 w-[calc((100%-12px)/var(--tab-count))] rounded-full bg-white/20 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+              className="absolute top-1.5 bottom-1.5 left-1.5 w-[calc((100%-12px)/var(--tab-count))] rounded-full bg-white/20 transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
               style={{
                 ["--tab-count" as string]: TABS.length,
-                transform: `translateX(calc(${activeIndex} * 100%))`,
+                opacity: hasActiveTab ? 1 : 0,
+                transform: `translateX(calc(${Math.max(0, activeIndex)} * 100%))`,
               }}
             />
             {TABS.map((tab) => {
@@ -379,13 +398,7 @@ export default function TabBar({
                       : "text-white/45 hover:text-white/70"
                   }`}
                 >
-                  {tab.id === "profile" && profileSeed ? (
-                    <UserAvatar
-                      seed={profileSeed}
-                      label={profileLabel ?? "You"}
-                      className="h-7 w-7"
-                    />
-                  ) : tab.id === "positions" ? (
+                  {tab.id === "positions" ? (
                     <PositionsTabCount
                       count={positionCount}
                       active={isActive}

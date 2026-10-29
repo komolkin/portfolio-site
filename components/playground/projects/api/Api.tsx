@@ -34,6 +34,7 @@ import Onboarding from "./Onboarding";
 import PositionsSheet, { BubblyPositionCard } from "./PositionsSheet";
 import MarketTopTraders from "./MarketTopTraders";
 import ReferralScreen from "./ReferralScreen";
+import RewardsScreen, { HowToEarnSheet } from "./RewardsScreen";
 import MarketInsightsPager from "./MarketInsightsPager";
 import SettingsScreen from "./SettingsScreen";
 import FollowListSheet, {
@@ -91,7 +92,7 @@ const nfMaskStyle = {
   ["--number-flow-mask-height" as string]: "0em",
 } as const;
 
-type SectionId = "explore" | "search" | "feed" | "profile";
+type SectionId = "explore" | "search" | "feed" | "rewards" | "profile";
 type ProfileSubScreen = "referral" | "settings";
 type ListDetailTab = "trades" | "wallets";
 type LeaderboardCategory = "all" | "sports" | "crypto" | "politics";
@@ -3594,14 +3595,14 @@ function RankBadge({ rank }: { rank: number }) {
   const medal = RANK_MEDALS[rank];
   if (!medal) {
     return (
-      <span className="w-6 text-center text-[13px] font-semibold tabular-nums text-white/35">
+      <span className="w-5 text-center text-[12px] font-semibold tabular-nums text-white/35">
         {rank}
       </span>
     );
   }
   return (
     <span
-      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] font-bold tabular-nums shadow-[inset_0_1px_0_rgba(255,255,255,0.45),inset_0_-1px_1px_rgba(0,0,0,0.25),0_1px_2px_rgba(0,0,0,0.4)]"
+      className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold tabular-nums shadow-[inset_0_1px_0_rgba(255,255,255,0.45),inset_0_-1px_1px_rgba(0,0,0,0.25),0_1px_2px_rgba(0,0,0,0.4)]"
       style={{ background: medal.face, color: medal.text }}
       aria-label={`Rank ${rank}`}
     >
@@ -4503,16 +4504,17 @@ function ProfilePositionRow({
 }) {
   return (
     <ActivityRow
+      compact
       leading={
         position.image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={position.image}
             alt=""
-            className="h-11 w-11 rounded-2xl object-cover"
+            className="h-10 w-10 rounded-[14px] object-cover"
           />
         ) : (
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/[0.1] text-[12px] font-semibold text-white/40">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-white/[0.1] text-[12px] font-semibold text-white/40">
             {position.outcome.slice(0, 1)}
           </div>
         )
@@ -4521,11 +4523,11 @@ function ProfilePositionRow({
       subtitle={`${position.outcome} · ${formatOdds(position.markPrice)}`}
       trailing={
         <div>
-          <p className="text-[16px] font-semibold tabular-nums">
+          <p className="text-[15px] font-semibold tabular-nums leading-snug">
             {formatUsd(position.valueUsd)}
           </p>
           <p
-            className={`mt-0.5 text-[13px] font-semibold tabular-nums ${
+            className={`mt-0.5 text-[12px] font-semibold tabular-nums ${
               position.pnlUsd > 0
                 ? "text-[#00D54B]"
                 : position.pnlUsd < 0
@@ -4711,9 +4713,9 @@ function ProfileCountRow({
   onFollowersClick?: () => void;
 }) {
   const countClass =
-    "flex items-baseline gap-1 rounded-md text-left transition-opacity hover:opacity-80";
+    "flex items-baseline gap-1 rounded-md transition-opacity hover:opacity-80";
   return (
-    <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[14px] leading-none">
+    <div className="mt-3 flex w-full flex-wrap items-baseline justify-center gap-x-4 gap-y-1 text-center text-[14px] leading-none">
       <button type="button" onClick={onFollowingClick} className={countClass}>
         <span className="font-semibold tabular-nums text-white">
           {following.toLocaleString()}
@@ -4753,14 +4755,14 @@ function ProfileIdentityHeader({
 }) {
   const [copied, setCopied] = useState(false);
   const hasAddress = wallet.startsWith("0x");
-  const nameIsAddress = name.startsWith("0x");
-  const displayName = nameIsAddress && hasAddress ? shortWallet(wallet) : name;
-  const walletLabel = !hasAddress
-    ? wallet
-    : nameIsAddress
-      ? "Copy address"
-      : shortWallet(wallet);
-  const showWallet = Boolean(walletLabel) && walletLabel !== displayName;
+  const nameIsAddress =
+    name.startsWith("0x") ||
+    (hasAddress && (name === shortWallet(wallet) || name === wallet));
+  // Title is always a username/handle — never the raw truncated address.
+  const displayName =
+    nameIsAddress && hasAddress ? feedHandle(wallet) : name || "You";
+  const walletShort = hasAddress ? shortWallet(wallet) : wallet.trim();
+  const showWallet = Boolean(walletShort) && walletShort !== displayName;
 
   useEffect(() => {
     if (!copied) return;
@@ -4779,8 +4781,13 @@ function ProfileIdentityHeader({
   };
 
   return (
-    <div>
-      <div className="flex items-start justify-between gap-3">
+    <div className="relative">
+      {trailing ? (
+        <div className="absolute right-0 top-0 z-[1] flex shrink-0 items-center gap-1">
+          {trailing}
+        </div>
+      ) : null}
+      <div className="flex flex-col items-center text-center">
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -4791,36 +4798,34 @@ function ProfileIdentityHeader({
         ) : (
           <UserAvatar seed={seed} label={name} className="h-16 w-16 text-[18px]" />
         )}
-        {trailing ? (
-          <div className="flex shrink-0 items-center gap-1">{trailing}</div>
+        <p
+          ref={nameRef as RefObject<HTMLParagraphElement>}
+          className="mt-3 max-w-full truncate text-[24px] font-semibold leading-tight tracking-[-0.03em]"
+        >
+          {displayName}
+        </p>
+        {showWallet ? (
+          <button
+            type="button"
+            onClick={() => void copyWallet()}
+            aria-label={copied ? "Address copied" : "Copy wallet address"}
+            className="mt-1 inline-flex items-center gap-1.5 text-[13px] tabular-nums text-white/45 transition-colors hover:text-white/70"
+          >
+            {copied ? "Copied" : walletShort}
+            {hasAddress && !copied ? (
+              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" aria-hidden>
+                <rect x="5" y="5" width="8" height="8" rx="2" stroke="currentColor" strokeWidth="1.4" />
+                <path
+                  d="M3 10.5V4.5A1.5 1.5 0 0 1 4.5 3h6"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                />
+              </svg>
+            ) : null}
+          </button>
         ) : null}
       </div>
-      <p
-        ref={nameRef as RefObject<HTMLParagraphElement>}
-        className="mt-3 truncate text-[24px] font-semibold leading-tight tracking-[-0.03em]"
-      >
-        {displayName}
-      </p>
-      {showWallet ? (
-        <button
-          type="button"
-          onClick={() => void copyWallet()}
-          className="mt-1 inline-flex items-center gap-1.5 text-[13px] tabular-nums text-white/45 transition-colors hover:text-white/70"
-        >
-          {copied ? "Copied" : walletLabel}
-          {hasAddress && !copied ? (
-            <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" aria-hidden>
-              <rect x="5" y="5" width="8" height="8" rx="2" stroke="currentColor" strokeWidth="1.4" />
-              <path
-                d="M3 10.5V4.5A1.5 1.5 0 0 1 4.5 3h6"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-              />
-            </svg>
-          ) : null}
-        </button>
-      ) : null}
     </div>
   );
 }
@@ -5232,6 +5237,50 @@ function FeedItemSkeleton() {
   );
 }
 
+const SEARCH_PLACEHOLDER_WORDS = ["markets", "traders"] as const;
+
+/** "Search markets/traders" — rotating noun with a soft vertical crossfade. */
+function SearchPlaceholderHint({ active }: { active: boolean }) {
+  const [wordIndex, setWordIndex] = useState(0);
+
+  useEffect(() => {
+    if (!active) return;
+    const id = window.setInterval(() => {
+      setWordIndex((prev) => (prev + 1) % SEARCH_PLACEHOLDER_WORDS.length);
+    }, 3000);
+    return () => window.clearInterval(id);
+  }, [active]);
+
+  const word = SEARCH_PLACEHOLDER_WORDS[wordIndex]!;
+
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute inset-0 flex items-center text-[14px] text-white/35"
+    >
+      <span className="whitespace-pre">Search </span>
+      <span className="relative inline-grid overflow-hidden leading-none">
+        {/* Reserve width for the longer word so the field doesn't jump. */}
+        <span className="invisible col-start-1 row-start-1 whitespace-nowrap">
+          markets
+        </span>
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.span
+            key={word}
+            initial={{ y: "55%", opacity: 0 }}
+            animate={{ y: "0%", opacity: 1 }}
+            exit={{ y: "-55%", opacity: 0 }}
+            transition={{ duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
+            className="col-start-1 row-start-1 whitespace-nowrap"
+          >
+            {word}
+          </motion.span>
+        </AnimatePresence>
+      </span>
+    </span>
+  );
+}
+
 function FeedPlayIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" className={className} aria-hidden>
@@ -5515,6 +5564,9 @@ export default function Api({
     embed ? false : SHOW_ONBOARDING,
   );
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
+  /** Where Back goes when own profile was opened from a non-tab entry point. */
+  const [profileReturnSection, setProfileReturnSection] =
+    useState<Exclude<SectionId, "profile">>("explore");
   const [profileSubScreen, setProfileSubScreen] =
     useState<ProfileSubScreen | null>(null);
   const [tradeFlowMarket, setTradeFlowMarket] =
@@ -5533,6 +5585,7 @@ export default function Api({
     handle: string;
   } | null>(null);
   const [depositOpen, setDepositOpen] = useState(false);
+  const [howToEarnOpen, setHowToEarnOpen] = useState(false);
   const [sharePosition, setSharePosition] =
     useState<SharePositionPayload | null>(null);
   const [followList, setFollowList] = useState<{
@@ -6332,7 +6385,33 @@ export default function Api({
     setTradeFlowOutcome(null);
     setProfileSubScreen(null);
     setProfileTab("copying");
+    setProfileReturnSection(
+      section === "profile" ? profileReturnSection : section,
+    );
     setSection("profile");
+  };
+
+  const openOwnProfile = (
+    from: Exclude<SectionId, "profile"> = section === "profile"
+      ? profileReturnSection
+      : section,
+  ) => {
+    setSelectedWallet(null);
+    setWalletLabel(null);
+    setSelectedListId(null);
+    setSelectedMarketSlug(null);
+    setSelectedMarket(null);
+    setFeedPositionTrade(null);
+    setProfileSubScreen(null);
+    setCopyTradeTarget(null);
+    setPositionsOpen(false);
+    setProfileReturnSection(from);
+    setSection("profile");
+  };
+
+  const backFromOwnProfile = () => {
+    setProfileSubScreen(null);
+    setSection(profileReturnSection);
   };
 
   const completeOnboarding = (username: string | null) => {
@@ -6471,14 +6550,31 @@ export default function Api({
     if (!showingDrillDown && !showingProfileSubScreen) {
       scrollStackRef.current = [];
     }
+    // Pulse is a live chat — always land on the newest messages.
+    const pinPulseBottom = section === "feed" && !showingDrillDown;
     const apply = () => {
-      el.scrollTop = restore?.outer ?? 0;
-      const feed = feedSnapRef.current;
-      if (feed && restore) feed.scrollTop = restore.feed;
+      if (pinPulseBottom) {
+        el.scrollTop = el.scrollHeight;
+        return;
+      }
+      if (restore) {
+        el.scrollTop = restore.outer;
+        const feed = feedSnapRef.current;
+        if (feed) feed.scrollTop = restore.feed;
+        return;
+      }
+      el.scrollTop = 0;
     };
     apply();
-    const id = window.requestAnimationFrame(apply);
-    return () => window.cancelAnimationFrame(id);
+    let id2 = 0;
+    const id1 = window.requestAnimationFrame(() => {
+      apply();
+      id2 = window.requestAnimationFrame(apply);
+    });
+    return () => {
+      window.cancelAnimationFrame(id1);
+      if (id2) window.cancelAnimationFrame(id2);
+    };
     // Only navigation should reset or restore scroll.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -6487,6 +6583,7 @@ export default function Api({
     selectedWallet,
     selectedListId,
     profileSubScreen,
+    showingDrillDown,
   ]);
 
   const stickyTitle = showingMarketDetail
@@ -6498,12 +6595,14 @@ export default function Api({
       : showingOwnProfile
         ? (profileUsername ??
           demoProfile?.displayName ??
-          (demoProfile?.wallet ? shortWallet(demoProfile.wallet) : null))
+          (demoProfile?.wallet ? feedHandle(demoProfile.wallet) : null))
         : section === "feed" && !showingDrillDown
           ? "Pulse"
           : section === "search" && !showingDrillDown
             ? "Search"
-            : null;
+            : section === "rewards" && !showingDrillDown
+              ? "Rewards"
+              : null;
 
   const pulseStickyAlways =
     section === "feed" && !showingDrillDown && stickyTitle === "Pulse";
@@ -6742,6 +6841,19 @@ export default function Api({
     return "invite";
   }, [demoProfile?.wallet, profileUsername]);
 
+  const shareRewards = async () => {
+    const text = `Join me on Worm — earn rewards: https://worm.wtf/r/${referralCode}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Worm Rewards", text });
+        return;
+      }
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // User cancelled the share sheet, or clipboard is unavailable.
+    }
+  };
+
   const walletBackLabel = selectedListId
     ? (listDetail?.name ?? "List")
     : selectedMarketSlug
@@ -6773,7 +6885,19 @@ export default function Api({
         ? { onClick: backFromMarket, label: `Back to ${marketBackLabel}` }
         : showingProfileSubScreen
           ? { onClick: backFromProfileSubScreen, label: "Back to profile" }
-          : null;
+          : showingOwnProfile
+            ? {
+                onClick: backFromOwnProfile,
+                label:
+                  profileReturnSection === "rewards"
+                    ? "Back to Rewards"
+                    : profileReturnSection === "feed"
+                      ? "Back to Pulse"
+                      : profileReturnSection === "search"
+                        ? "Back to Search"
+                        : "Back",
+              }
+            : null;
 
   const copiedOpenPnl = useMemo(
     () =>
@@ -7025,14 +7149,13 @@ export default function Api({
   ]);
 
   useEffect(() => {
-    if (section !== "feed" || showingDrillDown || !feedLivePlaying) return;
+    if (section !== "feed" || showingDrillDown) return;
     const scroller = scrollRef.current;
-    if (!scroller) return;
-    // Scroll the list end above the floating Live + tab bar (paddingBottom),
-    // not merely into the raw viewport bottom under those overlays.
+    if (!scroller || liveFeedItems.length === 0) return;
+    // Instant on entry / when paused; smooth while Live appends new takes.
     scroller.scrollTo({
       top: scroller.scrollHeight,
-      behavior: "smooth",
+      behavior: feedLivePlaying ? "smooth" : "auto",
     });
   }, [liveFeedItems, section, showingDrillDown, feedLivePlaying]);
 
@@ -7540,28 +7663,34 @@ export default function Api({
 
   const exploreHeader = (
     <header className="mb-4 shrink-0 pt-2">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <button
           type="button"
-          onClick={() => handleSectionChange("profile")}
-          className="min-w-0 text-left"
+          onClick={() => openOwnProfile("explore")}
+          className="flex min-w-0 items-center gap-3 text-left"
           aria-label="Open profile"
         >
-          <p
-            className={`text-[32px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSans.className}`}
-          >
-            {demoProfileStatus === "loading" ? (
-              "—"
-            ) : (
-              <BalanceFlow
-                value={profileBalance}
-                fractionClassName="text-white/40"
-              />
-            )}
-          </p>
-          {demoProfileStatus === "ready" && exploreHeaderPnl !== null && (
+          <UserAvatar
+            seed={demoProfile?.wallet ?? profileUsername ?? "you"}
+            label={profileUsername ?? "You"}
+            className="h-10 w-10 shrink-0"
+          />
+          <div className="min-w-0">
+            <p
+              className={`text-[24px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSans.className}`}
+            >
+              {demoProfileStatus === "loading" ? (
+                "—"
+              ) : (
+                <BalanceFlow
+                  value={profileBalance}
+                  fractionClassName="text-white/40"
+                />
+              )}
+            </p>
+            {demoProfileStatus === "ready" && exploreHeaderPnl !== null && (
               <p
-                className={`mt-1.5 inline-flex items-baseline gap-1 text-[13px] font-semibold tabular-nums ${
+                className={`mt-0.5 inline-flex items-baseline gap-1 text-[13px] font-semibold tabular-nums ${
                   exploreHeaderPnl > 0
                     ? "text-[#00D54B]"
                     : "text-white/45"
@@ -7576,11 +7705,12 @@ export default function Api({
                 ) : null}
               </p>
             )}
+          </div>
         </button>
         <button
           type="button"
           onClick={() => setDepositOpen(true)}
-          className="mt-1 shrink-0 rounded-full bg-white/[0.1] px-5 py-2.5 text-[14px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_0_0_1px_rgba(255,255,255,0.08)] transition-opacity hover:opacity-90"
+          className="shrink-0 rounded-full bg-white/[0.1] px-5 py-2.5 text-[14px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_0_0_1px_rgba(255,255,255,0.08)] transition-opacity hover:opacity-90"
         >
           Deposit
         </button>
@@ -7791,15 +7921,21 @@ export default function Api({
                 <span className="shrink-0">
                   <SearchTabIcon active={false} />
                 </span>
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search markets"
-                  className="min-w-0 flex-1 bg-transparent text-[14px] text-white outline-none placeholder:text-white/35"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
+                <span className="relative min-w-0 flex-1">
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    aria-label="Search markets or traders"
+                    placeholder=""
+                    className="relative z-[1] w-full bg-transparent text-[14px] text-white outline-none"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  {!searchQuery.trim() && (
+                    <SearchPlaceholderHint active={section === "search"} />
+                  )}
+                </span>
               </label>
             </header>
           ) : section === "profile" ? (
@@ -7812,7 +7948,7 @@ export default function Api({
                     : (profileUsername ??
                       demoProfile?.displayName ??
                       (demoProfile?.wallet
-                        ? shortWallet(demoProfile.wallet)
+                        ? feedHandle(demoProfile.wallet)
                         : "You"))
                 }
                 wallet={
@@ -7875,17 +8011,12 @@ export default function Api({
                   Trending
                 </h3>
                 <ul className="overflow-hidden rounded-[20px] bg-white/[0.08] ring-1 ring-white/[0.06]">
-                  {searchTrendingRows.map((row, index) => (
-                    <li
-                      key={row.market.marketId}
-                      className={
-                        index > 0 ? "border-t border-white/[0.06]" : undefined
-                      }
-                    >
+                  {searchTrendingRows.map((row) => (
+                    <li key={row.market.marketId}>
                       <button
                         type="button"
                         onClick={() => openMarket(row.market)}
-                        className="flex w-full items-start justify-between gap-3 px-4 py-3.5 text-left"
+                        className="flex w-full items-start justify-between gap-3 px-4 py-2.5 text-left"
                       >
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[15px] font-semibold leading-snug text-white">
@@ -8079,6 +8210,18 @@ export default function Api({
                 )}
               </div>
             </div>
+          )}
+
+          {section === "rewards" && !showingDrillDown && (
+            <RewardsScreen
+              username={profileUsername}
+              wallet={demoProfile?.wallet ?? null}
+              points={0}
+              titleRef={stickyTitleRef}
+              onOpenProfile={() => openOwnProfile("rewards")}
+              onShare={() => void shareRewards()}
+              onOpenHowToEarn={() => setHowToEarnOpen(true)}
+            />
           )}
 
           {section === "feed" && !showingDrillDown && (
@@ -9123,6 +9266,7 @@ export default function Api({
           !depositOpen &&
           !sharePosition &&
           !followList &&
+          !howToEarnOpen &&
           !positionsOpen &&
           !onboardingOpen && (
           <>
@@ -9183,25 +9327,32 @@ export default function Api({
                   aria-label={
                     feedLivePlaying ? "Pause live pulse" : "Play live pulse"
                   }
-                  className="pointer-events-auto inline-flex h-10 items-center gap-1.5 rounded-full bg-white/[0.12] px-4 text-[13px] font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:bg-white/[0.18]"
+                  style={{ width: feedLivePlaying ? 79 : 99 }}
+                  className="pointer-events-auto inline-flex h-10 shrink-0 items-center justify-center gap-1.5 overflow-hidden rounded-full bg-white/[0.12] text-[13px] font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md hover:bg-white/[0.18] motion-safe:!transition-[width,background-color] motion-safe:!duration-200 motion-safe:!ease-[cubic-bezier(0.32,0.72,0,1)]"
                 >
                   {feedLivePlaying ? (
-                    <FeedPauseIcon className="h-4 w-4" />
+                    <FeedPauseIcon className="h-4 w-4 shrink-0" />
                   ) : (
-                    <FeedPlayIcon className="h-4 w-4" />
+                    <FeedPlayIcon className="h-4 w-4 shrink-0" />
                   )}
-                  {feedLivePlaying ? "Live" : "Paused"}
+                  <span className="whitespace-nowrap">
+                    {feedLivePlaying ? "Live" : "Paused"}
+                  </span>
                 </button>
               </div>
             )}
             <TabBar
-              activeTab={positionsOpen ? "positions" : section}
+              activeTab={
+                positionsOpen
+                  ? "positions"
+                  : section === "profile"
+                    ? null
+                    : section
+              }
               onChange={handleSectionChange}
               positionCount={profilePositionCount}
               positionsPnl={profilePositionsPnl}
               positionsInvested={profilePositionsInvested}
-              profileSeed={demoProfile?.wallet ?? profileUsername ?? null}
-              profileLabel={profileUsername}
               compact={isExploreFeed && feedPastHero}
             />
           </>
@@ -9415,6 +9566,9 @@ export default function Api({
             onOpenWallet={openWallet}
             onClose={() => setFollowList(null)}
           />
+        )}
+        {howToEarnOpen && (
+          <HowToEarnSheet onClose={() => setHowToEarnOpen(false)} />
         )}
       </article>
     </div>

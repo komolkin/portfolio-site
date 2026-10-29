@@ -310,7 +310,7 @@ export default function TradePost({
             )}
           </button>
         ) : null}
-        <p className="min-w-0 flex-1 text-[16px] leading-[1.35] text-white">
+        <p className="min-w-0 flex-1 text-[14px] leading-[1.35] text-white">
           <button
             type="button"
             onClick={(event) => {
