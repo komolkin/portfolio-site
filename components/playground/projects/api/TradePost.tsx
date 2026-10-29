@@ -24,6 +24,13 @@ function formatUsdPrecise(value: number): string {
   })}`;
 }
 
+/** Full dollar amount with commas — no K/M shortening. */
+function formatUsdFull(value: number): string {
+  const abs = Math.abs(value);
+  const sign = value < 0 ? "-" : "";
+  return `${sign}$${Math.round(abs).toLocaleString("en-US")}`;
+}
+
 function formatSignedUsdCompact(value: number): string {
   const abs = Math.abs(value);
   const core =
@@ -324,15 +331,15 @@ export default function TradePost({
           <span className="text-white/55">
             just {move.isBuy ? "bought" : "sold"}
           </span>{" "}
-          <span className="font-semibold tabular-nums text-white">
-            {formatUsdPrecise(trade.amountUsd)}
-          </span>
-          <br />
           <span className="font-semibold" style={{ color: tint }}>
             {outcomeLabel}
+          </span>
+          <br />
+          <span className="font-semibold tabular-nums text-white">
+            {formatUsdFull(trade.amountUsd)}
           </span>{" "}
           <span className="text-white/55">
-            at {formatOddsPercent(trade.price)}.
+            at {formatOddsPercent(trade.price)}
           </span>
         </p>
       </div>
