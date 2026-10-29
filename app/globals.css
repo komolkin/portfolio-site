@@ -904,45 +904,47 @@ body > * {
   z-index: 1;
 }
 
-@keyframes api-positions-up-blink {
+/* Soft color glow for the Positions count — blur blobs survive LiquidGlass better than inset shadows. */
+@keyframes api-positions-up-glow {
   0%,
   100% {
-    box-shadow: inset 0 0 8px #1f8f45;
-    opacity: 0.45;
+    opacity: 0.35;
+    transform: scale(0.92);
   }
   50% {
-    box-shadow: inset 0 0 14px #3db86a;
     opacity: 0.7;
+    transform: scale(1.05);
   }
 }
 
-/* Mostly quiet; a brief red flash only every ~9s */
-@keyframes api-positions-down-blink {
+/* Mostly quiet; a brief red pulse only every ~9s */
+@keyframes api-positions-down-glow {
   0%,
   88%,
   100% {
-    box-shadow: inset 0 0 0 transparent;
-    opacity: 0;
+    opacity: 0.12;
+    transform: scale(0.9);
   }
   91%,
   94% {
-    box-shadow: inset 0 0 16px #c44a52;
-    opacity: 0.65;
+    opacity: 0.62;
+    transform: scale(1.08);
   }
 }
 
-.api-positions-up-blink {
-  animation: api-positions-up-blink 2.8s ease-in-out infinite;
+.api-positions-up-glow {
+  animation: api-positions-up-glow 2.8s ease-in-out infinite;
 }
 
-.api-positions-down-blink {
-  animation: api-positions-down-blink 9s ease-in-out infinite;
+.api-positions-down-glow {
+  animation: api-positions-down-glow 9s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .api-positions-up-blink,
-  .api-positions-down-blink {
+  .api-positions-up-glow,
+  .api-positions-down-glow {
     animation: none;
+    opacity: 0.45;
   }
 }
 
