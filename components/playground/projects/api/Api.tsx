@@ -278,7 +278,7 @@ function seedPnlHistory(endValue: number, salt = 0): LivelinePoint[] {
 }
 
 const LEADERBOARD_CATEGORY_OPTIONS = [
-  { id: "all", label: "All categories" },
+  { id: "all", label: "All" },
   { id: "sports", label: "Sports" },
   { id: "crypto", label: "Crypto" },
   { id: "politics", label: "Politics" },
@@ -302,12 +302,18 @@ const DEMO_LIVE_MARKET_ID = "demo-live-lal-bos";
 const DEMO_F1_MARKET_ID = "demo-f1-ver-nor";
 const DEMO_MLB_MARKET_ID = "demo-mlb-tb-mil";
 const DEMO_EPL_MARKET_ID = "demo-epl-mci-ars";
+const DEMO_TREND_BTC_ID = "demo-trend-btc-81500";
+const DEMO_TREND_FED_HIKE_ID = "demo-trend-fed-hike";
+const DEMO_TREND_FED_FUNDS_ID = "demo-trend-fed-funds";
 
 const DEMO_MARKET_IDS = new Set([
   DEMO_LIVE_MARKET_ID,
   DEMO_F1_MARKET_ID,
   DEMO_MLB_MARKET_ID,
   DEMO_EPL_MARKET_ID,
+  DEMO_TREND_BTC_ID,
+  DEMO_TREND_FED_HIKE_ID,
+  DEMO_TREND_FED_FUNDS_ID,
 ]);
 
 function isDemoMarketId(id: string | null | undefined): boolean {
@@ -617,6 +623,102 @@ function createDemoEplMarket(): PolymarketMarketData {
     teams: [city, arsenal],
     rules:
       "This market will resolve to the team that wins this Premier League match in regulation time, including stoppage time.\n\nIf the match ends in a draw, the market resolves to No for both teams. The resolution source is the official Premier League match report.",
+  };
+}
+
+/** Search-tab Trending rows — crypto/politics movers matching the product reference. */
+function createSearchTrendingDemos(): PolymarketMarketData[] {
+  const row = (
+    id: string,
+    title: string,
+    outcome: string,
+    price: number,
+    change: number,
+    category: string,
+  ): PolymarketMarketData => ({
+    marketId: id,
+    title,
+    slug: id,
+    category,
+    yesPrice: price,
+    noPrice: Math.max(0.01, 1 - price),
+    volumeUsd: 1_200_000,
+    volume24h: 340_000,
+    liquidityUsd: 90_000,
+    image: null,
+    closesAt: null,
+    isResolved: false,
+    price24hChange: change,
+    groupItemTitle: outcome,
+    outcomes: [
+      { label: outcome, price, marketId: id, slug: id },
+      {
+        label: "No",
+        price: Math.max(0.01, 1 - price),
+        marketId: id,
+        slug: id,
+      },
+    ],
+    relatedMarketCount: 1,
+    rules: null,
+  });
+
+  return [
+    row(
+      DEMO_TREND_BTC_ID,
+      "BTC price tomorrow at 5pm EDT?",
+      "$81,500 or above",
+      0.46,
+      0.14,
+      "Crypto",
+    ),
+    row(
+      DEMO_TREND_FED_HIKE_ID,
+      "Fed decision in December?",
+      "Hike 25bps",
+      0.77,
+      0.02,
+      "Politics",
+    ),
+    row(
+      DEMO_TREND_FED_FUNDS_ID,
+      "Fed funds rate at end of 2027",
+      "Above 4.25%",
+      0.52,
+      0.23,
+      "Politics",
+    ),
+  ];
+}
+
+type SearchTrendingRow = {
+  market: PolymarketMarketData;
+  outcome: string;
+  chance: number;
+  changePts: number;
+  up: boolean;
+};
+
+function searchTrendingRow(market: PolymarketMarketData): SearchTrendingRow {
+  const top =
+    [...(market.outcomes ?? [])].sort((a, b) => b.price - a.price)[0] ?? null;
+  const chance = Math.round(
+    Math.max(0, Math.min(1, top?.price ?? market.yesPrice)) * 100,
+  );
+  const changeRaw = market.price24hChange;
+  const changePts =
+    changeRaw != null
+      ? Math.max(1, Math.round(Math.abs(changeRaw) * 100))
+      : 2 + (hashString(market.marketId) % 22);
+  return {
+    market,
+    outcome:
+      market.groupItemTitle?.trim() ||
+      top?.label?.trim() ||
+      "Yes",
+    chance,
+    changePts,
+    up: changeRaw == null ? true : changeRaw >= 0,
   };
 }
 
@@ -6308,6 +6410,12 @@ export default function Api({
       ? [featured, f1, epl, ...rest, mlb]
       : [f1, epl, ...rest, mlb];
   }, [liveMarkets, trendingMarkets]);
+
+  const searchTrendingRows = useMemo(
+    () => createSearchTrendingDemos().map(searchTrendingRow),
+    [],
+  );
+
   useEffect(() => {
     const el = exploreHeaderRef.current;
     if (!isExploreFeed || !el) return;
@@ -7762,21 +7870,72 @@ export default function Api({
 
           {section === "search" && !showingDrillDown && (
             <div className="flex flex-col gap-6">
-              <section aria-label="Top performers">
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center gap-4">
-                    <FilterDropdown
-                      ariaLabel="Leaderboard category"
-                      value={leaderboardCategory}
-                      onChange={setLeaderboardCategory}
-                      options={LEADERBOARD_CATEGORY_OPTIONS}
-                    />
-                    <FilterDropdown
-                      ariaLabel="Leaderboard period"
-                      value={leaderboardPeriod}
-                      onChange={setLeaderboardPeriod}
-                      options={LEADERBOARD_PERIOD_OPTIONS}
-                    />
+              <section aria-label="Trending">
+                <h3 className="mb-3 text-[18px] font-semibold tracking-[-0.02em] text-white">
+                  Trending
+                </h3>
+                <ul className="overflow-hidden rounded-[20px] bg-white/[0.08] ring-1 ring-white/[0.06]">
+                  {searchTrendingRows.map((row, index) => (
+                    <li
+                      key={row.market.marketId}
+                      className={
+                        index > 0 ? "border-t border-white/[0.06]" : undefined
+                      }
+                    >
+                      <button
+                        type="button"
+                        onClick={() => openMarket(row.market)}
+                        className="flex w-full items-start justify-between gap-3 px-4 py-3.5 text-left"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[15px] font-semibold leading-snug text-white">
+                            {row.market.title}
+                          </p>
+                          <p className="mt-0.5 truncate text-[13px] leading-snug text-white/45">
+                            {row.outcome}
+                          </p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p
+                            className={`text-[15px] font-semibold tabular-nums leading-none text-white ${instrumentSans.className}`}
+                          >
+                            {row.chance}%
+                          </p>
+                          <p
+                            className={`mt-1 inline-flex items-center gap-0.5 text-[12px] font-semibold tabular-nums leading-none ${
+                              row.up ? "text-[#00D54B]" : "text-[#FF375F]"
+                            }`}
+                          >
+                            <span aria-hidden>{row.up ? "▲" : "▼"}</span>
+                            {row.changePts}
+                          </p>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              <section aria-label="Top traders">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="min-w-0 shrink text-[18px] font-semibold tracking-[-0.02em] text-white">
+                      Top traders
+                    </h3>
+                    <div className="flex shrink-0 items-center gap-4">
+                      <FilterDropdown
+                        ariaLabel="Leaderboard category"
+                        value={leaderboardCategory}
+                        onChange={setLeaderboardCategory}
+                        options={LEADERBOARD_CATEGORY_OPTIONS}
+                      />
+                      <FilterDropdown
+                        ariaLabel="Leaderboard period"
+                        value={leaderboardPeriod}
+                        onChange={setLeaderboardPeriod}
+                        options={LEADERBOARD_PERIOD_OPTIONS}
+                      />
+                    </div>
                   </div>
 
                   {leaderboardStatus === "loading" && (
@@ -7810,15 +7969,16 @@ export default function Api({
                           return (
                             <li key={wallet.wallet}>
                               <ActivityRow
+                                compact
                                 leading={
-                                  <div className="flex items-center gap-2.5">
+                                  <div className="flex items-center gap-2">
                                     <RankBadge rank={index + 1} />
                                     <UserAvatar
                                       seed={wallet.wallet}
                                       label={
                                         wallet.displayName ?? wallet.wallet
                                       }
-                                      className="h-11 w-11 text-[13px]"
+                                      className="h-9 w-9 text-[12px]"
                                     />
                                   </div>
                                 }

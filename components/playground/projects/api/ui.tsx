@@ -401,15 +401,18 @@ export function ActivityRow({
   subtitle,
   trailing,
   onClick,
+  compact = false,
 }: {
   leading: ReactNode;
   title: string;
   subtitle?: string;
   trailing?: ReactNode;
   onClick?: () => void;
+  compact?: boolean;
 }) {
-  const className =
-    "flex w-full items-center gap-3 px-0 py-3.5 text-left";
+  const className = `flex w-full items-center gap-3 px-0 text-left ${
+    compact ? "py-2" : "py-3.5"
+  }`;
   const body = (
     <>
       <div className="shrink-0">{leading}</div>
