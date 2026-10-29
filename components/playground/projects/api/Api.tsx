@@ -108,7 +108,7 @@ const IOS_STATUS_BLEED = "-mt-[52px]";
 const IOS_CHROME_TOP = "top-12";
 
 const PROFILE_BALANCE = 1_347;
-const MARKET_PAGE_BG = "#111113";
+const MARKET_PAGE_BG = "#000000";
 /** Feed edges fade over 24px; snap pages pad 24px so resting cards stay fully opaque. */
 const FEED_EDGE_MASK =
   "linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.35) 8px, rgba(0,0,0,0.8) 16px, #000 24px, #000 calc(100% - 24px), rgba(0,0,0,0.8) calc(100% - 16px), rgba(0,0,0,0.35) calc(100% - 8px), transparent 100%)";
@@ -302,6 +302,17 @@ const DEMO_LIVE_MARKET_ID = "demo-live-lal-bos";
 const DEMO_F1_MARKET_ID = "demo-f1-ver-nor";
 const DEMO_MLB_MARKET_ID = "demo-mlb-tb-mil";
 const DEMO_EPL_MARKET_ID = "demo-epl-mci-ars";
+
+const DEMO_MARKET_IDS = new Set([
+  DEMO_LIVE_MARKET_ID,
+  DEMO_F1_MARKET_ID,
+  DEMO_MLB_MARKET_ID,
+  DEMO_EPL_MARKET_ID,
+]);
+
+function isDemoMarketId(id: string | null | undefined): boolean {
+  return Boolean(id && DEMO_MARKET_IDS.has(id));
+}
 
 const F1_VERSTAPPEN_HEADSHOT =
   "https://a.espncdn.com/i/headshots/rpm/players/full/4665.png";
@@ -5390,6 +5401,11 @@ export default function Api({
   >([]);
   const liveFeedCursorRef = useRef(0);
   const liveFeedBottomRef = useRef<HTMLDivElement | null>(null);
+  const [marketPulseItems, setMarketPulseItems] = useState<
+    Array<TradePostTrade & { liveId: string }>
+  >([]);
+  const marketPulseCursorRef = useRef(0);
+  const marketPulseSlugRef = useRef<string | null>(null);
   const [followedWallets, setFollowedWallets] = useState<Set<string>>(
     () => new Set(),
   );
@@ -5997,6 +6013,13 @@ export default function Api({
       return;
     }
 
+    // Local demo markets must not be replaced by Polymarket title search —
+    // that swap changes slug/title and drops "Your position" after ~1s.
+    if (isDemoMarketId(selectedMarketSlug)) {
+      setMarketStatus("ready");
+      return;
+    }
+
     const controller = new AbortController();
     const slug = selectedMarketSlug;
     const requestedTitle = selectedMarket?.title ?? null;
@@ -6052,6 +6075,13 @@ export default function Api({
     }
 
     setMarketDetailTab("trades");
+
+    if (isDemoMarketId(selectedMarketSlug)) {
+      setMarketActivity({ trades: [], traders: [] });
+      setMarketActivityStatus("ready");
+      return;
+    }
+
     const controller = new AbortController();
     const slug = selectedMarketSlug;
     const requestedTitle = selectedMarket?.title ?? null;
@@ -6363,7 +6393,9 @@ export default function Api({
           (demoProfile?.wallet ? shortWallet(demoProfile.wallet) : null))
         : section === "feed" && !showingDrillDown
           ? "Pulse"
-          : null;
+          : section === "search" && !showingDrillDown
+            ? "Search"
+            : null;
 
   const pulseStickyAlways =
     section === "feed" && !showingDrillDown && stickyTitle === "Pulse";
@@ -6960,21 +6992,33 @@ export default function Api({
   );
 
   const marketUserPosition = useMemo(() => {
-    if (!selectedMarket) return null;
-    const slug = (selectedMarket.slug || selectedMarket.marketId).toLowerCase();
-    const title = selectedMarket.title.trim().toLowerCase();
+    if (!selectedMarket && !selectedMarketSlug) return null;
+    const openSlug = (selectedMarketSlug ?? "").toLowerCase();
+    const slug = (
+      selectedMarket?.slug ||
+      selectedMarket?.marketId ||
+      openSlug
+    ).toLowerCase();
+    const marketId = (selectedMarket?.marketId ?? "").toLowerCase();
+    const title = (selectedMarket?.title ?? "").trim();
     return (
       userTrades.find((item) => {
         if (item.cashedOut) return false;
+        if (item.trade.side.toUpperCase() === "SELL") return false;
         const itemSlug = (item.trade.marketSlug ?? "").toLowerCase();
-        const itemTitle = item.trade.marketTitle.trim().toLowerCase();
+        const itemTitle = item.trade.marketTitle.trim();
         return (
-          (itemSlug && (itemSlug === slug || itemSlug === selectedMarket.marketId.toLowerCase())) ||
-          itemTitle === title
+          (itemSlug &&
+            (itemSlug === slug ||
+              itemSlug === marketId ||
+              (openSlug && itemSlug === openSlug))) ||
+          (title &&
+            (itemTitle.toLowerCase() === title.toLowerCase() ||
+              titlesClose(itemTitle, title)))
         );
       }) ?? null
     );
-  }, [selectedMarket, userTrades]);
+  }, [selectedMarket, selectedMarketSlug, userTrades]);
 
   const marketFeedTrades = useMemo(() => {
     if (!selectedMarket) return [];
@@ -7010,6 +7054,120 @@ export default function Api({
       });
     return [...userOnes, ...apiOnes];
   }, [demoProfile?.wallet, marketActivity, selectedMarket, userTrades]);
+
+  const marketPulsePool = useMemo(() => {
+    if (!selectedMarket) return [];
+    const slugKey = selectedMarket.slug || selectedMarket.marketId;
+    const fromMarket = marketFeedTrades;
+    const fromGlobal = trades.filter((trade) => {
+      const itemSlug = (trade.marketSlug ?? "").toLowerCase();
+      const itemTitle = trade.marketTitle.trim().toLowerCase();
+      return (
+        itemSlug === slugKey.toLowerCase() ||
+        itemTitle === selectedMarket.title.trim().toLowerCase()
+      );
+    });
+    let merged = fromMarket.length > 0 ? fromMarket : fromGlobal;
+    // Sparse markets: remix the global Pulse pool onto this market so the
+    // stream still feels live (outcomes stay market-local).
+    if (merged.length < 4 && feedTrades.length > 0) {
+      const sides = getMarketOddsSides(selectedMarket);
+      const remixed = feedTrades.slice(0, 24).map((trade, index) => {
+        const side = sides[index % Math.max(1, sides.length)] ?? sides[0];
+        return {
+          ...trade,
+          marketTitle: selectedMarket.title,
+          marketSlug: slugKey,
+          marketCategory: selectedMarket.category,
+          outcome: side?.label ?? trade.outcome,
+          price: side?.price ?? trade.price,
+          marketImage: undefined,
+        } satisfies TradePostTrade;
+      });
+      merged = [...merged, ...remixed];
+    }
+    return expandFeedTrades(merged, `market-${slugKey}`, 48);
+  }, [feedTrades, marketFeedTrades, selectedMarket, trades]);
+
+  // Market-page Pulse: seed + prepend new takes at the top.
+  useEffect(() => {
+    if (!showingMarketDetail || !selectedMarketSlug) {
+      setMarketPulseItems([]);
+      marketPulseCursorRef.current = 0;
+      marketPulseSlugRef.current = null;
+      return;
+    }
+    if (marketPulsePool.length === 0) {
+      if (marketPulseSlugRef.current !== selectedMarketSlug) {
+        setMarketPulseItems([]);
+        marketPulseCursorRef.current = 0;
+        marketPulseSlugRef.current = selectedMarketSlug;
+      }
+      return;
+    }
+    if (marketPulseSlugRef.current !== selectedMarketSlug) {
+      marketPulseSlugRef.current = selectedMarketSlug;
+      const seedCount = Math.min(6, marketPulsePool.length);
+      marketPulseCursorRef.current = seedCount;
+      setMarketPulseItems(
+        marketPulsePool.slice(0, seedCount).map((trade, index) => ({
+          ...trade,
+          liveId: `mseed-${selectedMarketSlug}-${index}`,
+        })),
+      );
+      return;
+    }
+    setMarketPulseItems((prev) => {
+      if (prev.length > 0) return prev;
+      const seedCount = Math.min(6, marketPulsePool.length);
+      marketPulseCursorRef.current = seedCount;
+      return marketPulsePool.slice(0, seedCount).map((trade, index) => ({
+        ...trade,
+        liveId: `mseed-${selectedMarketSlug}-${index}`,
+      }));
+    });
+  }, [showingMarketDetail, selectedMarketSlug, marketPulsePool]);
+
+  useEffect(() => {
+    if (
+      !showingMarketDetail ||
+      marketDetailTab !== "trades" ||
+      feedPositionTrade ||
+      marketPulsePool.length === 0
+    ) {
+      return;
+    }
+
+    const pushNext = () => {
+      const index = marketPulseCursorRef.current % marketPulsePool.length;
+      const base = marketPulsePool[index]!;
+      marketPulseCursorRef.current += 1;
+      const n = marketPulseCursorRef.current;
+      const next: TradePostTrade & { liveId: string } = {
+        ...base,
+        amountUsd: Math.max(
+          1,
+          Math.round(
+            base.amountUsd *
+              (0.78 + (hashString(`${base.wallet}-m${n}`) % 40) / 100) *
+              100,
+          ) / 100,
+        ),
+        txHash: `${base.txHash ?? "mpulse"}-stream-${n}`,
+        timestamp: new Date().toISOString(),
+        liveId: `mpulse-${n}-${base.wallet}`,
+      };
+      setMarketPulseItems((prev) => [next, ...prev].slice(0, 48));
+    };
+
+    const id = window.setInterval(pushNext, 1800);
+    return () => window.clearInterval(id);
+  }, [
+    showingMarketDetail,
+    marketDetailTab,
+    feedPositionTrade,
+    marketPulsePool,
+  ]);
 
   const cashOutMarketPosition = (
     item: StoredUserTrade,
@@ -7483,62 +7641,29 @@ export default function Api({
                 </h2>
               </header>
             ) : (
-            <header
-              key={`market-header-${selectedMarketSlug}`}
-              className={`relative -mx-5 ${IOS_STATUS_BLEED} mb-4 overflow-hidden ${MARKET_ENTER}`}
-            >
-              <div
-                className={`relative ${
-                  selectedMarket?.image ? "min-h-[240px]" : "pt-14"
-                }`}
+              <header
+                key={`market-header-${selectedMarketSlug}`}
+                className={`relative mb-4 pt-12 ${MARKET_ENTER}`}
               >
-                {selectedMarket?.image && (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={selectedMarket.image}
-                      alt=""
-                      className="absolute inset-0 h-full w-full object-cover object-top"
-                    />
-                    <div
-                      aria-hidden
-                      className="absolute inset-0"
-                      style={{
-                        backgroundImage: `linear-gradient(to bottom, ${hexToRgba(marketAccent, 0.15)} 0%, ${hexToRgba(marketAccent, 0.45)} 35%, ${hexToRgba(marketAccent, 0.82)} 70%, ${marketAccent} 100%)`,
-                      }}
-                    />
-                  </>
+                {(selectedMarket?.liveGame?.league ??
+                  selectedMarket?.category) && (
+                  <p className="text-[12px] font-medium text-white/55">
+                    {selectedMarket.liveGame?.league ??
+                      selectedMarket.category}
+                  </p>
                 )}
-                <div
-                  className={`relative z-10 px-5 ${
-                    selectedMarket?.image
-                      ? "flex min-h-[240px] flex-col pb-1 pt-14"
+                <h2
+                  ref={stickyTitleRef as RefObject<HTMLHeadingElement>}
+                  className={`text-[22px] font-semibold leading-tight tracking-[-0.03em] ${
+                    selectedMarket?.liveGame?.league ||
+                    selectedMarket?.category
+                      ? "mt-1"
                       : ""
                   }`}
                 >
-                  <div className={selectedMarket?.image ? "mt-auto" : undefined}>
-                    {(selectedMarket?.liveGame?.league ??
-                      selectedMarket?.category) && (
-                      <p className="text-[12px] font-medium text-white/55">
-                        {selectedMarket.liveGame?.league ??
-                          selectedMarket.category}
-                      </p>
-                    )}
-                    <h2
-                      ref={stickyTitleRef as RefObject<HTMLHeadingElement>}
-                      className={`text-[22px] font-semibold leading-tight tracking-[-0.03em] ${
-                        selectedMarket?.liveGame?.league ||
-                        selectedMarket?.category
-                          ? "mt-1"
-                          : ""
-                      }`}
-                    >
-                      {selectedMarket?.title ?? "Market"}
-                    </h2>
-                  </div>
-                </div>
-              </div>
-            </header>
+                  {selectedMarket?.title ?? "Market"}
+                </h2>
+              </header>
             )
           ) : showingProfileSubScreen ? (
             <header className="mb-4 pt-12">
@@ -7548,7 +7673,10 @@ export default function Api({
             </header>
           ) : section === "search" ? (
             <header className="mb-4">
-              <h2 className={ui.title}>
+              <h2
+                ref={stickyTitleRef as RefObject<HTMLHeadingElement>}
+                className={ui.title}
+              >
                 Search
               </h2>
               <label className="mt-4 flex items-center gap-2.5 rounded-full bg-white/[0.08] px-4 py-3 text-white/40">
@@ -7816,7 +7944,7 @@ export default function Api({
                 )}
               {liveFeedItems.length > 0 && (
                 <div className="flex min-h-[calc(100%-0.5rem)] flex-col justify-end">
-                  <ul className="flex flex-col gap-5">
+                  <ul className="flex flex-col gap-3">
                     <AnimatePresence initial={false}>
                       {liveFeedItems.map((trade) => (
                         <motion.li
@@ -7846,6 +7974,22 @@ export default function Api({
                             }
                             onOpenWallet={(wallet) => openWallet(wallet, null)}
                             onOpenTrade={() => setFeedPositionTrade({ trade })}
+                            onOpenMarket={() =>
+                              openMarketBySlug(
+                                trade.marketSlug || trade.marketTitle,
+                                trade.marketTitle,
+                                {
+                                  image:
+                                    trade.marketImage ??
+                                    (trade.marketSlug
+                                      ? marketImageBySlug.get(trade.marketSlug)
+                                      : undefined) ??
+                                    null,
+                                  price: trade.price,
+                                  outcome: trade.outcome,
+                                },
+                              )
+                            }
                             currentUser={commentAuthor}
                           />
                         </motion.li>
@@ -8111,11 +8255,13 @@ export default function Api({
                       [
                         {
                           id: "trades",
-                          label: "Takes",
+                          label: "Pulse",
                           count:
-                            marketFeedTrades.length > 0
-                              ? marketFeedTrades.length
-                              : undefined,
+                            marketPulseItems.length > 0
+                              ? marketPulseItems.length
+                              : marketFeedTrades.length > 0
+                                ? marketFeedTrades.length
+                                : undefined,
                         },
                         {
                           id: "traders",
@@ -8126,62 +8272,72 @@ export default function Api({
                     }
                   />
 
-                  {marketDetailTab !== "rules" &&
+                  {marketDetailTab === "trades" &&
                     marketActivityStatus === "loading" &&
+                    marketPulseItems.length === 0 &&
                     marketFeedTrades.length === 0 && (
-                    <div className="mt-1 space-y-2 animate-pulse" aria-hidden>
-                      {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="h-[148px] rounded-[20px] bg-white/10" />
-                      ))}
-                    </div>
-                  )}
-
-                  {marketDetailTab === "trades" &&
-                    marketActivityStatus === "error" &&
-                    marketFeedTrades.length === 0 && (
-                    <p className="mt-2 text-sm text-white/55">
-                      Couldn&apos;t load market activity.
-                    </p>
-                  )}
-
-                  {marketDetailTab === "trades" &&
-                    (marketActivityStatus === "ready" ||
-                      marketFeedTrades.length > 0) &&
-                    marketFeedTrades.length === 0 && (
-                      <p className="mt-2 text-sm text-white/55">No recent takes.</p>
+                      <ul className="mt-3 flex flex-col gap-3 animate-pulse" aria-hidden>
+                        {Array.from({ length: 4 }).map((_, i) => (
+                          <FeedItemSkeleton key={i} />
+                        ))}
+                      </ul>
                     )}
 
                   {marketDetailTab === "trades" &&
-                    marketFeedTrades.length > 0 &&
-                    selectedMarket && (
-                      <ul className="flex flex-col">
-                        {marketFeedTrades.map((trade) => (
-                          <li
-                            key={`${trade.txHash ?? trade.timestamp}-${trade.wallet}-${trade.outcome}`}
-                            className="border-b border-white/[0.06] py-5 first:pt-3 last:border-b-0"
+                    marketActivityStatus === "error" &&
+                    marketPulseItems.length === 0 &&
+                    marketFeedTrades.length === 0 && (
+                      <p className="mt-3 text-sm text-white/55">
+                        Couldn&apos;t load market activity.
+                      </p>
+                    )}
+
+                  {marketDetailTab === "trades" &&
+                    marketActivityStatus !== "loading" &&
+                    marketPulseItems.length === 0 &&
+                    marketFeedTrades.length === 0 && (
+                      <p className="mt-3 text-sm text-white/55">
+                        No pulse yet for this market.
+                      </p>
+                    )}
+
+                  {marketDetailTab === "trades" && marketPulseItems.length > 0 && (
+                    <ul className="mt-3 flex flex-col gap-3">
+                      <AnimatePresence initial={false}>
+                        {marketPulseItems.map((trade) => (
+                          <motion.li
+                            key={trade.liveId}
+                            layout
+                            initial={{ opacity: 0, y: -14 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 420,
+                              damping: 32,
+                              mass: 0.7,
+                            }}
                           >
                             <TradePost
+                              variant="message"
                               trade={trade}
                               handle={resolveFeedHandle(trade.wallet)}
-                              caption={feedCaption(trade)}
-                              gifUrl={captionGifForTrade(trade)}
-                              lifted
-                              marketImage={
-                                selectedMarket.image ??
-                                (trade.marketSlug
-                                  ? marketImageBySlug.get(trade.marketSlug)
-                                  : undefined)
+                              caption=""
+                              gifUrl={null}
+                              showMarketThumb={false}
+                              showUserThumb
+                              onOpenWallet={(wallet) =>
+                                openWallet(wallet, null)
                               }
-                              onOpenWallet={(wallet) => openWallet(wallet, null)}
                               onOpenTrade={() =>
                                 setFeedPositionTrade({ trade })
                               }
                               currentUser={commentAuthor}
                             />
-                          </li>
+                          </motion.li>
                         ))}
-                      </ul>
-                    )}
+                      </AnimatePresence>
+                    </ul>
+                  )}
 
                   {marketDetailTab === "traders" &&
                     marketActivityStatus !== "loading" &&

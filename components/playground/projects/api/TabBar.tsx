@@ -158,19 +158,6 @@ function PositionsTabCount({
         ? "up"
         : "down";
 
-  const toneClass =
-    mode === "up"
-      ? active
-        ? "bg-[#1f8f45]/50"
-        : "bg-[#1f8f45]/32"
-      : mode === "down"
-        ? active
-          ? "bg-[#c44a52]/45"
-          : "bg-[#c44a52]/28"
-        : active
-          ? "bg-white/25"
-          : "bg-white/[0.12]";
-
   return (
     <span
       className={`relative isolate flex h-8 min-w-[36px] items-center justify-center overflow-hidden rounded-[10px] px-2.5 text-[15px] font-semibold tabular-nums ${
@@ -179,20 +166,28 @@ function PositionsTabCount({
     >
       <span
         aria-hidden
-        className={`absolute inset-0 rounded-[inherit] ${toneClass}`}
+        className={`absolute inset-0 rounded-[inherit] ${
+          mode === "up"
+            ? active
+              ? "bg-[#1f8f45]/35"
+              : "bg-[#1f8f45]/22"
+            : active
+              ? "bg-white/20"
+              : "bg-white/[0.12]"
+        }`}
       />
-      {mode === "up" ? (
+      {mode === "up" && (
         <span
           aria-hidden
-          className="api-positions-up-glow pointer-events-none absolute inset-[-40%] rounded-full bg-[#3db86a] blur-[10px]"
+          className="api-positions-up-blink pointer-events-none absolute inset-0 rounded-[inherit] motion-reduce:opacity-50"
         />
-      ) : null}
-      {mode === "down" ? (
+      )}
+      {mode === "down" && (
         <span
           aria-hidden
-          className="api-positions-down-glow pointer-events-none absolute inset-[-40%] rounded-full bg-[#ff4d5e] blur-[10px]"
+          className="api-positions-down-blink pointer-events-none absolute inset-0 rounded-[inherit] motion-reduce:hidden"
         />
-      ) : null}
+      )}
       <span className="relative z-[1]">{count}</span>
     </span>
   );

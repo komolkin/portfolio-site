@@ -171,6 +171,9 @@ export default function TradePost({
   currentUser,
   onOpenWallet,
   onOpenTrade,
+  onOpenMarket,
+  showMarketThumb = true,
+  showUserThumb = false,
   lifted = false,
   variant = "social",
 }: {
@@ -182,6 +185,12 @@ export default function TradePost({
   currentUser: { wallet: string; handle: string } | null;
   onOpenWallet: (wallet: string) => void;
   onOpenTrade: () => void;
+  /** Pulse market thumb → market page. */
+  onOpenMarket?: () => void;
+  /** Message variant: market thumb on the left. */
+  showMarketThumb?: boolean;
+  /** Message variant: userpic on the left → profile (market-page Pulse). */
+  showUserThumb?: boolean;
   lifted?: boolean;
   /** `message` = live chat line; `social` = card + likes/reply. */
   variant?: "message" | "social";
@@ -245,6 +254,7 @@ export default function TradePost({
 
   if (variant === "message") {
     const marketThumb = marketImage || trade.marketImage || null;
+    const hasLeading = showUserThumb || showMarketThumb;
     return (
       <div
         role="button"
@@ -256,22 +266,50 @@ export default function TradePost({
             onOpenTrade();
           }
         }}
-        className="flex w-full cursor-pointer items-start gap-3 rounded-2xl text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
+        className={`flex w-full cursor-pointer items-start rounded-2xl text-left ${
+          hasLeading ? "gap-3" : ""
+        }`}
       >
-        <div className="mt-0.5 shrink-0 overflow-hidden rounded-[10px]">
-          {marketThumb ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={marketThumb}
-              alt=""
-              className="h-9 w-9 object-cover"
+        {showUserThumb ? (
+          <button
+            type="button"
+            aria-label={`Open ${handle}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenWallet(trade.wallet);
+            }}
+            className="mt-0.5 shrink-0 rounded-full"
+          >
+            <UserAvatar
+              seed={trade.wallet}
+              label={handle}
+              className="h-9 w-9"
             />
-          ) : (
-            <div className="flex h-9 w-9 items-center justify-center bg-white/10 text-[12px] font-semibold text-white/45">
-              {trade.marketTitle.slice(0, 1).toUpperCase()}
-            </div>
-          )}
-        </div>
+          </button>
+        ) : showMarketThumb ? (
+          <button
+            type="button"
+            aria-label={`Open ${trade.marketTitle}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              (onOpenMarket ?? onOpenTrade)();
+            }}
+            className="mt-0.5 shrink-0 overflow-hidden rounded-[10px]"
+          >
+            {marketThumb ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={marketThumb}
+                alt=""
+                className="h-9 w-9 object-cover"
+              />
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center bg-white/10 text-[12px] font-semibold text-white/45">
+                {trade.marketTitle.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+          </button>
+        ) : null}
         <p className="min-w-0 flex-1 text-[16px] leading-[1.35] text-white">
           <button
             type="button"

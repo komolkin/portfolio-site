@@ -142,7 +142,7 @@ function FollowBadge({
         e.stopPropagation();
         onClick();
       }}
-      className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-white text-black ring-2 ring-[#111113]"
+      className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-white text-black ring-2 ring-black"
     >
       <svg viewBox="0 0 10 10" className="h-2.5 w-2.5" fill="none" aria-hidden>
         {following ? (
