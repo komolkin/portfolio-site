@@ -324,30 +324,15 @@ export default function TradePost({
           <span className="text-white/55">
             just {move.isBuy ? "bought" : "sold"}
           </span>{" "}
+          <span className="font-semibold tabular-nums text-white">
+            {formatUsdPrecise(trade.amountUsd)}
+          </span>{" "}
           <span className="font-semibold" style={{ color: tint }}>
             {outcomeLabel}
           </span>{" "}
           <span className="text-white/55">
-            at {formatOddsPercent(trade.price)} and {move.up ? "up" : "down"}
-          </span>{" "}
-          <span
-            className={`font-semibold tabular-nums ${
-              move.up ? "text-[#00D54B]" : "text-[#FF375F]"
-            }`}
-          >
-            {formatSignedUsdCompact(move.dollar)}
-          </span>{" "}
-          <span
-            className={`tabular-nums ${
-              move.up ? "text-[#00D54B]/80" : "text-[#FF375F]/80"
-            }`}
-          >
-            ({Math.abs(move.pct) >= 10
-              ? Math.abs(move.pct).toFixed(0)
-              : Math.abs(move.pct).toFixed(1)}
-            %)
+            at {formatOddsPercent(trade.price)}.
           </span>
-          <span className="text-white/55">.</span>
         </p>
       </div>
     );
