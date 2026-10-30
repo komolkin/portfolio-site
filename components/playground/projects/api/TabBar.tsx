@@ -411,11 +411,7 @@ export default function TabBar({
                   }
                   aria-selected={isActive}
                   onClick={() => onChange(tab.id)}
-                  className={`relative z-10 flex h-11 min-w-0 flex-1 items-center justify-center rounded-full transition-colors duration-300 ${
-                    isActive
-                      ? "text-white"
-                      : "text-white/45 hover:text-white/70"
-                  }`}
+                  className="group relative z-10 flex h-11 min-w-0 flex-1 items-center justify-center rounded-full"
                 >
                   {tab.id === "positions" ? (
                     <PositionsTabCount
@@ -425,7 +421,15 @@ export default function TabBar({
                       investedUsd={positionsInvested}
                     />
                   ) : (
-                    <TabIcon id={tab.id} active={isActive} />
+                    <span
+                      className={`flex items-center justify-center text-white transition-opacity duration-300 ${
+                        isActive
+                          ? "opacity-100"
+                          : "opacity-45 group-hover:opacity-70"
+                      }`}
+                    >
+                      <TabIcon id={tab.id} active={isActive} />
+                    </span>
                   )}
                 </button>
               );
