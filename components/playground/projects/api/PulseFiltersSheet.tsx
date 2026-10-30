@@ -114,7 +114,7 @@ export function pulseFiltersActive(filters: PulseFilters): boolean {
   return (
     filters.minSize !== "all" ||
     filters.category !== "all" ||
-    (filters.category === "sports" && filters.league !== "all")
+    filters.league !== "all"
   );
 }
 
