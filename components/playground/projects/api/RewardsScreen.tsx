@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import UserAvatar from "./UserAvatar";
+import UserAvatar, { PROFILE_AVATAR_SRC } from "./UserAvatar";
 import { ActivityRow, ui } from "./ui";
 
 const HOW_TO_EARN_STEPS = [
@@ -336,7 +336,12 @@ export default function RewardsScreen({
           aria-label="Open profile"
           className="shrink-0 rounded-full"
         >
-          <UserAvatar seed={youSeed} label={youLabel} className="h-9 w-9" />
+          <UserAvatar
+            seed={youSeed}
+            label={youLabel}
+            src={PROFILE_AVATAR_SRC}
+            className="h-9 w-9"
+          />
         </button>
         <h1
           ref={titleRef as RefObject<HTMLHeadingElement>}
@@ -425,13 +430,14 @@ export default function RewardsScreen({
                   <UserAvatar
                     seed={youSeed}
                     label={youLabel}
+                    src={PROFILE_AVATAR_SRC}
                     className="h-9 w-9 text-[12px]"
                   />
                 </div>
               }
               title="You"
               trailing={
-                <span className="text-[16px] font-semibold tabular-nums text-[#00D54B]">
+                <span className="text-[16px] font-semibold tabular-nums text-white">
                   {points.toLocaleString("en-US")}
                 </span>
               }
@@ -454,7 +460,7 @@ export default function RewardsScreen({
                 title={row.username}
                 subtitle={`@${row.handle}`}
                 trailing={
-                  <span className="text-[16px] font-semibold tabular-nums text-[#00D54B]">
+                  <span className="text-[16px] font-semibold tabular-nums text-white">
                     {row.points.toLocaleString("en-US")}
                   </span>
                 }

@@ -301,7 +301,7 @@ export default function TradePost({
               event.stopPropagation();
               (onOpenMarket ?? onOpenTrade)();
             }}
-            className="mt-0.5 shrink-0 overflow-hidden rounded-[10px]"
+            className="mt-0.5 shrink-0 overflow-hidden rounded-[6px]"
           >
             {marketThumb ? (
               // eslint-disable-next-line @next/next/no-img-element

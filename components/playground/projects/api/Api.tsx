@@ -40,6 +40,13 @@ import SettingsScreen from "./SettingsScreen";
 import FollowListSheet, {
   type FollowListPerson,
 } from "./FollowListSheet";
+import PulseFiltersSheet, {
+  DEFAULT_PULSE_FILTERS,
+  pulseFiltersActive,
+  pulseMinUsd,
+  tradeMatchesPulseFilters,
+  type PulseFilters,
+} from "./PulseFiltersSheet";
 import SharePositionModal, {
   type SharePositionPayload,
 } from "./SharePositionModal";
@@ -62,7 +69,7 @@ import {
   tickCopiedMarks,
   type CopyTrade,
 } from "./copyTrades";
-import UserAvatar from "./UserAvatar";
+import UserAvatar, { PROFILE_AVATAR_SRC } from "./UserAvatar";
 import TabBar, {
   SearchTabIcon,
   TAB_BAR_BOTTOM,
@@ -5298,6 +5305,24 @@ function FeedPauseIcon({ className }: { className?: string }) {
   );
 }
 
+function FeedFiltersIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      className={className}
+      aria-hidden
+    >
+      <path
+        d="M3.25 4h13.5a.75.75 0 0 1 .58 1.22L12.4 11.1a1.2 1.2 0 0 0-.28.76v2.55c0 .28-.15.53-.4.66l-2.55 1.35a.75.75 0 0 1-1.12-.66v-3.9c0-.28-.1-.55-.28-.76L2.67 5.22A.75.75 0 0 1 3.25 4Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function ReferralIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -5547,6 +5572,10 @@ export default function Api({
   const [feedPositionTrade, setFeedPositionTrade] =
     useState<FeedPositionSelection | null>(null);
   const [feedLivePlaying, setFeedLivePlaying] = useState(true);
+  const [pulseFilters, setPulseFilters] = useState<PulseFilters>(
+    DEFAULT_PULSE_FILTERS,
+  );
+  const [pulseFiltersOpen, setPulseFiltersOpen] = useState(false);
   const [liveFeedItems, setLiveFeedItems] = useState<
     Array<TradePostTrade & { liveId: string }>
   >([]);
@@ -7087,23 +7116,57 @@ export default function Api({
     [feedTrades],
   );
 
-  // Seed a short chat history once the pool is ready.
+  const filteredFeedPool = useMemo(
+    () =>
+      feedPoolTrades.filter((trade) =>
+        tradeMatchesPulseFilters(trade, pulseFilters),
+      ),
+    [feedPoolTrades, pulseFilters],
+  );
+
+  const pulseFiltersKey = useMemo(
+    () =>
+      [
+        pulseFilters.minSize,
+        pulseFilters.customMinUsd ?? "",
+        pulseFilters.category,
+        pulseFilters.league,
+      ].join("|"),
+    [pulseFilters],
+  );
+
+  const liveFeedSeedKeyRef = useRef<string | null>(null);
+
+  // Seed (or reseed) chat history when the pool is ready or filters change.
   useEffect(() => {
-    if (feedPoolTrades.length === 0) {
-      setLiveFeedItems([]);
+    if (filteredFeedPool.length === 0) {
+      liveFeedSeedKeyRef.current = pulseFiltersKey;
       liveFeedCursorRef.current = 0;
+      setLiveFeedItems([]);
       return;
     }
-    setLiveFeedItems((prev) => {
-      if (prev.length > 0) return prev;
-      const seedCount = Math.min(8, feedPoolTrades.length);
-      liveFeedCursorRef.current = seedCount;
-      return feedPoolTrades.slice(0, seedCount).map((trade, index) => ({
+    if (liveFeedSeedKeyRef.current === pulseFiltersKey) {
+      setLiveFeedItems((prev) => {
+        if (prev.length > 0) return prev;
+        const seedCount = Math.min(8, filteredFeedPool.length);
+        liveFeedCursorRef.current = seedCount;
+        return filteredFeedPool.slice(0, seedCount).map((trade, index) => ({
+          ...trade,
+          liveId: `seed-${pulseFiltersKey}-${trade.txHash ?? trade.timestamp ?? index}-${index}`,
+        }));
+      });
+      return;
+    }
+    liveFeedSeedKeyRef.current = pulseFiltersKey;
+    const seedCount = Math.min(8, filteredFeedPool.length);
+    liveFeedCursorRef.current = seedCount;
+    setLiveFeedItems(
+      filteredFeedPool.slice(0, seedCount).map((trade, index) => ({
         ...trade,
-        liveId: `seed-${trade.txHash ?? trade.timestamp ?? index}-${index}`,
-      }));
-    });
-  }, [feedPoolTrades]);
+        liveId: `seed-${pulseFiltersKey}-${trade.txHash ?? trade.timestamp ?? index}-${index}`,
+      })),
+    );
+  }, [filteredFeedPool, pulseFiltersKey]);
 
   useEffect(() => {
     if (
@@ -7114,23 +7177,29 @@ export default function Api({
     ) {
       return;
     }
-    if (feedPoolTrades.length === 0) return;
+    if (filteredFeedPool.length === 0) return;
 
     const pushNext = () => {
-      const index = liveFeedCursorRef.current % feedPoolTrades.length;
-      const base = feedPoolTrades[index]!;
+      const index = liveFeedCursorRef.current % filteredFeedPool.length;
+      const base = filteredFeedPool[index]!;
       liveFeedCursorRef.current += 1;
       const n = liveFeedCursorRef.current;
+      let amountUsd = Math.max(
+        1,
+        Math.round(
+          base.amountUsd *
+            (0.78 + (hashString(`${base.wallet}-${n}`) % 40) / 100) *
+            100,
+        ) / 100,
+      );
+      // Keep streamed sizes above the active min-size filter.
+      const floor = pulseMinUsd(pulseFilters);
+      if (floor > 0 && amountUsd < floor) {
+        amountUsd = floor + (hashString(`${base.wallet}-floor-${n}`) % 900);
+      }
       const next: TradePostTrade & { liveId: string } = {
         ...base,
-        amountUsd: Math.max(
-          1,
-          Math.round(
-            base.amountUsd *
-              (0.78 + (hashString(`${base.wallet}-${n}`) % 40) / 100) *
-              100,
-          ) / 100,
-        ),
+        amountUsd,
         txHash: `${base.txHash ?? "live"}-stream-${n}`,
         timestamp: new Date().toISOString(),
         liveId: `live-${n}-${base.wallet}`,
@@ -7145,7 +7214,8 @@ export default function Api({
     showingDrillDown,
     feedPositionTrade,
     feedLivePlaying,
-    feedPoolTrades,
+    filteredFeedPool,
+    pulseFilters,
   ]);
 
   useEffect(() => {
@@ -7673,6 +7743,7 @@ export default function Api({
           <UserAvatar
             seed={demoProfile?.wallet ?? profileUsername ?? "you"}
             label={profileUsername ?? "You"}
+            src={PROFILE_AVATAR_SRC}
             className="h-10 w-10 shrink-0"
           />
           <div className="min-w-0">
@@ -7710,7 +7781,7 @@ export default function Api({
         <button
           type="button"
           onClick={() => setDepositOpen(true)}
-          className="shrink-0 rounded-full bg-white/[0.1] px-5 py-2.5 text-[14px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_0_0_1px_rgba(255,255,255,0.08)] transition-opacity hover:opacity-90"
+          className="shrink-0 rounded-full bg-white/[0.1] px-5 py-2.5 text-[14px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_0_0_1px_rgba(255,255,255,0.04)] transition-opacity hover:opacity-90"
         >
           Deposit
         </button>
@@ -7956,6 +8027,7 @@ export default function Api({
                     ? "…"
                     : (demoProfile?.wallet ?? "")
                 }
+                avatarUrl={PROFILE_AVATAR_SRC}
                 nameRef={stickyTitleRef}
                 trailing={
                   <>
@@ -8216,7 +8288,7 @@ export default function Api({
             <RewardsScreen
               username={profileUsername}
               wallet={demoProfile?.wallet ?? null}
-              points={0}
+              points={2847}
               titleRef={stickyTitleRef}
               onOpenProfile={() => openOwnProfile("rewards")}
               onShare={() => void shareRewards()}
@@ -8244,6 +8316,16 @@ export default function Api({
                   <p className="text-sm text-white/55">
                     No recent trades yet. Check back in a moment.
                   </p>
+                )}
+              {tradesStatus === "ready" &&
+                feedPoolTrades.length > 0 &&
+                filteredFeedPool.length === 0 &&
+                liveFeedItems.length === 0 && (
+                  <div className="flex min-h-[calc(100%-3rem)] flex-col items-center justify-center px-4 text-center">
+                    <p className="text-sm text-white/55">
+                      No trades match these filters.
+                    </p>
+                  </div>
                 )}
               {liveFeedItems.length > 0 && (
                 <div className="flex min-h-[calc(100%-0.5rem)] flex-col justify-end">
@@ -9314,12 +9396,12 @@ export default function Api({
             </div>
             {section === "feed" && (
               <div
-                className="pointer-events-none absolute inset-x-0 z-[11] flex justify-center px-5"
+                className="pointer-events-none absolute inset-x-0 z-[11] flex justify-center gap-2 px-5"
                 style={{
                   bottom: TAB_BAR_BOTTOM + TAB_BAR_HEIGHT + 12,
                 }}
               >
-                <button
+                <motion.button
                   type="button"
                   data-sfx="press"
                   onClick={() => setFeedLivePlaying((prev) => !prev)}
@@ -9327,17 +9409,90 @@ export default function Api({
                   aria-label={
                     feedLivePlaying ? "Pause live pulse" : "Play live pulse"
                   }
-                  style={{ width: feedLivePlaying ? 79 : 99 }}
-                  className="pointer-events-auto inline-flex h-10 shrink-0 items-center justify-center gap-1.5 overflow-hidden rounded-full bg-white/[0.12] text-[13px] font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md hover:bg-white/[0.18] motion-safe:!transition-[width,background-color] motion-safe:!duration-200 motion-safe:!ease-[cubic-bezier(0.32,0.72,0,1)]"
+                  initial={false}
+                  animate={{ width: feedLivePlaying ? 79 : 99 }}
+                  transition={{
+                    width: {
+                      duration: 0.34,
+                      ease: [0.32, 0.72, 0, 1],
+                    },
+                  }}
+                  className="pointer-events-auto relative inline-flex h-10 shrink-0 overflow-hidden rounded-full bg-white/[0.12] text-[13px] font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:bg-white/[0.18]"
                 >
-                  {feedLivePlaying ? (
-                    <FeedPauseIcon className="h-4 w-4 shrink-0" />
-                  ) : (
-                    <FeedPlayIcon className="h-4 w-4 shrink-0" />
-                  )}
-                  <span className="whitespace-nowrap">
-                    {feedLivePlaying ? "Live" : "Paused"}
+                  <span className="absolute inset-0 flex items-center justify-center gap-1.5">
+                    <span className="relative h-4 w-4 shrink-0">
+                      <span
+                        className={`absolute inset-0 flex items-center justify-center transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                          feedLivePlaying
+                            ? "scale-100 rotate-0 opacity-100"
+                            : "scale-50 rotate-90 opacity-0"
+                        }`}
+                        aria-hidden={!feedLivePlaying}
+                      >
+                        <FeedPauseIcon className="h-4 w-4" />
+                      </span>
+                      <span
+                        className={`absolute inset-0 flex items-center justify-center transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                          feedLivePlaying
+                            ? "scale-50 -rotate-90 opacity-0"
+                            : "scale-100 rotate-0 opacity-100"
+                        }`}
+                        aria-hidden={feedLivePlaying}
+                      >
+                        <FeedPlayIcon className="h-4 w-4" />
+                      </span>
+                    </span>
+                    <motion.span
+                      initial={false}
+                      animate={{ width: feedLivePlaying ? 26 : 46 }}
+                      transition={{
+                        duration: 0.34,
+                        ease: [0.32, 0.72, 0, 1],
+                      }}
+                      className="relative h-[1.15em] overflow-hidden"
+                    >
+                      <span
+                        className={`absolute inset-y-0 left-0 flex items-center whitespace-nowrap transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                          feedLivePlaying
+                            ? "translate-y-0 opacity-100"
+                            : "translate-y-[120%] opacity-0"
+                        }`}
+                        aria-hidden={!feedLivePlaying}
+                      >
+                        Live
+                      </span>
+                      <span
+                        className={`absolute inset-y-0 left-0 flex items-center whitespace-nowrap transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                          feedLivePlaying
+                            ? "-translate-y-[120%] opacity-0"
+                            : "translate-y-0 opacity-100"
+                        }`}
+                        aria-hidden={feedLivePlaying}
+                      >
+                        Paused
+                      </span>
+                    </motion.span>
                   </span>
+                </motion.button>
+                <button
+                  type="button"
+                  data-sfx="press"
+                  onClick={() => setPulseFiltersOpen(true)}
+                  aria-label="Open pulse filters"
+                  aria-pressed={pulseFiltersActive(pulseFilters)}
+                  className={`pointer-events-auto relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors ${
+                    pulseFiltersActive(pulseFilters)
+                      ? "bg-white/[0.2] hover:bg-white/[0.26]"
+                      : "bg-white/[0.12] hover:bg-white/[0.18]"
+                  }`}
+                >
+                  <FeedFiltersIcon className="h-4 w-4" />
+                  {pulseFiltersActive(pulseFilters) ? (
+                    <span
+                      aria-hidden
+                      className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#6CBAEA]"
+                    />
+                  ) : null}
                 </button>
               </div>
             )}
@@ -9569,6 +9724,13 @@ export default function Api({
         )}
         {howToEarnOpen && (
           <HowToEarnSheet onClose={() => setHowToEarnOpen(false)} />
+        )}
+        {pulseFiltersOpen && (
+          <PulseFiltersSheet
+            value={pulseFilters}
+            onChange={setPulseFilters}
+            onClose={() => setPulseFiltersOpen(false)}
+          />
         )}
       </article>
     </div>

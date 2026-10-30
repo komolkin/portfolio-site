@@ -13,6 +13,10 @@ const PALETTES = [
   ["#38BDF8", "#C084FC", "#075985"],
 ] as const;
 
+/** Own-profile userpic used across the API playground. */
+export const PROFILE_AVATAR_SRC =
+  "https://cdn.pfps.gg/pfps/74372-636150-animated-anime-pfp.gif";
+
 function hashSeed(seed: string): number {
   let hash = 2166136261;
   const value = seed.toLowerCase();
@@ -49,13 +53,29 @@ function avatarBackground(seed: string): string {
 export default function UserAvatar({
   seed,
   label,
+  src,
   className = "h-9 w-9",
 }: {
   seed: string;
   label?: string;
+  /** Optional photo — replaces the generated gradient orb. */
+  src?: string | null;
   className?: string;
 }) {
   const name = label ?? seed;
+
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt=""
+        title={name}
+        aria-hidden
+        className={`relative inline-flex shrink-0 rounded-full border border-white/20 bg-[#2a2a2e] object-cover ${className}`}
+      />
+    );
+  }
 
   return (
     <span
