@@ -5381,53 +5381,6 @@ function FeedFiltersIcon({ className }: { className?: string }) {
   );
 }
 
-function ReferralIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      className={className}
-      aria-hidden
-    >
-      <path
-        d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M4 12h16M12 22V7"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7Z"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7Z"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M2 7h20v5H2V7Z"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function SettingsIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -9430,17 +9383,7 @@ export default function Api({
           !copyTradeTarget &&
           !depositOpen &&
           !followList && (
-          <div
-            className={`absolute right-3.5 ${IOS_CHROME_TOP} z-30 flex items-center gap-1`}
-          >
-            <button
-              type="button"
-              aria-label="Referral"
-              onClick={() => setProfileSubScreen("referral")}
-              className="flex h-11 w-11 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/10 hover:text-white"
-            >
-              <ReferralIcon className="h-5 w-5" />
-            </button>
+          <div className={`absolute right-3.5 ${IOS_CHROME_TOP} z-30`}>
             <button
               type="button"
               aria-label="Settings"

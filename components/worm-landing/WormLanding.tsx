@@ -1587,7 +1587,7 @@ export function WormLanding() {
           </div>
           <div className="absolute inset-0 bg-gradient-to-b from-white via-white/80 to-transparent" />
         </div>
-        <div className="relative mx-auto flex max-w-[1120px] flex-col gap-2 px-5 py-4 sm:px-8 sm:py-4">
+        <div className="relative mx-auto flex w-full max-w-[1440px] flex-col gap-2 px-5 py-4 sm:px-8 sm:py-4">
           <div className="relative flex h-12 items-center justify-between sm:h-16">
             <a
               href="#top"

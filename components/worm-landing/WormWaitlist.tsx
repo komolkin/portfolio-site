@@ -529,6 +529,89 @@ function RotatingTitle() {
   );
 }
 
+function DvdParachute() {
+  const reduceMotion = useReducedMotion();
+  const ref = useRef<HTMLSpanElement>(null);
+  const state = useRef({ x: 64, y: 120, vx: 2.1, vy: 1.75 });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const size = () => {
+      const width = el.offsetWidth || 84;
+      const height = el.offsetHeight || 84;
+      return { w: width, h: height };
+    };
+
+    const bounds = () => {
+      const { w, h } = size();
+      const root = (el.parentElement ?? el.offsetParent) as HTMLElement | null;
+      const maxX = Math.max(0, (root?.clientWidth ?? window.innerWidth) - w);
+      const maxY = Math.max(0, (root?.clientHeight ?? window.innerHeight) - h);
+      return { maxX, maxY };
+    };
+
+    let { maxX, maxY } = bounds();
+    const speed = reduceMotion ? 0.7 : 2.1;
+    state.current = {
+      x: Math.random() * maxX,
+      y: Math.random() * maxY,
+      vx: (Math.random() > 0.5 ? 1 : -1) * speed,
+      vy: (Math.random() > 0.5 ? 1 : -1) * (speed * 0.85),
+    };
+    el.style.transform = `translate3d(${state.current.x}px, ${state.current.y}px, 0)`;
+
+    let raf = 0;
+    const tick = () => {
+      ({ maxX, maxY } = bounds());
+      let { x, y, vx, vy } = state.current;
+      x += vx;
+      y += vy;
+      if (x <= 0) {
+        x = 0;
+        vx = Math.abs(vx);
+      } else if (x >= maxX) {
+        x = maxX;
+        vx = -Math.abs(vx);
+      }
+      if (y <= 0) {
+        y = 0;
+        vy = Math.abs(vy);
+      } else if (y >= maxY) {
+        y = maxY;
+        vy = -Math.abs(vy);
+      }
+      state.current = { x, y, vx, vy };
+      el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      raf = window.requestAnimationFrame(tick);
+    };
+    raf = window.requestAnimationFrame(tick);
+
+    const onResize = () => {
+      ({ maxX, maxY } = bounds());
+      state.current.x = Math.min(state.current.x, maxX);
+      state.current.y = Math.min(state.current.y, maxY);
+    };
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [reduceMotion]);
+
+  return (
+    <span
+      ref={ref}
+      aria-hidden
+      className="pointer-events-none absolute left-0 top-0 z-[40] select-none text-[72px] leading-none will-change-transform sm:text-[84px]"
+    >
+      🪂
+    </span>
+  );
+}
+
 export function WormWaitlist() {
   const [done, setDone] = useState(false);
 
@@ -540,92 +623,97 @@ export function WormWaitlist() {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[80] overflow-y-auto overscroll-y-contain bg-[#f6f5f2] text-[#141416] [scrollbar-gutter:stable]">
-      <header className="sticky top-0 z-50">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-[calc(100%+2.75rem)]"
-        >
-          <div className="worm-header-blur">
-            <i />
-            <i />
-            <i />
-            <i />
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-b from-white via-white/80 to-transparent" />
-        </div>
-        <div className="relative mx-auto flex h-12 max-w-[1120px] items-center justify-between px-5 py-4 sm:h-16 sm:px-8 sm:py-4">
-          <a
-            href="/waitlist"
-            aria-label="Worm"
-            onClick={(event) => {
-              event.preventDefault();
-              clearDoneFromStorage();
-              setDone(false);
-            }}
-            className={`relative z-10 flex shrink-0 items-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#141416] ${PRESS}`}
+    <div className="fixed inset-0 z-[80] bg-[#f6f5f2] text-[#141416]">
+      <div className="pointer-events-none absolute inset-0 z-[40] overflow-hidden">
+        <DvdParachute />
+      </div>
+      <div className="relative z-10 h-full overflow-y-auto overscroll-y-contain [scrollbar-gutter:stable]">
+        <header className="sticky top-0 z-50">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-[calc(100%+2.75rem)]"
           >
-            <img
-              src="/worm/logo-mark.png"
-              alt=""
-              width={44}
-              height={44}
-              className="h-11 w-11 object-contain"
-            />
-          </a>
-          <div className="relative z-10 flex items-center gap-4 sm:gap-5">
-            <WormInLink />
-            <a
-              href="https://www.worm.wtf/"
-              target="_blank"
-              rel="noreferrer"
-              className={`text-[15px] font-semibold tracking-[-0.015em] text-[#141416] hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#141416] ${PRESS}`}
-            >
-              Web App
-            </a>
-            <a
-              href="https://x.com/wormwtf"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Worm on X"
-              className={`text-[15px] font-semibold tracking-[-0.015em] text-[#141416] hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#141416] ${PRESS}`}
-            >
-              X
-            </a>
+            <div className="worm-header-blur">
+              <i />
+              <i />
+              <i />
+              <i />
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-b from-white via-white/80 to-transparent" />
           </div>
-        </div>
-      </header>
+          <div className="relative mx-auto flex h-12 w-full max-w-[1440px] items-center justify-between px-5 py-4 sm:h-16 sm:px-8 sm:py-4">
+            <a
+              href="/waitlist"
+              aria-label="Worm"
+              onClick={(event) => {
+                event.preventDefault();
+                clearDoneFromStorage();
+                setDone(false);
+              }}
+              className={`relative z-10 flex shrink-0 items-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#141416] ${PRESS}`}
+            >
+              <img
+                src="/worm/logo-mark.png"
+                alt=""
+                width={44}
+                height={44}
+                className="h-11 w-11 object-contain"
+              />
+            </a>
+            <div className="relative z-10 flex items-center gap-4 sm:gap-5">
+              <WormInLink />
+              <a
+                href="https://www.worm.wtf/"
+                target="_blank"
+                rel="noreferrer"
+                className={`text-[15px] font-semibold tracking-[-0.015em] text-[#141416] hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#141416] ${PRESS}`}
+              >
+                Web App
+              </a>
+              <a
+                href="https://x.com/wormwtf"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Worm on X"
+                className={`text-[15px] font-semibold tracking-[-0.015em] text-[#141416] hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#141416] ${PRESS}`}
+              >
+                X
+              </a>
+            </div>
+          </div>
+        </header>
 
-      <main className="relative flex min-h-[calc(100svh-5rem)] flex-col items-center justify-center px-5 pb-16 pt-8 text-center sm:px-8">
-        <div className="mx-auto w-full max-w-[760px]">
-          <AnimatePresence mode="wait" initial={false}>
-            {!done ? (
-              <motion.div
-                key="signup"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <div className="mb-10 sm:mb-12">
-                  <RotatingTitle />
-                </div>
-                <EarlyAccessForm onDone={() => setDone(true)} />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="success"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }}
-                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <WaitlistSuccess />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </main>
+        <main className="relative flex min-h-[calc(100svh-5rem)] flex-col items-center justify-center px-5 pb-16 pt-8 text-center sm:px-8">
+          <div className="mx-auto w-full max-w-[760px]">
+            <AnimatePresence mode="wait" initial={false}>
+              {!done ? (
+                <motion.div
+                  key="signup"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <div className="mb-10 sm:mb-12">
+                    <RotatingTitle />
+                  </div>
+                  <EarlyAccessForm onDone={() => setDone(true)} />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="success"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <WaitlistSuccess />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
