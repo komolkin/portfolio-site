@@ -7425,6 +7425,18 @@ export default function Api({
   }, [marketImageBySlug, profilePositions, userTrades]);
 
   const profilePositionCount = profilePositions.length;
+  const profilePositionsPnl = useMemo(
+    () => profilePositions.reduce((sum, position) => sum + position.pnlUsd, 0),
+    [profilePositions],
+  );
+  const profilePositionsInvested = useMemo(
+    () =>
+      profilePositions.reduce(
+        (sum, position) => sum + Math.max(0, position.valueUsd - position.pnlUsd),
+        0,
+      ),
+    [profilePositions],
+  );
 
   const marketUserPosition = useMemo(() => {
     if (!selectedMarket && !selectedMarketSlug) return null;
@@ -9727,6 +9739,8 @@ export default function Api({
               }
               onChange={handleSectionChange}
               positionCount={profilePositionCount}
+              positionsPnl={profilePositionsPnl}
+              positionsInvested={profilePositionsInvested}
               compact={isExploreFeed && feedPastHero}
               hidden={showingOwnProfile}
             />

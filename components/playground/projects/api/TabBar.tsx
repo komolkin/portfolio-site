@@ -190,10 +190,34 @@ function AirdropTabIcon({ active }: { active: boolean }) {
 function PositionsTabCount({
   count,
   active,
+  pnlUsd,
 }: {
   count: number;
   active: boolean;
+  pnlUsd: number;
+  investedUsd: number;
 }) {
+  const hasPositions = count > 0;
+  const mode =
+    !hasPositions || Math.abs(pnlUsd) < 0.01
+      ? "flat"
+      : pnlUsd > 0
+        ? "up"
+        : "down";
+
+  const toneClass =
+    mode === "up"
+      ? active
+        ? "bg-[#1f8f45]/50"
+        : "bg-[#1f8f45]/32"
+      : mode === "down"
+        ? active
+          ? "bg-[#c44a52]/45"
+          : "bg-[#c44a52]/28"
+        : active
+          ? "bg-white/25"
+          : "bg-white/[0.12]";
+
   return (
     <span
       className={`relative isolate flex h-8 min-w-[36px] items-center justify-center overflow-hidden rounded-[10px] px-2.5 text-[15px] font-semibold tabular-nums ${
@@ -202,18 +226,20 @@ function PositionsTabCount({
     >
       <span
         aria-hidden
-        className={`absolute inset-0 rounded-[inherit] ${
-          active ? "bg-black/50" : "bg-black/40"
-        }`}
+        className={`absolute inset-0 rounded-[inherit] ${toneClass}`}
       />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-0 rounded-[inherit] shadow-[inset_0_1px_1px_rgba(255,255,255,0.38),inset_0_-1px_3px_rgba(0,0,0,0.45)] ring-1 ring-inset ring-white/[0.08]"
-      />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-[2px] rounded-[8px] bg-[radial-gradient(120%_90%_at_50%_0%,rgba(255,255,255,0.28)_0%,rgba(255,255,255,0.06)_42%,rgba(255,255,255,0)_72%)]"
-      />
+      {mode === "up" ? (
+        <span
+          aria-hidden
+          className="api-positions-up-glow pointer-events-none absolute inset-[-40%] rounded-full bg-[#3db86a] blur-[10px]"
+        />
+      ) : null}
+      {mode === "down" ? (
+        <span
+          aria-hidden
+          className="api-positions-down-glow pointer-events-none absolute inset-[-40%] rounded-full bg-[#ff4d5e] blur-[10px]"
+        />
+      ) : null}
       <span className="relative z-[1]">{count}</span>
     </span>
   );
@@ -318,6 +344,8 @@ export type TabBarProps = {
   activeTab: TabId | null;
   onChange: (id: TabId) => void;
   positionCount: number;
+  positionsPnl: number;
+  positionsInvested: number;
   /** Shrink when the explore feed scrolls past the hero. */
   compact?: boolean;
   /** Slide off-screen (e.g. own profile). */
@@ -328,6 +356,8 @@ export default function TabBar({
   activeTab,
   onChange,
   positionCount,
+  positionsPnl,
+  positionsInvested,
   compact = false,
   hidden = false,
 }: TabBarProps) {
@@ -387,6 +417,8 @@ export default function TabBar({
                     <PositionsTabCount
                       count={positionCount}
                       active={isActive}
+                      pnlUsd={positionsPnl}
+                      investedUsd={positionsInvested}
                     />
                   ) : (
                     <span
