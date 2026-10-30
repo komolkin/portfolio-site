@@ -539,8 +539,8 @@ function DvdParachute() {
     if (!el) return;
 
     const size = () => {
-      const width = el.offsetWidth || 84;
-      const height = el.offsetHeight || 84;
+      const width = el.offsetWidth || 118;
+      const height = el.offsetHeight || 118;
       return { w: width, h: height };
     };
 
@@ -605,7 +605,7 @@ function DvdParachute() {
     <span
       ref={ref}
       aria-hidden
-      className="pointer-events-none absolute left-0 top-0 z-[40] select-none text-[72px] leading-none will-change-transform sm:text-[84px]"
+      className="pointer-events-none absolute left-0 top-0 z-[40] select-none text-[101px] leading-none will-change-transform sm:text-[118px]"
     >
       🪂
     </span>
