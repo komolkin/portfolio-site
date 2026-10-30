@@ -904,51 +904,6 @@ body > * {
   z-index: 1;
 }
 
-/* Soft color glow for the Positions count — blur blobs survive LiquidGlass better than inset shadows. */
-@keyframes api-positions-up-glow {
-  0%,
-  100% {
-    opacity: 0.35;
-    transform: scale(0.92);
-  }
-  50% {
-    opacity: 0.7;
-    transform: scale(1.05);
-  }
-}
-
-/* Mostly quiet; a brief red pulse only every ~9s */
-@keyframes api-positions-down-glow {
-  0%,
-  88%,
-  100% {
-    opacity: 0.12;
-    transform: scale(0.9);
-  }
-  91%,
-  94% {
-    opacity: 0.62;
-    transform: scale(1.08);
-  }
-}
-
-.api-positions-up-glow {
-  animation: api-positions-up-glow 2.8s ease-in-out infinite;
-}
-
-.api-positions-down-glow {
-  animation: api-positions-down-glow 9s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .api-positions-up-glow,
-  .api-positions-down-glow {
-    animation: none;
-    opacity: 0.45;
-  }
-}
-
-
 @keyframes positions-bubbly-hatch {
   from {
     transform: translateX(0);
