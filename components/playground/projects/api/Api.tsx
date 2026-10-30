@@ -3185,7 +3185,7 @@ function FloatingTopPositions({
               <img
                 src={bubble.avatarUrl}
                 alt=""
-                className="h-full w-full rounded-full bg-[#2a2a2e] object-cover shadow-[0_6px_18px_rgba(0,0,0,0.45)] ring-2 ring-white/30"
+                className="h-full w-full rounded-full border border-white/30 bg-[#2a2a2e] object-cover shadow-[0_6px_18px_rgba(0,0,0,0.45)]"
                 draggable={false}
                 loading="lazy"
                 decoding="async"
