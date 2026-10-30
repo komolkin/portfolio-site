@@ -230,8 +230,7 @@ function WaitlistSuccess() {
         You&apos;re on the list
       </h3>
       <p className="mt-2 text-pretty text-[18px] font-medium leading-[1.3] tracking-[-0.02em] text-[#5e5c56] sm:text-[20px]">
-        We&apos;ll reach out when early access opens on iOS. For now you can use
-        Worm in from your favourite AI app or the{" "}
+        For now you can use Worm from your favourite AI app or the{" "}
         <a
           href="https://www.worm.wtf/"
           target="_blank"
