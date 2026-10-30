@@ -5132,14 +5132,13 @@ function ProfileBalanceChart({
             ) : null}
           </span>
           <FilterDropdown
-            ariaLabel="Portfolio timeframe"
+            ariaLabel="Timeframe"
             value={range}
             onChange={(id) => {
               setScrubValue(null);
               setRange(id);
             }}
             options={PORTFOLIO_RANGE_OPTIONS}
-            menuAlign="left"
             triggerClassName="inline-flex items-center gap-0.5 text-[14px] font-medium text-white/40"
           />
         </div>
@@ -8140,13 +8139,13 @@ export default function Api({
                     </h3>
                     <div className="flex shrink-0 items-center gap-4">
                       <FilterDropdown
-                        ariaLabel="Leaderboard category"
+                        ariaLabel="Category"
                         value={leaderboardCategory}
                         onChange={setLeaderboardCategory}
                         options={LEADERBOARD_CATEGORY_OPTIONS}
                       />
                       <FilterDropdown
-                        ariaLabel="Leaderboard period"
+                        ariaLabel="Period"
                         value={leaderboardPeriod}
                         onChange={setLeaderboardPeriod}
                         options={LEADERBOARD_PERIOD_OPTIONS}

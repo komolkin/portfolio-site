@@ -7,8 +7,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { instrumentSans } from "@/lib/fonts";
+
+const FILTER_SHEET_CLOSE_PX = 72;
 
 export const ui = {
   shell: "bg-black text-white",
@@ -135,44 +138,187 @@ export function FilterDropdown<T extends string>({
   options,
   ariaLabel,
   triggerClassName,
-  menuAlign = "left",
 }: {
   value: T;
   onChange: (id: T) => void;
   options: readonly { id: T; label: string }[];
   ariaLabel: string;
   triggerClassName?: string;
+  /** @deprecated Sheets replace menus; kept for call-site compat. */
   menuAlign?: "left" | "right";
 }) {
   const [open, setOpen] = useState(false);
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const [drawerOffset, setDrawerOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const dragStartY = useRef(0);
+  const dragStartOffset = useRef(0);
+  const closeTimerRef = useRef<number | null>(null);
   const active = options.find((option) => option.id === value) ?? options[0];
 
   useEffect(() => {
+    return () => {
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+      }
+    };
+  }, []);
+
+  const closeSheet = () => {
+    setSheetVisible(false);
+    setDrawerOffset(0);
+    setIsDragging(false);
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+    }
+    closeTimerRef.current = window.setTimeout(() => {
+      setOpen(false);
+      setPortalTarget(null);
+    }, 280);
+  };
+
+  const closeSheetRef = useRef(closeSheet);
+  closeSheetRef.current = closeSheet;
+
+  useEffect(() => {
     if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
+    const id = window.requestAnimationFrame(() => setSheetVisible(true));
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") closeSheetRef.current();
     };
-    document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
     return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
+      window.cancelAnimationFrame(id);
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest("button")) return;
+    setIsDragging(true);
+    dragStartY.current = event.clientY;
+    dragStartOffset.current = drawerOffset;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    const delta = event.clientY - dragStartY.current;
+    setDrawerOffset(Math.max(0, dragStartOffset.current + delta));
+  };
+
+  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    setIsDragging(false);
+    if (drawerOffset > FILTER_SHEET_CLOSE_PX) {
+      closeSheet();
+      return;
+    }
+    setDrawerOffset(0);
+  };
+
+  const sheet =
+    open && portalTarget
+      ? createPortal(
+          <div className="absolute inset-0 z-50">
+            <div
+              className={`absolute inset-0 ${ui.backdrop} transition-opacity duration-300 ${
+                sheetVisible ? "opacity-100" : "opacity-0"
+              }`}
+              onClick={closeSheet}
+              aria-hidden
+            />
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={ariaLabel}
+              className={`absolute inset-x-0 bottom-0 flex max-h-[70%] flex-col overflow-hidden rounded-t-[1.75rem] ${ui.sheet} shadow-[0_-12px_40px_rgba(0,0,0,0.45)]`}
+              style={{
+                transform: sheetVisible
+                  ? `translateY(${drawerOffset}px)`
+                  : "translateY(100%)",
+                transition: isDragging
+                  ? "none"
+                  : "transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)",
+              }}
+            >
+              <div
+                className="flex shrink-0 touch-none flex-col px-5 pb-3 pt-2"
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+              >
+                <span
+                  aria-hidden
+                  className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/30"
+                />
+                <h2 className="text-[20px] font-semibold tracking-[-0.03em]">
+                  {ariaLabel}
+                </h2>
+              </div>
+              <div
+                role="listbox"
+                aria-label={ariaLabel}
+                className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                <div className="flex flex-col gap-1">
+                  {options.map((option) => {
+                    const selected = option.id === value;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        role="option"
+                        aria-selected={selected}
+                        data-sfx="click"
+                        onClick={() => {
+                          onChange(option.id);
+                          closeSheet();
+                        }}
+                        className={`flex w-full items-center rounded-2xl px-3.5 py-3.5 text-left text-[16px] font-semibold transition-colors ${
+                          selected
+                            ? "bg-white/10 text-white"
+                            : "text-white/70 hover:bg-white/[0.06] hover:text-white"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>,
+          portalTarget,
+        )
+      : null;
 
   return (
     <div ref={rootRef} className="relative min-w-0">
       <button
         type="button"
         aria-label={ariaLabel}
-        aria-haspopup="listbox"
+        aria-haspopup="dialog"
         aria-expanded={open}
         data-sfx="click"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => {
+          if (open) {
+            closeSheet();
+            return;
+          }
+          const host =
+            rootRef.current?.closest("article") ??
+            rootRef.current?.closest("[data-api-shell]");
+          if (!(host instanceof HTMLElement)) return;
+          setPortalTarget(host);
+          setSheetVisible(false);
+          setDrawerOffset(0);
+          setOpen(true);
+        }}
         className={
           triggerClassName ??
           "inline-flex max-w-full items-center gap-1 text-[15px] font-semibold tracking-[-0.02em] text-white"
@@ -196,39 +342,7 @@ export function FilterDropdown<T extends string>({
           />
         </svg>
       </button>
-      {open ? (
-        <div
-          role="listbox"
-          aria-label={ariaLabel}
-          className={`absolute top-[calc(100%+6px)] z-30 min-w-[148px] overflow-hidden rounded-2xl bg-[#1c1c1e] py-1 shadow-[0_12px_40px_rgba(0,0,0,0.55)] ring-1 ring-white/10 ${
-            menuAlign === "right" ? "right-0" : "left-0"
-          }`}
-        >
-          {options.map((option) => {
-            const selected = option.id === value;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                data-sfx="click"
-                onClick={() => {
-                  onChange(option.id);
-                  setOpen(false);
-                }}
-                className={`flex w-full items-center px-3.5 py-2.5 text-left text-[14px] font-semibold ${
-                  selected
-                    ? "bg-white/10 text-white"
-                    : "text-white/70 hover:bg-white/[0.06] hover:text-white"
-                }`}
-              >
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
+      {sheet}
     </div>
   );
 }

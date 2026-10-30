@@ -390,7 +390,7 @@ export default function TabBar({
           >
             <div
               aria-hidden
-              className="absolute top-1.5 bottom-1.5 left-1.5 w-[calc((100%-12px)/var(--tab-count))] rounded-full bg-white/20 transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+              className="absolute top-1.5 bottom-1.5 left-1.5 w-[calc((100%-12px)/var(--tab-count))] rounded-full bg-white/[0.08] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
               style={{
                 ["--tab-count" as string]: TABS.length,
                 opacity: hasActiveTab ? 1 : 0,
