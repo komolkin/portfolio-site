@@ -8642,12 +8642,6 @@ export default function Api({
                         {
                           id: "trades",
                           label: "Pulse",
-                          count:
-                            marketPulseItems.length > 0
-                              ? marketPulseItems.length
-                              : marketFeedTrades.length > 0
-                                ? marketFeedTrades.length
-                                : undefined,
                         },
                         {
                           id: "traders",
