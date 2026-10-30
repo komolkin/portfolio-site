@@ -7833,6 +7833,17 @@ export default function Api({
             }}
           />
         )}
+        {/* Pulse fills the viewport with feed rows — keep the same top glow above them. */}
+        {section === "feed" && !showingDrillDown && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 z-[19] h-[42%]"
+            style={{
+              background:
+                "radial-gradient(ellipse 110% 90% at 50% -8%, rgba(58, 86, 104, 0.58) 0%, rgba(34, 53, 68, 0.28) 38%, transparent 72%)",
+            }}
+          />
+        )}
         <IosStatusBar />
         <div
           ref={scrollRef}
@@ -8083,13 +8094,14 @@ export default function Api({
                 <h3 className="mb-3 text-[18px] font-semibold tracking-[-0.02em] text-white">
                   Trending
                 </h3>
-                <ul className="overflow-hidden rounded-[20px] bg-white/[0.08] ring-1 ring-white/[0.06]">
+                {/* Match Portfolio card inset: page px-5 + -mx-4 → 4px edges. */}
+                <ul className="-mx-4 overflow-hidden rounded-[20px] bg-white/[0.08] py-2.5 ring-1 ring-white/[0.06]">
                   {searchTrendingRows.map((row) => (
                     <li key={row.market.marketId}>
                       <button
                         type="button"
                         onClick={() => openMarket(row.market)}
-                        className="flex w-full items-start justify-between gap-3 px-4 py-2.5 text-left"
+                        className="flex w-full items-start justify-between gap-3 px-5 py-1 text-left"
                       >
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[15px] font-semibold leading-snug text-white">
@@ -9236,7 +9248,7 @@ export default function Api({
               pulseStickyAlways ? "opacity-100" : "opacity-0"
             }`}
           >
-            {showingMarketDetail ? null : (
+            {showingMarketDetail ? null : pulseStickyAlways ? null : (
               <div className="h-[96px] bg-gradient-to-b from-black from-[42%] via-black/75 to-transparent" />
             )}
             <p
@@ -9393,6 +9405,50 @@ export default function Api({
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black from-15% via-black/55 to-transparent" />
             </div>
+            {section === "feed" && !showingDrillDown && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 z-[18] h-[120px]"
+              >
+                <div
+                  className="absolute inset-0 backdrop-blur-[1px]"
+                  style={{
+                    maskImage:
+                      "linear-gradient(to bottom, black 0%, black 55%, transparent 100%)",
+                    WebkitMaskImage:
+                      "linear-gradient(to bottom, black 0%, black 55%, transparent 100%)",
+                  }}
+                />
+                <div
+                  className="absolute inset-0 backdrop-blur-[4px]"
+                  style={{
+                    maskImage:
+                      "linear-gradient(to bottom, black 0%, black 40%, transparent 78%)",
+                    WebkitMaskImage:
+                      "linear-gradient(to bottom, black 0%, black 40%, transparent 78%)",
+                  }}
+                />
+                <div
+                  className="absolute inset-0 backdrop-blur-[10px]"
+                  style={{
+                    maskImage:
+                      "linear-gradient(to bottom, black 0%, black 28%, transparent 62%)",
+                    WebkitMaskImage:
+                      "linear-gradient(to bottom, black 0%, black 28%, transparent 62%)",
+                  }}
+                />
+                <div
+                  className="absolute inset-0 backdrop-blur-[18px]"
+                  style={{
+                    maskImage:
+                      "linear-gradient(to bottom, black 0%, black 18%, transparent 48%)",
+                    WebkitMaskImage:
+                      "linear-gradient(to bottom, black 0%, black 18%, transparent 48%)",
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/50 from-10% via-black/20 to-transparent" />
+              </div>
+            )}
             {section === "feed" && (
               <div
                 className="pointer-events-none absolute inset-x-0 z-[11] flex justify-center gap-2 px-5"
