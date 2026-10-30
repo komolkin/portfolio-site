@@ -456,6 +456,62 @@ export function FollowButton({
   );
 }
 
+function FollowIconButton({
+  following,
+  onClick,
+}: {
+  following: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={following ? "Following" : "Follow"}
+      aria-pressed={following}
+      data-sfx="click"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.1] text-white transition-opacity hover:opacity-90"
+    >
+      {following ? (
+        <svg viewBox="0 0 12 12" className="h-4 w-4" fill="none" aria-hidden>
+          <path
+            d="M2.5 6.2 4.8 8.5 9.5 3.5"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
+          <circle
+            cx="10"
+            cy="8"
+            r="3.25"
+            stroke="currentColor"
+            strokeWidth="1.7"
+          />
+          <path
+            d="M4.5 18.25c.7-2.7 2.85-4.25 5.5-4.25s4.8 1.55 5.5 4.25"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+          />
+          <path
+            d="M17.25 9.25v5M14.75 11.75h5"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+          />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 export default function FeedPositionSheet({
   trade,
   handle,
@@ -464,6 +520,8 @@ export default function FeedPositionSheet({
   volume24h,
   following,
   onFollowToggle,
+  onCopy,
+  copyLabel = "Copy",
   onOpenWallet,
   onTrade,
   onClose,
@@ -480,6 +538,8 @@ export default function FeedPositionSheet({
   volume24h?: number;
   following: boolean;
   onFollowToggle: () => void;
+  onCopy?: () => void;
+  copyLabel?: string;
   onOpenWallet: () => void;
   onTrade?: (outcome: string) => void;
   onClose: () => void;
@@ -762,17 +822,31 @@ export default function FeedPositionSheet({
               </div>
             </button>
             {isOwn ? null : (
-              <FollowButton
-                following={following}
-                onClick={onFollowToggle}
-                size="md"
-              />
+              <div className="flex shrink-0 items-center gap-2">
+                {onCopy ? (
+                  <button
+                    type="button"
+                    data-sfx="click"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCopy();
+                    }}
+                    className="inline-flex h-9 shrink-0 items-center rounded-full bg-white px-4 text-[13px] font-semibold leading-none text-black transition-opacity hover:opacity-90"
+                  >
+                    {copyLabel}
+                  </button>
+                ) : null}
+                <FollowIconButton
+                  following={following}
+                  onClick={onFollowToggle}
+                />
+              </div>
             )}
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-4">
-          <section className="relative -mx-4 rounded-[28px] bg-white/[0.08] px-5 pb-4 pt-4">
+        <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-2">
+          <section className="relative -mx-4 rounded-[28px] bg-white/[0.08] px-5 pb-3 pt-4">
             <button
               type="button"
               aria-label="Share position"
@@ -931,7 +1005,7 @@ export default function FeedPositionSheet({
           </section>
         </div>
 
-        <div className="shrink-0 px-5 pb-5 pt-3">
+        <div className="shrink-0 px-5 pb-4 pt-2">
           <div className="flex gap-2.5">
             {(() => {
               const sides = [

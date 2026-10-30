@@ -4707,6 +4707,26 @@ function CheckGlyph() {
   );
 }
 
+function FollowPersonGlyph({ className = "h-6 w-6" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden>
+      <circle cx="10" cy="8" r="3.25" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M4.5 18.25c.7-2.7 2.85-4.25 5.5-4.25s4.8 1.55 5.5 4.25"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+      <path
+        d="M17.25 9.25v5M14.75 11.75h5"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function ProfileCountRow({
   following,
   followers,
@@ -5098,51 +5118,64 @@ function ProfileBalanceChart({
 
   return (
     // Match home video-market side inset (px-1): page is px-5, so -mx-4 → 4px edges.
-    <section className="-mx-4 mt-5 overflow-hidden rounded-[28px] bg-white/[0.08] px-5 pb-5 pt-4">
+    <section
+      className="-mx-4 mt-5 overflow-hidden rounded-[28px] bg-white/[0.08] px-5 pb-5 pt-4"
+      aria-busy={loading}
+    >
       <p className="text-[13px] font-medium text-white/45">Portfolio</p>
-      <p
-        className={`mt-1 text-[36px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSans.className}`}
-      >
-        {loading ? (
-          "—"
-        ) : (
-          <BalanceFlow
-            value={displayBalance}
-            fractionClassName="text-white/40"
-          />
-        )}
-      </p>
-      {!loading && rangePnl !== null ? (
-        <div className="mt-2 flex items-baseline gap-1.5 text-[14px] font-semibold tabular-nums">
-          <span
-            className={`inline-flex items-baseline gap-1 ${
-              rangePnl > 0
-                ? "text-[#00D54B]"
-                : rangePnl < 0
-                  ? "text-[#FF375F]"
-                  : "text-white/45"
-            }`}
-          >
-            <SignedUsdFlow value={rangePnl} />
-            {rangeRoi !== null ? (
-              <span className="inline-flex items-baseline">
-                (
-                <SignedPercentFlow value={rangeRoi} />)
-              </span>
-            ) : null}
-          </span>
-          <FilterDropdown
-            ariaLabel="Timeframe"
-            value={range}
-            onChange={(id) => {
-              setScrubValue(null);
-              setRange(id);
-            }}
-            options={PORTFOLIO_RANGE_OPTIONS}
-            triggerClassName="inline-flex items-center gap-0.5 text-[14px] font-medium text-white/40"
-          />
+      {loading ? (
+        <div className="mt-1 space-y-3" aria-hidden>
+          <div className="h-9 w-[11.5rem] animate-pulse rounded-lg bg-white/[0.1]" />
+          <div className="flex items-center gap-2">
+            <div className="h-3.5 w-24 animate-pulse rounded-md bg-white/[0.08]" />
+            <div className="h-3.5 w-14 animate-pulse rounded-md bg-white/[0.06]" />
+          </div>
         </div>
-      ) : null}
+      ) : (
+        <>
+          <p
+            className={`mt-1 text-[36px] font-semibold leading-none tracking-tight tabular-nums text-white ${instrumentSans.className}`}
+          >
+            <BalanceFlow
+              value={displayBalance}
+              fractionClassName="text-white/40"
+            />
+          </p>
+          {rangePnl !== null ? (
+            <div className="mt-2 flex items-baseline gap-1.5 text-[14px] font-semibold tabular-nums">
+              <span
+                className={`inline-flex items-baseline gap-1 ${
+                  rangePnl > 0
+                    ? "text-[#00D54B]"
+                    : rangePnl < 0
+                      ? "text-[#FF375F]"
+                      : "text-white/45"
+                }`}
+              >
+                <SignedUsdFlow value={rangePnl} />
+                {rangeRoi !== null ? (
+                  <span className="inline-flex items-baseline">
+                    (
+                    <SignedPercentFlow value={rangeRoi} />)
+                  </span>
+                ) : null}
+              </span>
+              <FilterDropdown
+                ariaLabel="Timeframe"
+                value={range}
+                onChange={(id) => {
+                  setScrubValue(null);
+                  setRange(id);
+                }}
+                options={PORTFOLIO_RANGE_OPTIONS}
+                triggerClassName="inline-flex items-center gap-0.5 text-[14px] font-medium text-white/40"
+              />
+            </div>
+          ) : (
+            <div className="mt-2 h-3.5" aria-hidden />
+          )}
+        </>
+      )}
       <div
         className="-mx-5 mt-3 h-[104px] w-[calc(100%+2.5rem)]"
         aria-label="Portfolio value chart"
@@ -5155,11 +5188,18 @@ function ProfileBalanceChart({
           />
         ) : (
           <div
-            className={`h-full w-full ${loading ? "animate-pulse bg-white/[0.04]" : ""}`}
+            className="h-full w-full animate-pulse bg-gradient-to-b from-white/[0.06] to-transparent"
+            aria-hidden
           />
         )}
       </div>
-      {actions ? <div className="mt-4 flex gap-2">{actions}</div> : null}
+      {actions ? (
+        <div
+          className={`mt-4 flex gap-2 ${loading ? "pointer-events-none opacity-40" : ""}`}
+        >
+          {actions}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -7871,7 +7911,7 @@ export default function Api({
           }
         >
           {showingWalletProfile ? (
-            <header className="mb-4 pt-12">
+            <header className="mb-4">
               <ProfileIdentityHeader
                 seed={selectedWallet ?? "wallet"}
                 name={walletLabel ?? shortWallet(selectedWallet ?? "")}
@@ -7900,27 +7940,8 @@ export default function Api({
                     <>
                       <button
                         type="button"
-                        aria-pressed={isFollowing(selectedWallet)}
-                        onClick={() => toggleFollow(selectedWallet)}
-                        className={`flex flex-1 items-center justify-center gap-1.5 ${
-                          isFollowing(selectedWallet)
-                            ? ui.pillSecondary
-                            : ui.pillPrimary
-                        }`}
-                      >
-                        {isFollowing(selectedWallet) ? (
-                          <>
-                            <CheckGlyph />
-                            Following
-                          </>
-                        ) : (
-                          "Follow"
-                        )}
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => openCopyTrade(selectedWallet, walletLabel)}
-                        className={`flex flex-1 items-center justify-center gap-1.5 ${ui.pillSecondary}`}
+                        className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 ${ui.pillPrimary}`}
                       >
                         {copyButtonState(selectedWallet) === "copying" ? (
                           <>
@@ -7931,6 +7952,34 @@ export default function Api({
                           "Paused"
                         ) : (
                           "Copy trades"
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={
+                          isFollowing(selectedWallet) ? "Following" : "Follow"
+                        }
+                        aria-pressed={isFollowing(selectedWallet)}
+                        onClick={() => toggleFollow(selectedWallet)}
+                        className="inline-flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full bg-white/[0.1] text-white transition-opacity hover:opacity-90"
+                      >
+                        {isFollowing(selectedWallet) ? (
+                          <svg
+                            viewBox="0 0 12 12"
+                            className="h-6 w-6"
+                            fill="none"
+                            aria-hidden
+                          >
+                            <path
+                              d="M2.5 6.2 4.8 8.5 9.5 3.5"
+                              stroke="currentColor"
+                              strokeWidth="1.6"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        ) : (
+                          <FollowPersonGlyph className="h-6 w-6" />
                         )}
                       </button>
                     </>
@@ -8021,7 +8070,7 @@ export default function Api({
               </label>
             </header>
           ) : section === "profile" ? (
-            <div className="mb-4 pt-12">
+            <div className="mb-4">
               <ProfileIdentityHeader
                 seed={demoProfile?.wallet ?? profileUsername ?? "profile"}
                 name={
@@ -8040,26 +8089,6 @@ export default function Api({
                 }
                 avatarUrl={PROFILE_AVATAR_SRC}
                 nameRef={stickyTitleRef}
-                trailing={
-                  <>
-                    <button
-                      type="button"
-                      aria-label="Referral"
-                      onClick={() => setProfileSubScreen("referral")}
-                      className="flex h-9 w-9 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
-                    >
-                      <ReferralIcon className="h-5 w-5" />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Settings"
-                      onClick={() => setProfileSubScreen("settings")}
-                      className="flex h-9 w-9 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
-                    >
-                      <SettingsIcon className="h-5 w-5" />
-                    </button>
-                  </>
-                }
               />
               <ProfileCountRow
                 following={followedWallets.size}
@@ -9275,6 +9304,36 @@ export default function Api({
           </div>
         )}
 
+        {showingOwnProfile &&
+          !showingProfileSubScreen &&
+          !tradeFlowMarket &&
+          !feedPositionTrade &&
+          !cashOutItem &&
+          !copyTradeTarget &&
+          !depositOpen &&
+          !followList && (
+          <div
+            className={`absolute right-3.5 ${IOS_CHROME_TOP} z-30 flex items-center gap-1`}
+          >
+            <button
+              type="button"
+              aria-label="Referral"
+              onClick={() => setProfileSubScreen("referral")}
+              className="flex h-11 w-11 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <ReferralIcon className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              aria-label="Settings"
+              onClick={() => setProfileSubScreen("settings")}
+              className="flex h-11 w-11 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <SettingsIcon className="h-5 w-5" />
+            </button>
+          </div>
+        )}
+
         {showingMarketDetail &&
           selectedMarket &&
           !tradeFlowMarket &&
@@ -9666,6 +9725,20 @@ export default function Api({
             following={isFollowing(feedPositionTrade.trade.wallet)}
             onFollowToggle={() =>
               toggleFollow(feedPositionTrade.trade.wallet)
+            }
+            onCopy={() =>
+              openCopyTrade(
+                feedPositionTrade.trade.wallet,
+                feedPositionTrade.handle ??
+                  resolveFeedHandle(feedPositionTrade.trade.wallet),
+              )
+            }
+            copyLabel={
+              copyButtonState(feedPositionTrade.trade.wallet) === "copying"
+                ? "Copying"
+                : copyButtonState(feedPositionTrade.trade.wallet) === "paused"
+                  ? "Paused"
+                  : "Copy"
             }
             isOwn={Boolean(
               demoProfile?.wallet &&
