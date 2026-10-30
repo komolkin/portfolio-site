@@ -166,7 +166,7 @@ export default function Onboarding({
   marketImages: string[];
   teamLogos: string[];
   isFollowing: (wallet: string) => boolean;
-  onToggleFollow: (wallet: string) => void;
+  onToggleFollow: (wallet: string, displayName?: string | null) => void;
   onComplete: (username: string | null) => void;
 }) {
   const [step, setStep] = useState<OnboardingStep>("welcome");
@@ -415,7 +415,9 @@ export default function Onboarding({
                       </div>
                       <FollowButton
                         following={isFollowing(wallet.wallet)}
-                        onClick={() => onToggleFollow(wallet.wallet)}
+                        onClick={() =>
+                          onToggleFollow(wallet.wallet, wallet.displayName)
+                        }
                       />
                     </li>
                   );

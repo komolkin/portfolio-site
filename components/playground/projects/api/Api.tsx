@@ -83,7 +83,9 @@ import {
   BlurShareButton,
   ChipTabs,
   FilterDropdown,
+  FollowToast,
   ui,
+  type FollowToastData,
 } from "./ui";
 import { hexToRgba, useImageAccent } from "./imageAccent";
 import {
@@ -4707,7 +4709,13 @@ function CheckGlyph() {
   );
 }
 
-function FollowPersonGlyph({ className = "h-6 w-6" }: { className?: string }) {
+function FollowPersonGlyph({
+  className = "h-6 w-6",
+  following = false,
+}: {
+  className?: string;
+  following?: boolean;
+}) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden>
       <circle cx="10" cy="8" r="3.25" stroke="currentColor" strokeWidth="1.7" />
@@ -4717,12 +4725,22 @@ function FollowPersonGlyph({ className = "h-6 w-6" }: { className?: string }) {
         strokeWidth="1.7"
         strokeLinecap="round"
       />
-      <path
-        d="M17.25 9.25v5M14.75 11.75h5"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-      />
+      {following ? (
+        <path
+          d="M15.2 11.6 17.1 13.6 20.3 9.9"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ) : (
+        <path
+          d="M17.25 9.25v5M14.75 11.75h5"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+        />
+      )}
     </svg>
   );
 }
@@ -5629,6 +5647,16 @@ export default function Api({
   const [followedWallets, setFollowedWallets] = useState<Set<string>>(
     () => new Set(),
   );
+  const [followToast, setFollowToast] = useState<FollowToastData | null>(null);
+  const followToastTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (followToastTimerRef.current !== null) {
+        window.clearTimeout(followToastTimerRef.current);
+      }
+    };
+  }, []);
   const [onboardingOpen, setOnboardingOpen] = useState(
     embed ? false : SHOW_ONBOARDING,
   );
@@ -5652,6 +5680,7 @@ export default function Api({
     wallet: string;
     displayName: string;
     handle: string;
+    avatarUrl?: string | null;
   } | null>(null);
   const [depositOpen, setDepositOpen] = useState(false);
   const [howToEarnOpen, setHowToEarnOpen] = useState(false);
@@ -6375,14 +6404,83 @@ export default function Api({
   const isFollowing = (wallet: string | null | undefined) =>
     Boolean(wallet && followedWallets.has(wallet.toLowerCase()));
 
-  const toggleFollow = (wallet: string) => {
+  const followToastName = (wallet: string, displayName?: string | null) => {
+    const raw = (
+      displayName?.trim() ||
+      (selectedWallet?.toLowerCase() === wallet.toLowerCase()
+        ? walletLabel
+        : null) ||
+      (feedPositionTrade?.trade.wallet.toLowerCase() === wallet.toLowerCase()
+        ? feedPositionTrade.handle
+        : null) ||
+      (copyTradeTarget?.wallet.toLowerCase() === wallet.toLowerCase()
+        ? copyTradeTarget.displayName
+        : null) ||
+      resolveFeedHandle(wallet)
+    )
+      .replace(/^@/, "")
+      .trim();
+    const name = raw || "trader";
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  };
+
+  const followToastAvatar = (
+    wallet: string,
+    avatarUrl?: string | null,
+  ): string | null => {
+    if (avatarUrl?.trim()) return avatarUrl.trim();
+    if (
+      selectedWallet?.toLowerCase() === wallet.toLowerCase() &&
+      walletAvatarUrl
+    ) {
+      return walletAvatarUrl;
+    }
+    if (
+      feedPositionTrade?.trade.wallet.toLowerCase() === wallet.toLowerCase() &&
+      feedPositionTrade.avatarUrl
+    ) {
+      return feedPositionTrade.avatarUrl;
+    }
+    if (
+      copyTradeTarget?.wallet.toLowerCase() === wallet.toLowerCase() &&
+      copyTradeTarget.avatarUrl
+    ) {
+      return copyTradeTarget.avatarUrl ?? null;
+    }
+    return null;
+  };
+
+  const showFollowToast = (toast: Omit<FollowToastData, "id">) => {
+    if (followToastTimerRef.current !== null) {
+      window.clearTimeout(followToastTimerRef.current);
+    }
+    setFollowToast({ id: Date.now(), ...toast });
+    followToastTimerRef.current = window.setTimeout(() => {
+      setFollowToast(null);
+      followToastTimerRef.current = null;
+    }, 3000);
+  };
+
+  const toggleFollow = (
+    wallet: string,
+    displayName?: string | null,
+    opts?: { toast?: boolean; avatarUrl?: string | null },
+  ) => {
     const key = wallet.toLowerCase();
+    const wasFollowing = followedWallets.has(key);
     setFollowedWallets((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
       persistFollows(next);
       return next;
+    });
+    if (opts?.toast === false) return;
+    showFollowToast({
+      action: wasFollowing ? "Unfollowed" : "Followed",
+      name: followToastName(wallet, displayName),
+      wallet,
+      avatarUrl: followToastAvatar(wallet, opts?.avatarUrl),
     });
   };
 
@@ -6402,7 +6500,11 @@ export default function Api({
     return trade.status === "paused" ? "paused" : "copying";
   };
 
-  const openCopyTrade = (wallet: string, displayName: string | null) => {
+  const openCopyTrade = (
+    wallet: string,
+    displayName: string | null,
+    avatarUrl?: string | null,
+  ) => {
     const label = (displayName ?? walletLabel)?.trim() || null;
     const short = shortWallet(wallet);
     // Prefer the username from the profile/feed you opened from — not a
@@ -6414,11 +6516,16 @@ export default function Api({
       label!.toLowerCase() !== wallet.toLowerCase();
     const username = isRealUsername
       ? label!.replace(/^@/, "")
-      : resolveFeedHandle(wallet);
+      : resolveFeedHandle(wallet).replace(/^@/, "");
     setCopyTradeTarget({
       wallet,
       displayName: username,
       handle: username,
+      avatarUrl:
+        avatarUrl ??
+        (selectedWallet?.toLowerCase() === wallet.toLowerCase()
+          ? walletAvatarUrl
+          : null),
     });
   };
 
@@ -6432,7 +6539,9 @@ export default function Api({
       next[index] = trade;
       return next;
     });
-    if (isNew && !isFollowing(trade.wallet)) toggleFollow(trade.wallet);
+    if (isNew && !isFollowing(trade.wallet)) {
+      toggleFollow(trade.wallet, trade.displayName, { toast: false });
+    }
   };
 
   const stopCopyTrade = (wallet: string) => {
@@ -7940,7 +8049,13 @@ export default function Api({
                     <>
                       <button
                         type="button"
-                        onClick={() => openCopyTrade(selectedWallet, walletLabel)}
+                        onClick={() =>
+                          openCopyTrade(
+                            selectedWallet,
+                            walletLabel,
+                            walletAvatarUrl,
+                          )
+                        }
                         className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 ${ui.pillPrimary}`}
                       >
                         {copyButtonState(selectedWallet) === "copying" ? (
@@ -7960,27 +8075,17 @@ export default function Api({
                           isFollowing(selectedWallet) ? "Following" : "Follow"
                         }
                         aria-pressed={isFollowing(selectedWallet)}
-                        onClick={() => toggleFollow(selectedWallet)}
+                        onClick={() =>
+                          toggleFollow(selectedWallet, walletLabel, {
+                            avatarUrl: walletAvatarUrl,
+                          })
+                        }
                         className="inline-flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full bg-white/[0.1] text-white transition-opacity hover:opacity-90"
                       >
-                        {isFollowing(selectedWallet) ? (
-                          <svg
-                            viewBox="0 0 12 12"
-                            className="h-6 w-6"
-                            fill="none"
-                            aria-hidden
-                          >
-                            <path
-                              d="M2.5 6.2 4.8 8.5 9.5 3.5"
-                              stroke="currentColor"
-                              strokeWidth="1.6"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        ) : (
-                          <FollowPersonGlyph className="h-6 w-6" />
-                        )}
+                        <FollowPersonGlyph
+                          className="h-6 w-6"
+                          following={isFollowing(selectedWallet)}
+                        />
                       </button>
                     </>
                   ) : null
@@ -9737,15 +9842,22 @@ export default function Api({
               return market ? outcomeTeamTone(market, label) : null;
             }}
             onClose={() => setFeedPositionTrade(null)}
+            covered={Boolean(tradeFlowMarket || copyTradeTarget)}
             following={isFollowing(feedPositionTrade.trade.wallet)}
             onFollowToggle={() =>
-              toggleFollow(feedPositionTrade.trade.wallet)
+              toggleFollow(
+                feedPositionTrade.trade.wallet,
+                feedPositionTrade.handle ??
+                  resolveFeedHandle(feedPositionTrade.trade.wallet),
+                { avatarUrl: feedPositionTrade.avatarUrl },
+              )
             }
             onCopy={() =>
               openCopyTrade(
                 feedPositionTrade.trade.wallet,
                 feedPositionTrade.handle ??
                   resolveFeedHandle(feedPositionTrade.trade.wallet),
+                feedPositionTrade.avatarUrl,
               )
             }
             copyLabel={
@@ -9826,6 +9938,7 @@ export default function Api({
             wallet={copyTradeTarget.wallet}
             displayName={copyTradeTarget.displayName}
             handle={copyTradeTarget.handle}
+            avatarUrl={copyTradeTarget.avatarUrl}
             existing={getCopyTrade(copyTradeTarget.wallet)}
             copied={copiedTradesForWallet(
               userTrades,
@@ -9833,6 +9946,7 @@ export default function Api({
             )}
             images={profileMarketImages}
             maxAmount={Math.max(100, profileBalance)}
+            nested={Boolean(feedPositionTrade)}
             onClose={() => setCopyTradeTarget(null)}
             onSave={saveCopyTrade}
             onStop={stopCopyTrade}
@@ -9875,6 +9989,7 @@ export default function Api({
             onClose={() => setPulseFiltersOpen(false)}
           />
         )}
+        <FollowToast toast={followToast} />
       </article>
     </div>
   );

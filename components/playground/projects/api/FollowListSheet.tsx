@@ -44,7 +44,7 @@ export default function FollowListSheet({
   people: FollowListPerson[];
   ownWallet: string | null;
   isFollowing: (wallet: string) => boolean;
-  onToggleFollow: (wallet: string) => void;
+  onToggleFollow: (wallet: string, displayName?: string | null) => void;
   onOpenWallet: (wallet: string, displayName: string | null) => void;
   onClose: () => void;
 }) {
@@ -202,7 +202,9 @@ export default function FollowListSheet({
                       {own ? null : (
                         <FollowButton
                           following={isFollowing(person.wallet)}
-                          onClick={() => onToggleFollow(person.wallet)}
+                          onClick={() =>
+                            onToggleFollow(person.wallet, person.displayName)
+                          }
                         />
                       )}
                     </div>

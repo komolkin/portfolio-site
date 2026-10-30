@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import NumberFlow from "@number-flow/react";
 import { instrumentSans } from "@/lib/fonts";
-import UserAvatar from "./UserAvatar";
+import UserAvatar, { traderPortraitSrc } from "./UserAvatar";
 import {
   copiedEntryPnl,
   copyRelationshipEntries,
@@ -11,13 +12,24 @@ import {
   type CopyTrade,
   type CopyTradeMode,
 } from "./copyTrades";
-import { ActivityRow, SheetPager, ui } from "./ui";
+import {
+  ActivityRow,
+  AmountKeypad,
+  SheetPager,
+  applyAmountKey,
+  ui,
+} from "./ui";
 import type { StoredUserTrade } from "./userTrades";
 
 const CLOSE_THRESHOLD_PX = 72;
 const DEFAULT_AMOUNT = 25;
 const DEFAULT_DAILY_CAP = 100;
 const DEFAULT_MAX_OPEN = 10;
+const QUICK_AMOUNTS = [5, 25] as const;
+
+const nfMaskStyle = {
+  ["--number-flow-mask-height" as string]: "0em",
+} as const;
 
 const DAILY_CAP_OPTIONS = [50, 100, 250, null] as const;
 const DAILY_CAP_CEILING = 999_999;
@@ -135,10 +147,12 @@ export default function CopyTradeModal({
   wallet,
   displayName,
   handle,
+  avatarUrl,
   existing,
   maxAmount,
   copied = [],
   images,
+  nested = false,
   onClose,
   onSave,
   onStop,
@@ -148,10 +162,12 @@ export default function CopyTradeModal({
   wallet: string;
   displayName: string;
   handle: string;
+  avatarUrl?: string | null;
   existing: CopyTrade | null;
   maxAmount: number;
   copied?: StoredUserTrade[];
   images?: Map<string, string>;
+  nested?: boolean;
   onClose: () => void;
   onSave: (trade: CopyTrade) => void;
   onStop: (wallet: string) => void;
@@ -164,13 +180,13 @@ export default function CopyTradeModal({
 }) {
   const [step, setStep] = useState<Step>(existing ? "manage" : "form");
   const [stepDir, setStepDir] = useState<1 | -1>(1);
-  const [mode, setMode] = useState<CopyTradeMode>(existing?.mode ?? "fixed");
-  const [amount, setAmount] = useState(existing?.amount ?? DEFAULT_AMOUNT);
-  const [amountDraft, setAmountDraft] = useState(
-    String(existing?.amount ?? DEFAULT_AMOUNT),
-  );
-  const [amountFocused, setAmountFocused] = useState(false);
-  const [copyExits, setCopyExits] = useState(existing?.copyExits ?? false);
+  const mode: CopyTradeMode = "fixed";
+  const initialAmount =
+    existing?.mode === "fixed"
+      ? (existing.amount ?? DEFAULT_AMOUNT)
+      : DEFAULT_AMOUNT;
+  const [amountDigits, setAmountDigits] = useState(String(initialAmount));
+  const copyExits = false;
   const [maxDailyUsd, setMaxDailyUsd] = useState<number | null>(
     existing?.maxDailyUsd ?? DEFAULT_DAILY_CAP,
   );
@@ -183,7 +199,6 @@ export default function CopyTradeModal({
   );
   const [stopArmed, setStopArmed] = useState(false);
   const [saved, setSaved] = useState<CopyTrade | null>(existing);
-  const amountInputRef = useRef<HTMLInputElement>(null);
   const dailyCapInputRef = useRef<HTMLInputElement>(null);
   const [drawerOffset, setDrawerOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -194,12 +209,22 @@ export default function CopyTradeModal({
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
-  const at = handle.startsWith("@") ? handle : `@${handle}`;
-  const ceiling = mode === "percent" ? 100 : Math.max(1, Math.floor(maxAmount));
+  const nameLabel = (displayName || handle).replace(/^@/, "").trim() || handle;
+  const traderAvatar = avatarUrl?.trim() || traderPortraitSrc(wallet);
+  const ceiling = Math.max(1, Math.floor(maxAmount));
+  const amount = Math.min(
+    ceiling,
+    Math.max(0, amountDigits === "" ? 0 : Number(amountDigits)),
+  );
+  const amountValid = amount >= 1;
 
   const goTo = (next: Step, dir: 1 | -1 = 1) => {
     setStepDir(dir);
     setStep(next);
+  };
+
+  const pressKey = (key: string) => {
+    setAmountDigits((prev) => applyAmountKey(prev, key, ceiling));
   };
 
   const closeSheet = () => {
@@ -238,31 +263,6 @@ export default function CopyTradeModal({
     return () => document.removeEventListener("keydown", onKey);
   }, [step, existing]);
 
-  const commitAmount = (raw: string) => {
-    const digits = raw.replace(/\D/g, "");
-    const next = Math.min(
-      ceiling,
-      Math.max(1, digits === "" ? 1 : Number(digits)),
-    );
-    setAmount(next);
-    setAmountDraft(String(next));
-    return next;
-  };
-
-  const addAmount = (delta: number) => {
-    setAmount((prev) => {
-      const next = Math.min(ceiling, Math.max(1, prev + delta));
-      setAmountDraft(String(next));
-      return next;
-    });
-  };
-
-  const setMaxAmount = () => {
-    const next = Math.max(1, ceiling);
-    setAmount(next);
-    setAmountDraft(String(next));
-  };
-
   const setDailyCap = (value: number | null) => {
     setMaxDailyUsd(value);
     setDailyCapDraft(value === null ? "" : String(value));
@@ -279,20 +279,12 @@ export default function CopyTradeModal({
     return next;
   };
 
-  const switchMode = (next: CopyTradeMode) => {
-    setMode(next);
-    const nextCeiling = next === "percent" ? 100 : Math.max(1, Math.floor(maxAmount));
-    const clamped = Math.min(nextCeiling, Math.max(1, amount));
-    setAmount(clamped);
-    setAmountDraft(String(clamped));
-  };
-
   const buildTrade = (status: CopyTrade["status"], createdAt: string): CopyTrade => ({
     wallet,
     displayName,
     handle: handle.replace(/^@/, ""),
     mode,
-    amount: commitAmount(amountDraft),
+    amount: Math.max(1, amount),
     copyExits,
     maxDailyUsd,
     maxOpenPositions,
@@ -301,6 +293,7 @@ export default function CopyTradeModal({
   });
 
   const confirmCopy = () => {
+    if (!amountValid) return;
     const trade = buildTrade("active", existing?.createdAt ?? new Date().toISOString());
     onSave(trade);
     setSaved(trade);
@@ -308,6 +301,7 @@ export default function CopyTradeModal({
   };
 
   const saveEdits = () => {
+    if (!amountValid) return;
     const trade = buildTrade(
       existing?.status ?? "active",
       existing?.createdAt ?? new Date().toISOString(),
@@ -367,6 +361,8 @@ export default function CopyTradeModal({
   const copiedEntries = copyRelationshipEntries(copied);
   const copiedPnl = copyRelationshipPnl(copied);
   const copiedCount = copiedEntries.length;
+  const fillPager = step === "form" || step === "risk";
+  const tallSheet = nested || fillPager;
   const ariaLabel =
     step === "risk"
       ? "Risk management"
@@ -379,9 +375,9 @@ export default function CopyTradeModal({
   return (
     <div className="absolute inset-0 z-40">
       <div
-        className={`absolute inset-0 ${ui.backdrop} transition-opacity duration-300 ${
-          open ? "opacity-100" : "opacity-0"
-        }`}
+        className={`absolute inset-0 transition-opacity duration-300 ${
+          nested ? "bg-transparent" : ui.backdrop
+        } ${open ? "opacity-100" : "opacity-0"}`}
         onClick={closeSheet}
         aria-hidden
       />
@@ -390,12 +386,14 @@ export default function CopyTradeModal({
         aria-modal="true"
         aria-labelledby="copytrade-title"
         aria-label={ariaLabel}
-        className={`absolute inset-x-0 bottom-0 flex max-h-[94%] flex-col overflow-hidden rounded-t-[1.75rem] ${ui.sheet} shadow-[0_-12px_40px_rgba(0,0,0,0.45)]`}
+        className={`absolute inset-x-0 bottom-0 flex flex-col overflow-hidden rounded-t-[1.75rem] ${ui.sheet} shadow-[0_-12px_40px_rgba(0,0,0,0.45)]`}
         style={{
+          height: tallSheet ? "94%" : undefined,
+          maxHeight: tallSheet ? undefined : "94%",
           transform: open ? `translateY(${drawerOffset}px)` : "translateY(100%)",
           transition: isDragging
             ? "none"
-            : "transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)",
+            : "transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), height 0.32s cubic-bezier(0.32, 0.72, 0, 1)",
         }}
       >
         <div
@@ -411,355 +409,276 @@ export default function CopyTradeModal({
           />
         </div>
 
-        <div className="min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-5">
-          <SheetPager step={step} direction={stepDir}>
+        <div
+          className={
+            fillPager
+              ? "relative flex min-h-0 flex-1 flex-col"
+              : tallSheet
+                ? "min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-5"
+                : "min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-5"
+          }
+        >
+          <SheetPager step={step} direction={stepDir} fill={fillPager}>
           {step === "form" && (
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                {existing ? (
-                  <button
-                    type="button"
-                    aria-label="Back"
-                    onClick={() => {
-                      setStopArmed(false);
-                      goTo("manage", -1);
-                    }}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
-                  >
-                    <BackIcon className="h-4 w-4" />
-                  </button>
-                ) : null}
+            <div className="relative flex h-full min-h-0 flex-col px-5 pb-5">
+              {existing ? (
+                <button
+                  type="button"
+                  aria-label="Back"
+                  onClick={() => {
+                    setStopArmed(false);
+                    goTo("manage", -1);
+                  }}
+                  className="absolute left-0 top-0 z-10 flex h-9 w-9 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+                >
+                  <BackIcon className="h-4 w-4" />
+                </button>
+              ) : null}
+
+              <div className="flex shrink-0 flex-col items-center pt-2 text-center">
                 <UserAvatar
                   seed={wallet}
-                  label={displayName}
-                  className="h-10 w-10"
+                  label={nameLabel}
+                  src={traderAvatar}
+                  className="h-16 w-16"
                 />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[13px] text-white/45">
-                    {existing ? "Edit copytrade" : "Auto copytrade"}
-                  </p>
-                  <h2
-                    id="copytrade-title"
-                    className="truncate text-[20px] font-semibold tracking-[-0.02em]"
-                  >
-                    {at}
-                  </h2>
-                </div>
-              </div>
-
-              <div
-                className="relative flex rounded-full bg-white/[0.08] p-1"
-                role="tablist"
-                aria-label="Copy amount mode"
-              >
-                <div
-                  aria-hidden
-                  className={`pointer-events-none absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-full bg-white transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-                    mode === "percent" ? "translate-x-full" : "translate-x-0"
-                  }`}
-                />
-                {(
-                  [
-                    ["fixed", "Fixed trade"],
-                    ["percent", "% of their size"],
-                  ] as const
-                ).map(([id, label]) => {
-                  const active = mode === id;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      role="tab"
-                      aria-selected={active}
-                      onClick={() => switchMode(id)}
-                      className={`relative z-10 flex-1 rounded-full py-2.5 text-[13px] font-semibold transition-colors duration-300 ${
-                        active
-                          ? "text-black"
-                          : "text-white/45 hover:text-white/70"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="rounded-[20px] bg-white/[0.08] px-3.5 py-3.5">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-[12px] font-medium text-white/45">Amount</p>
-                  <label
-                    className={`inline-flex cursor-text items-baseline text-[34px] font-semibold leading-none tabular-nums tracking-tight text-white ${instrumentSans.className}`}
-                    onClick={() => amountInputRef.current?.focus()}
-                  >
-                    <input
-                      ref={amountInputRef}
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      aria-label={
-                        mode === "percent"
-                          ? "Percent of their trade size"
-                          : "Fixed copy amount in dollars"
-                      }
-                      value={
-                        amountFocused
-                          ? amountDraft
-                          : amount.toLocaleString("en-US")
-                      }
-                      size={Math.max(
-                        2,
-                        (amountFocused
-                          ? amountDraft
-                          : amount.toLocaleString("en-US")
-                        ).length,
-                      )}
-                      onFocus={(e) => {
-                        setAmountFocused(true);
-                        setAmountDraft(String(amount));
-                        requestAnimationFrame(() => e.target.select());
-                      }}
-                      onBlur={() => {
-                        setAmountFocused(false);
-                        commitAmount(amountDraft);
-                      }}
-                      onChange={(e) => {
-                        const digits = e.target.value.replace(/\D/g, "");
-                        setAmountDraft(digits);
-                        if (digits === "") return;
-                        const next = Math.min(ceiling, Number(digits));
-                        if (Number.isFinite(next)) setAmount(Math.max(0, next));
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          amountInputRef.current?.blur();
-                        }
-                        if (e.key === "Escape") {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setAmountDraft(String(amount));
-                          amountInputRef.current?.blur();
-                        }
-                      }}
-                      className={`min-w-[2ch] bg-transparent text-right text-[34px] font-semibold leading-none tracking-tight text-white outline-none caret-[#00D54B] ${instrumentSans.className}`}
-                    />
-                    <span aria-hidden>{mode === "percent" ? "%" : "$"}</span>
-                  </label>
-                </div>
-                <div className="mt-3 flex gap-1.5">
-                  {[1, 5, 10, mode === "percent" ? 25 : 100].map((increment) => (
-                      <button
-                        key={increment}
-                        type="button"
-                        onClick={() => addAmount(increment)}
-                        className="min-w-0 flex-1 rounded-full bg-white/[0.1] py-1.5 text-[13px] font-semibold text-white/80 transition-colors hover:bg-white/15"
-                      >
-                        +{increment}
-                      </button>
-                    ))}
-                  <button
-                    type="button"
-                    onClick={setMaxAmount}
-                    className="min-w-0 flex-1 rounded-full bg-white/[0.1] py-1.5 text-[13px] font-semibold text-white/80 transition-colors hover:bg-white/15"
-                  >
-                    Max
-                  </button>
-                </div>
-              </div>
-
-              <div className="overflow-hidden rounded-[20px] bg-white/[0.08]">
-                <button
-                  type="button"
-                  onClick={() => goTo("risk")}
-                  className="flex w-full items-center gap-3 px-3.5 py-3.5 text-left transition-colors hover:bg-white/[0.04]"
+                <p className="mt-2.5 text-[12px] text-white/45">
+                  {existing ? "Edit copytrade" : "Auto copytrade"}
+                </p>
+                <h2
+                  id="copytrade-title"
+                  className="mt-0.5 max-w-[260px] truncate text-[16px] font-semibold"
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[15px] font-medium">Risk management</p>
-                    <p className="mt-0.5 truncate text-[11px] text-white/40">
-                      {riskSummary(maxDailyUsd, maxOpenPositions)}
-                    </p>
-                  </div>
-                  <ChevronIcon className="h-4 w-4 text-white/30" />
-                </button>
-                <div className="flex items-center gap-3 border-t border-white/[0.06] px-3.5 py-3.5">
-                  <p className="min-w-0 flex-1 text-[15px] font-medium">
-                    Copy exits too
-                  </p>
-                  <Toggle
-                    checked={copyExits}
-                    onChange={setCopyExits}
-                    label="Copy exits too"
+                  {nameLabel}
+                </h2>
+              </div>
+
+              <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
+                <p
+                  className={`inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight text-white ${instrumentSans.className}`}
+                  aria-live="polite"
+                >
+                  $
+                  <NumberFlow
+                    value={amount}
+                    format={{ useGrouping: true, maximumFractionDigits: 0 }}
+                    style={nfMaskStyle}
                   />
-                </div>
-              </div>
-
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={existing ? saveEdits : confirmCopy}
-                  className="w-full rounded-full bg-white py-3.5 text-[15px] font-semibold text-black transition-colors hover:bg-white/90"
-                >
-                  {existing ? "Save changes" : "Confirm copytrade"}
-                </button>
-                <p className="mt-2.5 text-center text-[12px] text-white/35">
-                  You can pause or stop anytime.
+                </p>
+                <p className="mt-3 text-[13px] font-medium text-white/45">
+                  per copied trade
                 </p>
               </div>
+
+              <div className="grid shrink-0 grid-cols-3 gap-2">
+                {QUICK_AMOUNTS.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() =>
+                      setAmountDigits(String(Math.min(value, ceiling)))
+                    }
+                    className="h-10 rounded-full bg-white/[0.08] text-[13px] font-semibold text-white transition-colors hover:bg-white/[0.12]"
+                  >
+                    ${value}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setAmountDigits(String(ceiling))}
+                  className="h-10 rounded-full bg-white/[0.08] text-[13px] font-semibold text-white transition-colors hover:bg-white/[0.12]"
+                >
+                  MAX
+                </button>
+              </div>
+
+              <AmountKeypad onKey={pressKey} className="mt-2" />
+
+              <button
+                type="button"
+                onClick={() => goTo("risk")}
+                className="mt-3 flex w-full shrink-0 items-center gap-3 rounded-[20px] bg-white/[0.08] px-3.5 py-3.5 text-left transition-colors hover:bg-white/[0.12]"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-medium">Risk management</p>
+                  <p className="mt-0.5 truncate text-[11px] text-white/40">
+                    {riskSummary(maxDailyUsd, maxOpenPositions)}
+                  </p>
+                </div>
+                <ChevronIcon className="h-4 w-4 shrink-0 text-white/30" />
+              </button>
+
+              <button
+                type="button"
+                disabled={!amountValid}
+                onClick={existing ? saveEdits : confirmCopy}
+                className="mt-3 w-full shrink-0 rounded-full bg-white py-4 text-[16px] font-semibold text-black transition-colors hover:bg-white/90 disabled:bg-white/[0.08] disabled:text-white/40"
+              >
+                {existing
+                  ? amountValid
+                    ? "Save changes"
+                    : "Enter amount"
+                  : amountValid
+                    ? "Confirm copytrade"
+                    : "Enter amount"}
+              </button>
             </div>
           )}
 
           {step === "risk" && (
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3">
+            <div className="flex h-full min-h-0 flex-col px-5 pb-5">
+              <div className="relative flex shrink-0 items-center justify-center pt-1">
                 <button
                   type="button"
                   aria-label="Back"
                   onClick={() => goTo("form", -1)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+                  className="absolute left-0 top-0 flex h-9 w-9 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
                 >
                   <BackIcon className="h-4 w-4" />
                 </button>
                 <h2
                   id="copytrade-title"
-                  className="text-[20px] font-semibold tracking-[-0.02em]"
+                  className="text-[16px] font-semibold tracking-[-0.02em]"
                 >
                   Risk management
                 </h2>
               </div>
 
-              <section className="rounded-[20px] bg-white/[0.08] px-3.5 py-3.5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[12px] font-medium text-white/45">
-                      Max daily spend
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-white/40">
-                      Pause new copies once this cap is hit
-                    </p>
-                  </div>
-                  <label
-                    className={`inline-flex shrink-0 cursor-text items-baseline text-[34px] font-semibold leading-none tabular-nums tracking-tight text-white ${instrumentSans.className}`}
-                    onClick={() => dailyCapInputRef.current?.focus()}
-                  >
-                    <input
-                      ref={dailyCapInputRef}
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      aria-label="Max daily spend in dollars"
-                      value={
-                        dailyCapFocused
-                          ? dailyCapDraft
-                          : maxDailyUsd === null
-                            ? "—"
-                            : maxDailyUsd.toLocaleString("en-US")
-                      }
-                      size={Math.max(
-                        2,
-                        (dailyCapFocused
-                          ? dailyCapDraft || "0"
-                          : maxDailyUsd === null
-                            ? "—"
-                            : maxDailyUsd.toLocaleString("en-US")
-                        ).length,
-                      )}
-                      onFocus={(e) => {
-                        setDailyCapFocused(true);
-                        setDailyCapDraft(
-                          maxDailyUsd === null ? "" : String(maxDailyUsd),
-                        );
-                        requestAnimationFrame(() => e.target.select());
-                      }}
-                      onBlur={() => {
-                        setDailyCapFocused(false);
-                        commitDailyCap(dailyCapDraft);
-                      }}
-                      onChange={(e) => {
-                        const digits = e.target.value.replace(/\D/g, "");
-                        setDailyCapDraft(digits);
-                        if (digits === "") {
-                          setMaxDailyUsd(null);
-                          return;
+              <div className="mt-5 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <section className="rounded-[20px] bg-white/[0.08] px-3.5 py-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-medium text-white/45">
+                        Max daily spend
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-white/40">
+                        Pause new copies once this cap is hit
+                      </p>
+                    </div>
+                    <label
+                      className={`inline-flex shrink-0 cursor-text items-baseline text-[34px] font-semibold leading-none tabular-nums tracking-tight text-white ${instrumentSans.className}`}
+                      onClick={() => dailyCapInputRef.current?.focus()}
+                    >
+                      <input
+                        ref={dailyCapInputRef}
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        aria-label="Max daily spend in dollars"
+                        value={
+                          dailyCapFocused
+                            ? dailyCapDraft
+                            : maxDailyUsd === null
+                              ? "—"
+                              : maxDailyUsd.toLocaleString("en-US")
                         }
-                        const next = Math.min(DAILY_CAP_CEILING, Number(digits));
-                        if (Number.isFinite(next)) {
-                          setMaxDailyUsd(Math.max(0, next));
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          dailyCapInputRef.current?.blur();
-                        }
-                        if (e.key === "Escape") {
-                          e.preventDefault();
-                          e.stopPropagation();
+                        size={Math.max(
+                          2,
+                          (dailyCapFocused
+                            ? dailyCapDraft || "0"
+                            : maxDailyUsd === null
+                              ? "—"
+                              : maxDailyUsd.toLocaleString("en-US")
+                          ).length,
+                        )}
+                        onFocus={(e) => {
+                          setDailyCapFocused(true);
                           setDailyCapDraft(
                             maxDailyUsd === null ? "" : String(maxDailyUsd),
                           );
-                          dailyCapInputRef.current?.blur();
-                        }
-                      }}
-                      className={`min-w-[2ch] bg-transparent text-right text-[34px] font-semibold leading-none tracking-tight text-white outline-none caret-[#00D54B] ${instrumentSans.className}`}
-                    />
-                    {(dailyCapFocused || maxDailyUsd !== null) && (
-                      <span aria-hidden>$</span>
-                    )}
-                  </label>
-                </div>
-                <div className="mt-3 flex gap-1.5">
-                  {DAILY_CAP_OPTIONS.map((value) => {
-                    const active = maxDailyUsd === value;
-                    return (
-                      <button
-                        key={value ?? "none"}
-                        type="button"
-                        onClick={() => setDailyCap(value)}
-                        className={`min-w-0 flex-1 rounded-full py-1.5 text-[13px] font-semibold transition-colors ${
-                          active
-                            ? "bg-white text-black"
-                            : "bg-white/[0.1] text-white/80 hover:bg-white/15"
-                        }`}
-                      >
-                        {value === null ? "No limit" : `$${value}`}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
+                          requestAnimationFrame(() => e.target.select());
+                        }}
+                        onBlur={() => {
+                          setDailyCapFocused(false);
+                          commitDailyCap(dailyCapDraft);
+                        }}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, "");
+                          setDailyCapDraft(digits);
+                          if (digits === "") {
+                            setMaxDailyUsd(null);
+                            return;
+                          }
+                          const next = Math.min(DAILY_CAP_CEILING, Number(digits));
+                          if (Number.isFinite(next)) {
+                            setMaxDailyUsd(Math.max(0, next));
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            dailyCapInputRef.current?.blur();
+                          }
+                          if (e.key === "Escape") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setDailyCapDraft(
+                              maxDailyUsd === null ? "" : String(maxDailyUsd),
+                            );
+                            dailyCapInputRef.current?.blur();
+                          }
+                        }}
+                        className={`min-w-[2ch] bg-transparent text-right text-[34px] font-semibold leading-none tracking-tight text-white outline-none caret-[#00D54B] ${instrumentSans.className}`}
+                      />
+                      {(dailyCapFocused || maxDailyUsd !== null) && (
+                        <span aria-hidden>$</span>
+                      )}
+                    </label>
+                  </div>
+                  <div className="mt-3 flex gap-1.5">
+                    {DAILY_CAP_OPTIONS.map((value) => {
+                      const active = maxDailyUsd === value;
+                      return (
+                        <button
+                          key={value ?? "none"}
+                          type="button"
+                          onClick={() => setDailyCap(value)}
+                          className={`min-w-0 flex-1 rounded-full py-1.5 text-[13px] font-semibold transition-colors ${
+                            active
+                              ? "bg-white text-black"
+                              : "bg-white/[0.1] text-white/80 hover:bg-white/15"
+                          }`}
+                        >
+                          {value === null ? "No limit" : `$${value}`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
 
-              <section className="overflow-hidden rounded-[20px] bg-white/[0.08]">
-                <div className="px-3.5 pt-3.5">
-                  <p className="text-[15px] font-medium">Max open copies</p>
-                  <p className="mt-0.5 text-[11px] text-white/40">
-                    Skip new trades while you already hold this many
-                  </p>
-                </div>
-                <div className="flex gap-1.5 px-3.5 py-3.5">
-                  {MAX_OPEN_OPTIONS.map((value) => {
-                    const active = maxOpenPositions === value;
-                    return (
-                      <button
-                        key={value ?? "none"}
-                        type="button"
-                        onClick={() => setMaxOpenPositions(value)}
-                        className={`min-w-0 flex-1 rounded-full py-1.5 text-[13px] font-semibold transition-colors ${
-                          active
-                            ? "bg-white text-black"
-                            : "bg-white/[0.1] text-white/80 hover:bg-white/15"
-                        }`}
-                      >
-                        {value === null ? "No limit" : String(value)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
+                <section className="overflow-hidden rounded-[20px] bg-white/[0.08]">
+                  <div className="px-3.5 pt-3.5">
+                    <p className="text-[15px] font-medium">Max open copies</p>
+                    <p className="mt-0.5 text-[11px] text-white/40">
+                      Skip new trades while you already hold this many
+                    </p>
+                  </div>
+                  <div className="flex gap-1.5 px-3.5 py-3.5">
+                    {MAX_OPEN_OPTIONS.map((value) => {
+                      const active = maxOpenPositions === value;
+                      return (
+                        <button
+                          key={value ?? "none"}
+                          type="button"
+                          onClick={() => setMaxOpenPositions(value)}
+                          className={`min-w-0 flex-1 rounded-full py-1.5 text-[13px] font-semibold transition-colors ${
+                            active
+                              ? "bg-white text-black"
+                              : "bg-white/[0.1] text-white/80 hover:bg-white/15"
+                          }`}
+                        >
+                          {value === null ? "No limit" : String(value)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              </div>
 
               <button
                 type="button"
                 onClick={() => goTo("form", -1)}
-                className="w-full rounded-full bg-white py-3.5 text-[15px] font-semibold text-black transition-colors hover:bg-white/90"
+                className="mt-3 w-full shrink-0 rounded-full bg-white py-4 text-[16px] font-semibold text-black transition-colors hover:bg-white/90"
               >
                 Done
               </button>
@@ -787,7 +706,7 @@ export default function CopyTradeModal({
                   id="copytrade-title"
                   className="mt-4 text-[22px] font-semibold tracking-[-0.03em]"
                 >
-                  You&apos;re copying {at}
+                  You&apos;re copying {nameLabel}
                 </h2>
                 <p className="mt-1.5 max-w-[260px] text-[13px] leading-snug text-white/45">
                   We&apos;ll match their next trades with your size and risk
@@ -798,14 +717,14 @@ export default function CopyTradeModal({
                   <div className="flex items-center gap-3 border-b border-white/[0.06] px-3.5 py-3">
                     <UserAvatar
                       seed={wallet}
-                      label={displayName}
+                      label={nameLabel}
+                      src={traderAvatar}
                       className="h-10 w-10"
                     />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[14px] font-semibold">
-                        {displayName}
+                        {nameLabel}
                       </p>
-                      <p className="mt-0.5 text-[12px] text-white/40">{at}</p>
                     </div>
                     <span className="shrink-0 rounded-full bg-[#00D54B]/15 px-2 py-0.5 text-[11px] font-semibold text-[#00D54B]">
                       Active
@@ -815,12 +734,6 @@ export default function CopyTradeModal({
                     <div className="flex items-center justify-between gap-3">
                       <dt className="text-white/45">Size</dt>
                       <dd className="font-semibold">{formatCopyRule(live)}</dd>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <dt className="text-white/45">Copy exits</dt>
-                      <dd className="font-semibold">
-                        {live.copyExits ? "On" : "Off"}
-                      </dd>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <dt className="text-white/45">Risk</dt>
@@ -854,7 +767,8 @@ export default function CopyTradeModal({
               <div className="flex items-center gap-3">
                 <UserAvatar
                   seed={wallet}
-                  label={displayName}
+                  label={nameLabel}
+                  src={traderAvatar}
                   className="h-10 w-10"
                 />
                 <div className="min-w-0 flex-1">
@@ -865,7 +779,7 @@ export default function CopyTradeModal({
                     Copying
                   </h2>
                   <p className="mt-0.5 truncate text-[13px] text-white/45">
-                    {at}
+                    {nameLabel}
                     {live.status === "paused" ? " · Paused" : ""}
                   </p>
                 </div>
@@ -914,8 +828,6 @@ export default function CopyTradeModal({
                 />
               </div>
               <p className="truncate text-[12px] text-white/40">
-                {live.copyExits ? "Exits copied" : "You manage exits"}
-                {" · "}
                 {riskSummary(live.maxDailyUsd, live.maxOpenPositions)}
               </p>
 

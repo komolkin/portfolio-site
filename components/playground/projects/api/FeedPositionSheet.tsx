@@ -475,39 +475,37 @@ function FollowIconButton({
       }}
       className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.1] text-white transition-opacity hover:opacity-90"
     >
-      {following ? (
-        <svg viewBox="0 0 12 12" className="h-4 w-4" fill="none" aria-hidden>
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
+        <circle
+          cx="10"
+          cy="8"
+          r="3.25"
+          stroke="currentColor"
+          strokeWidth="1.7"
+        />
+        <path
+          d="M4.5 18.25c.7-2.7 2.85-4.25 5.5-4.25s4.8 1.55 5.5 4.25"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+        />
+        {following ? (
           <path
-            d="M2.5 6.2 4.8 8.5 9.5 3.5"
+            d="M15.2 11.6 17.1 13.6 20.3 9.9"
             stroke="currentColor"
-            strokeWidth="1.6"
+            strokeWidth="1.7"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-        </svg>
-      ) : (
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
-          <circle
-            cx="10"
-            cy="8"
-            r="3.25"
-            stroke="currentColor"
-            strokeWidth="1.7"
-          />
-          <path
-            d="M4.5 18.25c.7-2.7 2.85-4.25 5.5-4.25s4.8 1.55 5.5 4.25"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-          />
+        ) : (
           <path
             d="M17.25 9.25v5M14.75 11.75h5"
             stroke="currentColor"
             strokeWidth="1.7"
             strokeLinecap="round"
           />
-        </svg>
-      )}
+        )}
+      </svg>
     </button>
   );
 }
@@ -530,6 +528,7 @@ export default function FeedPositionSheet({
   isOwn = false,
   market,
   outcomeTone,
+  covered = false,
 }: {
   trade: PolymarketTradeWithPnl;
   handle: string;
@@ -548,6 +547,8 @@ export default function FeedPositionSheet({
   isOwn?: boolean;
   market?: PolymarketMarketData;
   outcomeTone?: (outcome: string) => { fill: string; ink: string } | null;
+  /** Nested trade/copy sheet is open — keep backdrop, idle this sheet. */
+  covered?: boolean;
 }) {
   const [drawerOffset, setDrawerOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -741,24 +742,30 @@ export default function FeedPositionSheet({
   };
 
   return (
-    <div className="absolute inset-0 z-30">
+    <div
+      className={`absolute inset-0 z-30 ${covered ? "pointer-events-none" : ""}`}
+    >
       <div
         className={`absolute inset-0 ${ui.backdrop} transition-opacity duration-300 ${
           open ? "opacity-100" : "opacity-0"
         }`}
-        onClick={closeSheet}
+        onClick={covered ? undefined : closeSheet}
         aria-hidden
       />
       <div
         role="dialog"
-        aria-modal="true"
+        aria-modal={!covered}
+        aria-hidden={covered}
         aria-label={`${handle}'s position`}
         className={`absolute inset-x-0 bottom-0 flex max-h-[94%] flex-col overflow-hidden rounded-t-[1.75rem] ${ui.sheet} shadow-[0_-12px_40px_rgba(0,0,0,0.45)]`}
         style={{
-          transform: open ? `translateY(${drawerOffset}px)` : "translateY(100%)",
+          opacity: covered ? 0 : 1,
+          transform: open
+            ? `translateY(${drawerOffset}px)${covered ? " scale(0.98)" : ""}`
+            : "translateY(100%)",
           transition: isDragging
             ? "none"
-            : "transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)",
+            : "transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.28s ease",
         }}
       >
         <div

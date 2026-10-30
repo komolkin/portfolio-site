@@ -27,6 +27,13 @@ function hashSeed(seed: string): number {
   return hash >>> 0;
 }
 
+/** Deterministic portrait URL for a wallet/trader seed. */
+export function traderPortraitSrc(seed: string): string {
+  const h = hashSeed(seed);
+  const gender = h % 2 === 0 ? "men" : "women";
+  return `https://randomuser.me/api/portraits/${gender}/${(h >>> 3) % 99}.jpg`;
+}
+
 function avatarBackground(seed: string): string {
   const hash = hashSeed(seed);
   const [a, b, c] = PALETTES[hash % PALETTES.length];

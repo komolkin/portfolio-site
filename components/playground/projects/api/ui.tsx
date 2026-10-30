@@ -10,6 +10,7 @@ import {
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { instrumentSans } from "@/lib/fonts";
+import UserAvatar from "./UserAvatar";
 
 const FILTER_SHEET_CLOSE_PX = 72;
 
@@ -551,7 +552,7 @@ export function ActivityRow({
   return <div className={className}>{body}</div>;
 }
 
-const SHEET_STEP_EASE = [0.32, 0.72, 0, 1] as const;
+const SHEET_STEP_EASE = [0.22, 1, 0.36, 1] as const;
 
 const KEYPAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back"] as const;
 
@@ -626,10 +627,14 @@ export function SheetPager({
   children: ReactNode;
 }) {
   const reduceMotion = useReducedMotion();
-  const duration = reduceMotion ? 0 : fill ? 0.28 : 0.38;
-  const transition = { duration, ease: SHEET_STEP_EASE };
-  const enterX = fill ? 32 : 18;
-  const exitX = fill ? 24 : 14;
+  const duration = reduceMotion ? 0 : fill ? 0.4 : 0.42;
+  const transition = {
+    duration,
+    ease: SHEET_STEP_EASE,
+    opacity: { duration: reduceMotion ? 0 : duration * 0.85 },
+  };
+  const enterX = fill ? 22 : 16;
+  const exitX = fill ? 16 : 12;
   const pageRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number | null>(null);
 
@@ -650,11 +655,7 @@ export function SheetPager({
   }, [step, fill]);
 
   const page = (
-    <AnimatePresence
-      mode={fill ? "wait" : "sync"}
-      initial={false}
-      custom={direction}
-    >
+    <AnimatePresence mode="sync" initial={false} custom={direction}>
       <motion.div
         key={step}
         ref={fill ? undefined : pageRef}
@@ -663,8 +664,14 @@ export function SheetPager({
         animate="center"
         exit="exit"
         variants={{
-          enter: (dir: 1 | -1) => ({ x: dir * enterX, opacity: 0 }),
-          center: { x: 0, opacity: 1 },
+          enter: (dir: 1 | -1) => ({
+            x: dir * enterX,
+            opacity: 0,
+          }),
+          center: {
+            x: 0,
+            opacity: 1,
+          },
           exit: (dir: 1 | -1) => ({
             x: dir * -exitX,
             opacity: 0,
@@ -676,14 +683,15 @@ export function SheetPager({
               ? {
                   height: "100%",
                   pointerEvents: "none" as const,
-                  transition: { duration: reduceMotion ? 0 : 0.14, ease: "easeIn" },
                 }
               : {}),
           }),
         }}
         transition={transition}
         className={
-          fill ? "flex h-full min-h-0 flex-col will-change-[transform,opacity]" : "w-full"
+          fill
+            ? "flex h-full min-h-0 flex-col will-change-[transform,opacity]"
+            : "w-full"
         }
       >
         {children}
@@ -706,5 +714,55 @@ export function SheetPager({
     >
       {page}
     </motion.div>
+  );
+}
+
+export type FollowToastData = {
+  id: number;
+  action: "Followed" | "Unfollowed";
+  name: string;
+  wallet: string;
+  avatarUrl?: string | null;
+};
+
+export function FollowToast({
+  toast,
+}: {
+  toast: FollowToastData | null;
+}) {
+  const reduceMotion = useReducedMotion();
+  return (
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-[70] flex justify-center px-4 pt-14">
+      <AnimatePresence mode="popLayout">
+        {toast ? (
+          <motion.div
+            key={toast.id}
+            role="status"
+            aria-live="polite"
+            initial={reduceMotion ? false : { y: -28, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={
+              reduceMotion
+                ? { opacity: 0 }
+                : { y: -28, opacity: 0, transition: { duration: 0.22 } }
+            }
+            transition={{
+              duration: 0.32,
+              ease: [0.32, 0.72, 0, 1],
+            }}
+            className="inline-flex max-w-[min(100%,300px)] items-center gap-1.5 overflow-hidden rounded-full bg-black/55 py-2 pl-4 pr-4 text-[13px] font-semibold text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.28),inset_0_-2px_4px_rgba(0,0,0,0.4),0_8px_28px_rgba(0,0,0,0.35)] ring-1 ring-white/[0.06] backdrop-blur-xl"
+          >
+            <span className="shrink-0 text-white/90">{toast.action}</span>
+            <UserAvatar
+              seed={toast.wallet}
+              label={toast.name}
+              src={toast.avatarUrl}
+              className="h-5 w-5 shrink-0"
+            />
+            <span className="min-w-0 truncate">{toast.name}</span>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
   );
 }
