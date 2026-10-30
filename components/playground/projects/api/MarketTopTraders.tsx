@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PolymarketMarketTrade } from "@/lib/polymarketscan";
+import { ActivityRow } from "./ui";
 
 const LIST_SIZE = 10;
 
@@ -60,6 +61,20 @@ function formatUsd(value: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+
+function withAlpha(hex: string, alpha: number): string {
+  const raw = hex.replace("#", "").trim();
+  const full =
+    raw.length === 3
+      ? raw
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : raw;
+  if (!/^[0-9a-fA-F]{6}$/.test(full)) return hex;
+  const n = parseInt(full, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
 }
 
 function positionsFromTrades(
@@ -125,67 +140,29 @@ function demoPositions(
   return positions;
 }
 
-function FollowBadge({
-  following,
-  onClick,
-}: {
-  following: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={following ? "Unfollow" : "Follow"}
-      aria-pressed={following}
-      data-sfx="click"
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
-      className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-white text-black ring-2 ring-black"
-    >
-      <svg viewBox="0 0 10 10" className="h-2.5 w-2.5" fill="none" aria-hidden>
-        {following ? (
-          <path
-            d="M2 5.2 4.1 7.2 8 3"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        ) : (
-          <path
-            d="M5 2v6M2 5h6"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-        )}
-      </svg>
-    </button>
-  );
-}
-
 export default function MarketTopTraders({
   marketKey,
   sides,
   trades,
   resolveHandle,
-  isFollowing,
-  onToggleFollow,
   onOpenWallet,
 }: {
   marketKey: string;
   sides: TopTradersSide[];
   trades: readonly PolymarketMarketTrade[];
   resolveHandle: (wallet: string) => string;
-  isFollowing: (wallet: string) => boolean;
-  onToggleFollow: (wallet: string) => void;
   onOpenWallet: (wallet: string) => void;
 }) {
   const [active, setActive] = useState(0);
   const sideIndex = Math.min(active, Math.max(0, sides.length - 1));
   const side = sides[sideIndex];
+  const tabListRef = useRef<HTMLDivElement>(null);
+  const [indicator, setIndicator] = useState<{
+    left: number;
+    width: number;
+    height: number;
+    top: number;
+  } | null>(null);
 
   const positions = useMemo(() => {
     if (!side) return [];
@@ -197,14 +174,64 @@ export default function MarketTopTraders({
     return filled.sort((a, b) => b.valueUsd - a.valueUsd).slice(0, LIST_SIZE);
   }, [marketKey, side, sideIndex, trades, resolveHandle]);
 
+  const sidesKey = sides.map((entry) => entry.label).join("|");
+
+  useLayoutEffect(() => {
+    const list = tabListRef.current;
+    if (!list || sides.length < 2) return;
+    const measure = () => {
+      const selected = list.querySelector<HTMLElement>('[aria-selected="true"]');
+      if (!selected) return;
+      const listRect = list.getBoundingClientRect();
+      const tabRect = selected.getBoundingClientRect();
+      const next = {
+        left: tabRect.left - listRect.left,
+        top: tabRect.top - listRect.top,
+        width: tabRect.width,
+        height: tabRect.height,
+      };
+      setIndicator((prev) =>
+        prev &&
+        prev.left === next.left &&
+        prev.top === next.top &&
+        prev.width === next.width &&
+        prev.height === next.height
+          ? prev
+          : next,
+      );
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(list);
+    return () => ro.disconnect();
+  }, [sideIndex, sidesKey, sides.length]);
+
   if (!side) return null;
 
   return (
     <div className="flex flex-col">
       {sides.length > 1 && (
-        <div className="mt-1 flex gap-2" role="tablist" aria-label="Side">
+        <div
+          ref={tabListRef}
+          className="relative mt-1 flex rounded-full bg-white/[0.06] p-0.5"
+          role="tablist"
+          aria-label="Side"
+        >
+          {indicator ? (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute rounded-full transition-[transform,width,height,background-color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none"
+              style={{
+                width: indicator.width,
+                height: indicator.height,
+                transform: `translate(${indicator.left}px, ${indicator.top}px)`,
+                backgroundColor: withAlpha(side.color, 0.18),
+              }}
+            />
+          ) : null}
           {sides.map((entry, index) => {
             const selected = index === sideIndex;
+            const pct = Math.round(entry.price * 100);
             return (
               <button
                 key={entry.label}
@@ -213,77 +240,66 @@ export default function MarketTopTraders({
                 aria-selected={selected}
                 data-sfx="click"
                 onClick={() => setActive(index)}
-                className={`min-w-0 flex-1 truncate rounded-full px-3 py-2 text-[14px] font-semibold transition-colors ${
-                  selected ? "bg-white/[0.12]" : "bg-white/[0.04] opacity-60"
+                className={`relative z-[1] min-w-0 flex-1 truncate rounded-full px-3 py-2 text-center text-[13px] font-semibold transition-colors duration-200 ${
+                  selected ? "" : "text-white/40 hover:text-white/60"
                 }`}
-                style={{ color: entry.color }}
+                style={selected ? { color: entry.color } : undefined}
               >
-                {entry.label} {Math.round(entry.price * 100)}%
+                <span className="truncate">{entry.label}</span>
+                <span
+                  className={`ml-1.5 tabular-nums ${
+                    selected ? "opacity-85" : "text-white/30"
+                  }`}
+                >
+                  {pct}%
+                </span>
               </button>
             );
           })}
         </div>
       )}
 
-      <ol className="mt-2">
+      <ol className="mt-1">
         {positions.map((position) => {
           const up = position.pnlPct >= 0;
           return (
             <li key={position.key}>
-              <div
-                role="button"
-                tabIndex={0}
-                data-sfx="click"
-                onClick={() => onOpenWallet(position.wallet)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onOpenWallet(position.wallet);
-                  }
-                }}
-                className="flex w-full cursor-pointer items-center gap-3 py-2.5 text-left"
-              >
-                <span className="relative h-11 w-11 shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+              <ActivityRow
+                compact
+                leading={
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={position.photo}
                     alt=""
-                    className="h-11 w-11 rounded-full bg-white/10 object-cover"
+                    className="h-10 w-10 rounded-full bg-white/10 object-cover"
                   />
-                  <FollowBadge
-                    following={isFollowing(position.wallet)}
-                    onClick={() => onToggleFollow(position.wallet)}
-                  />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[16px] font-semibold leading-snug">
-                    {position.handle}
-                  </span>
-                  <span className="mt-0.5 block truncate text-[13px] text-white/55">
-                    Bought at {Math.round(position.avgPrice * 100)}%
-                  </span>
-                </span>
-                <span className="shrink-0 text-right">
-                  <span className="block text-[16px] font-semibold tabular-nums leading-snug">
-                    {formatUsd(position.valueUsd)}
-                  </span>
-                  <span
-                    className={`mt-0.5 inline-flex items-center gap-1 text-[13px] font-medium tabular-nums ${
-                      up ? "text-[#00D54B]" : "text-[#FF375F]"
-                    }`}
-                  >
-                    <svg
-                      viewBox="0 0 8 6"
-                      className={`h-1.5 w-2 ${up ? "" : "rotate-180"}`}
-                      aria-hidden
+                }
+                title={position.handle}
+                subtitle={`Bought at ${Math.round(position.avgPrice * 100)}%`}
+                trailing={
+                  <div>
+                    <p className="text-[15px] font-semibold tabular-nums leading-snug">
+                      {formatUsd(position.valueUsd)}
+                    </p>
+                    <p
+                      className={`mt-0.5 inline-flex items-center gap-1 text-[12px] font-semibold tabular-nums ${
+                        up ? "text-[#00D54B]" : "text-[#FF375F]"
+                      }`}
                     >
-                      <path d="M4 0 8 6H0z" fill="currentColor" />
-                    </svg>
-                    {up ? "+" : "-"}
-                    {Math.abs(position.pnlPct).toFixed(1)}%
-                  </span>
-                </span>
-              </div>
+                      <svg
+                        viewBox="0 0 8 6"
+                        className={`h-1.5 w-2 ${up ? "" : "rotate-180"}`}
+                        aria-hidden
+                      >
+                        <path d="M4 0 8 6H0z" fill="currentColor" />
+                      </svg>
+                      {up ? "+" : "-"}
+                      {Math.abs(position.pnlPct).toFixed(1)}%
+                    </p>
+                  </div>
+                }
+                onClick={() => onOpenWallet(position.wallet)}
+              />
             </li>
           );
         })}

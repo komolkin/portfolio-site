@@ -8398,6 +8398,15 @@ export default function Api({
                                 : undefined) ??
                               undefined
                             }
+                            outcomeColor={(() => {
+                              const market = trade.marketSlug
+                                ? marketBySlug.get(trade.marketSlug)
+                                : undefined;
+                              return market
+                                ? outcomeTeamTone(market, trade.outcome)
+                                    ?.text ?? null
+                                : null;
+                            })()}
                             onOpenWallet={(wallet) => openWallet(wallet, null)}
                             onOpenTrade={() => setFeedPositionTrade({ trade })}
                             onOpenMarket={() =>
@@ -8745,6 +8754,12 @@ export default function Api({
                               gifUrl={null}
                               showMarketThumb={false}
                               showUserThumb
+                              outcomeColor={
+                                outcomeTeamTone(
+                                  selectedMarket,
+                                  trade.outcome,
+                                )?.text ?? null
+                              }
                               onOpenWallet={(wallet) =>
                                 openWallet(wallet, null)
                               }
@@ -8790,8 +8805,6 @@ export default function Api({
                         )}
                         trades={marketActivity?.trades ?? []}
                         resolveHandle={resolveFeedHandle}
-                        isFollowing={isFollowing}
-                        onToggleFollow={toggleFollow}
                         onOpenWallet={(wallet) => openWallet(wallet, null)}
                       />
                     )}

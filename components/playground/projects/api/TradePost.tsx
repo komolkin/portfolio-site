@@ -183,6 +183,7 @@ export default function TradePost({
   showUserThumb = false,
   lifted = false,
   variant = "social",
+  outcomeColor,
 }: {
   trade: TradePostTrade;
   handle: string;
@@ -201,6 +202,8 @@ export default function TradePost({
   lifted?: boolean;
   /** `message` = live chat line; `social` = card + likes/reply. */
   variant?: "message" | "social";
+  /** Stable team/outcome color from market CTAs (overrides random tint). */
+  outcomeColor?: string | null;
 }) {
   const key = tradeKey(trade);
   const seed = hashString(
@@ -235,7 +238,7 @@ export default function TradePost({
   const likeCount = 1 + (seed % 12) + likeBump;
   const replyCount = comments.length;
   const move = tradeMoveStats(trade, seed);
-  const tint = outcomeTint(seed);
+  const tint = outcomeColor?.trim() || outcomeTint(seed);
   const pctLabel = formatSignedPercent(move.pct);
   const pctPositive = move.up;
 
