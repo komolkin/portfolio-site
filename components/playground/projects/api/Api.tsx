@@ -9536,14 +9536,16 @@ export default function Api({
                     feedLivePlaying ? "Pause live pulse" : "Play live pulse"
                   }
                   initial={false}
+                  whileTap={{ scale: 0.96 }}
                   animate={{ width: feedLivePlaying ? 79 : 99 }}
                   transition={{
                     width: {
                       duration: 0.34,
                       ease: [0.32, 0.72, 0, 1],
                     },
+                    scale: { duration: 0.12 },
                   }}
-                  className="pointer-events-auto relative inline-flex h-10 shrink-0 overflow-hidden rounded-full bg-white/[0.12] text-[13px] font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:bg-white/[0.18]"
+                  className="pointer-events-auto relative inline-flex h-10 shrink-0 origin-center overflow-hidden rounded-full bg-white/[0.12] text-[13px] font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:bg-white/[0.18]"
                 >
                   <span className="absolute inset-0 flex items-center justify-center gap-1.5">
                     <span className="relative h-4 w-4 shrink-0">
@@ -9606,7 +9608,7 @@ export default function Api({
                   onClick={() => setPulseFiltersOpen(true)}
                   aria-label="Open pulse filters"
                   aria-pressed={pulseFiltersActive(pulseFilters)}
-                  className={`pointer-events-auto relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors ${
+                  className={`pointer-events-auto relative inline-flex h-10 w-10 shrink-0 origin-center items-center justify-center rounded-full text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md transition-[colors,transform] duration-150 active:scale-[0.96] ${
                     pulseFiltersActive(pulseFilters)
                       ? "bg-white/[0.2] hover:bg-white/[0.26]"
                       : "bg-white/[0.12] hover:bg-white/[0.18]"
