@@ -348,6 +348,8 @@ export type TabBarProps = {
   positionsInvested: number;
   /** Shrink when the explore feed scrolls past the hero. */
   compact?: boolean;
+  /** Slide off-screen (e.g. own profile). */
+  hidden?: boolean;
 };
 
 export default function TabBar({
@@ -357,6 +359,7 @@ export default function TabBar({
   positionsPnl,
   positionsInvested,
   compact = false,
+  hidden = false,
 }: TabBarProps) {
   const activeIndex = TABS.findIndex((tab) => tab.id === activeTab);
   const hasActiveTab = activeIndex >= 0;
@@ -366,12 +369,20 @@ export default function TabBar({
       className="pointer-events-none absolute inset-x-0 z-10 flex justify-center px-5 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
       style={{
         bottom: TAB_BAR_BOTTOM,
-        transform: compact ? "scale(0.86)" : "scale(1)",
+        transform: [
+          hidden
+            ? `translateY(${TAB_BAR_HEIGHT + TAB_BAR_BOTTOM + 28}px)`
+            : "translateY(0)",
+          compact && !hidden ? "scale(0.86)" : "scale(1)",
+        ].join(" "),
         transformOrigin: "center bottom",
       }}
       aria-label="Main sections"
+      aria-hidden={hidden}
     >
-      <div className="pointer-events-auto w-full max-w-[360px]">
+      <div
+        className={`w-full max-w-[360px] ${hidden ? "pointer-events-none" : "pointer-events-auto"}`}
+      >
         <TabBarGlass>
           <div
             className="relative flex h-full w-full items-center justify-between px-1.5"

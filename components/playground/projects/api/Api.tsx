@@ -4518,10 +4518,10 @@ function ProfilePositionRow({
           <img
             src={position.image}
             alt=""
-            className="h-10 w-10 rounded-[14px] object-cover"
+            className="h-10 w-10 rounded-[8px] object-cover"
           />
         ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-white/[0.1] text-[12px] font-semibold text-white/40">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-white/[0.1] text-[12px] font-semibold text-white/40">
             {position.outcome.slice(0, 1)}
           </div>
         )
@@ -4585,17 +4585,18 @@ function ProfileHistoryRow({
   const timeAgo = formatTimeAgo(trade.timestamp);
   return (
     <ActivityRow
+      compact
       leading={
         marketImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={marketImage}
             alt=""
-            className="h-11 w-11 rounded-2xl object-cover"
+            className="h-10 w-10 rounded-[8px] object-cover"
           />
         ) : (
           <div
-            className={`flex h-11 w-11 items-center justify-center rounded-2xl text-[13px] font-semibold ${
+            className={`flex h-10 w-10 items-center justify-center rounded-[8px] text-[12px] font-semibold ${
               isBuy
                 ? "bg-[#00D54B]/15 text-[#00D54B]"
                 : "bg-[#FF375F]/15 text-[#FF375F]"
@@ -4610,14 +4611,14 @@ function ProfileHistoryRow({
       trailing={
         pnlUsd !== undefined ? (
           <span
-            className={`text-[16px] font-semibold tabular-nums ${
+            className={`text-[15px] font-semibold tabular-nums ${
               pnlUsd < 0 ? "text-[#FF375F]" : "text-[#00D54B]"
             }`}
           >
             {formatHistoryPnl(pnlUsd)}
           </span>
         ) : (
-          <span className="text-[16px] font-semibold tabular-nums text-white/45">
+          <span className="text-[15px] font-semibold tabular-nums text-white/45">
             {formatUsd(trade.size * trade.price)}
           </span>
         )
@@ -6628,7 +6629,7 @@ export default function Api({
         : section === "feed" && !showingDrillDown
           ? "Pulse"
           : section === "search" && !showingDrillDown
-            ? "Search"
+            ? "Explore"
             : section === "rewards" && !showingDrillDown
               ? "Rewards"
               : null;
@@ -7126,12 +7127,9 @@ export default function Api({
 
   const pulseFiltersKey = useMemo(
     () =>
-      [
-        pulseFilters.minSize,
-        pulseFilters.customMinUsd ?? "",
-        pulseFilters.category,
-        pulseFilters.league,
-      ].join("|"),
+      [pulseFilters.minSize, pulseFilters.category, pulseFilters.league].join(
+        "|",
+      ),
     [pulseFilters],
   );
 
@@ -7849,10 +7847,13 @@ export default function Api({
             !showingDrillDown && !showingProfileSubScreen
               ? {
                   // Flow: clear floating Live control + tab bar.
+                  // Profile: tab bar slides away — keep a light bottom inset.
                   paddingBottom:
-                    section === "feed"
-                      ? TAB_BAR_BOTTOM + TAB_BAR_HEIGHT + 12 + 52
-                      : TAB_BAR_CONTENT_INSET,
+                    section === "profile"
+                      ? 28
+                      : section === "feed"
+                        ? TAB_BAR_BOTTOM + TAB_BAR_HEIGHT + 12 + 52
+                        : TAB_BAR_CONTENT_INSET,
                 }
               : showingMarketDetail
                 ? { paddingBottom: TAB_BAR_CONTENT_INSET }
@@ -7986,7 +7987,7 @@ export default function Api({
                 ref={stickyTitleRef as RefObject<HTMLHeadingElement>}
                 className={ui.title}
               >
-                Search
+                Explore
               </h2>
               <label className="mt-4 flex items-center gap-2.5 rounded-full bg-white/[0.08] px-4 py-3 text-white/40">
                 <span className="shrink-0">
@@ -8010,7 +8011,7 @@ export default function Api({
               </label>
             </header>
           ) : section === "profile" ? (
-            <div className="mb-4">
+            <div className="mb-4 pt-12">
               <ProfileIdentityHeader
                 seed={demoProfile?.wallet ?? profileUsername ?? "profile"}
                 name={
@@ -8979,7 +8980,7 @@ export default function Api({
 
                     {walletProfileTab === "positions" &&
                       walletPositions.length > 0 && (
-                        <ul className="divide-y divide-white/[0.06]">
+                        <ul className="mt-1">
                           {walletPositions.map((position, index) => (
                             <li
                               key={`${position.marketSlug ?? position.marketTitle}-${position.outcome}-${index}`}
@@ -9002,7 +9003,7 @@ export default function Api({
 
                     {walletProfileTab === "history" &&
                       walletHistoryTrades.length > 0 && (
-                        <ul className="divide-y divide-white/[0.06]">
+                        <ul className="mt-1">
                           {walletHistoryTrades.map((trade, index) => (
                             <li
                               key={`${trade.txHash ?? trade.timestamp}-${trade.outcome}-${index}`}
@@ -9108,7 +9109,7 @@ export default function Api({
                     )}
 
                     {profileTab === "positions" && profilePositions.length > 0 && (
-                      <ul className="divide-y divide-white/[0.06]">
+                      <ul className="mt-1">
                         {profilePositions.map((position, index) => (
                           <li key={`${position.marketSlug ?? position.marketTitle}-${position.outcome}-${index}`}>
                             <ProfilePositionRow
@@ -9147,7 +9148,7 @@ export default function Api({
                       (profileHistoryStatus === "ready" ||
                         userHistoryTrades.length > 0) &&
                       mergedProfileHistory.length > 0 && (
-                        <ul className="divide-y divide-white/[0.06]">
+                        <ul className="mt-1">
                           {mergedProfileHistory.map((trade, index) => (
                             <li
                               key={`${trade.txHash ?? trade.timestamp}-${trade.outcome}-${index}`}
@@ -9354,7 +9355,11 @@ export default function Api({
           <>
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-x-0 bottom-0 z-[9] h-[140px]"
+              className={`pointer-events-none absolute inset-x-0 bottom-0 z-[9] h-[140px] transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                showingOwnProfile
+                  ? "translate-y-10 opacity-0"
+                  : "translate-y-0 opacity-100"
+              }`}
             >
               <div
                 className="absolute inset-0 backdrop-blur-[1px]"
@@ -9509,6 +9514,7 @@ export default function Api({
               positionsPnl={profilePositionsPnl}
               positionsInvested={profilePositionsInvested}
               compact={isExploreFeed && feedPastHero}
+              hidden={showingOwnProfile}
             />
           </>
         )}
@@ -9518,7 +9524,7 @@ export default function Api({
             loading={demoProfileStatus === "loading"}
             history={
               mergedProfileHistory.length > 0 ? (
-                <ul className="divide-y divide-white/[0.06] px-1">
+                <ul className="px-1">
                   {mergedProfileHistory.map((trade, index) => (
                     <li
                       key={`${trade.txHash ?? trade.timestamp}-${trade.outcome}-${index}`}

@@ -772,7 +772,7 @@ export default function FeedPositionSheet({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-4">
-          <section className="relative rounded-[28px] bg-white/[0.08] px-5 pb-4 pt-4">
+          <section className="relative -mx-4 rounded-[28px] bg-white/[0.08] px-5 pb-4 pt-4">
             <button
               type="button"
               aria-label="Share position"

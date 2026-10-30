@@ -6,7 +6,7 @@ import { ui } from "./ui";
 
 const CLOSE_THRESHOLD_PX = 72;
 
-export type PulseMinSize = "all" | "1k" | "5k" | "10k" | "custom";
+export type PulseMinSize = "all" | "100" | "1k" | "5k" | "10k" | "100k";
 export type PulseCategory =
   | "all"
   | "sports"
@@ -26,25 +26,24 @@ export type PulseLeague =
 
 export type PulseFilters = {
   minSize: PulseMinSize;
-  customMinUsd: number | null;
   category: PulseCategory;
   league: PulseLeague;
 };
 
 export const DEFAULT_PULSE_FILTERS: PulseFilters = {
   minSize: "all",
-  customMinUsd: null,
   category: "all",
   league: "all",
 };
 
-const MIN_SIZE_OPTIONS: { id: Exclude<PulseMinSize, "custom">; label: string }[] =
-  [
-    { id: "all", label: "All" },
-    { id: "1k", label: ">$1K" },
-    { id: "5k", label: ">$5K" },
-    { id: "10k", label: ">$10K" },
-  ];
+const MIN_SIZE_OPTIONS: { id: PulseMinSize; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "100", label: ">$100" },
+  { id: "1k", label: ">$1K" },
+  { id: "5k", label: ">$5K" },
+  { id: "10k", label: ">$10K" },
+  { id: "100k", label: ">$100K" },
+];
 
 const CATEGORY_OPTIONS: { id: PulseCategory; label: string }[] = [
   { id: "all", label: "All" },
@@ -66,10 +65,12 @@ const LEAGUE_OPTIONS: { id: PulseLeague; label: string }[] = [
   { id: "nhl", label: "NHL" },
 ];
 
-const MIN_SIZE_USD: Record<Exclude<PulseMinSize, "all" | "custom">, number> = {
+const MIN_SIZE_USD: Record<Exclude<PulseMinSize, "all">, number> = {
+  "100": 100,
   "1k": 1_000,
   "5k": 5_000,
   "10k": 10_000,
+  "100k": 100_000,
 };
 
 const CATEGORY_MATCH: Record<
@@ -119,7 +120,6 @@ export function pulseFiltersActive(filters: PulseFilters): boolean {
 
 export function pulseMinUsd(filters: PulseFilters): number {
   if (filters.minSize === "all") return 0;
-  if (filters.minSize === "custom") return Math.max(0, filters.customMinUsd ?? 0);
   return MIN_SIZE_USD[filters.minSize];
 }
 
@@ -205,9 +205,6 @@ export default function PulseFiltersSheet({
   const [drawerOffset, setDrawerOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [draft, setDraft] = useState<PulseFilters>(value);
-  const [customText, setCustomText] = useState(
-    value.customMinUsd != null ? String(value.customMinUsd) : "",
-  );
   const dragStartY = useRef(0);
   const dragStartOffset = useRef(0);
   const closeTimerRef = useRef<number | null>(null);
@@ -254,7 +251,7 @@ export default function PulseFiltersSheet({
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if ((event.target as HTMLElement).closest("button,input")) return;
+    if ((event.target as HTMLElement).closest("button")) return;
     setIsDragging(true);
     dragStartY.current = event.clientY;
     dragStartOffset.current = drawerOffset;
@@ -278,13 +275,8 @@ export default function PulseFiltersSheet({
     setDrawerOffset(0);
   };
 
-  const setMinSize = (id: Exclude<PulseMinSize, "custom">) => {
-    commit({
-      ...draft,
-      minSize: id,
-      customMinUsd: id === "all" ? null : draft.customMinUsd,
-    });
-    if (id !== "custom") setCustomText("");
+  const setMinSize = (id: PulseMinSize) => {
+    commit({ ...draft, minSize: id });
   };
 
   const setCategory = (id: PulseCategory) => {
@@ -295,22 +287,7 @@ export default function PulseFiltersSheet({
     });
   };
 
-  const applyCustom = (raw: string) => {
-    setCustomText(raw);
-    const digits = raw.replace(/[^\d]/g, "");
-    if (!digits) {
-      commit({ ...draft, minSize: "custom", customMinUsd: null });
-      return;
-    }
-    commit({
-      ...draft,
-      minSize: "custom",
-      customMinUsd: Number.parseInt(digits, 10),
-    });
-  };
-
   const reset = () => {
-    setCustomText("");
     commit(DEFAULT_PULSE_FILTERS);
   };
 
@@ -383,28 +360,6 @@ export default function PulseFiltersSheet({
                   onClick={() => setMinSize(option.id)}
                 />
               ))}
-              <label
-                className={`inline-flex h-9 min-w-[5.5rem] shrink-0 items-center rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${
-                  draft.minSize === "custom"
-                    ? "border-white/[0.16] bg-white/[0.14] text-white"
-                    : "border-white/[0.14] bg-transparent text-white/45"
-                }`}
-              >
-                <span className="mr-0.5 text-white/55">$</span>
-                <input
-                  inputMode="numeric"
-                  placeholder="Custom"
-                  value={customText}
-                  onFocus={() => {
-                    if (draft.minSize !== "custom") {
-                      commit({ ...draft, minSize: "custom" });
-                    }
-                  }}
-                  onChange={(event) => applyCustom(event.target.value)}
-                  className="w-[4.5rem] bg-transparent outline-none placeholder:text-white/40"
-                  aria-label="Custom minimum size"
-                />
-              </label>
             </div>
           </section>
 
