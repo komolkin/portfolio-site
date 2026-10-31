@@ -8218,11 +8218,11 @@ export default function Api({
                 </ul>
               </section>
 
-              <section aria-label="Top traders">
+              <section aria-label="Top performers">
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="min-w-0 shrink text-[18px] font-semibold tracking-[-0.02em] text-white">
-                      Top traders
+                      Top performers
                     </h3>
                     <div className="flex shrink-0 items-center gap-4">
                       <FilterDropdown

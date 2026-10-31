@@ -142,60 +142,6 @@ function CloseIcon({ className }: { className?: string }) {
   );
 }
 
-function XLogo({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
-      <path d="M17.75 3h3.07l-6.71 7.67L22 21h-6.18l-4.84-6.33L5.44 21H2.37l7.18-8.2L2 3h6.33l4.38 5.79L17.75 3Zm-1.08 16.17h1.7L7.4 4.74H5.58l11.09 14.43Z" />
-    </svg>
-  );
-}
-
-function TelegramLogo({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
-      <path d="M21.94 4.3 18.9 18.63c-.23 1.01-.83 1.26-1.68.79l-4.63-3.41-2.23 2.15c-.25.25-.45.45-.93.45l.33-4.71 8.57-7.75c.37-.33-.08-.52-.58-.18L7.16 12.64 2.6 11.21c-.99-.31-1.01-.99.21-1.47l17.8-6.86c.82-.3 1.54.2 1.33 1.42Z" />
-    </svg>
-  );
-}
-
-function InstagramLogo({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="12" cy="12" r="3.9" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" />
-    </svg>
-  );
-}
-
-function CopyIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <rect x="8.5" y="8.5" width="11" height="11" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
-      <path
-        d="M15.5 5.5v-.5a2 2 0 0 0-2-2H6a2.5 2.5 0 0 0-2.5 2.5v7.5a2 2 0 0 0 2 2h.5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function ForwardIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <path
-        d="M14 5.5 20 11.5l-6 6M20 11.5h-9a6.5 6.5 0 0 0-6.5 6.5v.5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 const SLIDE_KNOB_PX = 48;
 const SLIDE_PAD_PX = 4;
 
@@ -440,7 +386,6 @@ export default function TradeFlowModal({
   );
   const glowCss = glow.join(", ");
   const shareLink = `https://polymarket.app/r/${referralCode}`;
-  const [linkCopied, setLinkCopied] = useState(false);
 
   const amountCap = Math.max(1, Math.floor(maxAmount));
   const amount = amountDigits === "" ? 0 : Number(amountDigits);
@@ -565,20 +510,6 @@ export default function TradeFlowModal({
     toWin,
   )}.`;
 
-  const openExternal = (url: string) => {
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
-  const copyShareLink = async () => {
-    try {
-      await navigator.clipboard.writeText(`${shareText} ${shareLink}`);
-    } catch {
-      // Clipboard may be unavailable in this playground shell.
-    }
-    setLinkCopied(true);
-    window.setTimeout(() => setLinkCopied(false), 1800);
-  };
-
   const nativeShare = async () => {
     if (typeof navigator.share === "function") {
       try {
@@ -590,45 +521,6 @@ export default function TradeFlowModal({
     }
     openShare();
   };
-
-  const shareTargets = [
-    {
-      id: "x",
-      label: "Share on X",
-      icon: <XLogo className="h-[18px] w-[18px]" />,
-      onClick: () =>
-        openExternal(
-          `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareLink)}`,
-        ),
-    },
-    {
-      id: "telegram",
-      label: "Share on Telegram",
-      icon: <TelegramLogo className="h-5 w-5" />,
-      onClick: () =>
-        openExternal(
-          `https://t.me/share/url?url=${encodeURIComponent(shareLink)}&text=${encodeURIComponent(shareText)}`,
-        ),
-    },
-    {
-      id: "instagram",
-      label: "Share to Instagram",
-      icon: <InstagramLogo className="h-5 w-5" />,
-      onClick: openShare,
-    },
-    {
-      id: "copy",
-      label: linkCopied ? "Copied" : "Copy link",
-      icon: <CopyIcon className="h-5 w-5" />,
-      onClick: () => void copyShareLink(),
-    },
-    {
-      id: "more",
-      label: "More sharing options",
-      icon: <ForwardIcon className="h-5 w-5" />,
-      onClick: () => void nativeShare(),
-    },
-  ];
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest("button, input, textarea")) return;
@@ -800,7 +692,7 @@ export default function TradeFlowModal({
                     />
                   </p>
                   <p
-                    className={`mt-3 text-[13px] font-medium text-white/45 transition-opacity duration-200 ${
+                    className={`mt-3 text-[24px] font-medium text-white/45 transition-opacity duration-200 ${
                       amountValid ? "opacity-100" : "opacity-0"
                     }`}
                     aria-hidden={!amountValid}
@@ -989,26 +881,15 @@ export default function TradeFlowModal({
 
                   <div className="mt-auto w-full pt-8 animate-[trade-success-fade_0.5s_cubic-bezier(0.32,0.72,0,1)_0.45s_both]">
                     <p className="mx-auto max-w-[250px] text-[14px] leading-snug text-white/60">
-                      Share and invite friends to earn 30% of their trading fees
+                      Share and earn 30% of trading fees
                     </p>
-                    <div className="mt-5 flex items-center justify-center gap-2.5">
-                      {shareTargets.map((target) => (
-                        <button
-                          key={target.id}
-                          type="button"
-                          aria-label={target.label}
-                          title={target.label}
-                          onClick={target.onClick}
-                          className={`flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.1] backdrop-blur-md transition-colors hover:bg-white/[0.16] ${
-                            target.id === "copy" && linkCopied
-                              ? "text-[#00D54B]"
-                              : "text-white"
-                          }`}
-                        >
-                          {target.icon}
-                        </button>
-                      ))}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void nativeShare()}
+                      className="mt-5 w-full rounded-full bg-white py-4 text-[16px] font-semibold text-black transition-colors hover:bg-white/90"
+                    >
+                      Share
+                    </button>
                   </div>
                 </div>
               </div>

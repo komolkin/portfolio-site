@@ -412,7 +412,7 @@ export default function RewardsScreen({
             id="leaderboard-heading"
             className="min-w-0 text-[18px] font-semibold tracking-[-0.02em] text-white"
           >
-            Points Leaderboard
+            Leaderboard
           </h2>
           <p className="inline-flex shrink-0 items-center gap-1 text-[12px] font-medium tabular-nums text-white/45">
             <ClockIcon className="h-3.5 w-3.5" />
