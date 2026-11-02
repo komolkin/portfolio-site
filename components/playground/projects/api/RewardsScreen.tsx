@@ -394,15 +394,15 @@ export default function RewardsScreen({
             onClick={() => void copyAndSend()}
             className="shrink-0 rounded-full bg-white px-3.5 py-1.5 text-[13px] font-semibold text-black"
           >
-            {copied ? "Copied" : "Send"}
+            {copied ? "Copied" : "Copy"}
           </button>
         </div>
         <p className="mt-3 text-[13px] text-white/40">
-          $0 Earnings
+          $248.50 Earnings
           <span className="mx-2 text-white/25" aria-hidden>
             ·
           </span>
-          0 Referrals
+          12 Referrals
         </p>
       </section>
 
