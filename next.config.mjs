@@ -4,6 +4,32 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ["@number-flow/react"],
   },
+  async headers() {
+    return [
+      {
+        source: "/worm-app/sw.js",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
+          {
+            key: "Service-Worker-Allowed",
+            value: "/worm-app",
+          },
+        ],
+      },
+      {
+        source: "/worm-app/manifest.webmanifest",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "application/manifest+json",
+          },
+        ],
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

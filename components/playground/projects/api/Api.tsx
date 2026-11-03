@@ -124,7 +124,7 @@ const FEED_EDGE_MASK =
   "linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.35) 8px, rgba(0,0,0,0.8) 16px, #000 24px, #000 calc(100% - 24px), rgba(0,0,0,0.8) calc(100% - 16px), rgba(0,0,0,0.35) calc(100% - 8px), transparent 100%)";
 /** Lets trading work before (or without) the remote demo profile loading. */
 const LOCAL_TRADER_WALLET = "0x000000000000000000000000000000000000d3a0";
-const SHOW_ONBOARDING = false;
+const SHOW_ONBOARDING = true;
 const ONBOARDING_DONE_KEY = "playground-api-onboarded";
 const ONBOARDING_USERNAME_KEY = "playground-api-username";
 const ONBOARDING_FOLLOWS_KEY = "playground-api-follows";
@@ -335,9 +335,10 @@ const F1_VERSTAPPEN_HEADSHOT =
 const F1_NORRIS_HEADSHOT =
   "https://a.espncdn.com/i/headshots/rpm/players/full/5579.png";
 
-const MLB_RAYS_LOGO = "https://a.espncdn.com/i/teamlogos/mlb/500-dark/tb.png";
-const MLB_BREWERS_LOGO =
-  "https://a.espncdn.com/i/teamlogos/mlb/500-dark/mil.png";
+// Prefer full-color `/500/` marks — Brewers has no true light-on-dark asset,
+// and `/500-dark/` still reads as a dark olive glyph on night baseball clips.
+const MLB_RAYS_LOGO = "https://a.espncdn.com/i/teamlogos/mlb/500/tb.png";
+const MLB_BREWERS_LOGO = "https://a.espncdn.com/i/teamlogos/mlb/500/mil.png";
 
 function createDemoLiveMarket(): PolymarketMarketData {
   return {
@@ -2645,8 +2646,15 @@ function MatchSideVisual({
   }
 
   // Shared middle box — team logos scaled slightly so they match headshot weight.
+  // Soft plate behind marks so dark glyphs (e.g. Brewers) stay visible on night clips.
   return (
-    <div className="mx-auto flex h-12 w-12 shrink-0 items-center justify-center">
+    <div
+      className={`mx-auto flex h-12 w-12 shrink-0 items-center justify-center ${
+        isTeamLogo
+          ? "rounded-full bg-white/18 shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_6px_16px_rgba(0,0,0,0.35)]"
+          : ""
+      }`}
+    >
       {image && !failed ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -2658,7 +2666,7 @@ function MatchSideVisual({
           }
           className={
             isTeamLogo
-              ? "h-[82%] w-[82%] object-contain"
+              ? "h-[78%] w-[78%] object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
               : "h-full w-full object-contain"
           }
         />
@@ -5482,10 +5490,14 @@ function IosStatusBar() {
 
 export default function Api({
   embed = false,
+  app = false,
 }: {
   /** Fill a parent phone frame — no outer chrome, skip onboarding. */
   embed?: boolean;
+  /** Full-viewport installable shell — same fill as embed, keeps onboarding. */
+  app?: boolean;
 } = {}) {
+  const fillFrame = embed || app;
   const scrollRef = useRef<HTMLDivElement>(null);
   const feedSnapRef = useRef<HTMLElement>(null);
   /** Scroll offsets of the views underneath each drill-in, restored on back. */
@@ -5610,9 +5622,7 @@ export default function Api({
       }
     };
   }, []);
-  const [onboardingOpen, setOnboardingOpen] = useState(
-    embed ? false : SHOW_ONBOARDING,
-  );
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
   /** Where Back goes when own profile was opened from a non-tab entry point. */
   const [profileReturnSection, setProfileReturnSection] =
@@ -5654,6 +5664,9 @@ export default function Api({
     if (cached.follows.length > 0) {
       setFollowedWallets(new Set(cached.follows));
     }
+    if (!embed && SHOW_ONBOARDING && !cached.done) {
+      setOnboardingOpen(true);
+    }
     const deposits = Number(storageGet(DEPOSITS_KEY) ?? 0);
     if (Number.isFinite(deposits) && deposits > 0) {
       setExtraDepositUsd(deposits);
@@ -5665,7 +5678,7 @@ export default function Api({
       ),
     );
     setCopyTrades(loadCopyTrades());
-  }, []);
+  }, [embed]);
 
   useEffect(() => {
     if (skipUserTradesPersist.current) {
@@ -6731,9 +6744,7 @@ export default function Api({
           ? "Pulse"
           : section === "search" && !showingDrillDown
             ? "Explore"
-            : section === "rewards" && !showingDrillDown
-              ? "Rewards"
-              : null;
+            : null;
 
   const pulseStickyAlways =
     section === "feed" && !showingDrillDown && stickyTitle === "Pulse";
@@ -7888,23 +7899,32 @@ export default function Api({
     </header>
   );
 
+  const shellMotion =
+    "select-none overflow-hidden bg-black text-white transition-[background-color] duration-100 [&_input]:select-text [&_textarea]:select-text motion-safe:[&_button]:origin-center motion-safe:[&_button]:transition-[transform,color,background-color,border-color,opacity] motion-safe:[&_button]:duration-150 motion-safe:[&_button]:ease-out motion-safe:[&_button:active]:scale-[0.96]";
+
   return (
     <div
       className={
-        embed
+        fillFrame
           ? "relative h-full w-full min-h-0"
           : "relative flex h-full w-full items-center justify-center px-4"
       }
     >
       <article
         className={
-          embed
-            ? "relative flex h-full w-full min-h-0 select-none flex-col overflow-hidden bg-black text-white transition-[background-color] duration-100 [&_input]:select-text [&_textarea]:select-text motion-safe:[&_button]:origin-center motion-safe:[&_button]:transition-[transform,color,background-color,border-color,opacity] motion-safe:[&_button]:duration-150 motion-safe:[&_button]:ease-out motion-safe:[&_button:active]:scale-[0.96]"
-            : "relative flex h-[740px] w-full max-w-[360px] select-none flex-col overflow-hidden rounded-[32px] bg-black text-white transition-[background-color] duration-100 [&_input]:select-text [&_textarea]:select-text motion-safe:[&_button]:origin-center motion-safe:[&_button]:transition-[transform,color,background-color,border-color,opacity] motion-safe:[&_button]:duration-150 motion-safe:[&_button]:ease-out motion-safe:[&_button:active]:scale-[0.96]"
+          fillFrame
+            ? `relative flex h-full w-full min-h-0 flex-col ${shellMotion}`
+            : `relative flex h-[740px] w-full max-w-[360px] flex-col rounded-[32px] ${shellMotion}`
         }
-        style={
-          showingMarketDetail ? { backgroundColor: marketAccent } : undefined
-        }
+        style={{
+          ...(showingMarketDetail ? { backgroundColor: marketAccent } : null),
+          ...(app
+            ? ({
+                ["--worm-status-pad" as string]:
+                  "max(52px, env(safe-area-inset-top))",
+              } as CSSProperties)
+            : null),
+        }}
         aria-label="Polymarket API data"
         aria-busy={
           (section === "explore" &&
@@ -7945,10 +7965,12 @@ export default function Api({
             }}
           />
         )}
-        <IosStatusBar />
+        {app ? null : <IosStatusBar />}
         <div
           ref={scrollRef}
-          className={`relative z-[1] h-full min-h-0 px-5 ${IOS_STATUS_PAD} [scrollbar-gutter:stable] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+          className={`relative z-[1] h-full min-h-0 px-5 [scrollbar-gutter:stable] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+            app ? "pt-[length:var(--worm-status-pad)]" : IOS_STATUS_PAD
+          } ${
             isExploreFeed
               ? "flex flex-col overflow-hidden"
               : showingDrillDown || showingProfileSubScreen
@@ -8388,7 +8410,6 @@ export default function Api({
               username={profileUsername}
               wallet={demoProfile?.wallet ?? null}
               points={2847}
-              titleRef={stickyTitleRef}
               onOpenProfile={() => openOwnProfile("rewards")}
               onShare={() => void shareRewards()}
               onOpenHowToEarn={() => setHowToEarnOpen(true)}
@@ -9522,7 +9543,7 @@ export default function Api({
                     "linear-gradient(to top, black 0%, black 18%, transparent 48%)",
                 }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black from-15% via-black/55 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 from-15% via-black/35 to-transparent" />
             </div>
             {section === "feed" && !showingDrillDown && (
               <div

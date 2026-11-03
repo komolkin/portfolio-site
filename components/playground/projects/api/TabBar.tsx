@@ -14,7 +14,6 @@ const TABS: readonly { id: TabId; label: string }[] = [
 ];
 
 /** Matches Figma Navigation — Main sections (node 5436:9157). */
-const GLASS_BORDER = "rgba(255, 255, 255, 0.28)";
 const GLASS_COLOR = "rgba(0, 0, 0, 0.55)";
 const RADIUS = 28;
 export const TAB_BAR_HEIGHT = 56;
@@ -286,7 +285,7 @@ function TabBarGlass({ children }: { children: ReactNode }) {
   if (!mounted || reducedTransparency) {
     return (
       <div
-        className="relative w-full overflow-hidden rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
+        className="relative w-full overflow-hidden rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.45)] ring-1 ring-white/[0.04]"
         style={{
           height: TAB_BAR_HEIGHT,
           ...(reducedTransparency
@@ -299,43 +298,34 @@ function TabBarGlass({ children }: { children: ReactNode }) {
         }}
       >
         {children}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-full"
-          style={{
-            background:
-              "linear-gradient(-10deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 30%, rgba(120,120,120,0) 70%, rgba(255,255,255,0.28) 100%) border-box",
-            mask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-            WebkitMask:
-              "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-            maskComposite: "exclude",
-            WebkitMaskComposite: "xor",
-            border: "1px solid transparent",
-          }}
-        />
       </div>
     );
   }
 
   return (
-    <LiquidGlass
-      mode="preset"
-      radius={RADIUS}
-      frost={0.35}
-      blur={3.5}
-      glassColor={GLASS_COLOR}
-      borderColor={GLASS_BORDER}
-      lens="rim"
-      lensStrength={1.15}
-      quality="high"
-      liquid={reducedMotion ? false : "flow"}
-      liquidSpeed={0.55}
-      liquidScale={10}
-      className="w-full overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
-      style={{ width: "100%", height: TAB_BAR_HEIGHT }}
+    <div
+      className="relative w-full overflow-hidden rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.45)] ring-1 ring-white/[0.04]"
+      style={{ height: TAB_BAR_HEIGHT }}
     >
-      {children}
-    </LiquidGlass>
+      <LiquidGlass
+        mode="preset"
+        radius={RADIUS}
+        frost={0.35}
+        blur={3.5}
+        glassColor={GLASS_COLOR}
+        borderColor="rgba(255,255,255,0)"
+        lens="classic"
+        lensStrength={0}
+        quality="high"
+        liquid={reducedMotion ? false : "flow"}
+        liquidSpeed={0.55}
+        liquidScale={10}
+        className="h-full w-full"
+        style={{ width: "100%", height: TAB_BAR_HEIGHT }}
+      >
+        {children}
+      </LiquidGlass>
+    </div>
   );
 }
 
@@ -368,7 +358,7 @@ export default function TabBar({
     <nav
       className="pointer-events-none absolute inset-x-0 z-10 flex justify-center px-5 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
       style={{
-        bottom: TAB_BAR_BOTTOM,
+        bottom: `calc(${TAB_BAR_BOTTOM}px + env(safe-area-inset-bottom, 0px))`,
         transform: [
           hidden
             ? `translateY(${TAB_BAR_HEIGHT + TAB_BAR_BOTTOM + 28}px)`

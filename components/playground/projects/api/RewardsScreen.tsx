@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import NumberFlow from "@number-flow/react";
 import UserAvatar, { PROFILE_AVATAR_SRC } from "./UserAvatar";
 import { ActivityRow, ui } from "./ui";
+
+const nfMaskStyle = {
+  ["--number-flow-mask-height" as string]: "0em",
+} as const;
 
 const HOW_TO_EARN_STEPS = [
   {
@@ -177,6 +182,7 @@ const LEADERBOARD: readonly {
   handle: string;
   username: string;
   points: number;
+  referrals: number;
   seed: string;
 }[] = [
   {
@@ -184,6 +190,7 @@ const LEADERBOARD: readonly {
     handle: "ryanbet",
     username: "Ryanbet",
     points: 21686,
+    referrals: 84,
     seed: "0xrewards01",
   },
   {
@@ -191,6 +198,7 @@ const LEADERBOARD: readonly {
     handle: "polyverse",
     username: "polyverse",
     points: 5469,
+    referrals: 41,
     seed: "0xrewards02",
   },
   {
@@ -198,6 +206,7 @@ const LEADERBOARD: readonly {
     handle: "tomo",
     username: "Tomo",
     points: 5181,
+    referrals: 36,
     seed: "0xrewards03",
   },
   {
@@ -205,6 +214,7 @@ const LEADERBOARD: readonly {
     handle: "nova.eth",
     username: "Nova",
     points: 4820,
+    referrals: 29,
     seed: "0xrewards04",
   },
   {
@@ -212,6 +222,7 @@ const LEADERBOARD: readonly {
     handle: "sharpe",
     username: "Sharpe",
     points: 3914,
+    referrals: 22,
     seed: "0xrewards05",
   },
 ];
@@ -219,14 +230,36 @@ const LEADERBOARD: readonly {
 /** Season end ~36h from first mount of this module in a session. */
 const SEASON_END_AT = Date.now() + (1 * 24 + 7) * 60 * 60 * 1000 + 4 * 60 * 1000;
 
-function formatCountdown(ms: number): string {
+function CountdownFlow({ ms }: { ms: number }) {
   const total = Math.max(0, Math.floor(ms / 1000));
   const d = Math.floor(total / 86400);
   const h = Math.floor((total % 86400) / 3600);
   const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `In ${d}d ${pad(h)}h ${pad(m)}m ${pad(s)}s`;
+  const twoDigit = {
+    minimumIntegerDigits: 2,
+    maximumFractionDigits: 0,
+    useGrouping: false,
+  } as const;
+
+  return (
+    <span className="inline-flex items-baseline tabular-nums">
+      In{" "}
+      <NumberFlow
+        value={d}
+        trend={-1}
+        format={{ maximumFractionDigits: 0, useGrouping: false }}
+        style={nfMaskStyle}
+      />
+      d{" "}
+      <NumberFlow value={h} trend={-1} format={twoDigit} style={nfMaskStyle} />
+      h{" "}
+      <NumberFlow value={m} trend={-1} format={twoDigit} style={nfMaskStyle} />
+      m{" "}
+      <NumberFlow value={s} trend={-1} format={twoDigit} style={nfMaskStyle} />
+      s
+    </span>
+  );
 }
 
 function ShareIcon({ className }: { className?: string }) {
@@ -282,7 +315,6 @@ export default function RewardsScreen({
   username,
   wallet,
   points = 0,
-  titleRef,
   onOpenProfile,
   onShare,
   onOpenHowToEarn,
@@ -290,7 +322,6 @@ export default function RewardsScreen({
   username: string | null;
   wallet: string | null;
   points?: number;
-  titleRef?: RefObject<HTMLElement | null>;
   onOpenProfile: () => void;
   onShare: () => void;
   onOpenHowToEarn: () => void;
@@ -299,12 +330,48 @@ export default function RewardsScreen({
     Math.max(0, SEASON_END_AT - Date.now()),
   );
   const [copied, setCopied] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+  const fadeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const id = window.setInterval(() => {
       setRemainingMs(Math.max(0, SEASON_END_AT - Date.now()));
     }, 1000);
     return () => window.clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    let scroller: HTMLElement | null = header.parentElement;
+    while (scroller) {
+      const { overflowY } = getComputedStyle(scroller);
+      if (overflowY === "auto" || overflowY === "scroll") break;
+      scroller = scroller.parentElement;
+    }
+    if (!scroller) return;
+
+    let frame = 0;
+    const update = () => {
+      const fade = fadeRef.current;
+      if (!fade) return;
+      fade.style.opacity = String(
+        Math.max(0, Math.min(1, scroller!.scrollTop / 40)),
+      );
+    };
+    const onScroll = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        update();
+      });
+    };
+    update();
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      scroller!.removeEventListener("scroll", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   const referralCode = useMemo(() => {
@@ -329,34 +396,41 @@ export default function RewardsScreen({
 
   return (
     <div className="flex flex-col gap-5">
-      <header className="flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={onOpenProfile}
-          aria-label="Open profile"
-          className="shrink-0 rounded-full"
-        >
-          <UserAvatar
-            seed={youSeed}
-            label={youLabel}
-            src={PROFILE_AVATAR_SRC}
-            className="h-9 w-9"
-          />
-        </button>
-        <h1
-          ref={titleRef as RefObject<HTMLHeadingElement>}
-          className="text-[17px] font-semibold tracking-[-0.02em] text-white"
-        >
-          Rewards
-        </h1>
-        <button
-          type="button"
-          onClick={onShare}
-          aria-label="Share rewards"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
-        >
-          <ShareIcon className="h-5 w-5" />
-        </button>
+      <header
+        ref={headerRef}
+        className="sticky top-0 z-20 -mx-5 -mt-[length:var(--worm-status-pad,52px)] px-5 pb-3 pt-[length:var(--worm-status-pad,52px)]"
+      >
+        <div
+          ref={fadeRef}
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 inset-y-0 bg-gradient-to-b from-black from-[48%] via-black/80 to-transparent opacity-0"
+        />
+        <div className="relative flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onOpenProfile}
+            aria-label="Open profile"
+            className="shrink-0 rounded-full"
+          >
+            <UserAvatar
+              seed={youSeed}
+              label={youLabel}
+              src={PROFILE_AVATAR_SRC}
+              className="h-9 w-9"
+            />
+          </button>
+          <h1 className="text-[17px] font-semibold tracking-[-0.02em] text-white">
+            Rewards
+          </h1>
+          <button
+            type="button"
+            onClick={onShare}
+            aria-label="Share rewards"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+          >
+            <ShareIcon className="h-5 w-5" />
+          </button>
+        </div>
       </header>
 
       <section
@@ -416,7 +490,7 @@ export default function RewardsScreen({
           </h2>
           <p className="inline-flex shrink-0 items-center gap-1 text-[12px] font-medium tabular-nums text-white/45">
             <ClockIcon className="h-3.5 w-3.5" />
-            {formatCountdown(remainingMs)}
+            <CountdownFlow ms={remainingMs} />
           </p>
         </div>
 
@@ -458,7 +532,7 @@ export default function RewardsScreen({
                   </div>
                 }
                 title={row.username}
-                subtitle={`@${row.handle}`}
+                subtitle={`${row.referrals} referrals`}
                 trailing={
                   <span className="text-[16px] font-semibold tabular-nums text-white">
                     {row.points.toLocaleString("en-US")}

@@ -26,6 +26,7 @@
     "glimm": "^0.1.3",
     "hover-tilt": "^1.0.0",
     "liveline": "^0.0.7",
+    "matter-js": "^0.20.0",
     "next": "14.2.35",
     "postgres": "^3.4.7",
     "react": "^18.3.1",
@@ -35,6 +36,7 @@
     "zod": "^4.2.1"
   },
   "devDependencies": {
+    "@types/matter-js": "^0.20.2",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

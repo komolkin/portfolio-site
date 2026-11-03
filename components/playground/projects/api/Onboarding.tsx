@@ -1,13 +1,11 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { PolymarketLeaderboardWallet } from "@/lib/polymarketscan";
-import { FollowButton } from "./FeedPositionSheet";
-import MarketRiver from "./MarketRiver";
-import UserAvatar from "./UserAvatar";
+import OnboardingPhysics from "./OnboardingPhysics";
 
-type OnboardingStep = "welcome" | "invite" | "in" | "follow";
+type OnboardingStep = "welcome" | "invite" | "in";
 
 const STEP_EASE = [0.22, 1, 0.36, 1] as const;
 const INVITE_LENGTH = 6;
@@ -132,41 +130,15 @@ function InviteCodeInput({
   );
 }
 
-function shortWallet(wallet: string): string {
-  if (wallet.length < 10) return wallet;
-  return `${wallet.slice(0, 6)}…${wallet.slice(-4)}`;
-}
-
-function formatUsd(value: number): string {
-  const abs = Math.abs(value);
-  const sign = value < 0 ? "-" : "";
-  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(1)}K`;
-  return `${sign}$${abs.toFixed(0)}`;
-}
-
-function formatSignedUsd(value: number): string {
-  const formatted = formatUsd(Math.abs(value));
-  if (value > 0) return `+${formatted}`;
-  if (value < 0) return `-${formatted.replace("-", "")}`;
-  return formatUsd(0);
-}
-
 export default function Onboarding({
-  traders,
-  tradersStatus,
-  marketImages,
-  teamLogos,
-  isFollowing,
-  onToggleFollow,
   onComplete,
 }: {
-  traders: PolymarketLeaderboardWallet[];
-  tradersStatus: "loading" | "ready" | "error";
-  marketImages: string[];
-  teamLogos: string[];
-  isFollowing: (wallet: string) => boolean;
-  onToggleFollow: (wallet: string, displayName?: string | null) => void;
+  traders?: PolymarketLeaderboardWallet[];
+  tradersStatus?: "loading" | "ready" | "error";
+  marketImages?: string[];
+  teamLogos?: string[];
+  isFollowing?: (wallet: string) => boolean;
+  onToggleFollow?: (wallet: string, displayName?: string | null) => void;
   onComplete: (username: string | null) => void;
 }) {
   const [step, setStep] = useState<OnboardingStep>("welcome");
@@ -177,16 +149,11 @@ export default function Onboarding({
     if (inviteCode === INVITE_CODE) setStep("in");
     else setInviteError(true);
   };
-  const suggested = useMemo(
-    () => traders.slice(0, 8),
-    [traders],
-  );
 
   const finish = () => onComplete(null);
 
   const back = () => {
-    if (step === "follow") setStep("in");
-    else if (step === "in") setStep("invite");
+    if (step === "in") setStep("invite");
     else setStep("welcome");
   };
 
@@ -207,7 +174,7 @@ export default function Onboarding({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.45, ease: STEP_EASE }}
           >
-            <MarketRiver images={marketImages} logos={teamLogos} />
+            <OnboardingPhysics />
           </motion.div>
         ) : (
           <motion.div
@@ -225,7 +192,11 @@ export default function Onboarding({
           />
         )}
       </AnimatePresence>
-      <div className="relative z-[3] flex min-h-0 flex-1 flex-col">
+      <div
+        className={`relative z-[3] flex min-h-0 flex-1 flex-col ${
+          step === "welcome" ? "pointer-events-none" : ""
+        }`}
+      >
       <AnimatePresence initial={false}>
       {step !== "welcome" && (
         <motion.div
@@ -253,7 +224,7 @@ export default function Onboarding({
             </svg>
           </button>
           <div className="flex gap-1.5" aria-hidden>
-            {(["invite", "in", "follow"] as const).map((id) => (
+            {(["invite", "in"] as const).map((id) => (
               <span
                 key={id}
                 className={`h-1 w-6 rounded-full ${
@@ -262,15 +233,6 @@ export default function Onboarding({
               />
             ))}
           </div>
-          {step === "follow" && (
-            <button
-              type="button"
-              onClick={finish}
-              className="justify-self-end text-[12px] font-semibold text-white/45 hover:text-white/80"
-            >
-              Skip
-            </button>
-          )}
         </motion.div>
       )}
       </AnimatePresence>
@@ -285,15 +247,12 @@ export default function Onboarding({
         transition={{ duration: 0.32, ease: STEP_EASE }}
       >
       {step === "welcome" && (
-        <div className="relative flex min-h-0 flex-1 flex-col pb-5">
-          <h1 className="relative z-10 mx-auto mt-auto mb-6 max-w-[300px] text-balance text-center text-[28px] font-semibold leading-tight tracking-[-0.03em] [text-shadow:0_2px_24px_rgba(0,0,0,0.75)]">
-            Copy traders, track markets, and see what&apos;s moving
-          </h1>
+        <div className="relative flex min-h-0 flex-1 flex-col justify-end pb-5">
           <div className="relative z-10 flex shrink-0 flex-col gap-2.5">
             <button
               type="button"
               onClick={() => setStep("invite")}
-              className="mx-auto flex h-12 items-center justify-center rounded-full bg-white px-8 text-[15px] font-semibold text-black"
+              className="pointer-events-auto mx-auto flex h-12 items-center justify-center rounded-full bg-white px-8 text-[15px] font-semibold text-black"
             >
               I have an invite code
             </button>
@@ -339,16 +298,18 @@ export default function Onboarding({
 
       {step === "in" && (
         <div className="flex min-h-0 flex-1 flex-col">
-          <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em]">
-            You&apos;re in
-          </h1>
-          <p className="mt-3 max-w-[280px] text-[14px] leading-relaxed text-white/55">
-            Sign in to copy traders and track your positions.
-          </p>
-          <div className="mt-auto flex flex-col gap-2.5">
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
+            <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em]">
+              You&apos;re in
+            </h1>
+            <p className="mt-3 max-w-[280px] text-[14px] leading-relaxed text-white/55">
+              Sign in to copy traders and track your positions.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col gap-2.5">
             <button
               type="button"
-              onClick={() => setStep("follow")}
+              onClick={finish}
               className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full bg-white text-[15px] font-semibold text-black"
             >
               <GoogleMark />
@@ -356,82 +317,13 @@ export default function Onboarding({
             </button>
             <button
               type="button"
-              onClick={() => setStep("follow")}
+              onClick={finish}
               className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full bg-white/[0.1] text-[15px] font-semibold text-white"
             >
               <WalletGlyph />
               Connect wallet
             </button>
           </div>
-        </div>
-      )}
-
-      {step === "follow" && (
-        <div className="flex min-h-0 flex-1 flex-col">
-          <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em]">
-            Who to follow
-          </h1>
-          <p className="mt-3 text-[14px] leading-relaxed text-white/55">
-            Top performers from the leaderboard. You can unfollow anytime.
-          </p>
-          <div className="mt-5 min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {tradersStatus === "loading" && (
-              <div className="space-y-2.5 animate-pulse" aria-hidden>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-[58px] rounded-xl bg-white/10" />
-                ))}
-              </div>
-            )}
-            {tradersStatus !== "loading" && suggested.length === 0 && (
-              <p className="text-sm text-white/55">
-                No traders to suggest right now.
-              </p>
-            )}
-            {suggested.length > 0 && (
-              <ul className="flex flex-col gap-2">
-                {suggested.map((wallet) => {
-                  const pnlPositive = wallet.totalPnl >= 0;
-                  return (
-                    <li
-                      key={wallet.wallet}
-                      className="flex items-center gap-3 rounded-[20px] bg-white/[0.08] px-3 py-2.5"
-                    >
-                      <UserAvatar
-                        seed={wallet.wallet}
-                        label={wallet.displayName ?? wallet.wallet}
-                        className="h-9 w-9 text-[12px]"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-semibold">
-                          {wallet.displayName ?? shortWallet(wallet.wallet)}
-                        </p>
-                        <p
-                          className={`mt-0.5 text-[11px] font-semibold tabular-nums ${
-                            pnlPositive ? "text-[#00D54B]" : "text-[#FF375F]"
-                          }`}
-                        >
-                          {formatSignedUsd(wallet.totalPnl)}
-                        </p>
-                      </div>
-                      <FollowButton
-                        following={isFollowing(wallet.wallet)}
-                        onClick={() =>
-                          onToggleFollow(wallet.wallet, wallet.displayName)
-                        }
-                      />
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={finish}
-            className="mt-4 h-12 w-full shrink-0 rounded-full bg-white text-[15px] font-semibold text-black"
-          >
-            Done
-          </button>
         </div>
       )}
       </motion.div>
