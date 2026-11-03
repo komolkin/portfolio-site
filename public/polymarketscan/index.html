@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PolymarketScan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/polymarketscan/styles.css?v=72">
+</head>
+<body>
+  <header class="site-header">
+    <a class="logo" href="#top">PolymarketScan</a>
+    <nav class="nav" aria-label="Site">
+      <a href="#traders">Traders</a>
+      <a href="#markets">Markets</a>
+      <a href="#winners">Leaderboard</a>
+      <a href="#alerts">Watchlist</a>
+      <a href="#whales">Whales</a>
+      <a href="#markets">Intel</a>
+      <a href="#alerts">API &amp; Agents</a>
+    </nav>
+    <div class="header-actions">
+      <button class="icon-btn" type="button" aria-label="Theme">☀</button>
+      <div class="lang">
+        <button class="lang-btn" id="lang-btn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="lang-menu">
+          <span id="lang-current">Eng</span>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="lang-menu" id="lang-menu" role="listbox" aria-label="Language" hidden>
+          <button type="button" role="option" data-short="Eng" aria-selected="true">English</button>
+          <button type="button" role="option" data-short="Deu">Deutsch</button>
+          <button type="button" role="option" data-short="Fra">Français</button>
+          <button type="button" role="option" data-short="Esp">Español</button>
+          <button type="button" role="option" data-short="Ita">Italiano</button>
+          <button type="button" role="option" data-short="Por">Português</button>
+          <button type="button" role="option" data-short="Pol">Polski</button>
+          <button type="button" role="option" data-short="Tur">Türkçe</button>
+          <button type="button" role="option" data-short="Рус">Русский</button>
+          <button type="button" role="option" data-short="Укр">Українська</button>
+          <button type="button" role="option" data-short="Ned">Nederlands</button>
+          <button type="button" role="option" data-short="Sve">Svenska</button>
+          <button type="button" role="option" data-short="Ind">Bahasa Indonesia</button>
+          <button type="button" role="option" data-short="Vie">Tiếng Việt</button>
+          <button type="button" role="option" data-short="ไทย">ภาษาไทย</button>
+          <button type="button" role="option" data-short="日本">日本語</button>
+          <button type="button" role="option" data-short="한국">한국어</button>
+          <button type="button" role="option" data-short="简中">简体中文</button>
+          <button type="button" role="option" data-short="繁中">繁體中文</button>
+          <button type="button" role="option" data-short="عر">العربية</button>
+        </div>
+      </div>
+      <a class="signin" href="#alerts">Sign in</a>
+    </div>
+  </header>
+
+  <div class="tape" aria-label="Whale tape">
+    <div class="tape-label"><b>Live Whale Tape</b></div>
+    <div class="tape-viewport">
+      <div class="tape-run" id="tape-run"></div>
+    </div>
+  </div>
+
+  <main id="top">
+    <section class="screen">
+      <canvas class="dots" aria-hidden="true"></canvas>
+      <div class="hero-tools">
+        <span class="pill">Quests <b>0/6</b></span>
+        <span class="pill">Claim: 0m 0s <b>+0</b></span>
+      </div>
+
+      <div class="hero-search">
+        <h2>Ask anything about Polymarket</h2>
+        <form class="trader-search" id="trader-search" role="search">
+          <label class="sr-only" for="trader-q">Ask anything about Polymarket</label>
+          <input id="trader-q" type="text" placeholder="" autocomplete="off">
+          <span class="ask-hint" aria-hidden="true"></span>
+          <button class="search-go" type="submit" aria-label="Ask">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 13V3M8 3L4 7M8 3l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </form>
+        <p class="predict"><a href="https://worm.wtf"><span class="mark" aria-hidden="true"><img src="/polymarketscan/worm-mark.png" alt=""></span><span class="shine">Predict anything on worm.wtf</span><svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 7h8M8 3.5 11.5 7 8 10.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a></p>
+      </div>
+
+      <section class="stats" aria-label="PolymarketScan stats">
+        <div class="stats-grid">
+          <div class="stat"><b>3.66K</b><span>Total Accounts</span></div>
+          <div class="stat"><b>1.85K</b><span>Humans</span></div>
+          <div class="stat"><b>1.81K</b><span>Agents</span></div>
+          <div class="stat"><b>458</b><span>Watchlists</span></div>
+          <div class="stat"><b>14.64K</b><span>Alerts Fired</span></div>
+          <div class="stat"><b>32.4M</b><span>API Requests</span></div>
+          <div class="stat"><b>2.4M</b><span>Page Views</span></div>
+        </div>
+      </section>
+    </section>
+
+    <div class="wrap">
+      <section class="section" id="traders">
+        <div class="split">
+          <section class="panel" id="whales">
+            <div class="panel-head">
+              <div>
+                <h3>Whales now</h3>
+                <p>Every fill of $10K or more in the last 15 h: 496 of them.</p>
+              </div>
+              <a class="link" href="#markets" data-shelf="whales">Whale radar →</a>
+            </div>
+            <div class="filters">
+              <div class="segs">
+                <button class="seg on" type="button" data-order="latest">Latest</button>
+                <button class="seg" type="button" data-order="largest">Largest</button>
+              </div>
+              <div class="segs">
+                <button class="seg on" type="button" data-side="all">All</button>
+                <button class="seg" type="button" data-side="buy">Buys</button>
+                <button class="seg" type="button" data-side="sell">Sells</button>
+              </div>
+              <label class="check"><input id="settled" type="checkbox"> Include near-settled (98)</label>
+            </div>
+            <ul class="fills" id="fills"></ul>
+            <p class="empty" id="fills-empty" hidden>No fills match these switches.</p>
+          </section>
+
+          <section class="panel" id="winners">
+            <div class="panel-head">
+              <div>
+                <h3>Big winners</h3>
+                <p id="winners-rule">Top P&amp;L today.</p>
+              </div>
+              <a class="link" href="#winners">Leaderboard →</a>
+            </div>
+            <div class="filters" role="tablist">
+              <button class="seg on" type="button" data-period="day">Today</button>
+              <button class="seg" type="button" data-period="week">7 days</button>
+              <button class="seg" type="button" data-period="month">30 days</button>
+              <button class="seg" type="button" data-period="all">All time</button>
+            </div>
+            <ol class="winners" id="winners-list"></ol>
+          </section>
+        </div>
+      </section>
+
+      <section class="section" id="interest">
+        <div class="section-head">
+          <div>
+            <h2>People of interest</h2>
+            <p class="fine">Wallets worth a look, each with the one fact that put it here. <a class="link" href="#traders">Discover traders →</a></p>
+          </div>
+        </div>
+        <div class="cards" id="people"></div>
+      </section>
+
+      <section class="section" id="markets">
+        <div class="section-head">
+          <div>
+            <h2>What’s moving, what’s about to close</h2>
+            <p class="blurb">Three markets at a time, picked by a rule you can read, then the full market search, sorted the same way. <a class="link" id="shelf-link" href="#markets">All markets, moving now →</a></p>
+            <div class="filters" role="tablist" id="shelves">
+              <button class="seg on" type="button" data-shelf="movers">Moving now</button>
+              <button class="seg" type="button" data-shelf="closing">Closing soon</button>
+              <button class="seg" type="button" data-shelf="today">Biggest today</button>
+              <button class="seg" type="button" data-shelf="live">Live &amp; soon</button>
+              <button class="seg" type="button" data-shelf="whales">Whale money</button>
+            </div>
+          </div>
+        </div>
+        <div class="markets" id="market-cards"></div>
+      </section>
+
+      <section class="section" id="alerts">
+        <div class="section-head">
+          <div>
+            <h2>Watch it so you don’t have to</h2>
+            <p class="blurb">Pick a trader, a price or a closing time and hear about it when it happens, instead of refreshing the page.</p>
+          </div>
+        </div>
+        <div class="alerts">
+          <section class="panel">
+            <h3>What you can watch</h3>
+            <p class="fine">Alerts marked Available are checked every minute on our servers, so the site does not have to be open.</p>
+            <ul class="watch">
+              <li><span class="ico">☺</span><div><strong>A trader</strong><p>Every new trade, only trades over a size you pick, or the first time they enter a market.</p><p class="fine">The Alert button on any trader’s page</p></div><span class="status">Available</span></li>
+              <li><span class="ico">◎</span><div><strong>A list of wallets</strong><p>Put the traders you want to keep an eye on into a watchlist and open them together on one page.</p><p class="fine">Watchlists</p></div><span class="status">Available</span></li>
+              <li><span class="ico">$</span><div><strong>A price level</strong><p>When a market goes above or below a price you set.</p><p class="fine">Any market page, or the Alerts page</p></div><span class="status">Available</span></li>
+              <li><span class="ico">◷</span><div><strong>A closing time</strong><p>A reminder from an hour to a week before a market closes.</p><p class="fine">Alerts page</p></div><span class="status">Available</span></li>
+              <li><span class="ico">≡</span><div><strong>Depth at a price</strong><p>When a number of shares can be bought or sold at your price.</p><p class="fine">Alerts page</p></div><span class="status">Available</span></li>
+              <li><span class="ico">◈</span><div><strong>A whale entering a market</strong><p>A fill over a size you pick in a market you follow, whoever places it.</p><p class="fine">Not on the site yet</p></div><span class="status wait">Proposed</span></li>
+              <li><span class="ico">✦</span><div><strong>Markets in a watchlist</strong><p>Watchlists hold wallets today; this would let one hold markets too, with their moves in your feed.</p><p class="fine">Not on the site yet</p></div><span class="status wait">Proposed</span></li>
+            </ul>
+          </section>
+          <section class="panel arrive">
+            <h3>How they arrive</h3>
+            <p class="fine">Examples only, each built from a real moment in Polymarket’s data on this page. Nobody was sent them.</p>
+            <article class="example">
+              <div class="kicker"><b>EXAMPLE</b> Trader alert · trades of $10K+ <span class="when">5 h ago</span></div>
+              <p>RJW1 bought $18.5K of Yes at 57¢.</p>
+              <p class="fine">Will Paris Saint-Germain FC win on 2026-11-03?</p>
+              <p class="fine">Arrives: In-app</p>
+            </article>
+            <article class="example">
+              <div class="kicker"><b>EXAMPLE</b> Time alert · before close <span class="when">now</span></div>
+              <p>Closes in 10 min.</p>
+              <p class="fine">Republican Senate seats after the 2026 midterm elections?</p>
+              <p class="fine">Arrives: In-app, and Telegram if you switch it on and link it</p>
+            </article>
+            <article class="example dashed">
+              <div class="kicker"><b>EXAMPLE</b> Whale alert · fills of $100K+ <span class="when">14 h ago</span></div>
+              <p>f2hf84hg52h5 bought $304K of Yes at 95¢ in a market you follow.</p>
+              <p class="fine">Will the Democratic Party control the House after the 2026 Midterm elections?</p>
+              <p class="fine">Proposed alert type, not on the site yet</p>
+            </article>
+            <div class="signin-box">
+              <p>Sign in with email or a wallet to save watchlists and alerts.</p>
+              <p class="fine">Public watchlists can be browsed without an account.</p>
+              <div class="row">
+                <a class="solid" href="#alerts">Create an alert</a>
+                <a class="quiet" href="#alerts">Browse watchlists</a>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="section" id="news">
+        <h2><a href="#news">Market News ›</a></h2>
+        <div class="news-grid">
+          <a class="news-item" href="#news">
+            <span class="meta"><span class="mark cbs" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 7s2.2-3.5 5.5-3.5S12.5 7 12.5 7 10.3 10.5 7 10.5 1.5 7 1.5 7Z" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/></svg></span>12 minutes ago · CBS Sports</span>
+            <strong>College basketball rankings: UCLA surges in Top 25 And 1 after opening-night upset over Arizona</strong>
+          </a>
+          <a class="news-item" href="#news">
+            <span class="meta"><span class="mark nyt" aria-hidden="true">T</span>13 minutes ago · NYT Politics</span>
+            <strong>Israeli Claims of Iranian Chemical Weapons Divide U.S. Officials</strong>
+          </a>
+          <a class="news-item" href="#news">
+            <span class="meta"><span class="mark cbs" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 7s2.2-3.5 5.5-3.5S12.5 7 12.5 7 10.3 10.5 7 10.5 1.5 7 1.5 7Z" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/></svg></span>23 minutes ago · CBS Sports</span>
+            <strong>2026 NFL trade deadline tracker: Latest deals, grades as Bears and Jeffery Simmons, Colts enter rebuild</strong>
+          </a>
+          <a class="news-item" href="#news">
+            <span class="meta"><span class="mark nyt" aria-hidden="true">T</span>38 minutes ago · NYT Politics</span>
+            <strong>Trump Says U.S. to End $4 Billion in Aid to Israel at End of Year</strong>
+          </a>
+          <a class="news-item" href="#news">
+            <span class="meta"><span class="mark cbs" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 7s2.2-3.5 5.5-3.5S12.5 7 12.5 7 10.3 10.5 7 10.5 1.5 7 1.5 7Z" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/></svg></span>42 minutes ago · CBS Sports</span>
+            <strong>Is Polymarket Legal in California? November 2026 Status</strong>
+          </a>
+        </div>
+        <a class="link news-more" href="#news">View all →</a>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="foot-brand">
+        <div>PolymarketScan — The Polymarket Blockchain Explorer</div>
+        <div class="socials">
+          <a href="https://x.com/PredictionScan">@PredictionScan</a>
+          <a href="#top">Telegram</a>
+          <a href="#top">Discord</a>
+          <a href="https://polymarket.com">Polymarket</a>
+          <a href="#top">Polygon</a>
+          <a href="#top">The Graph</a>
+        </div>
+      </div>
+    </div>
+    <div class="wrap foot-grid">
+      <div>
+        <h3>Compare platforms</h3>
+        <a href="#top">Polymarket vs Kalshi</a>
+        <a href="#top">PredictIt alternative</a>
+        <a href="#top">Manifold Markets compared</a>
+        <a href="#top">Metaculus vs Polymarket</a>
+        <a href="#top">Predict.Fun comparison</a>
+      </div>
+      <div>
+        <h3>Access by region</h3>
+        <a href="#top">Polymarket in the United States</a>
+        <a href="#top">Trading from the UK</a>
+        <a href="#top">EU access guide</a>
+        <a href="#top">Polymarket for Canadians</a>
+        <a href="#top">Using Polymarket in Australia</a>
+        <a href="#top">India access overview</a>
+        <a href="#top">Singapore trader guide</a>
+      </div>
+      <div>
+        <h3>Market categories</h3>
+        <a href="#markets">Political markets</a>
+        <a href="#markets">Crypto prediction markets</a>
+        <a href="#markets">Sports betting odds</a>
+        <a href="#markets">Macro &amp; economic odds</a>
+        <a href="#markets">AI prediction markets</a>
+        <a href="#markets">Technology markets</a>
+        <a href="#markets">Entertainment odds</a>
+        <a href="#markets">Awards &amp; Oscars markets</a>
+        <a href="#markets">Science predictions</a>
+        <a href="#markets">Climate &amp; weather</a>
+        <a href="#markets">Geopolitics tracker</a>
+        <a href="#markets">Trump markets</a>
+        <a href="#markets">NFL markets</a>
+        <a href="#markets">NBA markets</a>
+        <a href="#markets">MLB markets</a>
+        <a href="#markets">Soccer odds</a>
+        <a href="#markets">World Cup futures</a>
+      </div>
+      <div>
+        <h3>Elections</h3>
+        <a href="#markets">Trump 2028 odds</a>
+        <a href="#markets">Democratic 2028 nominee</a>
+        <a href="#markets">Republican 2028 nominee</a>
+        <a href="#markets">2026 midterms forecast</a>
+      </div>
+      <div>
+        <h3>Learn prediction markets</h3>
+        <a href="#top">Learn hub</a>
+        <a href="#top">What is Polymarket?</a>
+        <a href="#top">How the markets work</a>
+        <a href="#top">Beginner trading guide</a>
+        <a href="#top">Fee breakdown</a>
+        <a href="#top">UMA resolution explained</a>
+        <a href="#top">Reading liquidity</a>
+        <a href="#top">Whale behavior</a>
+        <a href="#top">History &amp; milestones</a>
+        <a href="#top">Track record on accuracy</a>
+        <a href="#top">Airdrop guide</a>
+        <a href="#top">Developer API</a>
+        <a href="#top">Legal context</a>
+        <a href="#top">Vs traditional betting</a>
+      </div>
+      <div>
+        <h3>Trader tools</h3>
+        <a href="#winners">Trader leaderboards</a>
+        <a href="#whales">Whale tracker</a>
+        <a href="#markets">All live markets</a>
+        <a href="#markets">Polymarket Perps data</a>
+        <a href="#traders">Discover random traders</a>
+        <a href="#whales">Live signal feed</a>
+        <a href="#news">Polymarket news</a>
+        <a href="#top">Glossary of terms</a>
+      </div>
+    </div>
+    <div class="wrap">
+      <nav class="legal-nav">
+        <a href="#top">About Us</a>
+        <a href="#top">Contact Us</a>
+        <a href="#top">Roadmap</a>
+        <a href="#top">Privacy Policy</a>
+        <a href="#top">Terms of Service</a>
+        <a href="#top">Cookie Policy</a>
+        <a href="#top">Your privacy choices</a>
+      </nav>
+      <p class="disclaimer">PolymarketScan is an independent analytics platform and a participant in Polymarket’s Builder Program. PolymarketScan may earn a fee when you trade on Polymarket via our links. Market data from Polymarket.com. Polymarket.com is view-only for US users; US residents can trade event contracts on Polymarket US where eligible. Nothing here is investment advice. Trading is risky. 100% loss can occur. 18+.</p>
+    </div>
+  </footer>
+
+  <a class="float support" href="#alerts">Support</a>
+
+  <section class="dock" id="dock">
+    <div class="dock-panel" id="dock-panel" hidden>
+      <div class="dock-head">
+        <strong id="assistant-title">Assistant</strong>
+        <button type="button" id="dock-close">Close</button>
+      </div>
+      <div class="dock-log" id="dock-log">
+        <p class="dock-hello">Ask about traders, markets, or whale trades.</p>
+      </div>
+      <div class="dock-starters">
+        <button type="button" data-prompt="Find traders">Find traders</button>
+        <button type="button" data-prompt="Find markets">Find markets</button>
+        <button type="button" data-prompt="Find money">Find money</button>
+      </div>
+    </div>
+  </section>
+  <script src="/polymarketscan/main.js?v=19"></script>
+</body>
+</html>
