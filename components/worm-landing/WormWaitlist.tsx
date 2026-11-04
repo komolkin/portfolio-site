@@ -382,9 +382,10 @@ function EarlyAccessForm({ onDone }: { onDone: () => void }) {
               <AquaButton
                 type="submit"
                 variant="secondary"
+                circle
                 disabled={submitting}
                 aria-label="Submit email"
-                className="absolute right-1.5 z-[2] h-9 w-9 gap-0 px-0 tracking-normal"
+                className="absolute right-1.5 z-[2]"
               >
                 {submitting ? <Spinner /> : <ArrowRight />}
               </AquaButton>

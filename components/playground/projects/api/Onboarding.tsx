@@ -443,7 +443,7 @@ export default function Onboarding({
       {step === "invite" && (
         <div className="flex min-h-0 flex-1 flex-col">
           <h1 className="text-center text-[28px] font-semibold leading-tight tracking-[-0.03em]">
-            Enter the invite code you have received
+            Enter the invite code
           </h1>
           <InviteCodeInput
             value={inviteCode}
