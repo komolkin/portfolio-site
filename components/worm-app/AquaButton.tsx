@@ -41,7 +41,7 @@ export function AquaChrome({
         aria-hidden
         className={
           compact
-            ? "pointer-events-none absolute inset-x-1.5 top-[2px] z-[1] h-2 rounded-full bg-[length:100%_100%] bg-center bg-no-repeat"
+            ? "pointer-events-none absolute left-1/2 top-[3px] z-[1] h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[length:100%_100%] bg-center bg-no-repeat"
             : "pointer-events-none absolute inset-x-3 top-[3px] z-[1] h-3 rounded-full bg-[length:100%_100%] bg-center bg-no-repeat"
         }
         style={{ backgroundImage: "url(/worm-app/btn-gloss.png)" }}
