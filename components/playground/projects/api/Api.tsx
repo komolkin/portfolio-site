@@ -2647,16 +2647,9 @@ function MatchSideVisual({
     return <span className="mx-auto block h-12 w-12" aria-hidden />;
   }
 
-  // Shared middle box — team logos scaled slightly so they match headshot weight.
-  // Soft plate behind marks so dark glyphs (e.g. Brewers) stay visible on night clips.
+  // Shared middle box — logos sit bare (no plate) so marks read larger on clips.
   return (
-    <div
-      className={`mx-auto flex h-12 w-12 shrink-0 items-center justify-center ${
-        isTeamLogo
-          ? "rounded-full bg-white/18 shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_6px_16px_rgba(0,0,0,0.35)]"
-          : ""
-      }`}
-    >
+    <div className="mx-auto flex h-12 w-12 shrink-0 items-center justify-center">
       {image && !failed ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -2668,7 +2661,7 @@ function MatchSideVisual({
           }
           className={
             isTeamLogo
-              ? "h-[78%] w-[78%] object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
+              ? "h-full w-full object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
               : "h-full w-full object-contain"
           }
         />
