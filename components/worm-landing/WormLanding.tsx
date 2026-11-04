@@ -47,70 +47,43 @@ const PRODUCT_BEATS = [
   { id: "copy", title: "Same trade. Your size.", tone: "dark" },
 ] as const;
 
-/** Same pool as the API onboarding river — NBA teams interleaved with leagues. */
-const CLOSING_NBA_LOGOS = [
-  "lal",
-  "bos",
-  "gs",
-  "mia",
-  "chi",
-  "ny",
-  "dal",
-  "den",
-  "phx",
-  "mil",
-  "okc",
-  "phi",
-  "lac",
-  "cle",
-  "sa",
-  "min",
-  "hou",
-  "mem",
-  "sac",
-  "ind",
-].map((abbr) => `https://a.espncdn.com/i/teamlogos/nba/500/${abbr}.png`);
-
-const CLOSING_LEAGUE_LOGOS = [
-  "https://a.espncdn.com/i/teamlogos/leagues/500/nba.png",
-  "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
-  "https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png",
-  "https://a.espncdn.com/i/leaguelogos/soccer/500/2.png",
-  "https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png",
-  "https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png",
-  "https://a.espncdn.com/i/leaguelogos/soccer/500/15.png",
-  "https://a.espncdn.com/i/teamlogos/leagues/500/wnba.png",
-  "https://a.espncdn.com/i/leaguelogos/soccer/500/10.png",
-  "https://a.espncdn.com/i/teamlogos/leagues/500/mls.png",
-];
+/** Same glyphs as the API onboarding physics pile. */
+const CLOSING_ELEMENT_VISUALS = [
+  "/worm-app/physics/logo-w.png",
+  "/worm-app/physics/piece-football.png",
+  "/worm-app/physics/piece-alien.png",
+  "/worm-app/physics/piece-gold-e.png",
+  "/worm-app/physics/piece-tennis.png",
+  "/worm-app/physics/piece-golf.png",
+  "/worm-app/physics/piece-flag-r.png",
+  "/worm-app/physics/piece-marble-n.png",
+  "/worm-app/physics/piece-arrow.png",
+  "/worm-app/physics/piece-crystal-a.png",
+  "/worm-app/physics/piece-cash.png",
+  "/worm-app/physics/piece-soccer.png",
+] as const;
 
 function buildClosingLogoPool(): string[] {
-  const teams = [...CLOSING_NBA_LOGOS];
-  const leagues = [...CLOSING_LEAGUE_LOGOS];
-  const mixed: string[] = [];
-  while (teams.length > 0 || leagues.length > 0) {
-    mixed.push(...teams.splice(0, 2));
-    if (leagues.length > 0) mixed.push(leagues.shift()!);
-  }
-  return mixed;
+  // Duplicate so reshuffles can fill every fixed slot.
+  return [...CLOSING_ELEMENT_VISUALS, ...CLOSING_ELEMENT_VISUALS];
 }
 
 /** Fixed slots around the title — keep the center clear for copy + CTA. */
 const CLOSING_LOGO_SLOTS = [
-  { x: 6, y: 10, size: 46, rotate: -12 },
-  { x: 18, y: 28, size: 38, rotate: 8 },
-  { x: 4, y: 48, size: 42, rotate: -4 },
-  { x: 14, y: 68, size: 36, rotate: 14 },
-  { x: 8, y: 86, size: 40, rotate: -9 },
-  { x: 88, y: 12, size: 44, rotate: 10 },
-  { x: 78, y: 30, size: 36, rotate: -7 },
-  { x: 92, y: 46, size: 40, rotate: 6 },
-  { x: 80, y: 64, size: 42, rotate: -11 },
-  { x: 90, y: 84, size: 38, rotate: 9 },
-  { x: 28, y: 6, size: 34, rotate: -6 },
-  { x: 68, y: 8, size: 34, rotate: 5 },
-  { x: 32, y: 90, size: 36, rotate: 8 },
-  { x: 64, y: 88, size: 38, rotate: -8 },
+  { x: 6, y: 10, size: 72, rotate: -12 },
+  { x: 18, y: 28, size: 58, rotate: 8 },
+  { x: 4, y: 48, size: 64, rotate: -4 },
+  { x: 14, y: 68, size: 56, rotate: 14 },
+  { x: 8, y: 86, size: 62, rotate: -9 },
+  { x: 88, y: 12, size: 68, rotate: 10 },
+  { x: 78, y: 30, size: 56, rotate: -7 },
+  { x: 92, y: 46, size: 62, rotate: 6 },
+  { x: 80, y: 64, size: 64, rotate: -11 },
+  { x: 90, y: 84, size: 58, rotate: 9 },
+  { x: 28, y: 6, size: 54, rotate: -6 },
+  { x: 68, y: 8, size: 54, rotate: 5 },
+  { x: 32, y: 90, size: 56, rotate: 8 },
+  { x: 64, y: 88, size: 58, rotate: -8 },
 ] as const;
 
 const MARKETS = [
@@ -768,7 +741,7 @@ function ClosingLogoField({
             animate={
               visible
                 ? {
-                    opacity: 0.72,
+                    opacity: 1,
                     scale: 1,
                     rotate: slot.rotate,
                     y: 0,
