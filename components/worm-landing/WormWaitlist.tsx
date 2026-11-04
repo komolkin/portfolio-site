@@ -604,9 +604,16 @@ function DvdParachute() {
     <span
       ref={ref}
       aria-hidden
-      className="pointer-events-none absolute left-0 top-0 z-[40] select-none text-[101px] leading-none will-change-transform sm:text-[118px]"
+      className="pointer-events-none absolute left-0 top-0 z-[40] will-change-transform"
     >
-      🪂
+      <img
+        src="/worm/parachute.png"
+        alt=""
+        width={1179}
+        height={1088}
+        draggable={false}
+        className="pointer-events-none h-[101px] w-auto select-none sm:h-[118px]"
+      />
     </span>
   );
 }
