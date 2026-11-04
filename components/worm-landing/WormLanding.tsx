@@ -660,9 +660,10 @@ function ClosingLogoField({
   scrollRoot: RefObject<HTMLElement | null>;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
   const [visible, setVisible] = useState(false);
   const [tokens, setTokens] = useState<
-    { src: string; delay: number; key: string }[]
+    { src: string; delay: number; key: string; bob: number; drift: number }[]
   >([]);
 
   const reshuffle = useCallback(() => {
@@ -677,6 +678,9 @@ function ClosingLogoField({
         src,
         key: `${src}-${index}-${Math.floor(rand() * 1e6)}`,
         delay: 0.04 + rand() * 0.55,
+        // Stagger float period / amplitude so the field feels alive, not synced.
+        bob: 3.6 + rand() * 2.4,
+        drift: 5 + rand() * 5,
       })),
     );
   }, []);
@@ -716,20 +720,15 @@ function ClosingLogoField({
     <div
       ref={rootRef}
       aria-hidden
-      className="pointer-events-none absolute inset-0 overflow-hidden"
+      className="pointer-events-none absolute inset-0 overflow-visible"
     >
       {tokens.map((token, index) => {
         const slot = CLOSING_LOGO_SLOTS[index];
         if (!slot) return null;
         return (
-          <motion.img
+          <motion.div
             key={token.key}
-            src={token.src}
-            alt=""
-            width={slot.size}
-            height={slot.size}
-            draggable={false}
-            className="absolute object-contain select-none"
+            className="absolute"
             style={{
               left: `${slot.x}%`,
               top: `${slot.y}%`,
@@ -744,14 +743,12 @@ function ClosingLogoField({
                 ? {
                     opacity: 1,
                     scale: 1,
-                    rotate: slot.rotate,
                     y: 0,
                     filter: "blur(0px)",
                   }
                 : {
                     opacity: 0,
                     scale: 0.55,
-                    rotate: slot.rotate * 1.6,
                     y: 18,
                     filter: "blur(6px)",
                   }
@@ -761,7 +758,48 @@ function ClosingLogoField({
               delay: visible ? token.delay : 0,
               ease: [0.22, 1, 0.36, 1],
             }}
-          />
+          >
+            <motion.img
+              src={token.src}
+              alt=""
+              width={slot.size}
+              height={slot.size}
+              draggable={false}
+              className="h-full w-full object-contain select-none"
+              initial={false}
+              animate={
+                visible && !reduceMotion
+                  ? {
+                      y: [0, -token.drift, 0],
+                      rotate: [
+                        slot.rotate,
+                        slot.rotate + 2.5,
+                        slot.rotate - 1.8,
+                        slot.rotate,
+                      ],
+                    }
+                  : { y: 0, rotate: slot.rotate }
+              }
+              transition={
+                visible && !reduceMotion
+                  ? {
+                      y: {
+                        duration: token.bob,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        delay: token.delay + 0.65,
+                      },
+                      rotate: {
+                        duration: token.bob * 1.15,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        delay: token.delay + 0.65,
+                      },
+                    }
+                  : { duration: 0.4, ease: [0.22, 1, 0.36, 1] }
+              }
+            />
+          </motion.div>
         );
       })}
     </div>
@@ -1651,7 +1689,7 @@ export function WormLanding() {
           </div>
         </section>
 
-        <section className="relative overflow-hidden">
+        <section className="relative overflow-visible">
           <ClosingLogoField scrollRoot={scrollRef} />
           <div className="relative z-10 mx-auto max-w-[760px] px-5 py-24 text-center sm:px-8 md:py-32">
             <RotatingTitle

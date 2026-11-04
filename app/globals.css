@@ -109,6 +109,12 @@ html[data-bg="gradient"] body::after {
   mask-composite: add;
 }
 
+/* API playground: gradient only — no dotted grain. */
+html[data-bg-dots="off"] body::before,
+html[data-bg-dots="off"] body::after {
+  opacity: 0;
+}
+
 body > * {
   position: relative;
   z-index: 1;

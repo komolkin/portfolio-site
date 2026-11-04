@@ -52,6 +52,19 @@ export default function PlaygroundSlide() {
     }
   }, [deepLink, routeIndex]);
 
+  // API uses a clean gradient backdrop (no page-level dots).
+  useEffect(() => {
+    const root = document.documentElement;
+    if (activeProject === "api") {
+      root.dataset.bgDots = "off";
+    } else {
+      delete root.dataset.bgDots;
+    }
+    return () => {
+      delete root.dataset.bgDots;
+    };
+  }, [activeProject]);
+
   // `/5` etc. should land on the playground slide (first).
   // Skip if already in view — e.g. user scrolled here and URL updated after settle.
   useLayoutEffect(() => {
