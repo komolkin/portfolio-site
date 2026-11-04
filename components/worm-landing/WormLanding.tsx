@@ -26,9 +26,26 @@ const ApiApp = dynamic(
 const APP_HREF = "/1";
 const PRESS =
   "transition-transform duration-150 ease-out active:scale-[0.97]";
-const NAV_IDS = ["markets", "leaderboard", "feed", "copy", "how"] as const;
-type NavId = (typeof NAV_IDS)[number];
+/** Temporarily hide the product feature grid on /app. */
+const SHOW_PRODUCT_SECTION = false;
+const ALL_NAV_IDS = ["product", "how"] as const;
+type NavId = (typeof ALL_NAV_IDS)[number];
+const NAV_IDS = ALL_NAV_IDS.filter(
+  (id) => SHOW_PRODUCT_SECTION || id !== "product",
+);
 const TITLE_WORDS = ["follow", "share", "earn", "copy"] as const;
+
+/** Four product beats — one screen on /app. */
+const PRODUCT_BEATS = [
+  { id: "markets", title: "A short slate, mostly sports.", tone: "light" },
+  { id: "leaderboard", title: "Find who is right.", tone: "light" },
+  {
+    id: "feed",
+    title: "A take on the way in, and on the way out.",
+    tone: "light",
+  },
+  { id: "copy", title: "Same trade. Your size.", tone: "dark" },
+] as const;
 
 /** Same pool as the API onboarding river — NBA teams interleaved with leagues. */
 const CLOSING_NBA_LOGOS = [
@@ -245,12 +262,9 @@ function CopyShowcaseCard() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <div
-      className="relative mx-auto w-full max-w-[420px] md:mx-0 md:max-w-none"
-      style={{ perspective: 1200 }}
-    >
+    <div className="relative w-full" style={{ perspective: 1200 }}>
       <motion.div
-        className="worm-copy-showcase relative rounded-[28px] bg-[#141416] p-6 text-white sm:p-8"
+        className="worm-copy-showcase relative rounded-[24px] bg-[#1c1c1f] p-5 text-white shadow-[0_24px_60px_-28px_rgba(0,0,0,0.7)] ring-1 ring-white/10 sm:p-6"
         style={{
           transformStyle: "preserve-3d",
           transformOrigin: "50% 50%",
@@ -276,7 +290,7 @@ function CopyShowcaseCard() {
       >
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 overflow-hidden rounded-[28px]"
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-[24px]"
         >
           <motion.div
             className="absolute -left-1/4 -top-1/3 h-[140%] w-[70%] rotate-12 bg-gradient-to-br from-white/[0.14] via-white/[0.03] to-transparent"
@@ -295,21 +309,21 @@ function CopyShowcaseCard() {
         <div className="relative">
           <p className="text-[13px] text-white/50">Copying cole</p>
           <p
-            className={`mt-3 text-[56px] font-semibold leading-none tracking-[-0.04em] ${instrumentSans.className}`}
+            className={`mt-2 text-[44px] font-semibold leading-none tracking-[-0.04em] sm:text-[48px] ${instrumentSans.className}`}
           >
             $25
           </p>
-          <p className="mt-2 text-[15px] text-white/55">per trade</p>
-          <dl className="mt-8 divide-y divide-white/10 text-[15px]">
-            <div className="flex items-center justify-between py-3">
+          <p className="mt-1.5 text-[14px] text-white/55">per trade</p>
+          <dl className="mt-6 divide-y divide-white/10 text-[14px]">
+            <div className="flex items-center justify-between py-2.5">
               <dt className="text-white/55">Size</dt>
               <dd className="font-semibold">Fixed</dd>
             </div>
-            <div className="flex items-center justify-between py-3">
+            <div className="flex items-center justify-between py-2.5">
               <dt className="text-white/55">Copy exits</dt>
               <dd className="font-semibold text-[#00D54B]">On</dd>
             </div>
-            <div className="flex items-center justify-between py-3">
+            <div className="flex items-center justify-between py-2.5">
               <dt className="text-white/55">Max a day</dt>
               <dd className="font-semibold">$200</dd>
             </div>
@@ -320,13 +334,12 @@ function CopyShowcaseCard() {
   );
 }
 
-const NAV = [
-  { id: "markets", label: "Markets" },
-  { id: "leaderboard", label: "Top performers" },
-  { id: "feed", label: "Feed" },
-  { id: "copy", label: "Copy" },
-  { id: "how", label: "How it works" },
-] as const satisfies readonly { id: NavId; label: string }[];
+const NAV = (
+  [
+    { id: "product", label: "Product" },
+    { id: "how", label: "How it works" },
+  ] as const satisfies readonly { id: NavId; label: string }[]
+).filter((item) => SHOW_PRODUCT_SECTION || item.id !== "product");
 
 function scrollToId(
   root: HTMLElement,
@@ -897,18 +910,50 @@ function RotatingTitle({
   );
 }
 
-const STORY_PANELS = [
-  {
-    id: "leaderboard" as const,
-    title: "Find who is right.",
-    body: "Traders get discovered here. Follow someone to see their takes, or copy the next trade at your size.",
-  },
-  {
-    id: "feed" as const,
-    title: "A take on the way in, and on the way out.",
-    body: "When you open a position or cash out, you can say why. The feed is those takes. Anyone can comment.",
-  },
-] as const;
+function MarketsCard() {
+  return (
+    <ul className="divide-y divide-black/[0.06] overflow-hidden rounded-[24px] bg-white shadow-[0_22px_50px_-28px_rgba(0,0,0,0.4)]">
+      {MARKETS.map((market) => (
+        <li
+          key={market.title}
+          className="flex items-center gap-3 px-4 py-3 sm:px-5 sm:py-3.5"
+        >
+          <span className="flex shrink-0 -space-x-2">
+            {market.logos.map((src) => (
+              <img
+                key={src}
+                src={src}
+                alt=""
+                width={36}
+                height={36}
+                className="h-9 w-9 rounded-full bg-[#f6f5f2] object-contain p-0.5 ring-2 ring-white"
+              />
+            ))}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[15px] font-semibold">
+              {market.title}
+            </span>
+            <span className="mt-0.5 flex items-center gap-1.5 text-[13px] text-[#5e5c56]">
+              {market.live && (
+                <span className="h-1.5 w-1.5 rounded-full bg-[#00D54B]" />
+              )}
+              {market.meta}
+            </span>
+          </span>
+          <span className="text-right">
+            <span className="block text-[13px] text-[#5e5c56]">{market.pick}</span>
+            <span
+              className={`block text-[18px] font-semibold leading-none ${instrumentSans.className}`}
+            >
+              {market.price}
+            </span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function PeriodTabs({
   period,
@@ -1015,16 +1060,16 @@ function LeaderboardCard({
   board: { name: string; market: string; pnl: number }[];
 }) {
   return (
-    <div className="w-full overflow-hidden rounded-[28px] bg-white">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-black/[0.06] px-4 py-4 sm:px-6">
-        <p className="text-[15px] font-semibold">Top performers</p>
+    <div className="w-full overflow-hidden rounded-[24px] bg-white shadow-[0_22px_50px_-28px_rgba(0,0,0,0.4)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/[0.06] px-4 py-3 sm:px-5">
+        <p className="text-[14px] font-semibold">Top performers</p>
         <PeriodTabs period={period} onPeriodChange={onPeriodChange} />
       </div>
       <ol>
-        {board.map((trader, index) => (
+        {board.slice(0, 4).map((trader, index) => (
           <li
             key={trader.name}
-            className="flex items-center gap-3 border-b border-black/[0.06] px-4 py-4 last:border-b-0 sm:px-6"
+            className="flex items-center gap-3 border-b border-black/[0.06] px-4 py-3 last:border-b-0 sm:px-5"
           >
             <RankBadge rank={index + 1} />
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#141416] text-[13px] font-semibold uppercase text-white">
@@ -1054,7 +1099,7 @@ function LeaderboardCard({
 
 function FeedCard() {
   return (
-    <article className="w-full rounded-[28px] bg-white p-5 sm:p-6">
+    <article className="w-full rounded-[24px] bg-white p-5 shadow-[0_22px_50px_-28px_rgba(0,0,0,0.4)] sm:p-6">
       <div className="flex items-center gap-3">
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#141416] text-[13px] font-semibold uppercase text-white">
           m
@@ -1064,10 +1109,10 @@ function FeedCard() {
           <p className="text-[13px] text-[#5e5c56]">Bought Lakers · 54¢</p>
         </div>
       </div>
-      <p className="mt-5 text-[22px] font-semibold leading-snug tracking-[-0.03em]">
+      <p className="mt-4 text-[20px] font-semibold leading-snug tracking-[-0.03em] sm:text-[22px]">
         Lakers close this if the fourth stays slow.
       </p>
-      <div className="mt-5 rounded-2xl bg-[#f6f5f2] px-4 py-3">
+      <div className="mt-4 rounded-2xl bg-[#f6f5f2] px-4 py-3">
         <p className="text-[13px] font-semibold">cole</p>
         <p className="mt-1 text-[14px] leading-snug text-[#5e5c56]">
           Only if Reaves is still on the floor.
@@ -1302,159 +1347,6 @@ function ReferralCalculator({
   );
 }
 
-function StickyStory({
-  scrollRoot,
-  period,
-  onPeriodChange,
-  board,
-}: {
-  scrollRoot: RefObject<HTMLDivElement | null>;
-  period: Period;
-  onPeriodChange: (period: Period) => void;
-  board: { name: string; market: string; pnl: number }[];
-}) {
-  const [active, setActive] = useState(0);
-  const panelRefs = useRef<(HTMLElement | null)[]>([]);
-  const activeRef = useRef(0);
-  const switchTimerRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    activeRef.current = active;
-  }, [active]);
-
-  useEffect(() => {
-    const root = scrollRoot.current;
-    if (!root) return;
-
-    const nodes = panelRefs.current.filter(Boolean) as HTMLElement[];
-    if (!nodes.length) return;
-
-    const observer = new IntersectionObserver(
-      () => {
-        const rootRect = root.getBoundingClientRect();
-        const mid = rootRect.top + root.clientHeight * 0.5;
-        let next = activeRef.current;
-        let best = Number.POSITIVE_INFINITY;
-        nodes.forEach((node, index) => {
-          const rect = node.getBoundingClientRect();
-          const center = rect.top + rect.height * 0.5;
-          const distance = Math.abs(center - mid);
-          if (distance < best) {
-            best = distance;
-            next = index;
-          }
-        });
-        if (next === activeRef.current) return;
-        if (switchTimerRef.current != null) {
-          window.clearTimeout(switchTimerRef.current);
-        }
-        // Hold the target briefly so the boundary doesn't flicker mid-scroll.
-        switchTimerRef.current = window.setTimeout(() => {
-          switchTimerRef.current = null;
-          if (next !== activeRef.current) setActive(next);
-        }, 140);
-      },
-      {
-        root,
-        rootMargin: "-35% 0px -35% 0px",
-        threshold: [0, 0.25, 0.5, 0.75, 1],
-      },
-    );
-
-    nodes.forEach((node) => observer.observe(node));
-    return () => {
-      observer.disconnect();
-      if (switchTimerRef.current != null) {
-        window.clearTimeout(switchTimerRef.current);
-      }
-    };
-  }, [scrollRoot]);
-
-  return (
-    <section>
-      <div className="mx-auto grid max-w-[1120px] gap-10 px-5 py-16 sm:px-8 md:grid-cols-2 md:items-start md:gap-16 md:py-0 lg:gap-20">
-        <div className="relative hidden md:block md:h-full">
-          <div className="sticky top-0 flex h-svh items-center">
-            <div className="relative w-full">
-              {/* Keep height stable so the crossfade doesn't jump. */}
-              <div className="invisible pointer-events-none" aria-hidden>
-                <LeaderboardCard
-                  period={period}
-                  onPeriodChange={onPeriodChange}
-                  board={board}
-                />
-              </div>
-              <AnimatePresence initial={false}>
-                <motion.div
-                  key={STORY_PANELS[active].id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                  className="absolute inset-0 flex items-center"
-                >
-                  <div className="w-full">
-                    {active === 0 ? (
-                      <LeaderboardCard
-                        period={period}
-                        onPeriodChange={onPeriodChange}
-                        board={board}
-                      />
-                    ) : (
-                      <FeedCard />
-                    )}
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </div>
-        </div>
-
-        <div className="md:min-h-0">
-          {STORY_PANELS.map((panel, index) => (
-            <div
-              key={panel.id}
-              id={panel.id}
-              ref={(node) => {
-                panelRefs.current[index] = node;
-              }}
-              className="flex min-h-[min(85svh,720px)] scroll-mt-28 flex-col justify-center py-12 sm:scroll-mt-16 md:h-svh md:min-h-svh md:scroll-mt-0 md:justify-center md:py-0"
-            >
-              <div className="mb-8 md:hidden">
-                {index === 0 ? (
-                  <LeaderboardCard
-                    period={period}
-                    onPeriodChange={onPeriodChange}
-                    board={board}
-                  />
-                ) : (
-                  <FeedCard />
-                )}
-              </div>
-              <div>
-                <h2
-                  className={`text-balance text-[clamp(32px,4vw,48px)] font-semibold leading-[1.05] tracking-[-0.04em] transition-colors duration-300 ${
-                    active === index ? "text-[#141416]" : "text-[#c4c0b6]"
-                  }`}
-                >
-                  {panel.title}
-                </h2>
-                <p
-                  className={`mt-4 max-w-[440px] text-[17px] leading-relaxed transition-colors duration-300 ${
-                    active === index ? "text-[#5e5c56]" : "text-[#c4c0b6]"
-                  }`}
-                >
-                  {panel.body}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 export function WormLanding() {
   const [period, setPeriod] = useState<Period>("Week");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -1643,87 +1535,61 @@ export function WormLanding() {
           </div>
         </section>
 
-        <section
-          id="markets"
-          className="relative z-[1] flex scroll-mt-28 bg-[#f6f5f2] sm:scroll-mt-16 md:min-h-svh md:scroll-mt-0 md:items-center"
-        >
-          <div className="mx-auto grid w-full max-w-[1120px] items-center gap-12 px-5 py-20 sm:px-8 md:grid-cols-2 md:py-0 lg:gap-20">
-            <div>
-              <h2 className="text-balance text-[clamp(32px,4vw,48px)] font-semibold leading-[1.05] tracking-[-0.04em]">
-                A short slate, mostly sports.
+        {SHOW_PRODUCT_SECTION ? (
+          <section
+            id="product"
+            aria-labelledby="product-heading"
+            className="relative z-[1] flex scroll-mt-28 bg-[#f6f5f2] sm:scroll-mt-16 md:min-h-svh md:scroll-mt-0 md:items-center"
+          >
+            <div className="mx-auto w-full max-w-[1120px] px-5 py-14 sm:px-8 md:py-20 lg:py-24">
+              <h2 id="product-heading" className="sr-only">
+                Product
               </h2>
-              <p className="mt-4 max-w-[420px] text-[17px] leading-relaxed text-[#5e5c56]">
-                The board stays small on purpose. Games, races, and a few
-                matchups — enough to trade, easy to follow.
-              </p>
-            </div>
-            <ul className="divide-y divide-black/[0.06] overflow-hidden rounded-[28px] bg-white">
-              {MARKETS.map((market) => (
-                <li key={market.title} className="flex items-center gap-3 px-4 py-3.5 sm:px-5">
-                  <span className="flex shrink-0 -space-x-2">
-                    {market.logos.map((src) => (
-                      <img
-                        key={src}
-                        src={src}
-                        alt=""
-                        width={36}
-                        height={36}
-                        className="h-9 w-9 rounded-full bg-[#f6f5f2] object-contain p-0.5 ring-2 ring-white"
-                      />
-                    ))}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] font-semibold">
-                      {market.title}
-                    </span>
-                    <span className="mt-0.5 flex items-center gap-1.5 text-[13px] text-[#5e5c56]">
-                      {market.live && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#00D54B]" />
-                      )}
-                      {market.meta}
-                    </span>
-                  </span>
-                  <span className="text-right">
-                    <span className="block text-[13px] text-[#5e5c56]">
-                      {market.pick}
-                    </span>
-                    <span
-                      className={`block text-[18px] font-semibold leading-none ${instrumentSans.className}`}
+              <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
+                {PRODUCT_BEATS.map((beat) => {
+                  const dark = beat.tone === "dark";
+                  return (
+                    <article
+                      key={beat.id}
+                      id={beat.id}
+                      className={`flex min-h-[420px] min-w-0 flex-col overflow-hidden rounded-[28px] md:min-h-[460px] ${
+                        dark
+                          ? "bg-[#141416] text-white"
+                          : "bg-[#e8e6e1] text-[#141416]"
+                      }`}
                     >
-                      {market.price}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        <StickyStory
-          scrollRoot={scrollRef}
-          period={period}
-          onPeriodChange={setPeriod}
-          board={board}
-        />
-
-        <section
-          id="copy"
-          className="flex scroll-mt-28 sm:scroll-mt-16 md:min-h-svh md:scroll-mt-0 md:items-center"
-        >
-          <div className="mx-auto grid w-full max-w-[1120px] items-center gap-12 px-5 py-20 sm:px-8 md:grid-cols-2 md:py-0 lg:gap-20">
-            <div>
-              <h2 className="text-balance text-[clamp(32px,4vw,48px)] font-semibold leading-[1.05] tracking-[-0.04em]">
-                Same trade. Your size.
-              </h2>
-              <p className="mt-4 max-w-[440px] text-[17px] leading-relaxed text-[#5e5c56]">
-                Copy a trader with a fixed amount or a percent of their size.
-                Copy the exit too, or leave it. Follow them when you want
-                their takes in the feed.
-              </p>
+                      <div
+                        className={`flex flex-1 items-center justify-center px-5 pt-6 sm:px-7 sm:pt-8 ${
+                          dark
+                            ? "bg-[radial-gradient(120%_80%_at_50%_0%,#2a2a2e_0%,#141416_62%)]"
+                            : ""
+                        }`}
+                      >
+                        <div className="w-full max-w-[400px]">
+                          {beat.id === "markets" ? <MarketsCard /> : null}
+                          {beat.id === "leaderboard" ? (
+                            <LeaderboardCard
+                              period={period}
+                              onPeriodChange={setPeriod}
+                              board={board}
+                            />
+                          ) : null}
+                          {beat.id === "feed" ? <FeedCard /> : null}
+                          {beat.id === "copy" ? <CopyShowcaseCard /> : null}
+                        </div>
+                      </div>
+                      <div className="px-6 pb-6 pt-5 sm:px-8 sm:pb-7">
+                        <h3 className="text-balance text-[clamp(22px,2.4vw,28px)] font-semibold leading-[1.15] tracking-[-0.035em]">
+                          {beat.title}
+                        </h3>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
             </div>
-            <CopyShowcaseCard />
-          </div>
-        </section>
+          </section>
+        ) : null}
 
         <section
           id="how"
