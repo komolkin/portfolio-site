@@ -216,6 +216,19 @@ function GoogleMark() {
   );
 }
 
+function AppleMark() {
+  return (
+    <svg
+      viewBox="0 0 16 20"
+      className="h-[18px] w-[15px]"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M13.2 10.5c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.8-3.5.8s-1.8-.8-3-.8c-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.3 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7 2-.1 2.9-2.2c.7-1 1.2-2.1 1.5-3.2-3.9-1.5-3.8-5.5-3.8-5.4zM10.9 3.8c.6-.8 1.1-1.9.9-3-.9.1-2 .6-2.6 1.4-.6.7-1.1 1.8-.9 2.9 1 .1 2-.5 2.6-1.3z" />
+    </svg>
+  );
+}
+
 function TermsNote() {
   return (
     <p className="text-center text-[11px] leading-[1.45] text-white/45">
@@ -486,13 +499,22 @@ export default function Onboarding({
             </p>
           </div>
           <div className="relative z-10 flex shrink-0 flex-col gap-4">
-            <AquaButton
-              onClick={finish}
-              className="pointer-events-auto h-12 w-full px-5 text-[16px]"
-            >
-              <GoogleMark />
-              Continue with Google
-            </AquaButton>
+            <div className="pointer-events-auto flex flex-col gap-2.5">
+              <AquaButton
+                onClick={finish}
+                className="h-12 w-full px-5 text-[16px]"
+              >
+                <GoogleMark />
+                Continue with Google
+              </AquaButton>
+              <AquaButton
+                onClick={finish}
+                className="h-12 w-full px-5 text-[16px]"
+              >
+                <AppleMark />
+                Continue with Apple
+              </AquaButton>
+            </div>
             <div className="pointer-events-auto">
               <TermsNote />
             </div>
