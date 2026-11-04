@@ -8,6 +8,7 @@ import {
   Constraint,
   Engine,
   Query,
+  Sleeping,
   World,
   type Constraint as MatterConstraint,
 } from "matter-js";
@@ -28,10 +29,13 @@ type PieceDef = {
  * optical size regardless of aspect ratio.
  */
 const PIECE_SIZE_RATIO = 0.36;
-/** Hold at the top before the first piece drops. */
+/** Hold off-screen before the first piece drops. */
 const DROP_DELAY_MS = 750;
 /** Extra wait between each piece releasing. */
-const DROP_STAGGER_MS = 85;
+const DROP_STAGGER_MS = 70;
+/** Fixed Matter step — variable frame deltas were making the fall hitch. */
+const PHYSICS_STEP_MS = 1000 / 60;
+const GRAVITY_Y = 1.4;
 
 /** Layout tuned to Figma 360×740 onboarding hero. W falls with the rest. */
 const PIECES: PieceDef[] = [
@@ -165,8 +169,12 @@ export default function OnboardingPhysics() {
     }
 
     const engine = Engine.create({
-      gravity: { x: 0, y: reduced ? 0 : 1.15, scale: 0.001 },
+      gravity: { x: 0, y: reduced ? 0 : GRAVITY_Y, scale: 0.001 },
+      // Settled pile stops simulating — keeps the fall smooth under load.
+      enableSleeping: true,
     });
+    engine.positionIterations = 6;
+    engine.velocityIterations = 4;
 
     root.style.touchAction = "none";
     root.style.cursor = "grab";
@@ -187,6 +195,7 @@ export default function OnboardingPhysics() {
     let dragPointerId: number | null = null;
     let lastDrag = { x: 0, y: 0, t: 0 };
     let dragVelocity = { x: 0, y: 0 };
+    let physicsAcc = 0;
 
     const clearDropTimers = () => {
       for (const id of dropTimers) window.clearTimeout(id);
@@ -196,6 +205,8 @@ export default function OnboardingPhysics() {
     const syncSprites = () => {
       for (const item of runtimes) {
         const { body, el, width, height } = item;
+        // Skip parked intro pieces still waiting above the fold.
+        if (body.isStatic && el.style.opacity === "0") continue;
         el.style.transform = `translate3d(${body.position.x - width / 2}px, ${body.position.y - height / 2}px, 0) rotate(${body.angle}rad)`;
       }
     };
@@ -291,8 +302,7 @@ export default function OnboardingPhysics() {
         Math.min(width * PIECE_SIZE_RATIO, 156),
       );
 
-      // Hold gravity at 0 during the intro pause so nothing drifts on-screen.
-      engine.gravity.y = dropping || reduced ? 0 : 1.15;
+      engine.gravity.y = reduced ? 0 : GRAVITY_Y;
 
       const dropSpawns: { x: number; y: number }[] = [];
 
@@ -314,17 +324,22 @@ export default function OnboardingPhysics() {
         const startY = dropping ? -(pieceH + 40) : def.restY * height;
         if (dropping) dropSpawns.push({ x: startX, y: startY });
 
+        // Create dynamic first so mass is correct, then freeze until release.
         const body = Bodies.rectangle(startX, startY, pieceW * 0.78, pieceH * 0.78, {
-          chamfer: { radius: Math.min(30, pieceW * 0.16) },
-          friction: 0.5,
-          frictionAir: 0.014,
-          restitution: 0.4,
+          chamfer: { radius: Math.min(18, pieceW * 0.1) },
+          friction: 0.45,
+          frictionAir: 0.005,
+          restitution: 0.35,
           density: def.density ?? 0.0024,
           angle: def.angle + (Math.random() - 0.5) * 0.2,
           label: def.id,
+          // Parked pieces sit still for ~750ms — don't let sleeping trap them
+          // above the fold (gravity skips sleeping bodies, so they'd never fall).
+          sleepThreshold: dropping ? Infinity : 28,
         });
         Body.setVelocity(body, { x: 0, y: 0 });
         Body.setAngularVelocity(body, 0);
+        if (dropping) Body.setStatic(body, true);
         runtimes.push({ body, el, width: pieceW, height: pieceH });
       });
 
@@ -343,14 +358,15 @@ export default function OnboardingPhysics() {
           dropTimers.push(
             window.setTimeout(() => {
               if (!alive || !introDropActive) return;
-              // Re-seat just above the top, reveal, then let gravity take over.
-              if (index === 0) engine.gravity.y = 1.15;
+              Body.setStatic(item.body, false);
+              item.body.sleepThreshold = 28;
+              Sleeping.set(item.body, false);
               Body.setPosition(item.body, spawn);
               Body.setVelocity(item.body, {
-                x: (Math.random() - 0.5) * 1.4,
-                y: 3 + Math.random() * 2.5,
+                x: (Math.random() - 0.5) * 1.6,
+                y: 4 + Math.random() * 3,
               });
-              Body.setAngularVelocity(item.body, (Math.random() - 0.5) * 0.08);
+              Body.setAngularVelocity(item.body, (Math.random() - 0.5) * 0.1);
               item.el.style.opacity = "1";
               syncSprites();
               if (index >= total - 1) introDropActive = false;
@@ -422,9 +438,17 @@ export default function OnboardingPhysics() {
     let lastTick = performance.now();
     const loop = (now: number) => {
       if (!alive) return;
-      const delta = Math.min(33, now - lastTick);
+      // Fixed step + short spiral keeps motion smooth when a frame hitch hits.
+      physicsAcc += Math.min(now - lastTick, 48);
       lastTick = now;
-      Engine.update(engine, delta);
+      let steps = 0;
+      while (physicsAcc >= PHYSICS_STEP_MS && steps < 3) {
+        Engine.update(engine, PHYSICS_STEP_MS);
+        physicsAcc -= PHYSICS_STEP_MS;
+        steps += 1;
+      }
+      // Don't let leftover time balloon after a long stall.
+      if (physicsAcc > PHYSICS_STEP_MS * 2) physicsAcc = 0;
       syncSprites();
       raf = requestAnimationFrame(loop);
     };

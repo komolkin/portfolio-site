@@ -10,6 +10,7 @@ import {
   isPlaygroundDeepLink,
   type ProjectId,
 } from "@/components/playground/playground-route";
+import { useTheme } from "@/lib/themeContext";
 import HotTopics from "@/components/playground/projects/hot-topics/HotTopics";
 import Positions from "@/components/playground/projects/positions/Positions";
 import Expandable from "@/components/playground/projects/expandable/Expandable";
@@ -36,6 +37,7 @@ import Ai from "@/components/playground/projects/ai/Ai";
 export default function PlaygroundSlide() {
   const pathname = usePathname();
   const prefersReducedMotion = useReducedMotion();
+  const { chromeHidden } = useTheme();
   const routeIndex = playgroundIndexFromPathname(pathname ?? "/");
   const deepLink = isPlaygroundDeepLink(pathname ?? "/");
 
@@ -94,8 +96,12 @@ export default function PlaygroundSlide() {
       data-section="playground"
       className="slide relative flex h-[100dvh] w-full flex-col md:h-screen"
     >
-      <PlaygroundNav activeProject={activeProject} />
-      <main className="relative z-0 flex min-h-0 w-full min-w-0 flex-1 items-center justify-center overflow-hidden py-28 md:py-0">
+      {!chromeHidden ? <PlaygroundNav activeProject={activeProject} /> : null}
+      <main
+        className={`relative z-0 flex min-h-0 w-full min-w-0 flex-1 items-center justify-center overflow-hidden md:py-0 ${
+          chromeHidden ? "py-0" : "py-28"
+        }`}
+      >
         <AnimatePresence mode="wait" initial>
           <motion.div
             key={activeProject}

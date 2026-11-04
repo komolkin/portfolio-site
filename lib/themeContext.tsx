@@ -10,6 +10,8 @@ import {
 import {
   BG_MODE_KEY,
   DEFAULT_BG_MODE,
+  isBgMode,
+  nextBgMode,
   type BgMode,
 } from "@/lib/bgMode";
 
@@ -19,6 +21,8 @@ export { BG_MODE_KEY, DEFAULT_BG_MODE };
 interface ThemeContextType {
   theme: "dark";
   bgMode: BgMode;
+  /** Hide header nav + playground project selector. */
+  chromeHidden: boolean;
   setBgMode: (mode: BgMode) => void;
   toggleBgMode: () => void;
 }
@@ -26,18 +30,21 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType>({
   theme: "dark",
   bgMode: DEFAULT_BG_MODE,
+  chromeHidden: false,
   setBgMode: () => {},
   toggleBgMode: () => {},
 });
 
 function applyBgMode(mode: BgMode) {
-  document.documentElement.dataset.bg = mode;
+  // Focus keeps a solid page bg; only gradient has special CSS hooks.
+  document.documentElement.dataset.bg = mode === "gradient" ? "gradient" : "flat";
+  document.documentElement.dataset.chrome = mode === "focus" ? "off" : "on";
 }
 
 function readStoredBgMode(): BgMode {
   try {
     const stored = localStorage.getItem(BG_MODE_KEY);
-    if (stored === "flat" || stored === "gradient") return stored;
+    if (isBgMode(stored)) return stored;
   } catch {
     // ignore
   }
@@ -65,7 +72,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const toggleBgMode = useCallback(() => {
     setBgModeState((prev) => {
-      const next: BgMode = prev === "gradient" ? "flat" : "gradient";
+      const next = nextBgMode(prev);
       applyBgMode(next);
       try {
         localStorage.setItem(BG_MODE_KEY, next);
@@ -78,7 +85,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider
-      value={{ theme: "dark", bgMode, setBgMode, toggleBgMode }}
+      value={{
+        theme: "dark",
+        bgMode,
+        chromeHidden: bgMode === "focus",
+        setBgMode,
+        toggleBgMode,
+      }}
     >
       {children}
     </ThemeContext.Provider>

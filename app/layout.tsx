@@ -13,8 +13,8 @@ export const metadata: Metadata = {
     "Generalist design engineer focused on building impactful products and brands",
 };
 
-/** Runs before paint so the correct bg mode is applied without a flash. */
-const bgModeInitScript = `(function(){try{var m=localStorage.getItem(${JSON.stringify(BG_MODE_KEY)});document.documentElement.dataset.bg=(m==="gradient"||m==="flat")?m:${JSON.stringify(DEFAULT_BG_MODE)};}catch(e){document.documentElement.dataset.bg=${JSON.stringify(DEFAULT_BG_MODE)};}})();`;
+/** Runs before paint so the correct bg / chrome mode is applied without a flash. */
+const bgModeInitScript = `(function(){try{var m=localStorage.getItem(${JSON.stringify(BG_MODE_KEY)});var mode=(m==="gradient"||m==="flat"||m==="focus")?m:${JSON.stringify(DEFAULT_BG_MODE)};document.documentElement.dataset.bg=mode==="gradient"?"gradient":"flat";document.documentElement.dataset.chrome=mode==="focus"?"off":"on";}catch(e){document.documentElement.dataset.bg=${JSON.stringify(DEFAULT_BG_MODE)};document.documentElement.dataset.chrome="on";}})();`;
 
 export default function RootLayout({
   children,

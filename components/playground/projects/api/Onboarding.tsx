@@ -45,6 +45,47 @@ function WordLetters({
   );
 }
 
+function FloatingLogo() {
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useLayoutEffect(() => {
+    const img = imgRef.current;
+    if (img?.complete && img.naturalWidth > 0) setLoaded(true);
+  }, []);
+
+  return (
+    <motion.img
+      ref={imgRef}
+      src="/worm-app/floating-logo.png"
+      alt=""
+      draggable={false}
+      onLoad={() => setLoaded(true)}
+      className="h-auto w-[58%] max-w-[210px] select-none object-contain drop-shadow-[0_18px_40px_rgba(0,0,0,0.55)]"
+      initial={false}
+      animate={
+        loaded
+          ? { opacity: 1, scale: 1, y: [0, -10, 0] }
+          : { opacity: 0, scale: 0.92, y: 0 }
+      }
+      transition={
+        loaded
+          ? {
+              opacity: { duration: 0.55, ease: STEP_EASE },
+              scale: { duration: 0.7, ease: STEP_EASE },
+              y: {
+                duration: 4.2,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: 0.55,
+              },
+            }
+          : { duration: 0 }
+      }
+    />
+  );
+}
+
 /** Same rotating title as /waitlist, sized for the onboarding phone. */
 function RotatingTitle() {
   const [index, setIndex] = useState(0);
@@ -385,32 +426,13 @@ export default function Onboarding({
           <motion.div
             key="float-logo"
             aria-hidden
-            className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center"
-            initial={{ opacity: 0 }}
+            className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center pb-[8%]"
+            initial={{ opacity: 1 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.35, ease: STEP_EASE }}
+            transition={{ duration: 0.28, ease: STEP_EASE }}
           >
-            <motion.img
-              src="/worm-app/floating-logo.png"
-              alt=""
-              draggable={false}
-              className="h-auto w-[72%] max-w-[260px] select-none object-contain drop-shadow-[0_18px_40px_rgba(0,0,0,0.55)]"
-              initial={{ scale: 0.96 }}
-              animate={{
-                scale: 1,
-                y: [0, -10, 0],
-              }}
-              transition={{
-                scale: { duration: 0.5, ease: STEP_EASE },
-                y: {
-                  duration: 4.2,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: 0.35,
-                },
-              }}
-            />
+            <FloatingLogo />
           </motion.div>
         ) : null}
       </AnimatePresence>
