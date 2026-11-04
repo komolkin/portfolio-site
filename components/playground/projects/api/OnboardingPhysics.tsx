@@ -28,6 +28,10 @@ type PieceDef = {
  * optical size regardless of aspect ratio.
  */
 const PIECE_SIZE_RATIO = 0.36;
+/** Hold at the top before the first piece drops. */
+const DROP_DELAY_MS = 750;
+/** Extra wait between each piece releasing. */
+const DROP_STAGGER_MS = 85;
 
 /** Layout tuned to Figma 360×740 onboarding hero. W falls with the rest. */
 const PIECES: PieceDef[] = [
@@ -176,11 +180,18 @@ export default function OnboardingPhysics() {
     let lastH = 0;
     let resizeTimer = 0;
     let builtOnce = false;
+    let introDropActive = false;
+    let dropTimers: number[] = [];
     let dragConstraint: MatterConstraint | null = null;
     let dragBody: Body | null = null;
     let dragPointerId: number | null = null;
     let lastDrag = { x: 0, y: 0, t: 0 };
     let dragVelocity = { x: 0, y: 0 };
+
+    const clearDropTimers = () => {
+      for (const id of dropTimers) window.clearTimeout(id);
+      dropTimers = [];
+    };
 
     const syncSprites = () => {
       for (const item of runtimes) {
@@ -201,6 +212,7 @@ export default function OnboardingPhysics() {
 
     const clearDynamic = () => {
       endDrag();
+      clearDropTimers();
       if (walls.length) World.remove(engine.world, walls);
       if (runtimes.length) {
         World.remove(
@@ -236,12 +248,16 @@ export default function OnboardingPhysics() {
 
     const build = (dropIn: boolean) => {
       if (!alive) return false;
-      const { width, height } = root.getBoundingClientRect();
+      // clientWidth/Height match the Matter world + CSS zoom better than rect.
+      const width = root.clientWidth;
+      const height = root.clientHeight;
       if (width < 40 || height < 40) return false;
 
       clearDynamic();
+      introDropActive = false;
 
       const thickness = 96;
+      const dropping = dropIn && !reduced;
       walls = [
         Bodies.rectangle(width / 2, height + thickness / 2 - 4, width * 1.6, thickness, {
           isStatic: true,
@@ -256,17 +272,29 @@ export default function OnboardingPhysics() {
           isStatic: true,
           friction: 0.35,
         }),
-        Bodies.rectangle(width / 2, -thickness / 2, width * 1.6, thickness, {
-          isStatic: true,
-          friction: 0.2,
-          restitution: 0.2,
-        }),
+        // High ceiling so parked off-screen pieces don't hit it before dropping.
+        Bodies.rectangle(
+          width / 2,
+          -Math.max(height * 0.85, 320) - thickness / 2,
+          width * 1.6,
+          thickness,
+          {
+            isStatic: true,
+            friction: 0.2,
+            restitution: 0.2,
+          },
+        ),
       ];
 
       const longEdge = Math.max(
         84,
         Math.min(width * PIECE_SIZE_RATIO, 156),
       );
+
+      // Hold gravity at 0 during the intro pause so nothing drifts on-screen.
+      engine.gravity.y = dropping || reduced ? 0 : 1.15;
+
+      const dropSpawns: { x: number; y: number }[] = [];
 
       PIECES.forEach((def, index) => {
         const el = pieceEls.get(def.id);
@@ -275,17 +303,16 @@ export default function OnboardingPhysics() {
         const pieceH = def.aspect >= 1 ? longEdge / def.aspect : longEdge;
         el.style.width = `${pieceW}px`;
         el.style.height = `${pieceH}px`;
-        el.style.opacity = "1";
+        el.style.opacity = dropping ? "0" : "1";
         el.style.zIndex = def.id === "logo-w" ? "3" : "2";
 
-        const startX = dropIn
-          ? width * (0.16 + (index / Math.max(1, PIECES.length - 1)) * 0.68) +
-            (Math.random() - 0.5) * 16
+        const startX = dropping
+          ? width * (0.12 + (index / Math.max(1, PIECES.length - 1)) * 0.76) +
+            (Math.random() - 0.5) * 12
           : def.restX * width;
-        const startY =
-          dropIn && !reduced
-            ? pieceH * 0.55 + 20 + index * 16 + Math.random() * 18
-            : def.restY * height;
+        // Fully above the clip rect — screen stays empty until release.
+        const startY = dropping ? -(pieceH + 40) : def.restY * height;
+        if (dropping) dropSpawns.push({ x: startX, y: startY });
 
         const body = Bodies.rectangle(startX, startY, pieceW * 0.78, pieceH * 0.78, {
           chamfer: { radius: Math.min(30, pieceW * 0.16) },
@@ -296,19 +323,42 @@ export default function OnboardingPhysics() {
           angle: def.angle + (Math.random() - 0.5) * 0.2,
           label: def.id,
         });
-        if (dropIn && !reduced) {
-          Body.setVelocity(body, {
-            x: (Math.random() - 0.5) * 1.6,
-            y: 1.2 + Math.random() * 2.2,
-          });
-          Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.07);
-        }
+        Body.setVelocity(body, { x: 0, y: 0 });
+        Body.setAngularVelocity(body, 0);
         runtimes.push({ body, el, width: pieceW, height: pieceH });
       });
 
       World.add(engine.world, [...walls, ...runtimes.map((item) => item.body)]);
       syncSprites();
       builtOnce = true;
+
+      if (dropping) {
+        introDropActive = true;
+        const total = runtimes.length;
+        runtimes.forEach((item, index) => {
+          const spawn = dropSpawns[index] ?? {
+            x: item.body.position.x,
+            y: -item.height - 40,
+          };
+          dropTimers.push(
+            window.setTimeout(() => {
+              if (!alive || !introDropActive) return;
+              // Re-seat just above the top, reveal, then let gravity take over.
+              if (index === 0) engine.gravity.y = 1.15;
+              Body.setPosition(item.body, spawn);
+              Body.setVelocity(item.body, {
+                x: (Math.random() - 0.5) * 1.4,
+                y: 3 + Math.random() * 2.5,
+              });
+              Body.setAngularVelocity(item.body, (Math.random() - 0.5) * 0.08);
+              item.el.style.opacity = "1";
+              syncSprites();
+              if (index >= total - 1) introDropActive = false;
+            }, DROP_DELAY_MS + index * DROP_STAGGER_MS),
+          );
+        });
+      }
+
       return true;
     };
 
@@ -381,7 +431,10 @@ export default function OnboardingPhysics() {
     raf = requestAnimationFrame(loop);
 
     const resize = (dropIn: boolean) => {
-      const { width, height } = root.getBoundingClientRect();
+      // Don't rebuild mid-intro — that was canceling the delayed fall.
+      if (introDropActive && !dropIn) return;
+      const width = root.clientWidth;
+      const height = root.clientHeight;
       if (
         builtOnce &&
         Math.abs(width - lastW) < 2 &&
@@ -441,6 +494,7 @@ export default function OnboardingPhysics() {
 
     return () => {
       alive = false;
+      clearDropTimers();
       endDrag();
       root.removeEventListener("pointerdown", onPointerDown);
       root.removeEventListener("pointermove", onPointerMove);

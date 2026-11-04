@@ -379,6 +379,41 @@ export default function Onboarding({
           />
         )}
       </AnimatePresence>
+      {/* Pinned to the dialog so progress/step swaps don't shove it around. */}
+      <AnimatePresence initial={false}>
+        {step === "welcome" ? (
+          <motion.div
+            key="float-logo"
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35, ease: STEP_EASE }}
+          >
+            <motion.img
+              src="/worm-app/floating-logo.png"
+              alt=""
+              draggable={false}
+              className="h-auto w-[72%] max-w-[260px] select-none object-contain drop-shadow-[0_18px_40px_rgba(0,0,0,0.55)]"
+              initial={{ scale: 0.96 }}
+              animate={{
+                scale: 1,
+                y: [0, -10, 0],
+              }}
+              transition={{
+                scale: { duration: 0.5, ease: STEP_EASE },
+                y: {
+                  duration: 4.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 0.35,
+                },
+              }}
+            />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
       <div
         className={`relative z-[3] flex min-h-0 flex-1 flex-col ${
           step === "welcome" || step === "in" ? "pointer-events-none" : ""
@@ -434,31 +469,7 @@ export default function Onboarding({
         transition={{ duration: 0.32, ease: STEP_EASE }}
       >
       {step === "welcome" && (
-        <div className="relative flex min-h-0 flex-1 flex-col pb-5">
-          <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center">
-            <motion.img
-              src="/worm-app/floating-logo.png"
-              alt=""
-              draggable={false}
-              className="pointer-events-none h-auto w-[72%] max-w-[260px] select-none object-contain drop-shadow-[0_18px_40px_rgba(0,0,0,0.55)]"
-              initial={{ opacity: 0, y: 16, scale: 0.96 }}
-              animate={{
-                opacity: 1,
-                y: [0, -10, 0],
-                scale: 1,
-              }}
-              transition={{
-                opacity: { duration: 0.5, ease: STEP_EASE },
-                scale: { duration: 0.5, ease: STEP_EASE },
-                y: {
-                  duration: 4.2,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: 0.35,
-                },
-              }}
-            />
-          </div>
+        <div className="relative flex min-h-0 flex-1 flex-col justify-end pb-5">
           <div className="relative z-10 flex shrink-0 flex-col items-center gap-6">
             <RotatingTitle />
             <AquaButton
