@@ -474,7 +474,7 @@ export default function Onboarding({
           >
             That invite code isn&apos;t valid
           </p>
-          <div className="mt-auto flex flex-col gap-4">
+          <div className="mt-auto flex flex-col">
             <AquaButton
               disabled={inviteCode.length < INVITE_LENGTH}
               onClick={submitInvite}
@@ -482,7 +482,6 @@ export default function Onboarding({
             >
               Let me in
             </AquaButton>
-            <TermsNote />
           </div>
         </div>
       )}

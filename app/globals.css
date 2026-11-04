@@ -67,52 +67,9 @@ html[data-bg="gradient"]::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html::before,
-  body::before,
-  body::after {
+  html::before {
     transition: none;
   }
-}
-
-body::before,
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image: radial-gradient(circle 0.5px at 1px 1px, #757575 0.5px, transparent 1px);
-  background-size: 16px 16px;
-  background-repeat: repeat;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0;
-  transition: opacity 480ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-html[data-bg="gradient"] body::before {
-  background-color: transparent;
-  opacity: 0.25;
-}
-
-html[data-bg="gradient"] body::after {
-  opacity: 0.7;
-  -webkit-mask-image:
-    radial-gradient(ellipse 22% 22% at 4% 88%, #000, transparent 75%),
-    radial-gradient(ellipse 18% 18% at 32% 92%, #000, transparent 75%),
-    radial-gradient(ellipse 16% 14% at 62% 7%, #000, transparent 75%),
-    radial-gradient(ellipse 12% 12% at 99% 88%, #000, transparent 75%);
-  mask-image:
-    radial-gradient(ellipse 22% 22% at 4% 88%, #000, transparent 75%),
-    radial-gradient(ellipse 18% 18% at 32% 92%, #000, transparent 75%),
-    radial-gradient(ellipse 16% 14% at 62% 7%, #000, transparent 75%),
-    radial-gradient(ellipse 12% 12% at 99% 88%, #000, transparent 75%);
-  -webkit-mask-composite: source-over;
-  mask-composite: add;
-}
-
-/* API playground: gradient only — no dotted grain. */
-html[data-bg-dots="off"] body::before,
-html[data-bg-dots="off"] body::after {
-  opacity: 0;
 }
 
 body > * {
