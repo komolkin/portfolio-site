@@ -112,6 +112,22 @@ const PIECES: PieceDef[] = [
     restY: 0.6,
     angle: -0.16,
   },
+  {
+    id: "cash",
+    src: "/worm-app/physics/piece-cash.png",
+    aspect: 180 / 145,
+    restX: 0.38,
+    restY: 0.78,
+    angle: 0.18,
+  },
+  {
+    id: "soccer",
+    src: "/worm-app/physics/piece-soccer.png",
+    aspect: 158 / 158,
+    restX: 0.66,
+    restY: 0.78,
+    angle: -0.12,
+  },
 ];
 
 type PieceRuntime = {

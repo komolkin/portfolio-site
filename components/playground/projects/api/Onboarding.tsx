@@ -1,15 +1,156 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type HTMLAttributes,
+  type ReactNode,
+} from "react";
 import type { PolymarketLeaderboardWallet } from "@/lib/polymarketscan";
 import OnboardingPhysics from "./OnboardingPhysics";
 
 type OnboardingStep = "welcome" | "invite" | "in";
 
 const STEP_EASE = [0.22, 1, 0.36, 1] as const;
+const TITLE_EASE = [0.16, 1, 0.3, 1] as const;
+const TITLE_WORDS = ["follow", "share", "earn", "copy"] as const;
 const INVITE_LENGTH = 6;
 const INVITE_CODE = "111111";
+
+const letterVariants = {
+  initial: { y: "110%" },
+  animate: { y: "0%" },
+  exit: { y: "-110%" },
+};
+
+function WordLetters({
+  value,
+  className = "",
+  ...rest
+}: {
+  value: string;
+  className?: string;
+} & HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span className={`inline-flex whitespace-nowrap ${className}`} {...rest}>
+      {value.split("").map((letter, letterIndex) => (
+        <span key={`${value}-${letterIndex}`} className="inline-block">
+          {letter}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/** Same rotating title as /waitlist, sized for the onboarding phone. */
+function RotatingTitle() {
+  const [index, setIndex] = useState(0);
+  const [width, setWidth] = useState<number | "auto">("auto");
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const word = TITLE_WORDS[index];
+  const letters = word.split("");
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setIndex((current) => (current + 1) % TITLE_WORDS.length);
+    }, 3200);
+    return () => window.clearInterval(id);
+  }, []);
+
+  useLayoutEffect(() => {
+    const root = measureRef.current;
+    if (!root) return;
+    const el = root.querySelector<HTMLElement>(`[data-word="${word}"]`);
+    if (!el) return;
+    const next = Math.ceil(el.getBoundingClientRect().width) + 8;
+    let shrinkTimer = 0;
+    setWidth((prev) => {
+      if (typeof prev !== "number" || next >= prev) return next;
+      shrinkTimer = window.setTimeout(() => setWidth(next), 560);
+      return prev;
+    });
+    return () => {
+      if (shrinkTimer) window.clearTimeout(shrinkTimer);
+    };
+  }, [word]);
+
+  return (
+    <h1 className="text-balance text-center text-[32px] font-medium leading-[1.05] tracking-[-0.04em]">
+      <span className="block text-white/45">Social prediction app</span>
+      <span className="block">
+        <span className="text-white/45">for you to </span>
+        <motion.span
+          className="inline-grid overflow-hidden align-baseline leading-[inherit] text-white"
+          initial={false}
+          animate={{ width }}
+          transition={{ duration: 0.6, ease: TITLE_EASE }}
+          aria-label={word}
+        >
+          <WordLetters
+            value="follow"
+            className="invisible col-start-1 row-start-1"
+            aria-hidden
+          />
+          <span
+            ref={measureRef}
+            className="pointer-events-none invisible absolute left-0 top-0"
+            aria-hidden
+          >
+            {TITLE_WORDS.map((item) => (
+              <span
+                key={item}
+                data-word={item}
+                className="absolute left-0 top-0"
+              >
+                <WordLetters value={item} />
+              </span>
+            ))}
+          </span>
+          <span className="relative col-start-1 row-start-1 overflow-hidden">
+            <AnimatePresence initial={false}>
+              <motion.span
+                key={word}
+                className="absolute left-0 top-0 inline-flex will-change-transform"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={{
+                  initial: {},
+                  animate: {
+                    transition: {
+                      staggerChildren: 0.028,
+                      delayChildren: 0.02,
+                    },
+                  },
+                  exit: {
+                    transition: {
+                      staggerChildren: 0.022,
+                      staggerDirection: -1,
+                    },
+                  },
+                }}
+              >
+                {letters.map((letter, letterIndex) => (
+                  <motion.span
+                    key={`${word}-${letterIndex}`}
+                    variants={letterVariants}
+                    transition={{ duration: 0.52, ease: TITLE_EASE }}
+                    className="inline-block leading-[inherit]"
+                  >
+                    {letter}
+                  </motion.span>
+                ))}
+              </motion.span>
+            </AnimatePresence>
+          </span>
+        </motion.span>
+      </span>
+    </h1>
+  );
+}
 
 function GoogleMark() {
   return (
@@ -69,6 +210,70 @@ function TermsNote() {
         Privacy Policy
       </button>
     </p>
+  );
+}
+
+/**
+ * Aqua gel pill — white primary matches heyclicky “download for windows”
+ * (gloss strip + screen / color-burn edge washes).
+ */
+function AquaButton({
+  children,
+  onClick,
+  disabled,
+  variant = "primary",
+  className = "",
+}: {
+  children: ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  variant?: "primary" | "secondary";
+  className?: string;
+}) {
+  const isPrimary = variant === "primary";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`aqua-btn relative isolate flex h-12 items-center justify-center gap-2.5 overflow-hidden rounded-full px-5 pb-px text-[16px] font-medium tracking-[-0.03em] transition-[transform,opacity] duration-150 ease-out enabled:hover:opacity-80 enabled:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80 ${className}`}
+      style={{
+        color: isPrimary ? "#000" : "#f5f5f5",
+        textShadow: isPrimary
+          ? "0 2px 2px rgba(255,255,255,0.8)"
+          : "0 1px 1px rgba(0,0,0,0.35)",
+        background: isPrimary
+          ? "linear-gradient(#fbfbfb 0%, #ededed 42%, #e4e4e4 100%)"
+          : "linear-gradient(#3a3a3e 0%, #2a2a2e 42%, #1c1c1f 100%)",
+        border: isPrimary ? "1px solid #626262" : "1px solid #5a5a60",
+        boxShadow: "0 10px 24px rgba(0,0,0,0.22)",
+      }}
+    >
+      {/* Top gloss strip (heyclicky btn-gloss.png) */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-3 top-[3px] z-[1] h-3 rounded-full bg-[length:100%_100%] bg-center bg-no-repeat"
+        style={{ backgroundImage: "url(/worm-app/btn-gloss.png)" }}
+      />
+      {/* Screen wash + color-burn lip */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-[1] rounded-[inherit] mix-blend-screen"
+        style={{ boxShadow: "inset 0 -15px 2px -12px rgba(255,255,255,0.25)" }}
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-[1] rounded-[inherit] mix-blend-color-burn"
+        style={{
+          boxShadow: isPrimary
+            ? "inset 0 -8px 0 4px #b3b3b3"
+            : "inset 0 -8px 0 4px #6a6a70",
+        }}
+      />
+      <span className="relative z-[2] flex items-center justify-center gap-2.5">
+        {children}
+      </span>
+    </button>
   );
 }
 
@@ -165,7 +370,7 @@ export default function Onboarding({
       aria-label="Get started"
     >
       <AnimatePresence initial={false}>
-        {step === "welcome" ? (
+        {step === "in" ? (
           <motion.div
             key="river"
             className="absolute inset-0"
@@ -194,14 +399,14 @@ export default function Onboarding({
       </AnimatePresence>
       <div
         className={`relative z-[3] flex min-h-0 flex-1 flex-col ${
-          step === "welcome" ? "pointer-events-none" : ""
+          step === "welcome" || step === "in" ? "pointer-events-none" : ""
         }`}
       >
       <AnimatePresence initial={false}>
       {step !== "welcome" && (
         <motion.div
           key="progress"
-          className="mb-6 grid grid-cols-[1fr_auto_1fr] items-center"
+          className="pointer-events-auto mb-6 grid grid-cols-[1fr_auto_1fr] items-center"
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, transition: { duration: 0.16 } }}
@@ -247,22 +452,46 @@ export default function Onboarding({
         transition={{ duration: 0.32, ease: STEP_EASE }}
       >
       {step === "welcome" && (
-        <div className="relative flex min-h-0 flex-1 flex-col justify-end pb-5">
-          <div className="relative z-10 flex shrink-0 flex-col gap-2.5">
-            <button
-              type="button"
+        <div className="relative flex min-h-0 flex-1 flex-col pb-5">
+          <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center">
+            <motion.img
+              src="/worm-app/floating-logo.png"
+              alt=""
+              draggable={false}
+              className="pointer-events-none h-auto w-[72%] max-w-[260px] select-none object-contain drop-shadow-[0_18px_40px_rgba(0,0,0,0.55)]"
+              initial={{ opacity: 0, y: 16, scale: 0.96 }}
+              animate={{
+                opacity: 1,
+                y: [0, -10, 0],
+                scale: 1,
+              }}
+              transition={{
+                opacity: { duration: 0.5, ease: STEP_EASE },
+                scale: { duration: 0.5, ease: STEP_EASE },
+                y: {
+                  duration: 4.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 0.35,
+                },
+              }}
+            />
+          </div>
+          <div className="relative z-10 flex shrink-0 flex-col items-center gap-6">
+            <RotatingTitle />
+            <AquaButton
               onClick={() => setStep("invite")}
-              className="pointer-events-auto mx-auto flex h-12 items-center justify-center rounded-full bg-white px-8 text-[15px] font-semibold text-black"
+              className="pointer-events-auto mx-auto min-w-[220px]"
             >
               I have an invite code
-            </button>
+            </AquaButton>
           </div>
         </div>
       )}
 
       {step === "invite" && (
         <div className="flex min-h-0 flex-1 flex-col">
-          <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em]">
+          <h1 className="text-center text-[28px] font-semibold leading-tight tracking-[-0.03em]">
             Enter the invite code you have received
           </h1>
           <InviteCodeInput
@@ -282,14 +511,13 @@ export default function Onboarding({
             That invite code isn&apos;t valid
           </p>
           <div className="mt-auto flex flex-col gap-4">
-            <button
-              type="button"
+            <AquaButton
               disabled={inviteCode.length < INVITE_LENGTH}
               onClick={submitInvite}
-              className="h-12 w-full rounded-full bg-white text-[15px] font-semibold text-black disabled:bg-white/20 disabled:text-white/40"
+              className="w-full"
             >
               Let me in
-            </button>
+            </AquaButton>
             <TermsNote />
           </div>
         </div>
@@ -297,8 +525,8 @@ export default function Onboarding({
 
 
       {step === "in" && (
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
+        <div className="relative flex min-h-0 flex-1 flex-col justify-end pb-1">
+          <div className="pointer-events-none absolute inset-x-0 top-[8%] z-10 flex flex-col items-center px-2 text-center">
             <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em]">
               You&apos;re in
             </h1>
@@ -306,23 +534,22 @@ export default function Onboarding({
               Sign in to copy traders and track your positions.
             </p>
           </div>
-          <div className="flex shrink-0 flex-col gap-2.5">
-            <button
-              type="button"
+          <div className="relative z-10 flex shrink-0 flex-col gap-2.5">
+            <AquaButton
               onClick={finish}
-              className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full bg-white text-[15px] font-semibold text-black"
+              className="pointer-events-auto w-full"
             >
               <GoogleMark />
               Continue with Google
-            </button>
-            <button
-              type="button"
+            </AquaButton>
+            <AquaButton
+              variant="secondary"
               onClick={finish}
-              className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full bg-white/[0.1] text-[15px] font-semibold text-white"
+              className="pointer-events-auto w-full"
             >
               <WalletGlyph />
               Connect wallet
-            </button>
+            </AquaButton>
           </div>
         </div>
       )}
