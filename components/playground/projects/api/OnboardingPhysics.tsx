@@ -15,7 +15,7 @@ import {
 type PieceDef = {
   id: string;
   src: string;
-  widthRatio: number;
+  /** Intrinsic width / height of the PNG. */
   aspect: number;
   restX: number;
   restY: number;
@@ -23,62 +23,94 @@ type PieceDef = {
   density?: number;
 };
 
+/**
+ * Longer edge as a fraction of frame width so every glyph reads the same
+ * optical size regardless of aspect ratio.
+ */
+const PIECE_SIZE_RATIO = 0.36;
+
 /** Layout tuned to Figma 360×740 onboarding hero. W falls with the rest. */
 const PIECES: PieceDef[] = [
   {
     id: "logo-w",
     src: "/worm-app/physics/logo-w.png",
-    widthRatio: 0.58,
-    aspect: 520 / 380,
+    aspect: 215 / 158,
     restX: 0.5,
-    restY: 0.42,
+    restY: 0.36,
     angle: 0,
     density: 0.0042,
   },
   {
-    id: "sports-3",
-    src: "/worm-app/physics/piece-sports-3.png",
-    widthRatio: 0.4,
-    aspect: 219 / 297,
-    restX: 0.18,
-    restY: 0.86,
-    angle: -0.18,
+    id: "football",
+    src: "/worm-app/physics/piece-football.png",
+    aspect: 228 / 135,
+    restX: 0.2,
+    restY: 0.88,
+    angle: -0.22,
   },
   {
     id: "alien",
     src: "/worm-app/physics/piece-alien.png",
-    widthRatio: 0.34,
-    aspect: 248 / 345,
-    restX: 0.3,
-    restY: 0.7,
-    angle: 0.22,
+    aspect: 135 / 189,
+    restX: 0.28,
+    restY: 0.66,
+    angle: 0.2,
   },
   {
     id: "gold-e",
     src: "/worm-app/physics/piece-gold-e.png",
-    widthRatio: 0.28,
-    aspect: 379 / 419,
+    aspect: 159 / 175,
     restX: 0.5,
-    restY: 0.88,
+    restY: 0.86,
     angle: -0.08,
   },
   {
-    id: "sports-2",
-    src: "/worm-app/physics/piece-sports-2.png",
-    widthRatio: 0.28,
-    aspect: 246 / 252,
-    restX: 0.78,
-    restY: 0.74,
+    id: "tennis",
+    src: "/worm-app/physics/piece-tennis.png",
+    aspect: 163 / 164,
+    restX: 0.76,
+    restY: 0.7,
+    angle: 0.16,
+  },
+  {
+    id: "golf",
+    src: "/worm-app/physics/piece-golf.png",
+    aspect: 183 / 200,
+    restX: 0.82,
+    restY: 0.52,
+    angle: -0.1,
+  },
+  {
+    id: "flag-r",
+    src: "/worm-app/physics/piece-flag-r.png",
+    aspect: 129 / 158,
+    restX: 0.16,
+    restY: 0.5,
+    angle: -0.28,
+  },
+  {
+    id: "marble-n",
+    src: "/worm-app/physics/piece-marble-n.png",
+    aspect: 143 / 169,
+    restX: 0.8,
+    restY: 0.88,
     angle: 0.28,
   },
   {
-    id: "letters",
-    src: "/worm-app/physics/piece-letters.png",
-    widthRatio: 0.38,
-    aspect: 420 / 128,
-    restX: 0.86,
-    restY: 0.62,
-    angle: 0.42,
+    id: "arrow",
+    src: "/worm-app/physics/piece-arrow.png",
+    aspect: 147 / 182,
+    restX: 0.14,
+    restY: 0.74,
+    angle: 0.1,
+  },
+  {
+    id: "crystal-a",
+    src: "/worm-app/physics/piece-crystal-a.png",
+    aspect: 134 / 166,
+    restX: 0.62,
+    restY: 0.6,
+    angle: -0.16,
   },
 ];
 
@@ -215,14 +247,16 @@ export default function OnboardingPhysics() {
         }),
       ];
 
+      const longEdge = Math.max(
+        84,
+        Math.min(width * PIECE_SIZE_RATIO, 156),
+      );
+
       PIECES.forEach((def, index) => {
         const el = pieceEls.get(def.id);
         if (!el) return;
-        const pieceW =
-          def.id === "logo-w"
-            ? Math.min(width * def.widthRatio, 230)
-            : Math.max(64, width * def.widthRatio);
-        const pieceH = pieceW / def.aspect;
+        const pieceW = def.aspect >= 1 ? longEdge : longEdge * def.aspect;
+        const pieceH = def.aspect >= 1 ? longEdge / def.aspect : longEdge;
         el.style.width = `${pieceW}px`;
         el.style.height = `${pieceH}px`;
         el.style.opacity = "1";
