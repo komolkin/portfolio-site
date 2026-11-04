@@ -1246,19 +1246,26 @@ function ReferralCalculator({
         className="mt-8 flex h-[88px] items-end gap-[3px] sm:h-[104px] sm:gap-1"
         aria-hidden
       >
-        {bars.map((height, index) => (
-          <span
-            key={index}
-            className="min-w-0 flex-1 rounded-full bg-[rgba(20,20,22,0.14)] transition-[height] duration-300 ease-out"
-            style={{
-              height: `${Math.round(height * 100)}%`,
-              backgroundColor:
-                index > bars.length * 0.55
-                  ? "rgba(20, 20, 22, 0.72)"
-                  : undefined,
-            }}
-          />
-        ))}
+        {bars.map((height, index) => {
+          const filled = index > bars.length * 0.55;
+          return (
+            <span
+              key={index}
+              className="relative min-w-0 flex-1 overflow-hidden rounded-full transition-[height] duration-300 ease-out"
+              style={{
+                height: `${Math.round(height * 100)}%`,
+                // Aqua gel sticks — same chrome language as the Early Access pills.
+                background: filled
+                  ? "linear-gradient(180deg, #5c5c62 0%, #3a3a3e 32%, #2a2a2e 58%, #1c1c1f 100%)"
+                  : "linear-gradient(180deg, #f4f4f5 0%, #e4e4e6 42%, #d2d2d6 100%)",
+                border: filled ? "1px solid #5a5a60" : "1px solid #b8b8be",
+                boxShadow: filled
+                  ? "inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -6px 0 2px #6a6a70, 0 4px 10px rgba(0,0,0,0.14)"
+                  : "inset 0 1px 0 rgba(255,255,255,0.85), inset 0 -5px 0 2px #b3b3b3, 0 2px 6px rgba(0,0,0,0.06)",
+              }}
+            />
+          );
+        })}
       </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -1284,7 +1291,7 @@ function ReferralCalculator({
               onUserEdit();
               setTraders(Number(event.target.value));
             }}
-            className="mt-4 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#d9d6cf] accent-[#141416] [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#141416]"
+            className="worm-aqua-range mt-4 h-1.5 w-full cursor-pointer"
           />
         </label>
 
@@ -1310,7 +1317,7 @@ function ReferralCalculator({
               onUserEdit();
               setAvgTrade(Number(event.target.value));
             }}
-            className="mt-4 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#d9d6cf] accent-[#141416] [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#141416]"
+            className="worm-aqua-range mt-4 h-1.5 w-full cursor-pointer"
           />
           <span className="mt-2 block text-[12px] text-[#8a8882]">
             Bigger bets, bigger fees.
