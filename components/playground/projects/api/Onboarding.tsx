@@ -175,28 +175,6 @@ function GoogleMark() {
   );
 }
 
-function WalletGlyph() {
-  return (
-    <svg viewBox="0 0 20 20" className="h-[18px] w-[18px]" fill="none" aria-hidden>
-      <rect
-        x="2.25"
-        y="4.75"
-        width="15.5"
-        height="11.5"
-        rx="2.25"
-        stroke="currentColor"
-        strokeWidth="1.6"
-      />
-      <path
-        d="M2.25 8.25h15.5"
-        stroke="currentColor"
-        strokeWidth="1.6"
-      />
-      <circle cx="14.25" cy="12.15" r="1" fill="currentColor" />
-    </svg>
-  );
-}
-
 function TermsNote() {
   return (
     <p className="text-center text-[11px] leading-[1.45] text-white/45">
@@ -380,6 +358,10 @@ export default function Onboarding({
             transition={{ duration: 0.45, ease: STEP_EASE }}
           >
             <OnboardingPhysics />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-[28%] bg-gradient-to-t from-black via-black/55 to-transparent"
+            />
           </motion.div>
         ) : (
           <motion.div
@@ -527,14 +509,14 @@ export default function Onboarding({
       {step === "in" && (
         <div className="relative flex min-h-0 flex-1 flex-col justify-end pb-1">
           <div className="pointer-events-none absolute inset-x-0 top-[8%] z-10 flex flex-col items-center px-2 text-center">
-            <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em]">
+            <h1 className="text-[40px] font-semibold leading-tight tracking-[-0.035em]">
               You&apos;re in
             </h1>
-            <p className="mt-3 max-w-[280px] text-[14px] leading-relaxed text-white/55">
-              Sign in to copy traders and track your positions.
+            <p className="mt-1.5 max-w-[300px] text-[14px] leading-snug text-white/55">
+              Copy whales, talk shit in the feed — or just watch and have fun.
             </p>
           </div>
-          <div className="relative z-10 flex shrink-0 flex-col gap-2.5">
+          <div className="relative z-10 flex shrink-0 flex-col gap-4">
             <AquaButton
               onClick={finish}
               className="pointer-events-auto w-full"
@@ -542,14 +524,9 @@ export default function Onboarding({
               <GoogleMark />
               Continue with Google
             </AquaButton>
-            <AquaButton
-              variant="secondary"
-              onClick={finish}
-              className="pointer-events-auto w-full"
-            >
-              <WalletGlyph />
-              Connect wallet
-            </AquaButton>
+            <div className="pointer-events-auto">
+              <TermsNote />
+            </div>
           </div>
         </div>
       )}
