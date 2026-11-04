@@ -9496,7 +9496,7 @@ export default function Api({
           <>
             <div
               aria-hidden
-              className={`pointer-events-none absolute inset-x-0 bottom-0 z-[9] h-[140px] transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+              className={`pointer-events-none absolute inset-x-0 bottom-0 z-[9] h-[120px] transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                 showingOwnProfile
                   ? "translate-y-10 opacity-0"
                   : "translate-y-0 opacity-100"
@@ -9506,39 +9506,30 @@ export default function Api({
                 className="absolute inset-0 backdrop-blur-[1px]"
                 style={{
                   maskImage:
-                    "linear-gradient(to top, black 0%, black 55%, transparent 100%)",
+                    "linear-gradient(to top, black 0%, black 40%, transparent 100%)",
                   WebkitMaskImage:
-                    "linear-gradient(to top, black 0%, black 55%, transparent 100%)",
+                    "linear-gradient(to top, black 0%, black 40%, transparent 100%)",
                 }}
               />
               <div
-                className="absolute inset-0 backdrop-blur-[4px]"
+                className="absolute inset-0 backdrop-blur-[5px]"
                 style={{
                   maskImage:
-                    "linear-gradient(to top, black 0%, black 40%, transparent 78%)",
+                    "linear-gradient(to top, black 0%, black 28%, transparent 72%)",
                   WebkitMaskImage:
-                    "linear-gradient(to top, black 0%, black 40%, transparent 78%)",
+                    "linear-gradient(to top, black 0%, black 28%, transparent 72%)",
                 }}
               />
               <div
-                className="absolute inset-0 backdrop-blur-[10px]"
+                className="absolute inset-0 backdrop-blur-[12px]"
                 style={{
                   maskImage:
-                    "linear-gradient(to top, black 0%, black 28%, transparent 62%)",
+                    "linear-gradient(to top, black 0%, black 16%, transparent 52%)",
                   WebkitMaskImage:
-                    "linear-gradient(to top, black 0%, black 28%, transparent 62%)",
+                    "linear-gradient(to top, black 0%, black 16%, transparent 52%)",
                 }}
               />
-              <div
-                className="absolute inset-0 backdrop-blur-[18px]"
-                style={{
-                  maskImage:
-                    "linear-gradient(to top, black 0%, black 18%, transparent 48%)",
-                  WebkitMaskImage:
-                    "linear-gradient(to top, black 0%, black 18%, transparent 48%)",
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 from-15% via-black/35 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/32 from-10% via-black/12 to-transparent" />
             </div>
             {section === "feed" && !showingDrillDown && (
               <div

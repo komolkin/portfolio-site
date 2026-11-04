@@ -495,7 +495,8 @@ export default function Onboarding({
               You&apos;re in
             </h1>
             <p className="mt-1.5 max-w-[300px] text-[14px] leading-snug text-white/55">
-              Copy whales, talk shit in the feed — or just watch and have fun.
+              Copy whales, track markets, get instant alerts — trade and have
+              fun.
             </p>
           </div>
           <div className="relative z-10 flex shrink-0 flex-col gap-4">
