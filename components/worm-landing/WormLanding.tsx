@@ -28,7 +28,7 @@ const PRESS =
   "transition-transform duration-150 ease-out active:scale-[0.97]";
 /** Temporarily hide the product feature grid on /app. */
 const SHOW_PRODUCT_SECTION = false;
-const ALL_NAV_IDS = ["product", "how"] as const;
+const ALL_NAV_IDS = ["product"] as const;
 type NavId = (typeof ALL_NAV_IDS)[number];
 const NAV_IDS = ALL_NAV_IDS.filter(
   (id) => SHOW_PRODUCT_SECTION || id !== "product",
@@ -335,10 +335,10 @@ function CopyShowcaseCard() {
 }
 
 const NAV = (
-  [
-    { id: "product", label: "Product" },
-    { id: "how", label: "How it works" },
-  ] as const satisfies readonly { id: NavId; label: string }[]
+  [{ id: "product", label: "Product" }] as const satisfies readonly {
+    id: NavId;
+    label: string;
+  }[]
 ).filter((item) => SHOW_PRODUCT_SECTION || item.id !== "product");
 
 function scrollToId(
@@ -1501,14 +1501,16 @@ export function WormLanding() {
                 className="h-11 w-11 object-contain"
               />
             </a>
-            <nav
-              aria-label="On this page"
-              className="pointer-events-none absolute inset-x-0 top-1/2 z-0 hidden -translate-y-1/2 justify-center md:flex"
-            >
-              <div className="pointer-events-auto text-[14px] font-medium">
-                <NavLinks activeNav={activeNav} onNavClick={onNavClick} />
-              </div>
-            </nav>
+            {NAV.length > 0 ? (
+              <nav
+                aria-label="On this page"
+                className="pointer-events-none absolute inset-x-0 top-1/2 z-0 hidden -translate-y-1/2 justify-center md:flex"
+              >
+                <div className="pointer-events-auto text-[14px] font-medium">
+                  <NavLinks activeNav={activeNav} onNavClick={onNavClick} />
+                </div>
+              </nav>
+            ) : null}
             <div className="relative z-10 shrink-0">
               <EarlyAccess
                 size="nav"
@@ -1516,12 +1518,14 @@ export function WormLanding() {
               />
             </div>
           </div>
-          <nav
-            aria-label="On this page"
-            className="-mx-5 overflow-x-auto px-5 pb-1 text-[14px] font-medium [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden"
-          >
-            <NavLinks activeNav={activeNav} onNavClick={onNavClick} />
-          </nav>
+          {NAV.length > 0 ? (
+            <nav
+              aria-label="On this page"
+              className="-mx-5 overflow-x-auto px-5 pb-1 text-[14px] font-medium [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden"
+            >
+              <NavLinks activeNav={activeNav} onNavClick={onNavClick} />
+            </nav>
+          ) : null}
         </div>
       </header>
 
