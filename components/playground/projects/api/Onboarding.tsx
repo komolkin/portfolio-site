@@ -7,9 +7,9 @@ import {
   useRef,
   useState,
   type HTMLAttributes,
-  type ReactNode,
 } from "react";
 import type { PolymarketLeaderboardWallet } from "@/lib/polymarketscan";
+import AquaButton from "@/components/worm-app/AquaButton";
 import OnboardingPhysics from "./OnboardingPhysics";
 
 type OnboardingStep = "welcome" | "invite" | "in";
@@ -232,70 +232,6 @@ function TermsNote() {
   );
 }
 
-/**
- * Aqua gel pill — white primary matches heyclicky “download for windows”
- * (gloss strip + screen / color-burn edge washes).
- */
-function AquaButton({
-  children,
-  onClick,
-  disabled,
-  variant = "primary",
-  className = "",
-}: {
-  children: ReactNode;
-  onClick?: () => void;
-  disabled?: boolean;
-  variant?: "primary" | "secondary";
-  className?: string;
-}) {
-  const isPrimary = variant === "primary";
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`aqua-btn relative isolate flex h-12 items-center justify-center gap-2.5 overflow-hidden rounded-full px-5 pb-px text-[16px] font-medium tracking-[-0.03em] transition-[transform,opacity] duration-150 ease-out enabled:hover:opacity-80 enabled:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80 ${className}`}
-      style={{
-        color: isPrimary ? "#000" : "#f5f5f5",
-        textShadow: isPrimary
-          ? "0 2px 2px rgba(255,255,255,0.8)"
-          : "0 1px 1px rgba(0,0,0,0.35)",
-        background: isPrimary
-          ? "linear-gradient(#fbfbfb 0%, #ededed 42%, #e4e4e4 100%)"
-          : "linear-gradient(#3a3a3e 0%, #2a2a2e 42%, #1c1c1f 100%)",
-        border: isPrimary ? "1px solid #626262" : "1px solid #5a5a60",
-        boxShadow: "0 10px 24px rgba(0,0,0,0.22)",
-      }}
-    >
-      {/* Top gloss strip (heyclicky btn-gloss.png) */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-x-3 top-[3px] z-[1] h-3 rounded-full bg-[length:100%_100%] bg-center bg-no-repeat"
-        style={{ backgroundImage: "url(/worm-app/btn-gloss.png)" }}
-      />
-      {/* Screen wash + color-burn lip */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-[1] rounded-[inherit] mix-blend-screen"
-        style={{ boxShadow: "inset 0 -15px 2px -12px rgba(255,255,255,0.25)" }}
-      />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-[1] rounded-[inherit] mix-blend-color-burn"
-        style={{
-          boxShadow: isPrimary
-            ? "inset 0 -8px 0 4px #b3b3b3"
-            : "inset 0 -8px 0 4px #6a6a70",
-        }}
-      />
-      <span className="relative z-[2] flex items-center justify-center gap-2.5">
-        {children}
-      </span>
-    </button>
-  );
-}
-
 function InviteCodeInput({
   value,
   onChange,
@@ -496,7 +432,7 @@ export default function Onboarding({
             <RotatingTitle />
             <AquaButton
               onClick={() => setStep("invite")}
-              className="pointer-events-auto mx-auto min-w-[220px]"
+              className="pointer-events-auto mx-auto h-12 min-w-[220px] px-5 text-[16px]"
             >
               I have an invite code
             </AquaButton>
@@ -529,7 +465,7 @@ export default function Onboarding({
             <AquaButton
               disabled={inviteCode.length < INVITE_LENGTH}
               onClick={submitInvite}
-              className="w-full"
+              className="h-12 w-full px-5 text-[16px]"
             >
               Let me in
             </AquaButton>
@@ -552,7 +488,7 @@ export default function Onboarding({
           <div className="relative z-10 flex shrink-0 flex-col gap-4">
             <AquaButton
               onClick={finish}
-              className="pointer-events-auto w-full"
+              className="pointer-events-auto h-12 w-full px-5 text-[16px]"
             >
               <GoogleMark />
               Continue with Google

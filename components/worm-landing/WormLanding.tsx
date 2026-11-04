@@ -14,6 +14,7 @@ import {
   type RefObject,
 } from "react";
 import { instrumentSans } from "@/lib/fonts";
+import AquaButton from "@/components/worm-app/AquaButton";
 
 const ApiApp = dynamic(
   () => import("@/components/playground/projects/api/Api"),
@@ -373,14 +374,14 @@ function EarlyAccess({
       ? "h-10 gap-2 pl-3.5 pr-4 text-[14px]"
       : "h-[52px] gap-2.5 pl-5 pr-6 text-[17px]";
   return (
-    <button
-      type="button"
+    <AquaButton
+      variant="secondary"
       onClick={onOpen}
-      className={`inline-flex shrink-0 items-center rounded-full bg-black font-medium tracking-[-0.015em] text-white hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${sizeClass} ${PRESS}`}
+      className={`shrink-0 tracking-[-0.015em] ${sizeClass}`}
     >
       <AppleMark />
       Early Access on iOS
-    </button>
+    </AquaButton>
   );
 }
 

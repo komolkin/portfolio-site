@@ -9,6 +9,10 @@ import {
   type FormEvent,
   type HTMLAttributes,
 } from "react";
+import AquaButton, {
+  AquaChrome,
+  aquaSurfaceStyle,
+} from "@/components/worm-app/AquaButton";
 
 const PRESS =
   "transition-transform duration-150 ease-out active:scale-[0.97]";
@@ -321,28 +325,34 @@ function EarlyAccessForm({ onDone }: { onDone: () => void }) {
               if (!expanded) setExpanded(true);
             }}
             className={cn(
-              "relative flex h-[52px] items-center overflow-hidden rounded-full border transition-[width,background-color,border-color,box-shadow,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+              "relative isolate flex h-[52px] items-center overflow-hidden rounded-full pb-px transition-[width,background-color,border-color,box-shadow,transform,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
               expanded
-                ? "w-[min(320px,calc(100vw-6.5rem))] cursor-text border-black/[0.08] bg-white shadow-[0_8px_28px_-12px_rgba(20,20,22,0.18)]"
-                : "w-[228px] cursor-pointer border-transparent bg-black shadow-none hover:opacity-90 active:scale-[0.97] active:duration-150 motion-reduce:active:scale-100",
+                ? "w-[min(320px,calc(100vw-6.5rem))] cursor-text border border-black/[0.08] bg-white shadow-[0_8px_28px_-12px_rgba(20,20,22,0.18)]"
+                : "w-[228px] cursor-pointer hover:opacity-90 active:scale-[0.97] active:duration-150 motion-reduce:active:scale-100",
             )}
-            style={{ transitionTimingFunction: EASE_OUT }}
+            style={{
+              transitionTimingFunction: EASE_OUT,
+              ...(expanded ? undefined : aquaSurfaceStyle("secondary")),
+            }}
           >
-            {!expanded ? (
-              <span
-                aria-hidden
-                className="worm-early-access-ring pointer-events-none absolute inset-0 rounded-full"
-              />
-            ) : null}
+            {!expanded ? <AquaChrome variant="secondary" /> : null}
 
             <span
               aria-hidden={expanded}
               className={cn(
-                "pointer-events-none absolute inset-0 z-[2] flex items-center justify-center gap-2.5 text-[17px] font-medium tracking-[-0.015em] text-white transition-opacity ease-out",
+                "pointer-events-none absolute inset-0 z-[2] flex items-center justify-center gap-2.5 text-[17px] font-medium tracking-[-0.015em] transition-opacity ease-out",
                 expanded
                   ? "opacity-0 duration-200"
                   : "opacity-100 delay-300 duration-500",
               )}
+              style={
+                expanded
+                  ? undefined
+                  : {
+                      color: "#f5f5f5",
+                      textShadow: "0 1px 1px rgba(0,0,0,0.35)",
+                    }
+              }
             >
               <AppleMark />
               Early Access on iOS
@@ -361,35 +371,24 @@ function EarlyAccessForm({ onDone }: { onDone: () => void }) {
               aria-label="Email"
               aria-hidden={!expanded}
               className={cn(
-                "h-full w-full appearance-none rounded-full bg-transparent pl-5 pr-14 text-[15px] text-[#141416] outline-none placeholder:text-[#8a8882] transition-opacity ease-out",
+                "relative z-[2] h-full w-full appearance-none rounded-full bg-transparent pl-5 pr-14 text-[15px] text-[#141416] outline-none placeholder:text-[#8a8882] transition-opacity ease-out",
                 expanded
                   ? "opacity-100 delay-200 duration-500"
                   : "pointer-events-none opacity-0 duration-300",
               )}
             />
 
-            <button
-              type="submit"
-              disabled={!expanded || submitting}
-              aria-label="Submit email"
-              tabIndex={expanded ? 0 : -1}
-              className={cn(
-                "absolute right-1.5 z-[2] flex h-9 w-9 items-center justify-center rounded-full bg-black text-white transition-[opacity,transform] ease-[cubic-bezier(0.22,1,0.36,1)] hover:opacity-90 active:scale-95 disabled:cursor-default motion-reduce:active:scale-100",
-                expanded
-                  ? "scale-100 opacity-100 delay-250 duration-500"
-                  : "pointer-events-none scale-75 opacity-0 duration-300",
-              )}
-            >
-              {expanded ? (
-                <span
-                  aria-hidden
-                  className="worm-early-access-ring pointer-events-none absolute inset-0 rounded-full"
-                />
-              ) : null}
-              <span className="relative z-[2]">
+            {expanded ? (
+              <AquaButton
+                type="submit"
+                variant="secondary"
+                disabled={submitting}
+                aria-label="Submit email"
+                className="absolute right-1.5 z-[2] h-9 w-9 gap-0 px-0 tracking-normal"
+              >
                 {submitting ? <Spinner /> : <ArrowRight />}
-              </span>
-            </button>
+              </AquaButton>
+            ) : null}
           </form>
         </div>
       </div>
