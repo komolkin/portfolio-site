@@ -179,8 +179,10 @@ function readOnboardingCache(): OnboardingCache {
       // Ignore malformed follow lists — don't treat this as a first visit.
     }
   }
+  // Drop any legacy “done” flag — onboarding should reopen every refresh on /1.
+  storageRemove(ONBOARDING_DONE_KEY);
   onboardingCache = {
-    done: storageGet(ONBOARDING_DONE_KEY) === "1",
+    done: false,
     username: storageGet(ONBOARDING_USERNAME_KEY),
     follows,
   };
@@ -194,7 +196,7 @@ function markOnboardingDone(username: string | null) {
     username: username ?? prev.username,
     follows: prev.follows,
   };
-  storageSet(ONBOARDING_DONE_KEY, "1");
+  // Keep done in memory for this session only — do not persist across reloads.
   if (username) storageSet(ONBOARDING_USERNAME_KEY, username);
 }
 
@@ -5664,7 +5666,7 @@ export default function Api({
     if (cached.follows.length > 0) {
       setFollowedWallets(new Set(cached.follows));
     }
-    if (!embed && SHOW_ONBOARDING && !cached.done) {
+    if (!embed && SHOW_ONBOARDING) {
       setOnboardingOpen(true);
     }
     const deposits = Number(storageGet(DEPOSITS_KEY) ?? 0);
