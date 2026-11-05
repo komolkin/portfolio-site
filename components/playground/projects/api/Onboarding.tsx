@@ -1,13 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type HTMLAttributes,
-} from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import type { PolymarketLeaderboardWallet } from "@/lib/polymarketscan";
 import AquaButton from "@/components/worm-app/AquaButton";
 import OnboardingPhysics from "./OnboardingPhysics";
@@ -15,35 +9,8 @@ import OnboardingPhysics from "./OnboardingPhysics";
 type OnboardingStep = "welcome" | "invite" | "in";
 
 const STEP_EASE = [0.22, 1, 0.36, 1] as const;
-const TITLE_EASE = [0.16, 1, 0.3, 1] as const;
-const TITLE_WORDS = ["follow", "share", "earn", "copy"] as const;
 const INVITE_LENGTH = 6;
 const INVITE_CODE = "111111";
-
-const letterVariants = {
-  initial: { y: "110%" },
-  animate: { y: "0%" },
-  exit: { y: "-110%" },
-};
-
-function WordLetters({
-  value,
-  className = "",
-  ...rest
-}: {
-  value: string;
-  className?: string;
-} & HTMLAttributes<HTMLSpanElement>) {
-  return (
-    <span className={`inline-flex whitespace-nowrap ${className}`} {...rest}>
-      {value.split("").map((letter, letterIndex) => (
-        <span key={`${value}-${letterIndex}`} className="inline-block">
-          {letter}
-        </span>
-      ))}
-    </span>
-  );
-}
 
 function FloatingLogo() {
   const imgRef = useRef<HTMLImageElement>(null);
@@ -83,113 +50,6 @@ function FloatingLogo() {
           : { duration: 0 }
       }
     />
-  );
-}
-
-/** Same rotating title as /waitlist, sized for the onboarding phone. */
-function RotatingTitle() {
-  const [index, setIndex] = useState(0);
-  const [width, setWidth] = useState<number | "auto">("auto");
-  const measureRef = useRef<HTMLSpanElement>(null);
-  const word = TITLE_WORDS[index];
-  const letters = word.split("");
-
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      setIndex((current) => (current + 1) % TITLE_WORDS.length);
-    }, 3200);
-    return () => window.clearInterval(id);
-  }, []);
-
-  useLayoutEffect(() => {
-    const root = measureRef.current;
-    if (!root) return;
-    const el = root.querySelector<HTMLElement>(`[data-word="${word}"]`);
-    if (!el) return;
-    const next = Math.ceil(el.getBoundingClientRect().width) + 8;
-    let shrinkTimer = 0;
-    setWidth((prev) => {
-      if (typeof prev !== "number" || next >= prev) return next;
-      shrinkTimer = window.setTimeout(() => setWidth(next), 560);
-      return prev;
-    });
-    return () => {
-      if (shrinkTimer) window.clearTimeout(shrinkTimer);
-    };
-  }, [word]);
-
-  return (
-    <h1 className="text-balance text-center text-[32px] font-medium leading-[1.05] tracking-[-0.04em]">
-      <span className="block text-white/45">Social prediction app</span>
-      <span className="block">
-        <span className="text-white/45">for you to </span>
-        <motion.span
-          className="inline-grid overflow-hidden align-baseline leading-[inherit] text-white"
-          initial={false}
-          animate={{ width }}
-          transition={{ duration: 0.6, ease: TITLE_EASE }}
-          aria-label={word}
-        >
-          <WordLetters
-            value="follow"
-            className="invisible col-start-1 row-start-1"
-            aria-hidden
-          />
-          <span
-            ref={measureRef}
-            className="pointer-events-none invisible absolute left-0 top-0"
-            aria-hidden
-          >
-            {TITLE_WORDS.map((item) => (
-              <span
-                key={item}
-                data-word={item}
-                className="absolute left-0 top-0"
-              >
-                <WordLetters value={item} />
-              </span>
-            ))}
-          </span>
-          <span className="relative col-start-1 row-start-1 overflow-hidden">
-            <AnimatePresence initial={false}>
-              <motion.span
-                key={word}
-                className="absolute left-0 top-0 inline-flex will-change-transform"
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                variants={{
-                  initial: {},
-                  animate: {
-                    transition: {
-                      staggerChildren: 0.028,
-                      delayChildren: 0.02,
-                    },
-                  },
-                  exit: {
-                    transition: {
-                      staggerChildren: 0.022,
-                      staggerDirection: -1,
-                    },
-                  },
-                }}
-              >
-                {letters.map((letter, letterIndex) => (
-                  <motion.span
-                    key={`${word}-${letterIndex}`}
-                    variants={letterVariants}
-                    transition={{ duration: 0.52, ease: TITLE_EASE }}
-                    className="inline-block leading-[inherit]"
-                  >
-                    {letter}
-                  </motion.span>
-                ))}
-              </motion.span>
-            </AnimatePresence>
-          </span>
-        </motion.span>
-      </span>
-    </h1>
   );
 }
 
@@ -442,7 +302,6 @@ export default function Onboarding({
       {step === "welcome" && (
         <div className="relative flex min-h-0 flex-1 flex-col justify-end pb-5">
           <div className="relative z-10 flex shrink-0 flex-col items-center gap-6">
-            <RotatingTitle />
             <AquaButton
               onClick={() => setStep("invite")}
               className="pointer-events-auto mx-auto h-12 min-w-[220px] px-5 text-[16px]"
