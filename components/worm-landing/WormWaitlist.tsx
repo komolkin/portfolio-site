@@ -624,10 +624,10 @@ function DvdParachute() {
         ref={imgRef}
         src="/worm/parachute.png"
         alt=""
-        width={1179}
-        height={1088}
+        width={840}
+        height={991}
         draggable={false}
-        className="pointer-events-none h-[101px] w-auto select-none will-change-transform sm:h-[118px]"
+        className="pointer-events-none h-auto w-[110px] select-none will-change-transform sm:w-[128px]"
       />
     </span>
   );
