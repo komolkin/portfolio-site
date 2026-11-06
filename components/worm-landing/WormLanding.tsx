@@ -15,6 +15,7 @@ import {
 } from "react";
 import { instrumentSans } from "@/lib/fonts";
 import AquaButton from "@/components/worm-app/AquaButton";
+import DvdParachute from "@/components/worm-landing/DvdParachute";
 
 const ApiApp = dynamic(
   () => import("@/components/playground/projects/api/Api"),
@@ -1481,6 +1482,9 @@ export function WormLanding() {
       ref={scrollRef}
       className="fixed inset-0 z-[80] overflow-y-auto overscroll-y-contain bg-[#f6f5f2] text-[#141416] [scrollbar-gutter:stable]"
     >
+      <div className="pointer-events-none fixed inset-0 z-[40] overflow-hidden">
+        <DvdParachute />
+      </div>
       <DownloadModal
         open={downloadOpen}
         onClose={() => setDownloadOpen(false)}

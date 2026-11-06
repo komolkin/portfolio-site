@@ -30,22 +30,27 @@ const BURN: Record<AquaVariant, string> = {
 export function AquaChrome({
   variant = "secondary",
   compact = false,
+  gloss = true,
 }: {
   variant?: AquaVariant;
   /** Tighter chrome for circular icon buttons. */
   compact?: boolean;
+  /** Top specular highlight (circle chip or pill strip). */
+  gloss?: boolean;
 }) {
   return (
     <>
-      <span
-        aria-hidden
-        className={
-          compact
-            ? "pointer-events-none absolute left-1/2 top-[3px] z-[1] h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[length:100%_100%] bg-center bg-no-repeat"
-            : "pointer-events-none absolute inset-x-3 top-[3px] z-[1] h-3 rounded-full bg-[length:100%_100%] bg-center bg-no-repeat"
-        }
-        style={{ backgroundImage: "url(/worm-app/btn-gloss.png)" }}
-      />
+      {gloss ? (
+        <span
+          aria-hidden
+          className={
+            compact
+              ? "pointer-events-none absolute left-1/2 top-[3px] z-[1] h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[length:100%_100%] bg-center bg-no-repeat"
+              : "pointer-events-none absolute inset-x-3 top-[3px] z-[1] h-3 rounded-full bg-[length:100%_100%] bg-center bg-no-repeat"
+          }
+          style={{ backgroundImage: "url(/worm-app/btn-gloss.png)" }}
+        />
+      ) : null}
       <span
         aria-hidden
         className="pointer-events-none absolute inset-0 z-[1] rounded-[inherit] mix-blend-screen"
@@ -82,6 +87,7 @@ export default function AquaButton({
   children,
   variant = "primary",
   circle = false,
+  gloss = true,
   className = "",
   style,
   type = "button",
@@ -90,6 +96,8 @@ export default function AquaButton({
   children: ReactNode;
   variant?: AquaVariant;
   circle?: boolean;
+  /** Top specular highlight. Set false to drop the gloss chip/strip. */
+  gloss?: boolean;
   className?: string;
 } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className" | "children">) {
   return (
@@ -109,7 +117,7 @@ export default function AquaButton({
       }}
       {...rest}
     >
-      <AquaChrome variant={variant} compact={circle} />
+      <AquaChrome variant={variant} compact={circle} gloss={gloss} />
       <span
         className={
           circle

@@ -13,28 +13,17 @@ const STEP_EASE = [0.22, 1, 0.36, 1] as const;
 const INVITE_LENGTH = 6;
 const INVITE_CODE = "111111";
 
-function SnakeIcon() {
+/** Simple worm — round-cap S curve, same language as the playfield. */
+function WormIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-[20px] w-[20px]" fill="none" aria-hidden>
       <path
-        d="M5 14c0-2.2 1.8-4 4-4h1.5a2.5 2.5 0 0 0 0-5H9"
+        d="M7 17.5c0-2.6 2.1-4.7 4.7-4.7h.6c1.9 0 3.4-1.5 3.4-3.4S14.2 6 12.3 6H11"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="3.4"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
-      <path
-        d="M19 10c0 2.2-1.8 4-4 4h-1.5a2.5 2.5 0 0 0 0 5H15"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <path
-        d="M9 10h6M9 14h6"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <circle cx="18.2" cy="9.2" r="1.1" fill="currentColor" />
     </svg>
   );
 }
@@ -369,8 +358,9 @@ export default function Onboarding({
             </AquaButton>
             <AquaButton
               circle
+              gloss={false}
               variant="secondary"
-              aria-label={snakeOpen ? "Close snake game" : "Play snake"}
+              aria-label={snakeOpen ? "Close game" : "Play game"}
               aria-pressed={snakeOpen}
               onClick={() => setSnakeOpen((open) => !open)}
               className="pointer-events-auto size-12 shrink-0"
@@ -378,14 +368,14 @@ export default function Onboarding({
             >
               <AnimatePresence initial={false} mode="wait">
                 <motion.span
-                  key={snakeOpen ? "close" : "snake"}
+                  key={snakeOpen ? "close" : "worm"}
                   className="flex items-center justify-center"
                   initial={{ opacity: 0, rotate: -40, scale: 0.7 }}
                   animate={{ opacity: 1, rotate: 0, scale: 1 }}
                   exit={{ opacity: 0, rotate: 40, scale: 0.7 }}
                   transition={{ duration: 0.22, ease: STEP_EASE }}
                 >
-                  {snakeOpen ? <CloseIcon /> : <SnakeIcon />}
+                  {snakeOpen ? <CloseIcon /> : <WormIcon />}
                 </motion.span>
               </AnimatePresence>
             </AquaButton>
