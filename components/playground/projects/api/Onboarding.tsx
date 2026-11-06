@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { PolymarketLeaderboardWallet } from "@/lib/polymarketscan";
 import AquaButton from "@/components/worm-app/AquaButton";
+import Worm from "@/components/playground/projects/worm/Worm";
 import OnboardingPhysics from "./OnboardingPhysics";
 
 type OnboardingStep = "welcome" | "invite" | "in";
@@ -11,6 +12,45 @@ type OnboardingStep = "welcome" | "invite" | "in";
 const STEP_EASE = [0.22, 1, 0.36, 1] as const;
 const INVITE_LENGTH = 6;
 const INVITE_CODE = "111111";
+
+function SnakeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" aria-hidden>
+      <path
+        d="M5 14c0-2.2 1.8-4 4-4h1.5a2.5 2.5 0 0 0 0-5H9"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M19 10c0 2.2-1.8 4-4 4h-1.5a2.5 2.5 0 0 0 0 5H15"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9 10h6M9 14h6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <circle cx="18.2" cy="9.2" r="1.1" fill="currentColor" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-[16px] w-[16px]" fill="none" aria-hidden>
+      <path
+        d="M7 7l10 10M17 7 7 17"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
 function FloatingLogo() {
   const imgRef = useRef<HTMLImageElement>(null);
@@ -177,6 +217,7 @@ export default function Onboarding({
   const [step, setStep] = useState<OnboardingStep>("welcome");
   const [inviteCode, setInviteCode] = useState("");
   const [inviteError, setInviteError] = useState(false);
+  const [snakeOpen, setSnakeOpen] = useState(false);
 
   const submitInvite = () => {
     if (inviteCode === INVITE_CODE) setStep("in");
@@ -188,6 +229,11 @@ export default function Onboarding({
   const back = () => {
     if (step === "in") setStep("invite");
     else setStep("welcome");
+  };
+
+  const goInvite = () => {
+    setSnakeOpen(false);
+    setStep("invite");
   };
 
   return (
@@ -230,21 +276,34 @@ export default function Onboarding({
         )}
       </AnimatePresence>
       {/* Pinned to the dialog so progress/step swaps don't shove it around. */}
-      <AnimatePresence initial={false}>
-        {step === "welcome" ? (
+      <AnimatePresence initial={false} mode="wait">
+        {step === "welcome" && !snakeOpen ? (
           <motion.div
             key="float-logo"
             aria-hidden
             className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center pb-[8%]"
-            initial={{ opacity: 1 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.28, ease: STEP_EASE }}
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.2 } }}
+            transition={{ duration: 0.32, ease: STEP_EASE }}
           >
             <FloatingLogo />
           </motion.div>
         ) : null}
+        {step === "welcome" && snakeOpen ? (
+          <motion.div
+            key="snake-game"
+            className="absolute inset-x-0 top-[8%] bottom-[120px] z-[2]"
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.18 } }}
+            transition={{ duration: 0.32, ease: STEP_EASE }}
+          >
+            <Worm embedded />
+          </motion.div>
+        ) : null}
       </AnimatePresence>
+
       <div
         className={`relative z-[3] flex min-h-0 flex-1 flex-col ${
           step === "welcome" || step === "in" ? "pointer-events-none" : ""
@@ -301,12 +360,34 @@ export default function Onboarding({
       >
       {step === "welcome" && (
         <div className="relative flex min-h-0 flex-1 flex-col justify-end pb-5">
-          <div className="relative z-10 flex shrink-0 flex-col items-center gap-6">
+          <div className="relative z-10 flex shrink-0 items-center justify-center gap-2.5">
             <AquaButton
-              onClick={() => setStep("invite")}
-              className="pointer-events-auto mx-auto h-12 min-w-[220px] px-5 text-[16px]"
+              onClick={goInvite}
+              className="pointer-events-auto h-12 min-w-[200px] px-5 text-[16px]"
             >
               I have an invite code
+            </AquaButton>
+            <AquaButton
+              circle
+              variant="secondary"
+              aria-label={snakeOpen ? "Close snake game" : "Play snake"}
+              aria-pressed={snakeOpen}
+              onClick={() => setSnakeOpen((open) => !open)}
+              className="pointer-events-auto size-12 shrink-0"
+              style={{ width: 48, height: 48, minWidth: 48, minHeight: 48 }}
+            >
+              <AnimatePresence initial={false} mode="wait">
+                <motion.span
+                  key={snakeOpen ? "close" : "snake"}
+                  className="flex items-center justify-center"
+                  initial={{ opacity: 0, rotate: -40, scale: 0.7 }}
+                  animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                  exit={{ opacity: 0, rotate: 40, scale: 0.7 }}
+                  transition={{ duration: 0.22, ease: STEP_EASE }}
+                >
+                  {snakeOpen ? <CloseIcon /> : <SnakeIcon />}
+                </motion.span>
+              </AnimatePresence>
             </AquaButton>
           </div>
         </div>
