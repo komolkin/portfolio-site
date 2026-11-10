@@ -1,5 +1,5 @@
 export const PROJECTS = [
-  { id: "api", label: "API" },
+  { id: "api", label: "API", hidden: true },
   { id: "mcp", label: "MCP" },
   { id: "positions", label: "Positions" },
   { id: "expandable", label: "Expandable" },
