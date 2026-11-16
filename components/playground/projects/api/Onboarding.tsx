@@ -13,34 +13,6 @@ const STEP_EASE = [0.22, 1, 0.36, 1] as const;
 const INVITE_LENGTH = 6;
 const INVITE_CODE = "111111";
 
-/** Simple worm — round-cap S curve, same language as the playfield. */
-function WormIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-[20px] w-[20px]" fill="none" aria-hidden>
-      <path
-        d="M7 17.5c0-2.6 2.1-4.7 4.7-4.7h.6c1.9 0 3.4-1.5 3.4-3.4S14.2 6 12.3 6H11"
-        stroke="currentColor"
-        strokeWidth="3.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-[16px] w-[16px]" fill="none" aria-hidden>
-      <path
-        d="M7 7l10 10M17 7 7 17"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 function FloatingLogo() {
   const imgRef = useRef<HTMLImageElement>(null);
   const [loaded, setLoaded] = useState(false);
@@ -357,25 +329,22 @@ export default function Onboarding({
               I have an invite code
             </AquaButton>
             <AquaButton
-              circle
               gloss={false}
               variant="secondary"
-              aria-label={snakeOpen ? "Close game" : "Play game"}
               aria-pressed={snakeOpen}
               onClick={() => setSnakeOpen((open) => !open)}
-              className="pointer-events-auto size-12 shrink-0"
-              style={{ width: 48, height: 48, minWidth: 48, minHeight: 48 }}
+              className="pointer-events-auto h-12 min-w-[88px] px-5 text-[16px]"
             >
               <AnimatePresence initial={false} mode="wait">
                 <motion.span
-                  key={snakeOpen ? "close" : "worm"}
-                  className="flex items-center justify-center"
-                  initial={{ opacity: 0, rotate: -40, scale: 0.7 }}
-                  animate={{ opacity: 1, rotate: 0, scale: 1 }}
-                  exit={{ opacity: 0, rotate: 40, scale: 0.7 }}
-                  transition={{ duration: 0.22, ease: STEP_EASE }}
+                  key={snakeOpen ? "close" : "play"}
+                  className="inline-flex items-center justify-center"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.18, ease: STEP_EASE }}
                 >
-                  {snakeOpen ? <CloseIcon /> : <WormIcon />}
+                  {snakeOpen ? "Close" : "Play"}
                 </motion.span>
               </AnimatePresence>
             </AquaButton>

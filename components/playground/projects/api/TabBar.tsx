@@ -84,42 +84,46 @@ export function SearchTabIcon({ active }: { active: boolean }) {
   );
 }
 
+/** Users — Figma Social / Broadcast (node 22083:37923). */
 function PulseTabIcon({ active }: { active: boolean }) {
+  const stroke = active ? 2.05 : 1.7;
   return (
     <svg viewBox="0 0 24 24" fill="none" className="h-[28px] w-[28px]" aria-hidden>
       {active ? (
-        <>
-          <circle cx="12" cy="12" r="2.4" fill="currentColor" />
-          <path
-            d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6"
-            stroke="currentColor"
-            strokeWidth="2.1"
-            strokeLinecap="round"
-          />
-          <path
-            d="M5.4 5.4a9.3 9.3 0 0 0 0 13.2M18.6 5.4a9.3 9.3 0 0 1 0 13.2"
-            stroke="currentColor"
-            strokeWidth="2.1"
-            strokeLinecap="round"
-          />
-        </>
-      ) : (
-        <>
-          <circle cx="12" cy="12" r="2.1" stroke="currentColor" strokeWidth="1.7" />
-          <path
-            d="M8.3 8.3a5.2 5.2 0 0 0 0 7.4M15.7 8.3a5.2 5.2 0 0 1 0 7.4"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-          />
-          <path
-            d="M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-          />
-        </>
-      )}
+        <circle cx="9" cy="7" r="4" fill="currentColor" opacity="0.22" />
+      ) : null}
+      {/* Front person */}
+      <path
+        d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+        stroke="currentColor"
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle
+        cx="9"
+        cy="7"
+        r="4"
+        stroke="currentColor"
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Back person */}
+      <path
+        d="M22 21v-2a4 4 0 0 0-3-3.87"
+        stroke="currentColor"
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M16 3.13a4 4 0 0 1 0 7.75"
+        stroke="currentColor"
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
