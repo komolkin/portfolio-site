@@ -6692,8 +6692,8 @@ export default function Api({
       const t = Math.min(1, Math.max(0, scrollTop / range));
       header.style.opacity = String(1 - t);
       header.style.transform = `translate3d(0, ${(-14 * t).toFixed(2)}px, 0) scale(${(1 - t * 0.1).toFixed(4)})`;
-      // Always behind the feed layer — never overlay scrolling cards.
-      header.style.zIndex = "0";
+      // Rest only: above feed for Deposit taps. Any scroll: stay behind cards.
+      header.style.zIndex = scrollTop <= 1 ? "2" : "0";
       header.style.pointerEvents = t > 0.55 ? "none" : "auto";
       return t > 0.12;
     };
@@ -7895,7 +7895,7 @@ export default function Api({
       : null;
 
   const exploreHeader = (
-    <header className="mb-4 shrink-0 pt-2">
+    <header className={`mb-4 shrink-0 ${app ? "pt-5" : "pt-2"}`}>
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
@@ -8590,7 +8590,7 @@ export default function Api({
             <section
               ref={feedSnapRef}
               aria-label="Market previews"
-              className={`pointer-events-none relative z-[1] -mx-5 -my-6 min-h-0 flex-1 touch-pan-y snap-y snap-mandatory overflow-y-auto overscroll-y-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${HOME_ENTER_MID}`}
+              className={`relative z-[1] -mx-5 min-h-0 flex-1 touch-pan-y snap-y snap-mandatory overflow-y-auto overscroll-y-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${HOME_ENTER_MID}`}
               key={`home-mid-${homeEnterKey}`}
               style={{
                 maskImage: FEED_EDGE_MASK,

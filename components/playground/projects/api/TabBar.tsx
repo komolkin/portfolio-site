@@ -14,7 +14,6 @@ const TABS: readonly { id: TabId; label: string }[] = [
 ];
 
 /** Matches Figma Navigation — Main sections (node 5436:9157). */
-const GLASS_BORDER = "rgba(255, 255, 255, 0.08)";
 const GLASS_COLOR = "rgba(0, 0, 0, 0.55)";
 export const TAB_BAR_HEIGHT = 56;
 /** Half height → true capsule ends on the liquid-glass mesh. */
@@ -304,20 +303,6 @@ function TabBarGlass({ children }: { children: ReactNode }) {
         }}
       >
         {children}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-full"
-          style={{
-            background:
-              "linear-gradient(-10deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 30%, rgba(120,120,120,0) 70%, rgba(255,255,255,0.08) 100%) border-box",
-            mask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-            WebkitMask:
-              "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-            maskComposite: "exclude",
-            WebkitMaskComposite: "xor",
-            border: "1px solid transparent",
-          }}
-        />
       </div>
     );
   }
@@ -333,9 +318,10 @@ function TabBarGlass({ children }: { children: ReactNode }) {
         frost={0.35}
         blur={3.5}
         glassColor={GLASS_COLOR}
-        borderColor={GLASS_BORDER}
-        lens="rim"
-        lensStrength={1.15}
+        borderColor="rgba(0,0,0,0)"
+        border={0}
+        lens="classic"
+        lensStrength={0}
         quality="high"
         liquid={reducedMotion ? false : "flow"}
         liquidSpeed={0.55}
@@ -381,12 +367,20 @@ export default function TabBar({
   const activeIndex = TABS.findIndex((tab) => tab.id === activeTab);
   const hasActiveTab = activeIndex >= 0;
   const bottomGap = flushBottom ? 8 : TAB_BAR_BOTTOM;
+  // Flush mode: nav paints to the screen edge; pill sits above the home indicator.
+  const navBottom = flushBottom
+    ? 0
+    : `calc(${TAB_BAR_BOTTOM}px + env(safe-area-inset-bottom, 0px))`;
+  const navPadBottom = flushBottom
+    ? `max(${bottomGap}px, env(safe-area-inset-bottom, 0px))`
+    : 0;
 
   return (
     <nav
       className="pointer-events-none absolute inset-x-0 z-10 flex justify-center px-5 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
       style={{
-        bottom: `calc(${bottomGap}px + env(safe-area-inset-bottom, 0px))`,
+        bottom: navBottom,
+        paddingBottom: navPadBottom,
         transform: [
           hidden
             ? `translateY(${TAB_BAR_HEIGHT + bottomGap + 28}px)`
