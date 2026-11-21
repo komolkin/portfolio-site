@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { LiquidGlass } from "simple-liquid-glass";
 
 export type TabId = "explore" | "search" | "positions" | "feed" | "rewards";
 
@@ -13,11 +12,7 @@ const TABS: readonly { id: TabId; label: string }[] = [
   { id: "rewards", label: "Rewards" },
 ];
 
-/** Matches Figma Navigation — Main sections (node 5436:9157). */
-const GLASS_COLOR = "rgba(0, 0, 0, 0.55)";
 export const TAB_BAR_HEIGHT = 56;
-/** Half height → true capsule ends on the liquid-glass mesh. */
-const RADIUS = TAB_BAR_HEIGHT / 2;
 export const TAB_BAR_BOTTOM = 20;
 /** Space reserved under feed cards so actions clear the floating tab bar. */
 export const TAB_BAR_CONTENT_INSET = TAB_BAR_HEIGHT + TAB_BAR_BOTTOM + 12;
@@ -265,72 +260,35 @@ function TabIcon({ id, active }: { id: TabId; active: boolean }) {
 }
 
 function TabBarGlass({ children }: { children: ReactNode }) {
-  const [mounted, setMounted] = useState(false);
   const [reducedTransparency, setReducedTransparency] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const transparency = window.matchMedia(
       "(prefers-reduced-transparency: reduce)",
     );
-    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updateTransparency = () => setReducedTransparency(transparency.matches);
-    const updateMotion = () => setReducedMotion(motion.matches);
-    updateTransparency();
-    updateMotion();
-    transparency.addEventListener("change", updateTransparency);
-    motion.addEventListener("change", updateMotion);
-    return () => {
-      transparency.removeEventListener("change", updateTransparency);
-      motion.removeEventListener("change", updateMotion);
-    };
+    const update = () => setReducedTransparency(transparency.matches);
+    update();
+    transparency.addEventListener("change", update);
+    return () => transparency.removeEventListener("change", update);
   }, []);
-
-  if (!mounted || reducedTransparency) {
-    return (
-      <div
-        className="relative w-full overflow-hidden rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
-        style={{
-          height: TAB_BAR_HEIGHT,
-          ...(reducedTransparency
-            ? { background: "rgba(12, 12, 14, 0.94)" }
-            : {
-                background: "rgba(0, 0, 0, 0.58)",
-                backdropFilter: "blur(18px) saturate(140%)",
-                WebkitBackdropFilter: "blur(18px) saturate(140%)",
-              }),
-        }}
-      >
-        {children}
-      </div>
-    );
-  }
 
   return (
     <div
       className="relative w-full overflow-hidden rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
-      style={{ height: TAB_BAR_HEIGHT }}
+      style={{
+        height: TAB_BAR_HEIGHT,
+        background: reducedTransparency
+          ? "rgba(12, 12, 14, 0.94)"
+          : "rgba(0, 0, 0, 0.58)",
+        ...(reducedTransparency
+          ? null
+          : {
+              backdropFilter: "blur(18px) saturate(140%)",
+              WebkitBackdropFilter: "blur(18px) saturate(140%)",
+            }),
+      }}
     >
-      <LiquidGlass
-        mode="preset"
-        radius={RADIUS}
-        frost={0.35}
-        blur={3.5}
-        glassColor={GLASS_COLOR}
-        borderColor="rgba(0,0,0,0)"
-        border={0}
-        lens="classic"
-        lensStrength={0}
-        quality="high"
-        liquid={reducedMotion ? false : "flow"}
-        liquidSpeed={0.55}
-        liquidScale={10}
-        className="h-full w-full overflow-hidden rounded-full"
-        style={{ width: "100%", height: TAB_BAR_HEIGHT, borderRadius: RADIUS }}
-      >
-        {children}
-      </LiquidGlass>
+      {children}
     </div>
   );
 }
@@ -366,7 +324,8 @@ export default function TabBar({
 }: TabBarProps) {
   const activeIndex = TABS.findIndex((tab) => tab.id === activeTab);
   const hasActiveTab = activeIndex >= 0;
-  const bottomGap = flushBottom ? 8 : TAB_BAR_BOTTOM;
+  // Flush homescreen still keeps breathing room above the home indicator.
+  const bottomGap = flushBottom ? 16 : TAB_BAR_BOTTOM;
   // Flush mode: nav paints to the screen edge; pill sits above the home indicator.
   const navBottom = flushBottom
     ? 0

@@ -123,9 +123,9 @@ const IOS_STATUS_BLEED = "-mt-[52px]";
 
 const PROFILE_BALANCE = 0;
 const MARKET_PAGE_BG = "#000000";
-/** Feed edges fade over 24px; snap pages pad 24px so resting cards stay fully opaque. */
+/** Feed edges fade; top keeps 24px pad, bottom stays tight against the tab bar. */
 const FEED_EDGE_MASK =
-  "linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.35) 8px, rgba(0,0,0,0.8) 16px, #000 24px, #000 calc(100% - 24px), rgba(0,0,0,0.8) calc(100% - 16px), rgba(0,0,0,0.35) calc(100% - 8px), transparent 100%)";
+  "linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.35) 8px, rgba(0,0,0,0.8) 16px, #000 24px, #000 calc(100% - 6px), rgba(0,0,0,0.55) calc(100% - 2px), transparent 100%)";
 /** Lets trading work before (or without) the remote demo profile loading. */
 const LOCAL_TRADER_WALLET = "0x000000000000000000000000000000000000d3a0";
 const SHOW_ONBOARDING = true;
@@ -5509,9 +5509,6 @@ export default function Api({
   const stickyMarketFadeRef = useRef<HTMLDivElement>(null);
   const [section, setSection] = useState<SectionId>("explore");
   const [feedPastHero, setFeedPastHero] = useState(false);
-  const [feedScrolled, setFeedScrolled] = useState(false);
-  const [exploreHeaderHeight, setExploreHeaderHeight] = useState(0);
-  const exploreHeaderRef = useRef<HTMLDivElement>(null);
   const [feedPageIndex, setFeedPageIndex] = useState(0);
   const [positionsOpen, setPositionsOpen] = useState(false);
   const [liveMarkets, setLiveMarkets] = useState<PolymarketMarketData[]>([]);
@@ -6586,6 +6583,13 @@ export default function Api({
       return;
     }
     setPositionsOpen(false);
+    // Retap Home while already on the feed → jump back to the first card.
+    if (next === "explore" && section === "explore" && !showingDrillDown) {
+      feedSnapRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      setFeedPastHero(false);
+      setFeedPageIndex(0);
+      return;
+    }
     setSection(next);
   };
 
@@ -6650,16 +6654,6 @@ export default function Api({
     [],
   );
 
-  useEffect(() => {
-    const el = exploreHeaderRef.current;
-    if (!isExploreFeed || !el) return;
-    const measure = () => setExploreHeaderHeight(el.offsetHeight);
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [isExploreFeed]);
-
   const homeFeedClips = useMemo(
     () => assignUniqueClips(homeFeedMarkets),
     [homeFeedMarkets],
@@ -6668,48 +6662,22 @@ export default function Api({
   useEffect(() => {
     if (!isExploreFeed) {
       setFeedPastHero(false);
-      setFeedScrolled(false);
       setFeedPageIndex(0);
       return;
     }
     const scroller = feedSnapRef.current;
-    const header = exploreHeaderRef.current;
-    if (!scroller || !header) return;
+    if (!scroller) return;
 
     let raf = 0;
-    let lastScrolled = false;
     let lastPastHero = false;
     let lastPage = -1;
-
-    // Scroll-linked (no CSS transition) so snap swipes stay 1:1 both ways.
-    header.style.transition = "none";
-    header.style.willChange = "opacity, transform";
-    header.style.transformOrigin = "50% 0%";
-
-    const applyHeaderMotion = (scrollTop: number, page: number) => {
-      // Fade across ~half a card swipe so it tracks the finger, not a tiny header band.
-      const range = Math.max(120, page * 0.5);
-      const t = Math.min(1, Math.max(0, scrollTop / range));
-      header.style.opacity = String(1 - t);
-      header.style.transform = `translate3d(0, ${(-14 * t).toFixed(2)}px, 0) scale(${(1 - t * 0.1).toFixed(4)})`;
-      // Rest only: above feed for Deposit taps. Any scroll: stay behind cards.
-      header.style.zIndex = scrollTop <= 1 ? "2" : "0";
-      header.style.pointerEvents = t > 0.55 ? "none" : "auto";
-      return t > 0.12;
-    };
 
     const update = () => {
       raf = 0;
       const page = Math.max(1, scroller.clientHeight);
-      const scrollTop = scroller.scrollTop;
-      const index = Math.round(scrollTop / page);
-      const scrolled = applyHeaderMotion(scrollTop, page);
+      const index = Math.round(scroller.scrollTop / page);
       const pastHero = index > 0;
 
-      if (scrolled !== lastScrolled) {
-        lastScrolled = scrolled;
-        setFeedScrolled(scrolled);
-      }
       if (pastHero !== lastPastHero) {
         lastPastHero = pastHero;
         setFeedPastHero(pastHero);
@@ -6729,13 +6697,6 @@ export default function Api({
     return () => {
       scroller.removeEventListener("scroll", onScroll);
       if (raf) window.cancelAnimationFrame(raf);
-      header.style.transition = "";
-      header.style.willChange = "";
-      header.style.transformOrigin = "";
-      header.style.opacity = "";
-      header.style.transform = "";
-      header.style.pointerEvents = "";
-      header.style.zIndex = "";
     };
   }, [isExploreFeed, homeFeedMarkets.length, marketsStatus]);
 
@@ -8038,12 +7999,15 @@ export default function Api({
               ? {
                   // Flow: clear floating Live control + tab bar.
                   // Profile: tab bar slides away — keep a light bottom inset.
+                  // Explore: sit the preview just above the floating tab (no extra air).
                   paddingBottom:
                     section === "profile"
                       ? 28
                       : section === "feed"
                         ? TAB_BAR_BOTTOM + TAB_BAR_HEIGHT + 12 + 52
-                        : TAB_BAR_CONTENT_INSET,
+                        : isExploreFeed
+                          ? (app ? 16 : TAB_BAR_BOTTOM) + TAB_BAR_HEIGHT
+                          : TAB_BAR_CONTENT_INSET,
                 }
               : showingMarketDetail
                 ? { paddingBottom: TAB_BAR_CONTENT_INSET }
@@ -8573,20 +8537,6 @@ export default function Api({
           )}
 
           {isExploreFeed && (
-            <div
-              ref={exploreHeaderRef}
-              className={`absolute inset-x-5 z-0 ${
-                feedScrolled ? "pointer-events-none" : ""
-              }`}
-              style={{ top: "var(--worm-status-pad, 52px)" }}
-            >
-              <div key={`home-top-${homeEnterKey}`} className={HOME_ENTER}>
-                {exploreHeader}
-              </div>
-            </div>
-          )}
-
-          {isExploreFeed && (
             <section
               ref={feedSnapRef}
               aria-label="Market previews"
@@ -8602,23 +8552,23 @@ export default function Api({
                 Array.from({ length: 3 }).map((_, i) => (
                   <div
                     key={i}
-                    className="flex h-full min-h-full snap-start snap-always flex-col px-1 py-6"
+                    className="flex h-full min-h-full snap-start snap-always flex-col pt-6 pb-1"
                     aria-hidden
                   >
                     {i === 0 ? (
-                      <div
-                        aria-hidden
-                        className="pointer-events-none shrink-0"
-                        style={{ height: exploreHeaderHeight }}
-                      />
+                      <div className={`shrink-0 px-5 ${HOME_ENTER}`}>
+                        {exploreHeader}
+                      </div>
                     ) : null}
-                    <div className="pointer-events-auto min-h-0 w-full flex-1 animate-pulse rounded-[24px] bg-white/10" />
+                    <div className="min-h-0 w-full flex-1 px-1">
+                      <div className="h-full animate-pulse rounded-[24px] bg-white/10" />
+                    </div>
                   </div>
                 ))}
 
               {marketsStatus === "error" && (
                 <div className="px-5 pt-6">
-                  <div aria-hidden className="shrink-0" style={{ height: exploreHeaderHeight }} />
+                  <div className={`shrink-0 ${HOME_ENTER}`}>{exploreHeader}</div>
                   <p className="text-sm text-white/55">
                     Couldn&apos;t load markets.
                   </p>
@@ -8627,7 +8577,7 @@ export default function Api({
 
               {marketsStatus === "ready" && homeFeedMarkets.length === 0 && (
                 <div className="px-5 pt-6">
-                  <div aria-hidden className="shrink-0" style={{ height: exploreHeaderHeight }} />
+                  <div className={`shrink-0 ${HOME_ENTER}`}>{exploreHeader}</div>
                   <p className="text-sm text-white/55">No markets right now.</p>
                 </div>
               )}
@@ -8644,7 +8594,7 @@ export default function Api({
                   return (
                     <div
                       key={market.marketId}
-                      className="flex h-full min-h-full snap-start snap-always flex-col px-1 py-6"
+                      className="flex h-full min-h-full snap-start snap-always flex-col pt-6 pb-1"
                       style={{
                         contentVisibility: cardActive ? "visible" : "auto",
                         containIntrinsicSize: "auto 640px",
@@ -8652,12 +8602,13 @@ export default function Api({
                     >
                       {isFirst ? (
                         <div
-                          aria-hidden
-                          className="pointer-events-none shrink-0"
-                          style={{ height: exploreHeaderHeight }}
-                        />
+                          key={`home-top-${homeEnterKey}`}
+                          className={`shrink-0 px-5 ${HOME_ENTER}`}
+                        >
+                          {exploreHeader}
+                        </div>
                       ) : null}
-                      <div className="pointer-events-auto min-h-0 flex-1 touch-pan-y pb-1">
+                      <div className="min-h-0 flex-1 px-1">
                         {isFeaturedLive ? (
                           <LiveGameCard
                             market={market}
@@ -9650,7 +9601,7 @@ export default function Api({
                 className="pointer-events-none absolute inset-x-0 z-[11] flex justify-center gap-2 px-5"
                 style={{
                   bottom:
-                    (app ? 8 : TAB_BAR_BOTTOM) +
+                    (app ? 16 : TAB_BAR_BOTTOM) +
                     TAB_BAR_HEIGHT +
                     12,
                 }}
