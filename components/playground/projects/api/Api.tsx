@@ -122,7 +122,7 @@ const HOME_ENTER_BOT =
 const IOS_STATUS_BLEED = "-mt-[52px]";
 const IOS_CHROME_TOP = "top-12";
 
-const PROFILE_BALANCE = 1_347;
+const PROFILE_BALANCE = 0;
 const MARKET_PAGE_BG = "#000000";
 /** Feed edges fade over 24px; snap pages pad 24px so resting cards stay fully opaque. */
 const FEED_EDGE_MASK =
@@ -5711,7 +5711,10 @@ export default function Api({
       // balance (API lifetime PnL on the seed wallet can be huge or negative).
       const rawRoi =
         typeof data.roiPercent === "number" ? data.roiPercent : 8.1;
-      const roiPercent = Math.min(18, Math.max(4, Math.abs(rawRoi) || 8.1));
+      const roiPercent =
+        PROFILE_BALANCE <= 0
+          ? 0
+          : Math.min(18, Math.max(4, Math.abs(rawRoi) || 8.1));
       const totalPnl =
         Math.round(PROFILE_BALANCE * (roiPercent / 100) * 100) / 100;
       setDemoProfile({
