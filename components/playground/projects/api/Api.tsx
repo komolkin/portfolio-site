@@ -120,7 +120,6 @@ const HOME_ENTER_BOT =
   "motion-safe:animate-[api-home-enter_480ms_cubic-bezier(0.32,0.72,0,1)_200ms_both]";
 
 const IOS_STATUS_BLEED = "-mt-[52px]";
-const IOS_CHROME_TOP = "top-12";
 
 const PROFILE_BALANCE = 0;
 const MARKET_PAGE_BG = "#000000";
@@ -5498,6 +5497,8 @@ export default function Api({
   app?: boolean;
 } = {}) {
   const fillFrame = embed || app;
+  /** Playground keeps fake status chrome; /worm-app sits under the browser UI. */
+  const chromeTop = app ? "top-3" : "top-12";
   const scrollRef = useRef<HTMLDivElement>(null);
   const feedSnapRef = useRef<HTMLElement>(null);
   /** Scroll offsets of the views underneath each drill-in, restored on back. */
@@ -6691,6 +6692,8 @@ export default function Api({
       const t = Math.min(1, Math.max(0, scrollTop / range));
       header.style.opacity = String(1 - t);
       header.style.transform = `translate3d(0, ${(-14 * t).toFixed(2)}px, 0) scale(${(1 - t * 0.1).toFixed(4)})`;
+      // Rest: above feed so Deposit/profile stay tappable. Scrolling: drop behind cards.
+      header.style.zIndex = t > 0.18 ? "0" : "2";
       header.style.pointerEvents = t > 0.55 ? "none" : "auto";
       return t > 0.12;
     };
@@ -6732,6 +6735,7 @@ export default function Api({
       header.style.opacity = "";
       header.style.transform = "";
       header.style.pointerEvents = "";
+      header.style.zIndex = "";
     };
   }, [isExploreFeed, homeFeedMarkets.length, marketsStatus]);
 
@@ -7968,8 +7972,9 @@ export default function Api({
         style={{
           ...(showingMarketDetail ? { backgroundColor: marketAccent } : null),
           ...({
+            // /worm-app: no fake status bar — only real notch inset when present.
             ["--worm-status-pad" as string]: app
-              ? "max(52px, env(safe-area-inset-top))"
+              ? "env(safe-area-inset-top, 0px)"
               : "52px",
           } as CSSProperties),
         }}
@@ -8570,9 +8575,10 @@ export default function Api({
           {isExploreFeed && (
             <div
               ref={exploreHeaderRef}
-              className={`absolute inset-x-5 top-[52px] z-0 ${
+              className={`absolute inset-x-5 z-0 ${
                 feedScrolled ? "pointer-events-none" : ""
               }`}
+              style={{ top: "var(--worm-status-pad, 52px)" }}
             >
               <div key={`home-top-${homeEnterKey}`} className={HOME_ENTER}>
                 {exploreHeader}
@@ -8584,11 +8590,12 @@ export default function Api({
             <section
               ref={feedSnapRef}
               aria-label="Market previews"
-              className={`pointer-events-none relative z-[1] -mx-5 -my-6 min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-y-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${HOME_ENTER_MID}`}
+              className={`relative z-[1] -mx-5 -my-6 min-h-0 flex-1 touch-pan-y snap-y snap-mandatory overflow-y-auto overscroll-y-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${HOME_ENTER_MID}`}
               key={`home-mid-${homeEnterKey}`}
               style={{
                 maskImage: FEED_EDGE_MASK,
                 WebkitMaskImage: FEED_EDGE_MASK,
+                WebkitOverflowScrolling: "touch",
               }}
             >
               {marketsStatus === "loading" &&
@@ -8640,9 +8647,13 @@ export default function Api({
                       }}
                     >
                       {isFirst ? (
-                        <div aria-hidden className="shrink-0" style={{ height: exploreHeaderHeight }} />
+                        <div
+                          aria-hidden
+                          className="pointer-events-none shrink-0"
+                          style={{ height: exploreHeaderHeight }}
+                        />
                       ) : null}
-                      <div className="pointer-events-auto min-h-0 flex-1 pb-1">
+                      <div className="min-h-0 flex-1 pb-1">
                         {isFeaturedLive ? (
                           <LiveGameCard
                             market={market}
@@ -9398,7 +9409,7 @@ export default function Api({
               !cashOutItem &&
               !copyTradeTarget &&
               !depositOpen && (
-                <div className={`absolute inset-x-0 ${IOS_CHROME_TOP} flex justify-center px-16`}>
+                <div className={`absolute inset-x-0 ${chromeTop} flex justify-center px-16`}>
                   <div className="flex h-10 min-w-0 max-w-full items-center">
                     <p className="min-w-0 truncate text-[15px] font-semibold tracking-[-0.02em]">
                       {selectedMarket?.title ?? "Market"}
@@ -9422,7 +9433,7 @@ export default function Api({
               <div className="h-[96px] bg-gradient-to-b from-black from-[42%] via-black/75 to-transparent" />
             )}
             <p
-              className={`absolute ${IOS_CHROME_TOP} truncate text-center text-[15px] font-semibold leading-10 tracking-[-0.02em] text-white ${
+              className={`absolute ${chromeTop} truncate text-center text-[15px] font-semibold leading-10 tracking-[-0.02em] text-white ${
                 drillBack ? "inset-x-[4.5rem]" : "inset-x-8"
               }`}
             >
@@ -9437,7 +9448,7 @@ export default function Api({
           !cashOutItem &&
           !copyTradeTarget &&
           !depositOpen && (
-          <div className={`absolute left-3.5 ${IOS_CHROME_TOP} z-30`}>
+          <div className={`absolute left-3.5 ${chromeTop} z-30`}>
             <BlurBackButton
               onClick={drillBack.onClick}
               label={drillBack.label}
@@ -9454,7 +9465,7 @@ export default function Api({
           !copyTradeTarget &&
           !depositOpen &&
           !followList && (
-          <div className={`absolute right-3.5 ${IOS_CHROME_TOP} z-30`}>
+          <div className={`absolute right-3.5 ${chromeTop} z-30`}>
             <button
               type="button"
               aria-label="Settings"
@@ -9473,7 +9484,7 @@ export default function Api({
           !cashOutItem &&
           !copyTradeTarget &&
           !depositOpen && (
-            <div className={`absolute right-3.5 ${IOS_CHROME_TOP} z-30`}>
+            <div className={`absolute right-3.5 ${chromeTop} z-30`}>
               <BlurShareButton onClick={() => void shareMarket()} circle />
             </div>
           )}
