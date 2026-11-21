@@ -119,7 +119,6 @@ const HOME_ENTER_MID =
 const HOME_ENTER_BOT =
   "motion-safe:animate-[api-home-enter_480ms_cubic-bezier(0.32,0.72,0,1)_200ms_both]";
 
-const IOS_STATUS_PAD = "pt-[52px]";
 const IOS_STATUS_BLEED = "-mt-[52px]";
 const IOS_CHROME_TOP = "top-12";
 
@@ -7965,12 +7964,11 @@ export default function Api({
         }
         style={{
           ...(showingMarketDetail ? { backgroundColor: marketAccent } : null),
-          ...(app
-            ? ({
-                ["--worm-status-pad" as string]:
-                  "max(52px, env(safe-area-inset-top))",
-              } as CSSProperties)
-            : null),
+          ...({
+            ["--worm-status-pad" as string]: app
+              ? "max(52px, env(safe-area-inset-top))"
+              : "52px",
+          } as CSSProperties),
         }}
         aria-label="Polymarket API data"
         aria-busy={
@@ -8016,16 +8014,19 @@ export default function Api({
         <div
           ref={scrollRef}
           className={`relative z-[1] h-full min-h-0 px-5 [scrollbar-gutter:stable] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
-            app ? "pt-[length:var(--worm-status-pad)]" : IOS_STATUS_PAD
-          } ${
             isExploreFeed
               ? "flex flex-col overflow-hidden"
               : showingDrillDown || showingProfileSubScreen
                 ? "overflow-y-auto overscroll-contain pb-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 : "overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           }`}
-          style={
-            !showingDrillDown && !showingProfileSubScreen
+          style={{
+            // Rewards owns its sticky top bar — no scroller inset or it doubles the gap.
+            paddingTop:
+              section === "rewards" && !showingDrillDown
+                ? 0
+                : "var(--worm-status-pad, 52px)",
+            ...(!showingDrillDown && !showingProfileSubScreen
               ? {
                   // Flow: clear floating Live control + tab bar.
                   // Profile: tab bar slides away — keep a light bottom inset.
@@ -8038,8 +8039,8 @@ export default function Api({
                 }
               : showingMarketDetail
                 ? { paddingBottom: TAB_BAR_CONTENT_INSET }
-                : undefined
-          }
+                : null),
+          }}
         >
           {showingWalletProfile ? (
             <header className="mb-4">
@@ -8566,7 +8567,7 @@ export default function Api({
           {isExploreFeed && (
             <div
               ref={exploreHeaderRef}
-              className={`absolute inset-x-5 top-[52px] z-[2] ${
+              className={`absolute inset-x-5 top-[52px] z-0 ${
                 feedScrolled ? "pointer-events-none" : ""
               }`}
             >

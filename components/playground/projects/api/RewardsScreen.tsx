@@ -355,9 +355,9 @@ export default function RewardsScreen({
     const update = () => {
       const fade = fadeRef.current;
       if (!fade) return;
-      fade.style.opacity = String(
-        Math.max(0, Math.min(1, scroller!.scrollTop / 40)),
-      );
+      // Soft edge under the solid bar once content starts scrolling beneath.
+      const t = Math.max(0, Math.min(1, scroller!.scrollTop / 48));
+      fade.style.opacity = String(t);
     };
     const onScroll = () => {
       if (frame) return;
@@ -398,12 +398,13 @@ export default function RewardsScreen({
     <div className="flex flex-col gap-5">
       <header
         ref={headerRef}
-        className="sticky top-0 z-20 -mx-5 -mt-[length:var(--worm-status-pad,52px)] px-5 pb-3 pt-[length:var(--worm-status-pad,52px)]"
+        className="sticky top-0 z-20 -mx-5 bg-black px-5 pb-3"
+        style={{ paddingTop: "var(--worm-status-pad, 52px)" }}
       >
         <div
           ref={fadeRef}
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 inset-y-0 bg-gradient-to-b from-black from-[48%] via-black/80 to-transparent opacity-0"
+          className="pointer-events-none absolute inset-x-0 top-full h-7 bg-gradient-to-b from-black to-transparent opacity-0"
         />
         <div className="relative flex items-center justify-between gap-3">
           <button
