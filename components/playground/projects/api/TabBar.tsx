@@ -360,6 +360,8 @@ export type TabBarProps = {
   compact?: boolean;
   /** Slide off-screen (e.g. own profile). */
   hidden?: boolean;
+  /** Staggered home-enter animation class for the glass pill. */
+  enterClassName?: string;
 };
 
 export default function TabBar({
@@ -370,6 +372,7 @@ export default function TabBar({
   positionsInvested,
   compact = false,
   hidden = false,
+  enterClassName = "",
 }: TabBarProps) {
   const activeIndex = TABS.findIndex((tab) => tab.id === activeTab);
   const hasActiveTab = activeIndex >= 0;
@@ -391,7 +394,7 @@ export default function TabBar({
       aria-hidden={hidden}
     >
       <div
-        className={`w-full max-w-[360px] ${hidden ? "pointer-events-none" : "pointer-events-auto"}`}
+        className={`w-full max-w-[360px] ${enterClassName} ${hidden ? "pointer-events-none" : "pointer-events-auto"}`}
       >
         <TabBarGlass>
           <div

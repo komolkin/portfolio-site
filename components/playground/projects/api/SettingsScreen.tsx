@@ -307,7 +307,9 @@ export default function SettingsScreen({
           <div className="border-t border-white/[0.06]">
             <button
               type="button"
-            className="flex w-full px-3.5 py-3.5 text-left text-[15px] font-medium text-[#FF375F] transition-colors hover:bg-white/[0.04]"
+              data-sfx="press"
+              onClick={onResetOnboarding}
+              className="flex w-full px-3.5 py-3.5 text-left text-[15px] font-medium text-[#FF375F] transition-colors hover:bg-white/[0.04]"
             >
               Sign out
             </button>

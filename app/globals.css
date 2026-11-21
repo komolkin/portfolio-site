@@ -882,6 +882,18 @@ body > * {
   }
 }
 
+/* Home chrome after onboarding — top / middle / bottom stagger. */
+@keyframes api-home-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 @keyframes api-float-drift {
   0%,
   100% {

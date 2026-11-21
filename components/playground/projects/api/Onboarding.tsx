@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import type { PolymarketLeaderboardWallet } from "@/lib/polymarketscan";
 import AquaButton from "@/components/worm-app/AquaButton";
 import Worm from "@/components/playground/projects/worm/Worm";
@@ -51,42 +51,6 @@ function FloatingLogo() {
           : { duration: 0 }
       }
     />
-  );
-}
-
-function GoogleMark() {
-  return (
-    <svg viewBox="0 0 18 18" className="h-[18px] w-[18px]" aria-hidden>
-      <path
-        fill="#4285F4"
-        d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z"
-      />
-      <path
-        fill="#34A853"
-        d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z"
-      />
-      <path
-        fill="#EA4335"
-        d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z"
-      />
-    </svg>
-  );
-}
-
-function AppleMark() {
-  return (
-    <svg
-      viewBox="0 0 16 20"
-      className="h-[18px] w-[15px]"
-      fill="currentColor"
-      aria-hidden
-    >
-      <path d="M13.2 10.5c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.8-3.5.8s-1.8-.8-3-.8c-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.3 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7 2-.1 2.9-2.2c.7-1 1.2-2.1 1.5-3.2-3.9-1.5-3.8-5.5-3.8-5.4zM10.9 3.8c.6-.8 1.1-1.9.9-3-.9.1-2 .6-2.6 1.4-.6.7-1.1 1.8-.9 2.9 1 .1 2-.5 2.6-1.3z" />
-    </svg>
   );
 }
 
@@ -197,6 +161,11 @@ export default function Onboarding({
     setStep("invite");
   };
 
+  const enterFromGame = useCallback(() => {
+    setSnakeOpen(false);
+    setStep("in");
+  }, []);
+
   return (
     <div
       className="absolute inset-0 z-40 flex flex-col overflow-hidden bg-black px-5 pt-[64px] pb-5"
@@ -260,7 +229,7 @@ export default function Onboarding({
             exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.18 } }}
             transition={{ duration: 0.32, ease: STEP_EASE }}
           >
-            <Worm embedded />
+            <Worm embedded onWin={enterFromGame} />
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -321,30 +290,30 @@ export default function Onboarding({
       >
       {step === "welcome" && (
         <div className="relative flex min-h-0 flex-1 flex-col justify-end pb-5">
-          <div className="relative z-10 flex shrink-0 items-center justify-center gap-2.5">
+          <div className="relative z-10 flex w-full shrink-0 items-center justify-center gap-2">
             <AquaButton
               onClick={goInvite}
-              className="pointer-events-auto h-12 min-w-[200px] px-5 text-[16px]"
+              className="pointer-events-auto h-12 min-w-0 flex-1 whitespace-nowrap px-4 text-[15px]"
             >
-              I have an invite code
+              I have a code
             </AquaButton>
             <AquaButton
               gloss={false}
               variant="secondary"
               aria-pressed={snakeOpen}
               onClick={() => setSnakeOpen((open) => !open)}
-              className="pointer-events-auto h-12 min-w-[88px] px-5 text-[16px]"
+              className="pointer-events-auto h-12 min-w-0 flex-1 whitespace-nowrap px-4 text-[15px]"
             >
               <AnimatePresence initial={false} mode="wait">
                 <motion.span
                   key={snakeOpen ? "close" : "play"}
-                  className="inline-flex items-center justify-center"
+                  className="inline-flex items-center justify-center whitespace-nowrap"
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.18, ease: STEP_EASE }}
                 >
-                  {snakeOpen ? "Close" : "Play"}
+                  {snakeOpen ? "Close" : "Play to get in"}
                 </motion.span>
               </AnimatePresence>
             </AquaButton>
@@ -398,20 +367,12 @@ export default function Onboarding({
             </p>
           </div>
           <div className="relative z-10 flex shrink-0 flex-col gap-4">
-            <div className="pointer-events-auto flex flex-col gap-2.5">
+            <div className="pointer-events-auto">
               <AquaButton
                 onClick={finish}
                 className="h-12 w-full px-5 text-[16px]"
               >
-                <GoogleMark />
-                Continue with Google
-              </AquaButton>
-              <AquaButton
-                onClick={finish}
-                className="h-12 w-full px-5 text-[16px]"
-              >
-                <AppleMark />
-                Continue with Apple
+                Get started
               </AquaButton>
             </div>
             <div className="pointer-events-auto">

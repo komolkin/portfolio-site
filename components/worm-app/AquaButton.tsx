@@ -16,7 +16,7 @@ const SURFACE: Record<AquaVariant, CSSProperties> = {
     color: "#f5f5f5",
     textShadow: "0 1px 1px rgba(0,0,0,0.35)",
     background: "linear-gradient(#3a3a3e 0%, #2a2a2e 42%, #1c1c1f 100%)",
-    border: "1px solid #5a5a60",
+    border: "1px solid rgba(255,255,255,0.14)",
     boxShadow: "0 10px 24px rgba(0,0,0,0.22)",
   },
 };

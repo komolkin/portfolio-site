@@ -112,6 +112,12 @@ const MARKET_ENTER =
   "motion-safe:animate-[api-market-enter_300ms_cubic-bezier(0.32,0.72,0,1)_both]";
 const MARKET_ENTER_DELAYED =
   "motion-safe:animate-[api-market-enter_300ms_cubic-bezier(0.32,0.72,0,1)_70ms_both]";
+const HOME_ENTER =
+  "motion-safe:animate-[api-home-enter_480ms_cubic-bezier(0.32,0.72,0,1)_both]";
+const HOME_ENTER_MID =
+  "motion-safe:animate-[api-home-enter_480ms_cubic-bezier(0.32,0.72,0,1)_100ms_both]";
+const HOME_ENTER_BOT =
+  "motion-safe:animate-[api-home-enter_480ms_cubic-bezier(0.32,0.72,0,1)_200ms_both]";
 
 const IOS_STATUS_PAD = "pt-[52px]";
 const IOS_STATUS_BLEED = "-mt-[52px]";
@@ -5618,6 +5624,8 @@ export default function Api({
     };
   }, []);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  /** Bumps when home chrome should replay its staggered enter. */
+  const [homeEnterKey, setHomeEnterKey] = useState(0);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
   /** Where Back goes when own profile was opened from a non-tab entry point. */
   const [profileReturnSection, setProfileReturnSection] =
@@ -6557,6 +6565,7 @@ export default function Api({
     markOnboardingDone(username);
     persistFollows(followedWallets);
     setOnboardingOpen(false);
+    setHomeEnterKey((n) => n + 1);
     if (username) setProfileUsername(username);
   };
 
@@ -6594,6 +6603,10 @@ export default function Api({
     setUserTrades([]);
     setCopyTrades([]);
     setProfileSubScreen(null);
+    setSelectedWallet(null);
+    setPositionsOpen(false);
+    setSection("explore");
+    setHomeEnterKey(0);
     if (!embed && SHOW_ONBOARDING) setOnboardingOpen(true);
   };
 
@@ -8522,7 +8535,9 @@ export default function Api({
                 transform: feedScrolled ? "scale(0.92)" : "scale(1)",
               }}
             >
-              {exploreHeader}
+              <div key={`home-top-${homeEnterKey}`} className={HOME_ENTER}>
+                {exploreHeader}
+              </div>
             </div>
           )}
 
@@ -8530,7 +8545,8 @@ export default function Api({
             <section
               ref={feedSnapRef}
               aria-label="Market previews"
-              className="pointer-events-none relative z-[1] -mx-5 -my-6 min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-y-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className={`pointer-events-none relative z-[1] -mx-5 -my-6 min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-y-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${HOME_ENTER_MID}`}
+              key={`home-mid-${homeEnterKey}`}
               style={{
                 maskImage: FEED_EDGE_MASK,
                 WebkitMaskImage: FEED_EDGE_MASK,
@@ -9680,6 +9696,7 @@ export default function Api({
               </div>
             )}
             <TabBar
+              key={`home-bot-${homeEnterKey}`}
               activeTab={
                 positionsOpen
                   ? "positions"
@@ -9693,6 +9710,7 @@ export default function Api({
               positionsInvested={profilePositionsInvested}
               compact={isExploreFeed && feedPastHero}
               hidden={showingOwnProfile}
+              enterClassName={HOME_ENTER_BOT}
             />
           </>
         )}
