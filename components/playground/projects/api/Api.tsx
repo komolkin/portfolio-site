@@ -6670,16 +6670,49 @@ export default function Api({
       return;
     }
     const scroller = feedSnapRef.current;
-    if (!scroller) return;
+    const header = exploreHeaderRef.current;
+    if (!scroller || !header) return;
 
     let raf = 0;
+    let lastScrolled = false;
+    let lastPastHero = false;
+    let lastPage = -1;
+
+    // Scroll-linked (no CSS transition) so snap swipes stay 1:1 both ways.
+    header.style.transition = "none";
+    header.style.willChange = "opacity, transform";
+    header.style.transformOrigin = "50% 0%";
+
+    const applyHeaderMotion = (scrollTop: number, page: number) => {
+      // Fade across ~half a card swipe so it tracks the finger, not a tiny header band.
+      const range = Math.max(120, page * 0.5);
+      const t = Math.min(1, Math.max(0, scrollTop / range));
+      header.style.opacity = String(1 - t);
+      header.style.transform = `translate3d(0, ${(-14 * t).toFixed(2)}px, 0) scale(${(1 - t * 0.1).toFixed(4)})`;
+      header.style.pointerEvents = t > 0.55 ? "none" : "auto";
+      return t > 0.12;
+    };
+
     const update = () => {
       raf = 0;
       const page = Math.max(1, scroller.clientHeight);
-      const index = Math.round(scroller.scrollTop / page);
-      setFeedPastHero(index > 0);
-      setFeedScrolled(scroller.scrollTop > 12);
-      setFeedPageIndex(index);
+      const scrollTop = scroller.scrollTop;
+      const index = Math.round(scrollTop / page);
+      const scrolled = applyHeaderMotion(scrollTop, page);
+      const pastHero = index > 0;
+
+      if (scrolled !== lastScrolled) {
+        lastScrolled = scrolled;
+        setFeedScrolled(scrolled);
+      }
+      if (pastHero !== lastPastHero) {
+        lastPastHero = pastHero;
+        setFeedPastHero(pastHero);
+      }
+      if (index !== lastPage) {
+        lastPage = index;
+        setFeedPageIndex(index);
+      }
     };
     const onScroll = () => {
       if (raf) return;
@@ -6691,6 +6724,12 @@ export default function Api({
     return () => {
       scroller.removeEventListener("scroll", onScroll);
       if (raf) window.cancelAnimationFrame(raf);
+      header.style.transition = "";
+      header.style.willChange = "";
+      header.style.transformOrigin = "";
+      header.style.opacity = "";
+      header.style.transform = "";
+      header.style.pointerEvents = "";
     };
   }, [isExploreFeed, homeFeedMarkets.length, marketsStatus]);
 
@@ -8527,13 +8566,9 @@ export default function Api({
           {isExploreFeed && (
             <div
               ref={exploreHeaderRef}
-              className={`absolute inset-x-5 top-[52px] z-0 origin-top transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+              className={`absolute inset-x-5 top-[52px] z-[2] ${
                 feedScrolled ? "pointer-events-none" : ""
               }`}
-              style={{
-                opacity: feedScrolled ? 0 : 1,
-                transform: feedScrolled ? "scale(0.92)" : "scale(1)",
-              }}
             >
               <div key={`home-top-${homeEnterKey}`} className={HOME_ENTER}>
                 {exploreHeader}
