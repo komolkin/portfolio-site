@@ -928,7 +928,7 @@ export default function Worm({
 
   const hint = isReady ? (
     <p
-      className={`pointer-events-none absolute inset-x-0 bottom-0 z-10 px-3 pb-7 text-center text-[28px] font-medium leading-snug tracking-[-0.03em] text-white/50 ${
+      className={`pointer-events-none absolute inset-x-0 bottom-0 z-10 px-3 pb-6 text-center text-[18px] font-normal leading-snug tracking-[-0.02em] text-white/45 ${
         challenge
           ? "motion-safe:animate-[worm-hint-pulse_2.4s_ease-in-out_infinite]"
           : ""
