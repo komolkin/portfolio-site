@@ -14,7 +14,7 @@ const TABS: readonly { id: TabId; label: string }[] = [
 ];
 
 /** Matches Figma Navigation — Main sections (node 5436:9157). */
-const GLASS_BORDER = "rgba(255, 255, 255, 0.28)";
+const GLASS_BORDER = "rgba(255, 255, 255, 0.08)";
 const GLASS_COLOR = "rgba(0, 0, 0, 0.55)";
 export const TAB_BAR_HEIGHT = 56;
 /** Half height → true capsule ends on the liquid-glass mesh. */
@@ -309,7 +309,7 @@ function TabBarGlass({ children }: { children: ReactNode }) {
           className="pointer-events-none absolute inset-0 rounded-full"
           style={{
             background:
-              "linear-gradient(-10deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 30%, rgba(120,120,120,0) 70%, rgba(255,255,255,0.28) 100%) border-box",
+              "linear-gradient(-10deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 30%, rgba(120,120,120,0) 70%, rgba(255,255,255,0.08) 100%) border-box",
             mask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
             WebkitMask:
               "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
@@ -362,6 +362,8 @@ export type TabBarProps = {
   hidden?: boolean;
   /** Staggered home-enter animation class for the glass pill. */
   enterClassName?: string;
+  /** /worm-app homescreen — sit closer to the home indicator. */
+  flushBottom?: boolean;
 };
 
 export default function TabBar({
@@ -373,18 +375,21 @@ export default function TabBar({
   compact = false,
   hidden = false,
   enterClassName = "",
+  /** /worm-app homescreen — sit closer to the home indicator. */
+  flushBottom = false,
 }: TabBarProps) {
   const activeIndex = TABS.findIndex((tab) => tab.id === activeTab);
   const hasActiveTab = activeIndex >= 0;
+  const bottomGap = flushBottom ? 8 : TAB_BAR_BOTTOM;
 
   return (
     <nav
       className="pointer-events-none absolute inset-x-0 z-10 flex justify-center px-5 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
       style={{
-        bottom: `calc(${TAB_BAR_BOTTOM}px + env(safe-area-inset-bottom, 0px))`,
+        bottom: `calc(${bottomGap}px + env(safe-area-inset-bottom, 0px))`,
         transform: [
           hidden
-            ? `translateY(${TAB_BAR_HEIGHT + TAB_BAR_BOTTOM + 28}px)`
+            ? `translateY(${TAB_BAR_HEIGHT + bottomGap + 28}px)`
             : "translateY(0)",
           compact && !hidden ? "scale(0.86)" : "scale(1)",
         ].join(" "),

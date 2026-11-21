@@ -17,20 +17,36 @@ const ApiApp = dynamic(
 
 export default function WormAppShell() {
   useEffect(() => {
-    if (!("serviceWorker" in navigator)) return;
-    const register = () => {
-      void navigator.serviceWorker
-        .register("/worm-app/sw.js", { scope: "/worm-app" })
-        .catch(() => {
-          /* installability still works on iOS without SW */
-        });
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlBg = html.style.backgroundColor;
+    const prevBodyBg = body.style.backgroundColor;
+    // Homescreen / standalone: fill the home-indicator strip (html is otherwise #141414).
+    html.style.backgroundColor = "#000000";
+    body.style.backgroundColor = "#000000";
+    html.classList.add("worm-app-active");
+
+    if ("serviceWorker" in navigator) {
+      const register = () => {
+        void navigator.serviceWorker
+          .register("/worm-app/sw.js", { scope: "/worm-app" })
+          .catch(() => {
+            /* installability still works on iOS without SW */
+          });
+      };
+      if (document.readyState === "complete") register();
+      else window.addEventListener("load", register, { once: true });
+    }
+
+    return () => {
+      html.style.backgroundColor = prevHtmlBg;
+      body.style.backgroundColor = prevBodyBg;
+      html.classList.remove("worm-app-active");
     };
-    if (document.readyState === "complete") register();
-    else window.addEventListener("load", register, { once: true });
   }, []);
 
   return (
-    <div className="fixed inset-0 h-[100dvh] w-full overflow-hidden bg-black text-white">
+    <div className="worm-app-frame fixed inset-0 w-full overflow-hidden bg-black text-white">
       <ApiApp app />
     </div>
   );

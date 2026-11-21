@@ -52,7 +52,7 @@ export default function WormAppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-[100dvh] bg-black text-white antialiased">
+    <div className="fixed inset-0 bg-black text-white antialiased">
       {children}
     </div>
   );

@@ -6692,8 +6692,8 @@ export default function Api({
       const t = Math.min(1, Math.max(0, scrollTop / range));
       header.style.opacity = String(1 - t);
       header.style.transform = `translate3d(0, ${(-14 * t).toFixed(2)}px, 0) scale(${(1 - t * 0.1).toFixed(4)})`;
-      // Rest: above feed so Deposit/profile stay tappable. Scrolling: drop behind cards.
-      header.style.zIndex = t > 0.18 ? "0" : "2";
+      // Always behind the feed layer — never overlay scrolling cards.
+      header.style.zIndex = "0";
       header.style.pointerEvents = t > 0.55 ? "none" : "auto";
       return t > 0.12;
     };
@@ -8590,7 +8590,7 @@ export default function Api({
             <section
               ref={feedSnapRef}
               aria-label="Market previews"
-              className={`relative z-[1] -mx-5 -my-6 min-h-0 flex-1 touch-pan-y snap-y snap-mandatory overflow-y-auto overscroll-y-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${HOME_ENTER_MID}`}
+              className={`pointer-events-none relative z-[1] -mx-5 -my-6 min-h-0 flex-1 touch-pan-y snap-y snap-mandatory overflow-y-auto overscroll-y-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${HOME_ENTER_MID}`}
               key={`home-mid-${homeEnterKey}`}
               style={{
                 maskImage: FEED_EDGE_MASK,
@@ -8606,9 +8606,13 @@ export default function Api({
                     aria-hidden
                   >
                     {i === 0 ? (
-                      <div aria-hidden className="shrink-0" style={{ height: exploreHeaderHeight }} />
+                      <div
+                        aria-hidden
+                        className="pointer-events-none shrink-0"
+                        style={{ height: exploreHeaderHeight }}
+                      />
                     ) : null}
-                    <div className="min-h-0 w-full flex-1 animate-pulse rounded-[24px] bg-white/10" />
+                    <div className="pointer-events-auto min-h-0 w-full flex-1 animate-pulse rounded-[24px] bg-white/10" />
                   </div>
                 ))}
 
@@ -8653,7 +8657,7 @@ export default function Api({
                           style={{ height: exploreHeaderHeight }}
                         />
                       ) : null}
-                      <div className="min-h-0 flex-1 pb-1">
+                      <div className="pointer-events-auto min-h-0 flex-1 touch-pan-y pb-1">
                         {isFeaturedLive ? (
                           <LiveGameCard
                             market={market}
@@ -9645,7 +9649,10 @@ export default function Api({
               <div
                 className="pointer-events-none absolute inset-x-0 z-[11] flex justify-center gap-2 px-5"
                 style={{
-                  bottom: TAB_BAR_BOTTOM + TAB_BAR_HEIGHT + 12,
+                  bottom:
+                    (app ? 8 : TAB_BAR_BOTTOM) +
+                    TAB_BAR_HEIGHT +
+                    12,
                 }}
               >
                 <motion.button
@@ -9761,6 +9768,7 @@ export default function Api({
               compact={isExploreFeed && feedPastHero}
               hidden={showingOwnProfile}
               enterClassName={HOME_ENTER_BOT}
+              flushBottom={app}
             />
           </>
         )}
@@ -9819,6 +9827,7 @@ export default function Api({
         )}
         {SHOW_ONBOARDING && !embed && onboardingOpen && (
           <Onboarding
+            compactChrome={app}
             traders={leaderboardWallets}
             tradersStatus={leaderboardStatus}
             marketImages={onboardingImages}

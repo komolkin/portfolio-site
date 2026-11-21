@@ -129,8 +129,11 @@ function InviteCodeInput({
 }
 
 export default function Onboarding({
+  compactChrome = false,
   onComplete,
 }: {
+  /** /worm-app — no fake status bar; keep a small top inset only. */
+  compactChrome?: boolean;
   traders?: PolymarketLeaderboardWallet[];
   tradersStatus?: "loading" | "ready" | "error";
   marketImages?: string[];
@@ -168,7 +171,9 @@ export default function Onboarding({
 
   return (
     <div
-      className="absolute inset-0 z-40 flex flex-col overflow-hidden bg-black px-5 pt-[64px] pb-5"
+      className={`absolute inset-0 z-40 flex flex-col overflow-hidden bg-black px-5 pb-5 ${
+        compactChrome ? "pt-5" : "pt-[64px]"
+      }`}
       role="dialog"
       aria-modal="true"
       aria-label="Get started"
