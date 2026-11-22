@@ -52,7 +52,7 @@ export default function WormAppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 bg-black text-white antialiased">
+    <div className="worm-app-frame fixed inset-0 overflow-hidden bg-black text-white antialiased">
       {children}
     </div>
   );

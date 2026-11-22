@@ -15,6 +15,20 @@ const ApiApp = dynamic(
   },
 );
 
+/** iOS standalone often reports a short %/vh; lock to the tallest layout size. */
+function syncWormAppHeight() {
+  const vv = window.visualViewport;
+  const height = Math.max(
+    window.innerHeight,
+    document.documentElement.clientHeight,
+    vv ? Math.ceil(vv.height + (vv.offsetTop || 0)) : 0,
+  );
+  document.documentElement.style.setProperty(
+    "--worm-app-height",
+    `${height}px`,
+  );
+}
+
 export default function WormAppShell() {
   useEffect(() => {
     const html = document.documentElement;
@@ -25,6 +39,13 @@ export default function WormAppShell() {
     html.style.backgroundColor = "#000000";
     body.style.backgroundColor = "#000000";
     html.classList.add("worm-app-active");
+    syncWormAppHeight();
+
+    const onResize = () => syncWormAppHeight();
+    window.addEventListener("resize", onResize);
+    window.visualViewport?.addEventListener("resize", onResize);
+    window.visualViewport?.addEventListener("scroll", onResize);
+    window.addEventListener("orientationchange", onResize);
 
     if ("serviceWorker" in navigator) {
       const register = () => {
@@ -42,11 +63,16 @@ export default function WormAppShell() {
       html.style.backgroundColor = prevHtmlBg;
       body.style.backgroundColor = prevBodyBg;
       html.classList.remove("worm-app-active");
+      html.style.removeProperty("--worm-app-height");
+      window.removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("scroll", onResize);
+      window.removeEventListener("orientationchange", onResize);
     };
   }, []);
 
   return (
-    <div className="worm-app-frame fixed inset-0 w-full overflow-hidden bg-black text-white">
+    <div className="relative h-full min-h-[var(--worm-app-height,100%)] w-full overflow-hidden bg-black text-white">
       <ApiApp app />
     </div>
   );
