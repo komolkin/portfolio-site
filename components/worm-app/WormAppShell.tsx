@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import dynamic from "next/dynamic";
+import { syncWormAppHeight } from "@/lib/wormAppHeight";
 
 const ApiApp = dynamic(
   () => import("@/components/playground/projects/api/Api"),
@@ -14,20 +15,6 @@ const ApiApp = dynamic(
     ),
   },
 );
-
-/** iOS standalone often reports a short %/vh; lock to the tallest layout size. */
-function syncWormAppHeight() {
-  const vv = window.visualViewport;
-  const height = Math.max(
-    window.innerHeight,
-    document.documentElement.clientHeight,
-    vv ? Math.ceil(vv.height + (vv.offsetTop || 0)) : 0,
-  );
-  document.documentElement.style.setProperty(
-    "--worm-app-height",
-    `${height}px`,
-  );
-}
 
 export default function WormAppShell() {
   useEffect(() => {

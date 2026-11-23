@@ -28,6 +28,15 @@ const nextConfig = {
           },
         ],
       },
+      {
+        source: "/worm-app-2/manifest.webmanifest",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "application/manifest+json",
+          },
+        ],
+      },
     ];
   },
   images: {

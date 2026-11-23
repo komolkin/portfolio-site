@@ -1,20 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import { syncWormAppHeight } from "@/lib/wormAppHeight";
 import MainFeed from "./MainFeed";
-
-function syncWormAppHeight() {
-  const vv = window.visualViewport;
-  const height = Math.max(
-    window.innerHeight,
-    document.documentElement.clientHeight,
-    vv ? Math.ceil(vv.height + (vv.offsetTop || 0)) : 0,
-  );
-  document.documentElement.style.setProperty(
-    "--worm-app-height",
-    `${height}px`,
-  );
-}
 
 export default function WormApp2Shell() {
   useEffect(() => {
@@ -30,6 +18,7 @@ export default function WormApp2Shell() {
     const onResize = () => syncWormAppHeight();
     window.addEventListener("resize", onResize);
     window.visualViewport?.addEventListener("resize", onResize);
+    window.visualViewport?.addEventListener("scroll", onResize);
     window.addEventListener("orientationchange", onResize);
 
     return () => {
@@ -39,6 +28,7 @@ export default function WormApp2Shell() {
       html.style.removeProperty("--worm-app-height");
       window.removeEventListener("resize", onResize);
       window.visualViewport?.removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("scroll", onResize);
       window.removeEventListener("orientationchange", onResize);
     };
   }, []);
