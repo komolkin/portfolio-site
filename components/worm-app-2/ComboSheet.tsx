@@ -1,6 +1,11 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  useDragControls,
+  type PanInfo,
+} from "framer-motion";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 
@@ -18,6 +23,8 @@ const MIN_PICKS = 2;
 const MAX_SLOTS = 8;
 const COMBO_EDGE = 0.35;
 const AMOUNT_CHIPS = [5, 10, 25, 50] as const;
+const DISMISS_OFFSET_PX = 100;
+const DISMISS_VELOCITY = 650;
 
 function comboMultiplier(percents: number[]) {
   if (!percents.length) return 0;
@@ -91,6 +98,7 @@ export function ComboSheet({
   const [step, setStep] = useState<Step>("build");
   const [stake, setStake] = useState(10);
   const [copied, setCopied] = useState(false);
+  const dragControls = useDragControls();
 
   const multiplier = useMemo(
     () => comboMultiplier(picks.map((pick) => pick.percent ?? 50)),
@@ -139,6 +147,15 @@ export function ComboSheet({
     }
   };
 
+  const onDragEnd = (_: unknown, info: PanInfo) => {
+    if (
+      info.offset.y > DISMISS_OFFSET_PX ||
+      info.velocity.y > DISMISS_VELOCITY
+    ) {
+      onOpenChange(false);
+    }
+  };
+
   return (
     <AnimatePresence>
       {open ? (
@@ -163,16 +180,29 @@ export function ComboSheet({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 420, damping: 38, mass: 0.85 }}
+            drag="y"
+            dragControls={dragControls}
+            dragListener={false}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.55 }}
+            onDragEnd={onDragEnd}
             className="relative z-[1] flex max-h-[88dvh] w-full max-w-[430px] flex-col overflow-hidden rounded-t-3xl border-0 bg-[rgba(20,20,20,0.88)] pb-[max(8px,env(safe-area-inset-bottom))] shadow-none backdrop-blur-[18px]"
           >
-            <div className="flex justify-center pb-1 pt-2.5" aria-hidden>
+            <div
+              className="flex touch-none justify-center pb-2 pt-2.5"
+              onPointerDown={(event) => dragControls.start(event)}
+              aria-hidden
+            >
               <span className="h-1 w-10 rounded-full bg-white/20" />
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-2">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 pt-2">
               {step === "success" ? (
                 <div className="flex min-h-[22.5rem] flex-col gap-3">
-                  <header className="relative flex h-8 shrink-0 items-center justify-center">
+                  <header
+                    className="relative flex h-8 shrink-0 touch-none items-center justify-center"
+                    onPointerDown={(event) => dragControls.start(event)}
+                  >
                     <p className="text-base font-semibold leading-none tracking-tight">
                       {picks.length}-picks combo placed
                     </p>
@@ -226,7 +256,13 @@ export function ComboSheet({
 
               {step === "amount" ? (
                 <div className="-mt-3 flex min-h-[22.5rem] flex-col gap-3">
-                  <header className="relative flex h-8 shrink-0 items-center justify-between gap-3">
+                  <header
+                    className="relative flex h-8 shrink-0 touch-none items-center justify-between gap-3"
+                    onPointerDown={(event) => {
+                      if ((event.target as HTMLElement).closest("button")) return;
+                      dragControls.start(event);
+                    }}
+                  >
                     <button
                       type="button"
                       aria-label="Back to picks"
@@ -310,7 +346,10 @@ export function ComboSheet({
 
               {step === "build" ? (
                 <>
-                  <header className="relative mb-4 flex h-8 shrink-0 items-center justify-between gap-3">
+                  <header
+                    className="relative mb-4 flex h-8 shrink-0 touch-none items-center justify-between gap-3"
+                    onPointerDown={(event) => dragControls.start(event)}
+                  >
                     <h2 className="truncate text-2xl font-semibold tracking-tight">
                       {heading}
                     </h2>

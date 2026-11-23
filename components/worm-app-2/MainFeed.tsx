@@ -1540,6 +1540,11 @@ function BottomChrome({
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 overflow-hidden">
+      {/* Block taps through the blur into market cards underneath. */}
+      <div
+        aria-hidden
+        className="pointer-events-auto absolute inset-x-0 bottom-0 h-[120px]"
+      />
       {/* Blur sits under chrome (override .api-progressive-blur z-index). */}
       <div
         aria-hidden
