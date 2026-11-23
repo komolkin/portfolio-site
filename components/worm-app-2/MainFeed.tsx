@@ -19,6 +19,7 @@ import {
   type RefObject,
 } from "react";
 import { instrumentSans } from "@/lib/fonts";
+import { ComboSheet, type ComboSheetPick } from "./ComboSheet";
 
 type SportsVideoListener = (playingId: string | null) => void;
 
@@ -379,6 +380,37 @@ const MARKETS: MarketCard[] = [
         ],
       },
       {
+        id: "btc-62000",
+        title: "Bitcoin at or above $62,000?",
+        crypto: {
+          price: "$60,821",
+          priceValue: 60821,
+          delta: "$1,179",
+          deltaHint: "below target",
+          deltaUp: false,
+          chance: "52%",
+          chanceValue: 52,
+          target: "$62,000",
+          targetValue: 62000,
+        },
+        options: [
+          {
+            id: "yes-62",
+            label: "Yes",
+            percent: 52,
+            color: "#338003",
+            logo: "/worm-app-2/logos/bitcoin.png",
+          },
+          {
+            id: "no-62",
+            label: "No",
+            percent: 48,
+            color: "#633a3a",
+            logo: "/worm-app-2/logos/bitcoin.png",
+          },
+        ],
+      },
+      {
         id: "btc-65000",
         title: "Bitcoin at or above $65,000?",
         crypto: {
@@ -416,14 +448,7 @@ const MARKETS: MarketCard[] = [
 const MAX_COMBO_PICKS = 8;
 const MAX_CHIP_LOGOS = 3;
 
-type ComboPick = {
-  id: string;
-  label: string;
-  logo?: string;
-  mark?: string;
-  /** Options from the same game card share this so + swaps sides. */
-  groupId: string;
-};
+type ComboPick = ComboSheetPick;
 
 function OptionEmblem({
   logo,
@@ -462,12 +487,14 @@ function OptionEmblem({
 function OptionRow({
   option,
   groupId,
+  subtitle,
   selected,
   disabled,
   onToggle,
 }: {
   option: PickOption;
   groupId: string;
+  subtitle: string;
   selected: boolean;
   disabled: boolean;
   onToggle: (pick: ComboPick) => void;
@@ -519,6 +546,8 @@ function OptionRow({
             logo: option.logo,
             mark: option.mark,
             groupId,
+            subtitle,
+            percent: option.percent,
           });
         }}
         className={`relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full transition-colors duration-200 disabled:opacity-35 ${
@@ -601,6 +630,7 @@ function TeamPicksCard({
               key={option.id}
               option={option}
               groupId={pick.id}
+              subtitle={pick.title}
               selected={selected}
               disabled={atLimit && !selected}
               onToggle={onToggle}
@@ -1289,7 +1319,13 @@ function FeedHeader() {
   );
 }
 
-function PicksChip({ picks }: { picks: ComboPick[] }) {
+function PicksChip({
+  picks,
+  onOpen,
+}: {
+  picks: ComboPick[];
+  onOpen: () => void;
+}) {
   const count = picks.length;
   const empty = count === 0;
   const logos = picks.slice(-MAX_CHIP_LOGOS);
@@ -1311,12 +1347,14 @@ function PicksChip({ picks }: { picks: ComboPick[] }) {
       type="button"
       data-combo-chip
       layout
+      onClick={onOpen}
+      whileTap={{ scale: 0.96 }}
       animate={bump ? { scale: [1, 1.04, 1] } : { scale: 1 }}
       transition={{
         layout: { type: "spring", stiffness: 420, damping: 36, mass: 0.75 },
         scale: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
       }}
-      className="inline-flex min-h-12 items-center justify-center gap-3.5 overflow-hidden rounded-full bg-[rgba(20,20,20,0.8)] px-6 py-3.5 backdrop-blur-[10px]"
+      className="inline-flex min-h-12 origin-center items-center justify-center gap-3.5 overflow-hidden rounded-full bg-[rgba(20,20,20,0.8)] px-6 py-3.5 backdrop-blur-[10px]"
     >
       <span className="relative inline-grid text-[16px] font-medium tabular-nums text-white">
         <AnimatePresence initial={false} mode="popLayout">
@@ -1352,15 +1390,16 @@ function PicksChip({ picks }: { picks: ComboPick[] }) {
           </motion.span>
         ))}
       </AnimatePresence>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <motion.img
-        layout
-        src="/worm-app-2/icons/chevron.svg"
-        alt=""
-        width={10}
-        height={5}
-        className="h-1.5 w-2.5 shrink-0 rotate-180 opacity-80"
-      />
+      <span className="inline-flex shrink-0 rotate-180 opacity-80" aria-hidden>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/worm-app-2/icons/chevron.svg"
+          alt=""
+          width={10}
+          height={5}
+          className="h-1.5 w-2.5"
+        />
+      </span>
     </motion.button>
   );
 }
@@ -1466,9 +1505,11 @@ function TabBar({ hidden }: { hidden: boolean }) {
 function BottomChrome({
   feedRef,
   picks,
+  onOpenCombo,
 }: {
   feedRef: RefObject<HTMLDivElement | null>;
   picks: ComboPick[];
+  onOpenCombo: () => void;
 }) {
   const [tabHidden, setTabHidden] = useState(false);
   const lastScrollY = useRef(0);
@@ -1502,7 +1543,7 @@ function BottomChrome({
       {/* Blur sits under chrome (override .api-progressive-blur z-index). */}
       <div
         aria-hidden
-        className="api-progressive-blur !z-0 h-[200px]"
+        className="api-progressive-blur !z-0 h-[120px]"
         data-edge="bottom"
       >
         <i />
@@ -1512,7 +1553,7 @@ function BottomChrome({
       </div>
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-40 bg-gradient-to-t from-black/45 via-black/15 to-transparent"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-28 bg-gradient-to-t from-black/45 via-black/15 to-transparent"
       />
       <div className="pointer-events-auto relative z-[1] flex flex-col items-center px-7 pb-[max(28px,env(safe-area-inset-bottom,0px))]">
         {/* Drop into the tab bar slot when the bar hides — transform only. */}
@@ -1522,7 +1563,7 @@ function BottomChrome({
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           className="will-change-transform"
         >
-          <PicksChip picks={picks} />
+          <PicksChip picks={picks} onOpen={onOpenCombo} />
         </motion.div>
         <TabBar hidden={tabHidden} />
       </div>
@@ -1532,6 +1573,7 @@ function BottomChrome({
 
 export default function MainFeed() {
   const [comboPicks, setComboPicks] = useState<ComboPick[]>([]);
+  const [comboOpen, setComboOpen] = useState(false);
   const feedRef = useRef<HTMLDivElement>(null);
   const selectedIds = useMemo(
     () => new Set(comboPicks.map((pick) => pick.id)),
@@ -1578,7 +1620,20 @@ export default function MainFeed() {
           </div>
         </div>
 
-        <BottomChrome feedRef={feedRef} picks={comboPicks} />
+        <BottomChrome
+          feedRef={feedRef}
+          picks={comboPicks}
+          onOpenCombo={() => setComboOpen(true)}
+        />
+        <ComboSheet
+          open={comboOpen}
+          picks={comboPicks}
+          onOpenChange={setComboOpen}
+          onRemove={(id) =>
+            setComboPicks((prev) => prev.filter((pick) => pick.id !== id))
+          }
+          onClear={() => setComboPicks([])}
+        />
       </div>
     </SportsVideoLockProvider>
   );
