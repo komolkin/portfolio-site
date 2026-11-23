@@ -1380,7 +1380,7 @@ function TabBar({ hidden }: { hidden: boolean }) {
         opacity: hidden ? 0 : 1,
       }}
       transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-      className={`mx-auto mt-4 flex h-16 w-full max-w-[360px] items-center rounded-full bg-black/70 p-1.5 shadow-[0_10px_40px_rgba(0,0,0,0.5)] ring-1 ring-white/[0.08] will-change-transform ${
+      className={`mx-auto mt-4 flex h-16 w-full max-w-[360px] items-center rounded-full bg-black/60 p-1.5 shadow-[0_10px_40px_rgba(0,0,0,0.5)] ring-1 ring-white/[0.08] backdrop-blur-[22px] will-change-transform ${
         hidden ? "pointer-events-none" : ""
       }`}
     >
@@ -1419,15 +1419,15 @@ function TabBar({ hidden }: { hidden: boolean }) {
       </button>
       <button
         type="button"
-        aria-label="Positions, 5 open"
+        aria-label="Positions, 0 open"
         className={itemClass}
       >
         <span className="relative flex h-9 min-w-9 items-center justify-center overflow-hidden rounded-[12px] px-2.5 text-[16px] font-semibold tabular-nums text-white">
           <span
             aria-hidden
-            className="absolute inset-0 rounded-[12px] bg-[#1f8f45]/35 shadow-[inset_0_0_16px_rgba(59,181,104,0.85)]"
+            className="absolute inset-0 rounded-[12px] bg-white/10 shadow-[inset_0_0_16px_rgba(255,255,255,0.35)]"
           />
-          <span className="relative z-[1]">5</span>
+          <span className="relative z-[1]">0</span>
         </span>
       </button>
       <button
@@ -1499,11 +1499,22 @@ function BottomChrome({
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 overflow-hidden">
+      {/* Blur sits under chrome (override .api-progressive-blur z-index). */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent"
+        className="api-progressive-blur !z-0 h-[200px]"
+        data-edge="bottom"
+      >
+        <i />
+        <i />
+        <i />
+        <i />
+      </div>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-40 bg-gradient-to-t from-black/45 via-black/15 to-transparent"
       />
-      <div className="pointer-events-auto relative flex flex-col items-center px-7 pb-[max(28px,env(safe-area-inset-bottom,0px))]">
+      <div className="pointer-events-auto relative z-[1] flex flex-col items-center px-7 pb-[max(28px,env(safe-area-inset-bottom,0px))]">
         {/* Drop into the tab bar slot when the bar hides — transform only. */}
         <motion.div
           initial={false}
