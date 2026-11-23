@@ -8,6 +8,7 @@ import {
 } from "framer-motion";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { playComboPlace } from "@/lib/combo-sound";
 
 export type ComboSheetPick = {
   id: string;
@@ -26,7 +27,7 @@ const AMOUNT_CHIPS = [5, 10, 25, 50] as const;
 const DISMISS_OFFSET_PX = 100;
 const DISMISS_VELOCITY = 650;
 
-function comboMultiplier(percents: number[]) {
+export function comboMultiplier(percents: number[]) {
   if (!percents.length) return 0;
   return percents.reduce((product, percent) => {
     const price = Math.max(0.01, Math.min(0.99, percent / 100));
@@ -93,7 +94,7 @@ export function ComboSheet({
   picks: ComboSheetPick[];
   onOpenChange: (open: boolean) => void;
   onRemove: (id: string) => void;
-  onClear: () => void;
+  onClear: (opts?: { silent?: boolean }) => void;
 }) {
   const [step, setStep] = useState<Step>("build");
   const [stake, setStake] = useState(10);
@@ -242,7 +243,7 @@ export function ComboSheet({
                   <button
                     type="button"
                     onClick={() => {
-                      onClear();
+                      onClear({ silent: true });
                       setStep("build");
                       setStake(10);
                       onOpenChange(false);
@@ -333,7 +334,10 @@ export function ComboSheet({
                     <button
                       type="button"
                       disabled={stake <= 0}
-                      onClick={() => setStep("success")}
+                      onClick={() => {
+                        playComboPlace();
+                        setStep("success");
+                      }}
                       className={`h-11 w-full rounded-full text-sm font-semibold text-white transition-transform duration-150 ease-out active:scale-[0.98] disabled:active:scale-100 ${
                         stake > 0 ? "bg-[#8481fb]" : "bg-[#8481fb]/60"
                       }`}

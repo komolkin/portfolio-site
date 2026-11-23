@@ -355,20 +355,22 @@ export function getMarketOddsSides(market: {
     return label.length > 0 && label !== "yes" && label !== "no";
   });
 
-  if (named.length === 2) {
-    return named.map((outcome, index) => ({
-      label: outcome.label,
-      price: outcome.price,
-      side: (index === 0 ? "yes" : "no") as "yes" | "no",
-    }));
-  }
-
+  // Multi-runner markets with a group title act as Yes/No on that runner.
   if (named.length === 1 || (named.length > 2 && market.groupItemTitle)) {
     const label = market.groupItemTitle ?? named[0]!.label;
     return [
       { label, price: market.yesPrice, side: "yes" },
       { label: "No", price: market.noPrice, side: "no" },
     ];
+  }
+
+  // 2-way matchups and 3-way soccer (home / draw / away).
+  if (named.length >= 2) {
+    return named.map((outcome, index) => ({
+      label: outcome.label,
+      price: outcome.price,
+      side: (index === 0 ? "yes" : "no") as "yes" | "no",
+    }));
   }
 
   const matchup = parseMatchupTitle(market.title);

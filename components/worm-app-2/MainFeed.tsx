@@ -4,6 +4,7 @@ import {
   AnimatePresence,
   motion,
   useMotionValueEvent,
+  useReducedMotion,
   useSpring,
 } from "framer-motion";
 import Image from "next/image";
@@ -15,11 +16,54 @@ import {
   useMemo,
   useRef,
   useState,
+  memo,
   type ReactNode,
   type RefObject,
 } from "react";
 import { instrumentSans } from "@/lib/fonts";
-import { ComboSheet, type ComboSheetPick } from "./ComboSheet";
+import {
+  playComboAdd,
+  playComboFull,
+  playComboRemove,
+} from "@/lib/combo-sound";
+import type { PolymarketMarketData } from "@/lib/polymarketscan";
+import DepositModal from "@/components/playground/projects/api/DepositModal";
+import TradeFlowModal from "@/components/playground/projects/api/TradeFlowModal";
+import {
+  ComboSheet,
+  comboMultiplier,
+  type ComboSheetPick,
+} from "./ComboSheet";
+import MarketScreen, {
+  type MarketScreenOption,
+} from "./MarketScreen";
+
+const DEPOSITS_KEY = "playground-api-deposits";
+
+function storageGet(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function storageSet(key: string, value: string) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Ignore quota / private-mode failures.
+  }
+}
+
+function formatBalanceParts(value: number) {
+  const safe = Math.max(0, Number.isFinite(value) ? value : 0);
+  const whole = Math.floor(safe).toLocaleString("en-US");
+  const cents = Math.round((safe % 1) * 100)
+    .toString()
+    .padStart(2, "0");
+  return { whole, cents };
+}
 
 type SportsVideoListener = (playingId: string | null) => void;
 
@@ -126,7 +170,7 @@ const MARKETS: MarketCard[] = [
     picks: [
       {
         id: "nba-hawks-pistons",
-        title: "Tomorrow 1:00",
+        title: "Tomorrow, 1:00 PM",
         background: "/worm-app-2/bg/hawks-pistons.jpg",
         video: "/worm-app-2/bg/hawks-pistons.mp4",
         options: [
@@ -148,7 +192,7 @@ const MARKETS: MarketCard[] = [
       },
       {
         id: "nba-knicks-spurs",
-        title: "Tonight 8:30",
+        title: "Tonight, 8:30 PM",
         background: "/worm-app-2/bg/knicks-spurs.jpg",
         video: "/worm-app-2/bg/knicks-spurs.mp4",
         options: [
@@ -170,7 +214,7 @@ const MARKETS: MarketCard[] = [
       },
       {
         id: "nba-lakers-celtics",
-        title: "Fri 10:00",
+        title: "Fri, 10:00 PM",
         background: "/worm-app-2/bg/lakers-celtics.jpg",
         video: "/worm-app-2/bg/lakers-celtics.mp4",
         options: [
@@ -201,21 +245,28 @@ const MARKETS: MarketCard[] = [
     picks: [
       {
         id: "laliga-getafe-atletico",
-        title: "Today 1:00",
+        title: "Today, 1:00 PM",
         background: "/worm-app-2/bg/getafe-atletico.jpg",
         video: "/worm-app-2/bg/getafe-atletico.mp4",
         options: [
           {
             id: "getafe",
             label: "Getafe",
-            percent: 45,
+            percent: 38,
             color: "#0057B8",
             logo: "/worm-app-2/logos/getafe.png",
           },
           {
+            id: "getafe-atletico-draw",
+            label: "Draw",
+            percent: 24,
+            color: "#8E8E93",
+            mark: "=",
+          },
+          {
             id: "atletico",
             label: "Atlético",
-            percent: 55,
+            percent: 38,
             color: "#CB3524",
             logo: "/worm-app-2/logos/atletico.png",
           },
@@ -223,21 +274,28 @@ const MARKETS: MarketCard[] = [
       },
       {
         id: "laliga-barca-madrid",
-        title: "Sat 4:15",
+        title: "Sat, 4:15 PM",
         background: "/worm-app-2/bg/barca-madrid.jpg",
         video: "/worm-app-2/bg/barca-madrid.mp4",
         options: [
           {
             id: "barca",
             label: "Barça",
-            percent: 47,
+            percent: 40,
             color: "#A50044",
             logo: "/worm-app-2/logos/barcelona.png",
           },
           {
+            id: "barca-madrid-draw",
+            label: "Draw",
+            percent: 22,
+            color: "#8E8E93",
+            mark: "=",
+          },
+          {
             id: "madrid",
             label: "Madrid",
-            percent: 53,
+            percent: 38,
             color: "#FEBE10",
             logo: "/worm-app-2/logos/madrid.png",
           },
@@ -245,21 +303,28 @@ const MARKETS: MarketCard[] = [
       },
       {
         id: "laliga-sevilla-valencia",
-        title: "Sun 2:00",
+        title: "Sun, 2:00 PM",
         background: "/worm-app-2/bg/sevilla-valencia.jpg",
         video: "/worm-app-2/bg/sevilla-valencia.mp4",
         options: [
           {
             id: "sevilla",
             label: "Sevilla",
-            percent: 41,
+            percent: 35,
             color: "#E81F2C",
             logo: "/worm-app-2/logos/sevilla.png",
           },
           {
+            id: "sevilla-valencia-draw",
+            label: "Draw",
+            percent: 26,
+            color: "#8E8E93",
+            mark: "=",
+          },
+          {
             id: "valencia",
             label: "Valencia",
-            percent: 59,
+            percent: 39,
             color: "#EE3524",
             logo: "/worm-app-2/logos/valencia.png",
           },
@@ -276,7 +341,7 @@ const MARKETS: MarketCard[] = [
     picks: [
       {
         id: "atp-alcaraz-sinner",
-        title: "Tonight 3:00",
+        title: "Tonight, 3:00 PM",
         background: "/worm-app-2/bg/alcaraz-sinner.jpg",
         video: "/worm-app-2/bg/alcaraz-sinner.mp4",
         options: [
@@ -298,7 +363,7 @@ const MARKETS: MarketCard[] = [
       },
       {
         id: "atp-djokovic-medvedev",
-        title: "Tomorrow 5:30",
+        title: "Tomorrow, 5:30 PM",
         background: "/worm-app-2/bg/djokovic-medvedev.jpg",
         video: "/worm-app-2/bg/djokovic-medvedev.mp4",
         options: [
@@ -320,7 +385,7 @@ const MARKETS: MarketCard[] = [
       },
       {
         id: "atp-fritz-zverev",
-        title: "Sat 1:00",
+        title: "Sat, 1:00 PM",
         background: "/worm-app-2/bg/fritz-zverev.jpg",
         video: "/worm-app-2/bg/fritz-zverev.mp4",
         options: [
@@ -337,6 +402,81 @@ const MARKETS: MarketCard[] = [
             percent: 56,
             color: "#000000",
             logo: "/worm-app-2/logos/zverev.png",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "cs2",
+    kind: "sports",
+    title: "CS2",
+    subtitle: "PGL Singapore Major",
+    logo: "/worm-app-2/logos/cs2.png",
+    picks: [
+      {
+        id: "cs2-faze-wildcard",
+        title: "Tomorrow, 8:00 PM",
+        background: "/worm-app-2/bg/faze-wildcard.jpg",
+        video: "/worm-app-2/bg/faze-wildcard.mp4",
+        options: [
+          {
+            id: "faze",
+            label: "FaZe",
+            percent: 64,
+            color: "#E10600",
+            logo: "/worm-app-2/logos/faze.png",
+          },
+          {
+            id: "wildcard",
+            label: "Wildcard",
+            percent: 36,
+            color: "#5B21B6",
+            logo: "/worm-app-2/logos/wildcard.png",
+          },
+        ],
+      },
+      {
+        id: "cs2-liquid-bcgame",
+        title: "Tomorrow, 7:00 PM",
+        background: "/worm-app-2/bg/liquid-bcgame.jpg",
+        video: "/worm-app-2/bg/liquid-bcgame.mp4",
+        options: [
+          {
+            id: "liquid",
+            label: "Liquid",
+            percent: 55,
+            color: "#0C2B5E",
+            logo: "/worm-app-2/logos/liquid.png",
+          },
+          {
+            id: "bcgame",
+            label: "BC.Game",
+            percent: 45,
+            color: "#00C853",
+            logo: "/worm-app-2/logos/bcgame.png",
+          },
+        ],
+      },
+      {
+        id: "cs2-heroic-imperial",
+        title: "Tomorrow, 5:00 PM",
+        background: "/worm-app-2/bg/heroic-imperial.jpg",
+        video: "/worm-app-2/bg/heroic-imperial.mp4",
+        options: [
+          {
+            id: "heroic",
+            label: "HEROIC",
+            percent: 67,
+            color: "#ED1C24",
+            logo: "/worm-app-2/logos/heroic.png",
+          },
+          {
+            id: "imperial",
+            label: "Imperial",
+            percent: 33,
+            color: "#F5C518",
+            logo: "/worm-app-2/logos/imperial.png",
           },
         ],
       },
@@ -447,6 +587,7 @@ const MARKETS: MarketCard[] = [
 
 const MAX_COMBO_PICKS = 8;
 const MAX_CHIP_LOGOS = 3;
+const ENTER_EASE = [0.22, 1, 0.36, 1] as const;
 
 type ComboPick = ComboSheetPick;
 
@@ -473,15 +614,71 @@ function OptionEmblem({
       />
     );
   }
+  const glyph = mark ?? label.slice(0, 2).toUpperCase();
+  const fontSize =
+    glyph === "="
+      ? Math.max(14, size * 0.72)
+      : Math.max(8, size * 0.38);
+
   return (
     <span
       className="flex shrink-0 items-center justify-center rounded-full bg-white/15 font-semibold tracking-tight text-white"
-      style={{ width: size, height: size, fontSize: Math.max(8, size * 0.38) }}
+      style={{ width: size, height: size, fontSize }}
       aria-hidden
     >
-      {mark ?? label.slice(0, 2).toUpperCase()}
+      {glyph}
     </span>
   );
+}
+
+function matchupSides(pick: PickCard): [PickOption | undefined, PickOption | undefined] {
+  const teams = pick.options.filter(
+    (option) => option.label.trim().toLowerCase() !== "draw",
+  );
+  return [teams[0], teams[1] ?? teams[teams.length - 1]];
+}
+
+function toTradeMarket(
+  market: MarketCard,
+  pick: PickCard,
+): PolymarketMarketData {
+  const [left, right] = matchupSides(pick);
+  const threeWay = pick.options.length > 2;
+  return {
+    marketId: pick.id,
+    title: pick.crypto
+      ? pick.title
+      : `${left?.label ?? ""} vs ${right?.label ?? ""}`.trim(),
+    slug: pick.id,
+    category: market.kind === "crypto" ? "Crypto" : market.title,
+    yesPrice: (left?.percent ?? 50) / 100,
+    noPrice: (right?.percent ?? 50) / 100,
+    volumeUsd: 0,
+    volume24h: 0,
+    liquidityUsd: 0,
+    image: left?.logo ?? market.logo,
+    closesAt: null,
+    isResolved: false,
+    price24hChange: null,
+    eventTitle: market.title,
+    // Keep null for 3-way soccer so all outcomes (incl. Draw) stay tradable.
+    groupItemTitle: threeWay ? null : pick.title,
+    outcomes: pick.options.map((option) => ({
+      label: option.label,
+      price: option.percent / 100,
+      marketId: option.id,
+      slug: option.id,
+      logo: option.logo ?? null,
+    })),
+    teams: pick.options
+      .filter((option) => option.label.trim().toLowerCase() !== "draw")
+      .map((option) => ({
+        name: option.label,
+        logo: option.logo ?? null,
+        abbr: null,
+        color: option.color,
+      })),
+  };
 }
 
 function OptionRow({
@@ -491,6 +688,7 @@ function OptionRow({
   selected,
   disabled,
   onToggle,
+  onTrade,
 }: {
   option: PickOption;
   groupId: string;
@@ -498,6 +696,7 @@ function OptionRow({
   selected: boolean;
   disabled: boolean;
   onToggle: (pick: ComboPick) => void;
+  onTrade?: (option: PickOption) => void;
 }) {
   const blocked = !selected && disabled;
 
@@ -505,8 +704,12 @@ function OptionRow({
     <div className="flex w-full items-start gap-2 overflow-hidden">
       <button
         type="button"
-        aria-label={`${option.label} ${option.percent}%`}
-        className="relative flex h-12 min-w-0 flex-1 items-center justify-between overflow-hidden rounded-xl bg-[rgba(38,38,38,0.6)] pl-3 pr-4 text-left"
+        aria-label={`Trade ${option.label} · ${option.percent}%`}
+        onClick={(event) => {
+          event.stopPropagation();
+          onTrade?.(option);
+        }}
+        className="relative flex h-12 min-w-0 flex-1 items-center justify-between overflow-hidden rounded-full bg-[rgba(38,38,38,0.6)] pl-3 pr-4 text-left"
       >
         <div
           aria-hidden
@@ -613,15 +816,31 @@ function TeamPicksCard({
   selectedIds,
   atLimit,
   onToggle,
+  onOpen,
+  onTrade,
 }: {
   pick: PickCard;
   selectedIds: Set<string>;
   atLimit: boolean;
   onToggle: (pick: ComboPick) => void;
+  onOpen: () => void;
+  onTrade: (option: PickOption) => void;
 }) {
   return (
-    <div className="w-[min(311px,82vw)] shrink-0 rounded-[20px] bg-[rgba(55,55,55,0.7)] p-4 backdrop-blur-md">
-      <p className="mb-3 text-[16px] font-medium text-white">{pick.title}</p>
+    <div
+      role="link"
+      tabIndex={0}
+      aria-label={`Open ${pick.title}`}
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
+      className="w-[min(311px,82vw)] shrink-0 origin-center cursor-pointer rounded-[20px] bg-[rgba(55,55,55,0.7)] p-4 backdrop-blur-md transition-transform duration-150 ease-out motion-safe:active:scale-[0.96] motion-safe:has-[button:active]:scale-100"
+    >
+      <p className="mb-2 text-[16px] font-medium text-white">{pick.title}</p>
       <div className="flex flex-col gap-2">
         {pick.options.map((option) => {
           const selected = selectedIds.has(option.id);
@@ -634,6 +853,7 @@ function TeamPicksCard({
               selected={selected}
               disabled={atLimit && !selected}
               onToggle={onToggle}
+              onTrade={onTrade}
             />
           );
         })}
@@ -1063,20 +1283,25 @@ function BitcoinTargetChart({
   );
 }
 
-function MarketPreview({
+const MarketPreview = memo(function MarketPreview({
   market,
   selectedIds,
   atLimit,
   onToggle,
+  onOpenMarket,
+  onOpenTrade,
 }: {
   market: MarketCard;
   selectedIds: Set<string>;
   atLimit: boolean;
   onToggle: (pick: ComboPick) => void;
+  onOpenMarket: (market: MarketCard, pick: PickCard) => void;
+  onOpenTrade: (market: MarketCard, pick: PickCard, option: PickOption) => void;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [scrubValue, setScrubValue] = useState<number | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const activePick = market.picks[activeIndex] ?? market.picks[0];
   // Price series stays fixed; dashed target + delta follow the active pick.
   const baseCrypto = market.picks[0]?.crypto;
   const chartCrypto =
@@ -1129,7 +1354,7 @@ function MarketPreview({
   }, [market.id, market.picks.length]);
 
   return (
-    <article className="relative h-[min(580px,74vh)] w-full overflow-hidden rounded-[24px] bg-[#131313]">
+    <article className="relative h-[min(580px,74vh)] w-full origin-center overflow-hidden rounded-[24px] bg-[#131313] transition-transform duration-150 ease-out motion-safe:has-[[data-market-open]:active]:scale-[0.96]">
       {market.kind === "sports" ? (
         <>
           {market.picks.map((pick, index) => {
@@ -1186,7 +1411,7 @@ function MarketPreview({
                 const vsTarget = displayPrice - chartCrypto.targetValue;
                 const aboveTarget = vsTarget >= 0;
                 return (
-                  <div className="absolute left-4 top-[77px] w-[220px]">
+                  <div className="pointer-events-none absolute left-4 top-[77px] z-[2] w-[220px]">
                     <p className="text-[40px] font-semibold leading-none tabular-nums text-white">
                       {formatUsd(displayPrice)}
                     </p>
@@ -1228,41 +1453,61 @@ function MarketPreview({
                   </div>
                 );
               })()}
-              <BitcoinTargetChart
-                price={baseCrypto?.priceValue ?? chartCrypto.priceValue}
-                target={chartCrypto.targetValue}
-                targetLabel={chartCrypto.target}
-                scaleTargets={scaleTargets}
-                onScrub={setScrubValue}
-              />
+              <div className="absolute inset-0 z-[2]">
+                <BitcoinTargetChart
+                  price={baseCrypto?.priceValue ?? chartCrypto.priceValue}
+                  target={chartCrypto.targetValue}
+                  targetLabel={chartCrypto.target}
+                  scaleTargets={scaleTargets}
+                  onScrub={setScrubValue}
+                />
+              </div>
             </>
           ) : null}
         </div>
       )}
 
-      <div className="absolute left-4 top-4 z-[1] flex items-center gap-3">
-        <div className="relative size-[49px] shrink-0">
-          <Image
-            src={market.logo}
-            alt=""
-            fill
-            className="object-contain"
-            sizes="49px"
-          />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[24px] font-semibold leading-none text-white">
-            {market.title}
-          </p>
-          {market.kind === "sports" && market.subtitle ? (
-            <p className="mt-0.5 text-[14px] font-medium text-white/80">
-              {market.subtitle}
-            </p>
-          ) : null}
-        </div>
-      </div>
+      {/* Tap media → market page (picks scroller stays above). */}
+      {activePick ? (
+        <button
+          type="button"
+          data-market-open
+          aria-label={`Open ${market.title} · ${activePick.title}`}
+          onClick={() => onOpenMarket(market, activePick)}
+          className="absolute inset-0 z-[1]"
+        />
+      ) : null}
 
-      <div className="absolute inset-x-0 bottom-2.5 z-[1]">
+      {activePick ? (
+        <button
+          type="button"
+          onClick={() => onOpenMarket(market, activePick)}
+          className="absolute left-4 top-4 z-[3] flex items-center gap-3 text-left"
+          aria-label={`Open ${market.title}`}
+        >
+          <div className="relative size-[49px] shrink-0">
+            <Image
+              src={market.logo}
+              alt=""
+              fill
+              className="object-contain"
+              sizes="49px"
+            />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[24px] font-semibold leading-none text-white">
+              {market.title}
+            </p>
+            {market.kind === "sports" && market.subtitle ? (
+              <p className="mt-0.5 text-[14px] font-medium text-white/80">
+                {market.subtitle}
+              </p>
+            ) : null}
+          </div>
+        </button>
+      ) : null}
+
+      <div className="absolute inset-x-0 bottom-2.5 z-[2]">
         <div
           ref={scrollerRef}
           className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-pl-2.5 pr-2.5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -1277,6 +1522,8 @@ function MarketPreview({
                 selectedIds={selectedIds}
                 atLimit={atLimit}
                 onToggle={onToggle}
+                onOpen={() => onOpenMarket(market, pick)}
+                onTrade={(option) => onOpenTrade(market, pick, option)}
               />
             </div>
           ))}
@@ -1284,9 +1531,17 @@ function MarketPreview({
       </div>
     </article>
   );
-}
+});
 
-function FeedHeader() {
+function FeedHeader({
+  balance,
+  onDeposit,
+}: {
+  balance: number;
+  onDeposit: () => void;
+}) {
+  const { whole, cents } = formatBalanceParts(balance);
+
   return (
     <header className="flex items-start justify-between px-5 pt-[calc(env(safe-area-inset-top,0px)+24px)]">
       <div className="flex items-center gap-3">
@@ -1301,8 +1556,8 @@ function FeedHeader() {
         </div>
         <div>
           <p className="text-[24px] font-semibold leading-[1.25] text-white">
-            $0
-            <span className="text-white/40">.00</span>
+            ${whole}
+            <span className="text-white/40">.{cents}</span>
           </p>
           <p className="text-[13px] font-semibold leading-[19.5px] text-[#00d54b]">
             +$0.00(+0%)
@@ -1311,6 +1566,7 @@ function FeedHeader() {
       </div>
       <button
         type="button"
+        onClick={onDeposit}
         className="mt-1 flex h-12 items-center rounded-full bg-white/10 px-[21px] text-[15px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]"
       >
         Deposit
@@ -1334,6 +1590,12 @@ function PicksChip({
     : count === 1
       ? "1 pick"
       : `${count} picks`;
+  const multiplier = useMemo(
+    () => comboMultiplier(picks.map((pick) => pick.percent ?? 50)),
+    [picks],
+  );
+  const showMultiplier = count >= 2;
+  const multiplierLabel = `${multiplier.toFixed(2)}x`;
   const prevCount = useRef(count);
 
   useEffect(() => {
@@ -1389,6 +1651,21 @@ function PicksChip({
             />
           </motion.span>
         ))}
+      </AnimatePresence>
+      <AnimatePresence initial={false} mode="popLayout">
+        {showMultiplier ? (
+          <motion.span
+            key={multiplierLabel}
+            layout
+            initial={{ opacity: 0, scale: 0.85, x: 8 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            exit={{ opacity: 0, scale: 0.85, x: -6 }}
+            transition={{ type: "spring", stiffness: 480, damping: 32, mass: 0.7 }}
+            className="shrink-0 text-[16px] font-semibold tabular-nums text-[#5dd978]"
+          >
+            {multiplierLabel}
+          </motion.span>
+        ) : null}
       </AnimatePresence>
       <span className="inline-flex shrink-0 rotate-180 opacity-80" aria-hidden>
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1461,10 +1738,10 @@ function TabBar({ hidden }: { hidden: boolean }) {
         aria-label="Positions, 0 open"
         className={itemClass}
       >
-        <span className="relative flex h-9 min-w-9 items-center justify-center overflow-hidden rounded-[12px] px-2.5 text-[16px] font-semibold tabular-nums text-white">
+        <span className="relative flex h-9 min-w-9 items-center justify-center overflow-hidden rounded-[8px] px-2.5 text-[16px] font-semibold tabular-nums text-white">
           <span
             aria-hidden
-            className="absolute inset-0 rounded-[12px] bg-white/10 shadow-[inset_0_0_16px_rgba(255,255,255,0.35)]"
+            className="absolute inset-0 rounded-[8px] bg-white/10 shadow-[inset_0_0_16px_rgba(255,255,255,0.35)]"
           />
           <span className="relative z-[1]">0</span>
         </span>
@@ -1506,14 +1783,20 @@ function BottomChrome({
   feedRef,
   picks,
   onOpenCombo,
+  enterDelay = 0,
+  elevated = false,
 }: {
   feedRef: RefObject<HTMLDivElement | null>;
   picks: ComboPick[];
   onOpenCombo: () => void;
+  enterDelay?: number;
+  /** Sit above MarketScreen; hide feed tab bar. */
+  elevated?: boolean;
 }) {
   const [tabHidden, setTabHidden] = useState(false);
   const lastScrollY = useRef(0);
   const hiddenRef = useRef(false);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     const feed = feedRef.current;
@@ -1538,14 +1821,25 @@ function BottomChrome({
     return () => feed.removeEventListener("scroll", onScroll);
   }, [feedRef]);
 
+  const hideChrome = elevated ? false : tabHidden;
+
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 overflow-hidden">
-      {/* Block taps through the blur into market cards underneath. */}
+    <motion.div
+      className={`pointer-events-none absolute inset-x-0 bottom-0 overflow-hidden ${
+        elevated ? "z-[45]" : "z-10"
+      }`}
+      initial={reduceMotion ? false : { opacity: 0, y: 28 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: 0.5,
+        delay: reduceMotion ? 0 : enterDelay,
+        ease: ENTER_EASE,
+      }}
+    >
       <div
         aria-hidden
         className="pointer-events-auto absolute inset-x-0 bottom-0 h-[120px]"
       />
-      {/* Blur sits under chrome (override .api-progressive-blur z-index). */}
       <div
         aria-hidden
         className="api-progressive-blur !z-0 h-[120px]"
@@ -1561,84 +1855,211 @@ function BottomChrome({
         className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-28 bg-gradient-to-t from-black/45 via-black/15 to-transparent"
       />
       <div className="pointer-events-auto relative z-[1] flex flex-col items-center px-7 pb-[max(28px,env(safe-area-inset-bottom,0px))]">
-        {/* Drop into the tab bar slot when the bar hides — transform only. */}
         <motion.div
           initial={false}
-          animate={{ y: tabHidden ? 80 : 0 }}
+          animate={{ y: hideChrome ? 80 : 0 }}
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-          className="will-change-transform"
         >
           <PicksChip picks={picks} onOpen={onOpenCombo} />
         </motion.div>
-        <TabBar hidden={tabHidden} />
+        {elevated ? null : <TabBar hidden={tabHidden} />}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 export default function MainFeed() {
   const [comboPicks, setComboPicks] = useState<ComboPick[]>([]);
   const [comboOpen, setComboOpen] = useState(false);
+  const [depositOpen, setDepositOpen] = useState(false);
+  const [openMarket, setOpenMarket] = useState<{
+    market: MarketCard;
+    pick: PickCard;
+  } | null>(null);
+  const [tradeFlow, setTradeFlow] = useState<{
+    market: MarketCard;
+    pick: PickCard;
+    outcome: string;
+  } | null>(null);
+  const [extraDepositUsd, setExtraDepositUsd] = useState(0);
   const feedRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
   const selectedIds = useMemo(
     () => new Set(comboPicks.map((pick) => pick.id)),
     [comboPicks],
   );
   const atLimit = comboPicks.length >= MAX_COMBO_PICKS;
+  const balance = extraDepositUsd;
 
-  const togglePick = (pick: ComboPick) => {
-    setComboPicks((prev) => {
-      const exists = prev.some((item) => item.id === pick.id);
-      if (exists) {
-        return prev.filter((item) => item.id !== pick.id);
-      }
-      // Same game card: swap to the newly chosen side.
-      const withoutGroup = prev.filter((item) => item.groupId !== pick.groupId);
-      if (withoutGroup.length >= MAX_COMBO_PICKS) return prev;
-      return [...withoutGroup, pick];
+  useEffect(() => {
+    const deposits = Number(storageGet(DEPOSITS_KEY) ?? 0);
+    if (Number.isFinite(deposits) && deposits > 0) {
+      setExtraDepositUsd(deposits);
+    }
+  }, []);
+
+  const comboPicksRef = useRef(comboPicks);
+  comboPicksRef.current = comboPicks;
+
+  const togglePick = useCallback((pick: ComboPick) => {
+    const prev = comboPicksRef.current;
+    const exists = prev.some((item) => item.id === pick.id);
+    if (exists) {
+      const updated = prev.filter((item) => item.id !== pick.id);
+      comboPicksRef.current = updated;
+      setComboPicks(updated);
+      playComboRemove(updated.length);
+      return;
+    }
+    // Same game card: swap to the newly chosen side.
+    const withoutGroup = prev.filter((item) => item.groupId !== pick.groupId);
+    if (withoutGroup.length >= MAX_COMBO_PICKS) {
+      playComboFull();
+      return;
+    }
+    const updated = [...withoutGroup, pick];
+    comboPicksRef.current = updated;
+    setComboPicks(updated);
+    playComboAdd(updated.length);
+  }, []);
+
+  const handleDepositComplete = useCallback((amountUsd: number) => {
+    setExtraDepositUsd((prev) => {
+      const next = prev + amountUsd;
+      storageSet(DEPOSITS_KEY, String(next));
+      return next;
     });
-  };
+  }, []);
+
+  const openCombo = useCallback(() => setComboOpen(true), []);
+  const openDeposit = useCallback(() => setDepositOpen(true), []);
+  const openMarketPage = useCallback((market: MarketCard, pick: PickCard) => {
+    setOpenMarket({ market, pick });
+  }, []);
+  const closeMarketPage = useCallback(() => setOpenMarket(null), []);
+  const openTrade = useCallback(
+    (market: MarketCard, pick: PickCard, option: PickOption | MarketScreenOption) => {
+      setTradeFlow({ market, pick, outcome: option.label });
+    },
+    [],
+  );
+  const closeTrade = useCallback(() => setTradeFlow(null), []);
+  const tradeMarket = useMemo(
+    () =>
+      tradeFlow ? toTradeMarket(tradeFlow.market, tradeFlow.pick) : null,
+    [tradeFlow],
+  );
 
   return (
     <SportsVideoLockProvider>
       <div
         className={`relative h-full w-full bg-black motion-safe:[&_button:not([data-combo-chip])]:origin-center motion-safe:[&_button:not([data-combo-chip])]:transition-transform motion-safe:[&_button:not([data-combo-chip])]:duration-150 motion-safe:[&_button:not([data-combo-chip])]:ease-out motion-safe:[&_button:not([data-combo-chip]):active]:scale-[0.96] ${instrumentSans.className}`}
       >
-        <div
+        <motion.div
           ref={feedRef}
           className="h-full overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           style={{
             paddingBottom: "calc(144px + env(safe-area-inset-bottom, 0px))",
           }}
+          initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, ease: ENTER_EASE }}
         >
-          <FeedHeader />
+          <FeedHeader balance={balance} onDeposit={openDeposit} />
           <div className="mt-6 flex flex-col gap-6 px-2">
-            {MARKETS.map((market) => (
-              <MarketPreview
+            {MARKETS.map((market, index) => (
+              <motion.div
                 key={market.id}
-                market={market}
-                selectedIds={selectedIds}
-                atLimit={atLimit}
-                onToggle={togglePick}
-              />
+                initial={reduceMotion ? false : { opacity: 0, y: 22 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.5,
+                  delay: reduceMotion ? 0 : 0.08 + index * 0.07,
+                  ease: ENTER_EASE,
+                }}
+              >
+                <MarketPreview
+                  market={market}
+                  selectedIds={selectedIds}
+                  atLimit={atLimit}
+                  onToggle={togglePick}
+                  onOpenMarket={openMarketPage}
+                  onOpenTrade={openTrade}
+                />
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         <BottomChrome
           feedRef={feedRef}
           picks={comboPicks}
-          onOpenCombo={() => setComboOpen(true)}
+          onOpenCombo={openCombo}
+          enterDelay={0.22}
+          elevated={Boolean(openMarket)}
         />
         <ComboSheet
           open={comboOpen}
           picks={comboPicks}
           onOpenChange={setComboOpen}
-          onRemove={(id) =>
-            setComboPicks((prev) => prev.filter((pick) => pick.id !== id))
-          }
-          onClear={() => setComboPicks([])}
+          onRemove={(id) => {
+            const updated = comboPicksRef.current.filter((pick) => pick.id !== id);
+            comboPicksRef.current = updated;
+            setComboPicks(updated);
+            playComboRemove(updated.length);
+          }}
+          onClear={(opts) => {
+            comboPicksRef.current = [];
+            setComboPicks([]);
+            if (!opts?.silent) playComboRemove(0);
+          }}
         />
+        {depositOpen ? (
+          <DepositModal
+            balance={balance}
+            wallet=""
+            onClose={() => setDepositOpen(false)}
+            onComplete={handleDepositComplete}
+          />
+        ) : null}
+        {openMarket ? (
+          <MarketScreen
+            market={openMarket.market}
+            pick={openMarket.pick}
+            selectedIds={selectedIds}
+            atLimit={atLimit}
+            onBack={closeMarketPage}
+            onTrade={(option) =>
+              openTrade(openMarket.market, openMarket.pick, option)
+            }
+            onToggle={(option) =>
+              togglePick({
+                id: option.id,
+                label: option.label,
+                logo: option.logo,
+                mark: option.mark,
+                groupId: openMarket.pick.id,
+                subtitle: openMarket.pick.title,
+                percent: option.percent,
+              })
+            }
+          />
+        ) : null}
+        {tradeFlow && tradeMarket ? (
+          <div className="absolute inset-0 z-50">
+            <TradeFlowModal
+              market={tradeMarket}
+              initialOutcome={tradeFlow.outcome}
+              wallet="local"
+              handle="you"
+              referralCode="worm"
+              maxAmount={Math.max(100, balance)}
+              onClose={closeTrade}
+              onComplete={() => {}}
+              onShare={() => {}}
+            />
+          </div>
+        ) : null}
       </div>
     </SportsVideoLockProvider>
   );
