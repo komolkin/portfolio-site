@@ -1354,7 +1354,7 @@ function PicksChip({
         layout: { type: "spring", stiffness: 420, damping: 36, mass: 0.75 },
         scale: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
       }}
-      className="inline-flex min-h-12 origin-center items-center justify-center gap-3.5 overflow-hidden rounded-full bg-[rgba(20,20,20,0.8)] px-6 py-3.5 backdrop-blur-[10px]"
+      className="inline-flex min-h-12 origin-center items-center justify-center gap-3.5 overflow-hidden rounded-full bg-[rgba(20,20,20,0.8)] px-6 py-3.5 ring-1 ring-white/[0.08] backdrop-blur-[10px]"
     >
       <span className="relative inline-grid text-[16px] font-medium tabular-nums text-white">
         <AnimatePresence initial={false} mode="popLayout">
