@@ -359,7 +359,7 @@ export function ComboSheet({
                           key={index}
                           className={`w-[3px] rounded-full transition-[height,background-color] duration-300 ease-out ${
                             index < picks.length
-                              ? "h-[9px] bg-[#8481fb]"
+                              ? "h-[9px] bg-white"
                               : "h-1 bg-white/20"
                           }`}
                         />
@@ -446,8 +446,10 @@ export function ComboSheet({
                       if (!canStake) return;
                       setStep("amount");
                     }}
-                    className={`h-11 w-full rounded-full text-sm font-semibold text-white transition-transform duration-150 ease-out active:scale-[0.98] ${
-                      canStake ? "bg-[#8481fb]" : "bg-[#8481fb]/60"
+                    className={`h-11 w-full rounded-full text-sm font-semibold transition-transform duration-150 ease-out active:scale-[0.98] ${
+                      canStake
+                        ? "bg-white text-black"
+                        : "bg-white/60 text-black/60"
                     }`}
                   >
                     {picks.length === 1
