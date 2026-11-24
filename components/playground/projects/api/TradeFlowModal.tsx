@@ -12,7 +12,7 @@ import { GifThumb, TakeComposer } from "./richMessage";
 import { AmountKeypad, SheetPager, applyAmountKey, ui } from "./ui";
 
 const CLOSE_THRESHOLD_PX = 72;
-const QUICK_AMOUNTS = [5, 25] as const;
+const QUICK_AMOUNTS = [5, 25, 100] as const;
 
 const CONFETTI_COLORS_LIGHT = [
   "#1DB954",
@@ -802,7 +802,7 @@ export default function TradeFlowModal({
         }`}
         style={{
           height: light
-            ? "88%"
+            ? "84%"
             : success
               ? "100%"
               : step === "amount"
@@ -862,7 +862,7 @@ export default function TradeFlowModal({
             {step === "amount" && (
               <div
                 className={`flex flex-col px-5 pb-[max(20px,env(safe-area-inset-bottom,0px))] ${
-                  light ? "h-full min-h-0 justify-between" : ""
+                  light ? "h-full min-h-0" : ""
                 }`}
               >
                 <div className="flex shrink-0 flex-col items-center pt-1 text-center">
@@ -900,9 +900,10 @@ export default function TradeFlowModal({
                   </p>
                 </div>
 
-                <div className="flex shrink-0 flex-col items-center py-8">
+                <div className="min-h-0 flex-1" aria-hidden />
+                <div className="flex shrink-0 flex-col items-center py-1">
                   <p
-                    className={`inline-flex items-baseline text-[56px] font-semibold leading-none tracking-tight ${ink} ${appFont}`}
+                    className={`inline-flex items-baseline justify-center text-[56px] font-semibold leading-none tracking-tight ${ink} ${appFont}`}
                     aria-live="polite"
                   >
                     $
@@ -926,62 +927,64 @@ export default function TradeFlowModal({
                     </span>
                   </p>
                 </div>
+                <div className="min-h-0 flex-1" aria-hidden />
 
-                <div className="grid shrink-0 grid-cols-3 gap-2">
-                  {QUICK_AMOUNTS.map((value) => (
+                <div className="flex shrink-0 flex-col gap-2">
+                  <div className="grid shrink-0 grid-cols-4 gap-2">
+                    {QUICK_AMOUNTS.map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() =>
+                          setAmountDigits(String(Math.min(value, amountCap)))
+                        }
+                        className={`h-10 rounded-full text-[13px] font-semibold transition-colors ${
+                          light
+                            ? "bg-black/[0.05] text-black hover:bg-black/[0.08]"
+                            : "bg-white/[0.08] text-white hover:bg-white/[0.12]"
+                        }`}
+                      >
+                        ${value}
+                      </button>
+                    ))}
                     <button
-                      key={value}
                       type="button"
-                      onClick={() =>
-                        setAmountDigits(String(Math.min(value, amountCap)))
-                      }
+                      onClick={() => setAmountDigits(String(amountCap))}
                       className={`h-10 rounded-full text-[13px] font-semibold transition-colors ${
                         light
                           ? "bg-black/[0.05] text-black hover:bg-black/[0.08]"
                           : "bg-white/[0.08] text-white hover:bg-white/[0.12]"
                       }`}
                     >
-                      ${value}
+                      MAX
                     </button>
-                  ))}
+                  </div>
+
+                  <AmountKeypad
+                    onKey={pressKey}
+                    tone={light ? "light" : "dark"}
+                  />
+
                   <button
                     type="button"
-                    onClick={() => setAmountDigits(String(amountCap))}
-                    className={`h-10 rounded-full text-[13px] font-semibold transition-colors ${
+                    disabled={!amountValid}
+                    onClick={() => {
+                      if (light) submitTrade();
+                      else goTo("confirm");
+                    }}
+                    className={`flex h-[52px] w-full shrink-0 items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,colors] duration-150 ease-out active:scale-[0.94] disabled:active:scale-100 ${
                       light
-                        ? "bg-black/[0.05] text-black hover:bg-black/[0.08]"
-                        : "bg-white/[0.08] text-white hover:bg-white/[0.12]"
+                        ? "bg-black text-white hover:bg-black/90 disabled:bg-black/[0.06] disabled:text-black/30"
+                        : "bg-white text-black hover:bg-white/90 disabled:bg-white/[0.08] disabled:text-white/40"
                     }`}
                   >
-                    MAX
+                    {amountValid
+                      ? light
+                        ? "Confirm"
+                        : "Continue"
+                      : "Enter amount"}
                   </button>
                 </div>
-
-                <AmountKeypad
-                  onKey={pressKey}
-                  className="mt-2"
-                  tone={light ? "light" : "dark"}
-                />
-
-                <button
-                  type="button"
-                  disabled={!amountValid}
-                  onClick={() => {
-                    if (light) submitTrade();
-                    else goTo("confirm");
-                  }}
-                  className={`mt-3 w-full shrink-0 rounded-full py-4 text-[16px] font-semibold transition-colors ${
-                    light
-                      ? "bg-black text-white hover:bg-black/90 disabled:bg-black/[0.06] disabled:text-black/30"
-                      : "bg-white text-black hover:bg-white/90 disabled:bg-white/[0.08] disabled:text-white/40"
-                  }`}
-                >
-                  {amountValid
-                    ? light
-                      ? "Confirm"
-                      : "Continue"
-                    : "Enter amount"}
-                </button>
               </div>
             )}
 
@@ -1201,7 +1204,7 @@ export default function TradeFlowModal({
                     <button
                       type="button"
                       onClick={() => void nativeShare()}
-                      className={`mt-5 w-full rounded-full py-4 text-[16px] font-semibold transition-colors ${
+                      className={`mt-5 flex h-[52px] w-full items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,colors] duration-150 ease-out active:scale-[0.94] ${
                         light
                           ? "bg-black text-white hover:bg-black/90"
                           : "bg-white text-black hover:bg-white/90"

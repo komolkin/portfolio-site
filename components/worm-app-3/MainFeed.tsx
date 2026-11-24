@@ -23,6 +23,7 @@ import {
   playComboFull,
   playComboRemove,
 } from "@/lib/combo-sound";
+import { hapticNudge, hapticStep, hapticSuccess, hapticTap } from "@/lib/haptics";
 import type { PolymarketMarketData } from "@/lib/polymarketscan";
 import TradeFlowModal from "@/components/playground/projects/api/TradeFlowModal";
 import {
@@ -35,7 +36,7 @@ const BG = "#E8E8E8";
 const YES = "#1DB954";
 const NO = "#FF3B5C";
 
-const MAX_BET = 500;
+const MAX_BET = 100;
 const MAX_DRAG_PX = 168;
 const COMBO_OVERDRAG_PX = 72;
 const COMBO_ARM_PX = MAX_DRAG_PX + 28;
@@ -499,16 +500,15 @@ function BetReveal({
       }`}
       style={{ opacity, width }}
     >
-      {/* Stretch only the fill; keep the amount centered in the visible gap */}
       <motion.div
         className={`absolute inset-y-0 ${
-          isYes ? "left-0 origin-left" : "right-0 origin-right"
+          isYes
+            ? "left-0 origin-left rounded-l-[28px]"
+            : "right-0 origin-right rounded-r-[28px]"
         }`}
         style={{
-          width: "calc(100% + 8px)",
-          background: `linear-gradient(${
-            isYes ? "90deg" : "270deg"
-          }, ${accent} 0%, ${accent}ee 55%, ${accent}99 100%)`,
+          width: "100%",
+          backgroundColor: accent,
           scaleX,
         }}
       />
@@ -615,9 +615,12 @@ function MarketCard({
   const yesInCombo = comboOutcomes.has("Yes");
   const noInCombo = comboOutcomes.has("No");
   const x = useMotionValue(0);
+  const committedRef = useRef(false);
+  const lastAmountRef = useRef(0);
+  const lastComboArmedRef = useRef(false);
+
   const yesOpacity = useTransform(x, [0, 20, 48], [0, 0.7, 1]);
   const noOpacity = useTransform(x, [0, -20, -48], [0, 0.7, 1]);
-  // Match the visible gap exactly so the amount stays centered while dragging.
   const yesWidth = useTransform(x, (v) => Math.max(0, v));
   const noWidth = useTransform(x, (v) => Math.max(0, -v));
   const yesScaleX = useTransform(
@@ -630,16 +633,27 @@ function MarketCard({
     [0, -MAX_DRAG_PX * 0.55, -MAX_DRAG_PX, -(MAX_DRAG_PX + COMBO_OVERDRAG_PX)],
     [0.92, 1, 1.06, 1.18],
   );
-  const committedRef = useRef(false);
 
   useMotionValueEvent(x, "change", (latest) => {
-    setDragAmount(amountFromOffset(latest));
+    const nextAmount = amountFromOffset(latest);
+    const nextCombo = isComboZone(latest);
+    if (nextAmount !== lastAmountRef.current) {
+      if (nextAmount > 0) hapticStep();
+      lastAmountRef.current = nextAmount;
+    }
+    if (nextCombo !== lastComboArmedRef.current) {
+      if (nextCombo) hapticNudge();
+      lastComboArmedRef.current = nextCombo;
+    }
+    setDragAmount(nextAmount);
     setDragOutcome(outcomeFromOffset(latest));
-    setComboArmed(isComboZone(latest));
+    setComboArmed(nextCombo);
   });
 
   const snapBack = useCallback(() => {
     void animate(x, 0, { type: "spring", stiffness: 420, damping: 36 });
+    lastAmountRef.current = 0;
+    lastComboArmedRef.current = false;
     setDragAmount(0);
     setDragOutcome(null);
     setComboArmed(false);
@@ -699,7 +713,10 @@ function MarketCard({
           const combo = isComboZone(offset);
           if (combo && outcome && !committedRef.current) {
             committedRef.current = true;
+            hapticSuccess();
             void animate(x, 0, { type: "spring", stiffness: 380, damping: 34 });
+            lastAmountRef.current = 0;
+            lastComboArmedRef.current = false;
             setDragAmount(0);
             setDragOutcome(null);
             setComboArmed(false);
@@ -717,8 +734,11 @@ function MarketCard({
             !committedRef.current
           ) {
             committedRef.current = true;
+            hapticSuccess();
             const finalAmount = Math.max(COMMIT_AMOUNT, amount);
             void animate(x, 0, { type: "spring", stiffness: 380, damping: 34 });
+            lastAmountRef.current = 0;
+            lastComboArmedRef.current = false;
             setDragAmount(0);
             setDragOutcome(null);
             setComboArmed(false);
@@ -760,16 +780,21 @@ function MarketCard({
           <button
             type="button"
             onPointerDown={(event) => event.stopPropagation()}
-            onClick={() => onCommitTrade(market, "Yes", 0)}
+            onClick={() => {
+              hapticTap();
+              onCommitTrade(market, "Yes", 0);
+            }}
             className={`flex h-[52px] origin-center items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
-              dragOutcome === "Yes"
-                ? "text-white"
-                : dragOutcome === "No"
-                  ? "bg-black/[0.05] text-black/35"
+              dragOutcome === "No"
+                ? "bg-black/[0.05] text-black/35"
+                : yesInCombo || dragOutcome === "Yes"
+                  ? "text-white"
                   : "bg-black/[0.06] text-black"
             }`}
             style={
-              dragOutcome === "Yes" ? { backgroundColor: YES } : undefined
+              yesInCombo || dragOutcome === "Yes"
+                ? { backgroundColor: YES }
+                : undefined
             }
           >
             Yes {market.yesPercent}%
@@ -777,16 +802,21 @@ function MarketCard({
           <button
             type="button"
             onPointerDown={(event) => event.stopPropagation()}
-            onClick={() => onCommitTrade(market, "No", 0)}
+            onClick={() => {
+              hapticTap();
+              onCommitTrade(market, "No", 0);
+            }}
             className={`flex h-[52px] origin-center items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
-              dragOutcome === "No"
-                ? "text-white"
-                : dragOutcome === "Yes"
-                  ? "bg-black/[0.05] text-black/35"
+              dragOutcome === "Yes"
+                ? "bg-black/[0.05] text-black/35"
+                : noInCombo || dragOutcome === "No"
+                  ? "text-white"
                   : "bg-black/[0.06] text-black"
             }`}
             style={
-              dragOutcome === "No" ? { backgroundColor: NO } : undefined
+              noInCombo || dragOutcome === "No"
+                ? { backgroundColor: NO }
+                : undefined
             }
           >
             No {noPercent}%
@@ -901,7 +931,10 @@ function CategoryTabs({
               type="button"
               role="tab"
               aria-selected={selected}
-              onClick={() => onChange(category.id)}
+              onClick={() => {
+                hapticTap();
+                onChange(category.id);
+              }}
               className={`flex h-[34px] shrink-0 items-center gap-1.5 rounded-full pl-1.5 pr-3 transition-[box-shadow,background-color,transform] duration-200 ease-out active:scale-[0.98] ${
                 selected
                   ? "bg-[#E4E4E6] shadow-[inset_0_1px_3px_rgba(0,0,0,0.14),inset_0_-0.5px_0_rgba(255,255,255,0.65)]"
@@ -958,7 +991,10 @@ function PicksChip({
       type="button"
       data-combo-chip
       layout
-      onClick={onOpen}
+      onClick={() => {
+        hapticTap();
+        onOpen();
+      }}
       whileTap={{ scale: 0.96 }}
       initial={{ opacity: 0, y: 12, scale: 0.96 }}
       animate={

@@ -34,6 +34,7 @@
     "react-dom": "^18.3.1",
     "simple-liquid-glass": "^4.1.0",
     "three": "^0.169.0",
+    "web-haptics": "^0.0.6",
     "zod": "^4.2.1"
   },
   "devDependencies": {

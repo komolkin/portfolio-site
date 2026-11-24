@@ -10,6 +10,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { allo } from "@/lib/fonts";
 import { playComboPlace } from "@/lib/combo-sound";
+import { hapticSuccess, hapticTap } from "@/lib/haptics";
 
 export type ComboSheetPick = {
   id: string;
@@ -28,6 +29,11 @@ const AMOUNT_CHIPS = [5, 10, 25, 50] as const;
 const DISMISS_OFFSET_PX = 100;
 const DISMISS_VELOCITY = 650;
 const GREEN = "#1DB954";
+/** Match MarketCard Yes/No — primary full-width CTA */
+const PRIMARY_BTN =
+  "flex h-[52px] w-full items-center justify-center rounded-[18px] text-[16px] font-semibold transition-transform duration-150 ease-out active:scale-[0.94]";
+const SECONDARY_BTN =
+  "w-full py-2.5 text-[15px] font-semibold text-black/40 transition-transform duration-150 ease-out active:scale-[0.98]";
 
 export function comboMultiplier(percents: number[]) {
   if (!percents.length) return 0;
@@ -240,20 +246,24 @@ export function ComboSheet({
                   </div>
                   <button
                     type="button"
-                    onClick={() => void share()}
-                    className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-black text-sm font-semibold text-white transition-transform duration-150 ease-out active:scale-[0.98]"
+                    onClick={() => {
+                      hapticTap();
+                      void share();
+                    }}
+                    className={`${PRIMARY_BTN} gap-2 bg-black text-white`}
                   >
                     {copied ? "Copied" : "Share"}
                   </button>
                   <button
                     type="button"
                     onClick={() => {
+                      hapticTap();
                       onClear({ silent: true });
                       setStep("build");
                       setStake(10);
                       onOpenChange(false);
                     }}
-                    className="h-8 w-full rounded-full text-sm font-semibold text-black/45 transition-transform duration-150 ease-out active:scale-[0.98]"
+                    className={SECONDARY_BTN}
                   >
                     New combo
                   </button>
@@ -322,7 +332,10 @@ export function ComboSheet({
                         <button
                           key={chip}
                           type="button"
-                          onClick={() => setStake((value) => value + chip)}
+                          onClick={() => {
+                            hapticTap();
+                            setStake((value) => value + chip);
+                          }}
                           className="rounded-full bg-black/[0.06] px-3.5 py-2 text-sm font-semibold text-black transition-transform duration-150 ease-out active:scale-[0.98]"
                         >
                           +${chip}
@@ -330,7 +343,10 @@ export function ComboSheet({
                       ))}
                       <button
                         type="button"
-                        onClick={() => setStake(100)}
+                        onClick={() => {
+                          hapticTap();
+                          setStake(100);
+                        }}
                         className="rounded-full bg-black/[0.06] px-3.5 py-2 text-sm font-semibold text-black transition-transform duration-150 ease-out active:scale-[0.98]"
                       >
                         Max
@@ -340,10 +356,11 @@ export function ComboSheet({
                       type="button"
                       disabled={stake <= 0}
                       onClick={() => {
+                        hapticSuccess();
                         playComboPlace();
                         setStep("success");
                       }}
-                      className={`h-11 w-full rounded-full text-sm font-semibold text-white transition-transform duration-150 ease-out active:scale-[0.98] disabled:active:scale-100 ${
+                      className={`${PRIMARY_BTN} text-white disabled:active:scale-100 ${
                         stake > 0 ? "bg-black" : "bg-black/40"
                       }`}
                     >
@@ -414,7 +431,10 @@ export function ComboSheet({
                           <button
                             type="button"
                             aria-label={`Remove ${pick.label}`}
-                            onClick={() => onRemove(pick.id)}
+                            onClick={() => {
+                              hapticTap();
+                              onRemove(pick.id);
+                            }}
                             className="grid size-6 shrink-0 place-items-center rounded-full bg-black/[0.06] text-black/55"
                           >
                             <svg
@@ -456,9 +476,10 @@ export function ComboSheet({
                     type="button"
                     onClick={() => {
                       if (!canStake) return;
+                      hapticTap();
                       setStep("amount");
                     }}
-                    className={`h-11 w-full rounded-full text-sm font-semibold transition-transform duration-150 ease-out active:scale-[0.98] ${
+                    className={`${PRIMARY_BTN} ${
                       canStake
                         ? "bg-black text-white"
                         : "bg-black/[0.06] text-black/40"
@@ -472,10 +493,11 @@ export function ComboSheet({
                     <button
                       type="button"
                       onClick={() => {
+                        hapticTap();
                         onClear();
                         onOpenChange(false);
                       }}
-                      className="mt-2 h-11 w-full rounded-full text-sm font-semibold text-black/40 transition-transform duration-150 ease-out active:scale-[0.98]"
+                      className={`mt-1 ${SECONDARY_BTN}`}
                     >
                       Reset
                     </button>
