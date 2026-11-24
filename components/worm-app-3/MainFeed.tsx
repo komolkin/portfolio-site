@@ -1878,14 +1878,14 @@ function PicksChip({
         y: { type: "spring", stiffness: 420, damping: 34 },
         scale: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
       }}
-      className="inline-flex min-h-12 origin-center items-center justify-center gap-3 overflow-hidden rounded-full bg-white/85 px-5 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.12)] ring-1 ring-black/[0.04] backdrop-blur-[22px]"
+      className="inline-flex min-h-12 origin-center items-center justify-center gap-3 overflow-hidden rounded-full bg-black px-5 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.28)] ring-1 ring-white/10"
     >
       <TextMorph
         as="span"
         numbers
         duration={320}
         ease={{ stiffness: 420, damping: 36, mass: 0.75 }}
-        className="text-[15px] font-semibold tabular-nums text-black"
+        className="text-[15px] font-semibold tabular-nums text-white"
       >
         {label}
       </TextMorph>
@@ -1904,7 +1904,7 @@ function PicksChip({
                 damping: 30,
                 mass: 0.65,
               }}
-              className={`relative inline-flex size-6 shrink-0 overflow-hidden rounded-[7px] bg-black/[0.06] ring-2 ring-white ${
+              className={`relative inline-flex size-6 shrink-0 overflow-hidden rounded-[7px] bg-white/10 ring-2 ring-black ${
                 index === 0 ? "" : "-ml-2"
               }`}
             >
@@ -1917,7 +1917,7 @@ function PicksChip({
                   className="size-6 object-cover"
                 />
               ) : (
-                <span className="grid size-6 place-items-center text-[9px] font-bold text-black/55">
+                <span className="grid size-6 place-items-center text-[9px] font-bold text-white/55">
                   {(pick.mark ?? pick.label).slice(0, 2).toUpperCase()}
                 </span>
               )}
@@ -1944,7 +1944,7 @@ function PicksChip({
           alt=""
           width={10}
           height={5}
-          className="h-1.5 w-2.5 invert"
+          className="h-1.5 w-2.5"
         />
       </span>
     </motion.button>
