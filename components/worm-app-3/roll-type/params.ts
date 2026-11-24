@@ -10,7 +10,7 @@ export type Phrases = readonly Phrase[];
 
 export const SCENE_W = 1080;
 export const SCENE_H = 608;
-export const CAP = 102;
+export const CAP = 86;
 export const BASELINES = [292, 421] as const;
 export const TOP_LINE = 94;
 export const BOTTOM_LINE = 493;
