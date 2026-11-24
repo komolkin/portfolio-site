@@ -58,10 +58,10 @@ const SIZE_DELTA_EXIT_MS = 480;
 const LIVE_PERCENT_HIGH_MIN = 75;
 const LIVE_PERCENT_HIGH_MAX = 88;
 const LIVE_PERCENT_BAND = 5;
-const LIVE_PERCENT_TICK_MS = 9000;
-/** Most ticks are no-ops so price moves feel rare. */
-const LIVE_PERCENT_MOVE_CHANCE = 0.1;
-const LIVE_PERCENT_STEP = 0.65;
+const LIVE_PERCENT_TICK_MS = 3000;
+/** ±1–2pp each tick so rounded % / cents visibly move. */
+const LIVE_PERCENT_STEP_MIN = 1;
+const LIVE_PERCENT_STEP_MAX = 2.2;
 const AMOUNT_FONT_MIN = 36;
 const AMOUNT_FONT_MAX = 58;
 const MAX_COMBO_PICKS = 8;
@@ -1188,10 +1188,23 @@ function MarketCard({
   useEffect(() => {
     if (!hasPosition) return;
     const id = window.setInterval(() => {
-      if (Math.random() > LIVE_PERCENT_MOVE_CHANCE) return;
       setLivePositionPercent((prev) => {
-        const step = (Math.random() - 0.5) * LIVE_PERCENT_STEP * 2;
-        return clampLivePercent(prev + step, positionPercent);
+        const magnitude =
+          LIVE_PERCENT_STEP_MIN +
+          Math.random() * (LIVE_PERCENT_STEP_MAX - LIVE_PERCENT_STEP_MIN);
+        const direction = Math.random() < 0.5 ? -1 : 1;
+        let next = clampLivePercent(
+          prev + direction * magnitude,
+          positionPercent,
+        );
+        // Bounce off band edges so we don't stall on the same rounded %.
+        if (Math.round(next) === Math.round(prev)) {
+          next = clampLivePercent(
+            prev - direction * magnitude,
+            positionPercent,
+          );
+        }
+        return next;
       });
     }, LIVE_PERCENT_TICK_MS);
     return () => window.clearInterval(id);
