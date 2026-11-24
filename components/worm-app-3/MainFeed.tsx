@@ -80,32 +80,32 @@ const FEED_CATEGORIES: FeedCategory[] = [
   {
     id: "trending",
     label: "Trending",
-    icon: "/worm-app-3/categories/arrow.png",
+    icon: "/worm-app-3/categories/arrow.png?v=3",
   },
   {
     id: "sports",
     label: "Sports",
-    icon: "/worm-app-3/categories/soccer.png",
+    icon: "/worm-app-3/categories/soccer.png?v=3",
   },
   {
     id: "crypto",
     label: "Crypto",
-    icon: "/worm-app-3/categories/cash.png",
+    icon: "/worm-app-3/categories/cash.png?v=3",
   },
   {
     id: "culture",
     label: "Culture",
-    icon: "/worm-app-3/categories/alien.png",
+    icon: "/worm-app-3/categories/alien.png?v=3",
   },
   {
     id: "tech",
     label: "Tech",
-    icon: "/worm-app-3/categories/crystal-a.png",
+    icon: "/worm-app-3/categories/crystal-a.png?v=3",
   },
   {
     id: "politics",
     label: "Politics",
-    icon: "/worm-app-3/categories/flag-r.png",
+    icon: "/worm-app-3/categories/flag-r.png?v=3",
   },
 ];
 
@@ -848,7 +848,7 @@ function MarketCard({
         }}
         className={`relative touch-pan-y overflow-hidden rounded-[28px] ${
           market.video
-            ? "flex min-h-[420px] flex-col bg-black px-5 pb-6 pt-5 text-white"
+            ? "flex min-h-[504px] flex-col bg-black px-5 pb-6 pt-5 text-white"
             : "bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
         } ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
       >
@@ -1109,8 +1109,9 @@ function CategoryTabs({
                 <Image
                   src={category.icon}
                   alt=""
-                  width={22}
-                  height={22}
+                  width={44}
+                  height={44}
+                  unoptimized
                   className="size-[22px] object-contain"
                   draggable={false}
                 />
@@ -1333,16 +1334,23 @@ function BottomNav({
           />
         </svg>
       </button>
-      <button type="button" aria-label="Profile" className={item}>
-        <span className="relative size-9 overflow-hidden rounded-full bg-gradient-to-br from-amber-300 to-rose-500">
-          <Image
-            src="/worm-app-3/logos/avatar.png"
-            alt=""
-            fill
-            className="object-cover"
-            sizes="36px"
+      <button type="button" aria-label="Profile" className={`${item} text-black/45`}>
+        <svg viewBox="0 0 24 24" width={20} height={20} fill="none" aria-hidden>
+          <path
+            d="M18 21v-2a4 4 0 0 0-4-4h-4a4 4 0 0 0-4 4v2"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           />
-        </span>
+          <circle
+            cx="12"
+            cy="7"
+            r="4"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+        </svg>
       </button>
     </motion.nav>
   );
