@@ -768,21 +768,47 @@ export default function TradeFlowModal({
     openShare();
   };
 
+  const sheetScrollRef = useRef<HTMLDivElement>(null);
+  const pendingSheetDragRef = useRef(false);
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest("button, input, textarea")) return;
-    setIsDragging(true);
+    const target = e.target as HTMLElement;
+    if (target.closest("button, input, textarea, a, [data-no-sheet-drag]")) {
+      pendingSheetDragRef.current = false;
+      return;
+    }
+    const scroller =
+      target.closest("[data-sheet-scroll]") ?? sheetScrollRef.current;
+    if (scroller instanceof HTMLElement && scroller.scrollTop > 0) {
+      pendingSheetDragRef.current = false;
+      return;
+    }
+    pendingSheetDragRef.current = true;
     dragStartY.current = e.clientY;
     dragStartOffset.current = drawerOffset;
-    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
-    const delta = e.clientY - dragStartY.current;
-    setDrawerOffset(Math.max(0, dragStartOffset.current + delta));
+    if (!isDragging) {
+      if (!pendingSheetDragRef.current) return;
+      const delta = e.clientY - dragStartY.current;
+      if (delta < -6) {
+        pendingSheetDragRef.current = false;
+        return;
+      }
+      if (delta <= 6) return;
+      setIsDragging(true);
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+    const next = Math.max(
+      0,
+      dragStartOffset.current + (e.clientY - dragStartY.current),
+    );
+    setDrawerOffset(next);
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    pendingSheetDragRef.current = false;
     if (!isDragging) return;
     e.currentTarget.releasePointerCapture(e.pointerId);
     setIsDragging(false);
@@ -906,7 +932,12 @@ export default function TradeFlowModal({
           transition: isDragging
             ? "none"
             : "transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), height 0.55s cubic-bezier(0.32, 0.72, 0, 1), max-height 0.55s cubic-bezier(0.32, 0.72, 0, 1), border-radius 0.55s cubic-bezier(0.32, 0.72, 0, 1), background-color 0.6s ease",
+          touchAction: "pan-y",
         }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
       >
         <div
           aria-hidden
@@ -923,10 +954,6 @@ export default function TradeFlowModal({
           className={`relative flex shrink-0 touch-none flex-col px-5 pb-1 pt-2 transition-opacity duration-200 ${
             success && !light ? "pointer-events-none opacity-0" : ""
           }`}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
         >
           <span
             aria-hidden
@@ -1089,7 +1116,10 @@ export default function TradeFlowModal({
 
             {step === "confirm" && (
               <div className="flex h-full min-h-0 flex-col">
-                <div className="relative min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-4">
+                <div
+                  data-sheet-scroll
+                  className="relative min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-5 pb-4"
+                >
                   <button
                     type="button"
                     aria-label="Back"
@@ -1153,7 +1183,11 @@ export default function TradeFlowModal({
                   <CloseCountdownButton light={light} onClose={closeSheet} />
                 </div>
 
-                <div className="relative z-[3] flex h-full min-h-0 flex-1 flex-col items-center overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-6 pb-9 text-center">
+                <div
+                  ref={sheetScrollRef}
+                  data-sheet-scroll
+                  className="relative z-[3] flex h-full min-h-0 flex-1 flex-col items-center overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-6 pb-9 text-center"
+                >
                   <div className="flex w-full min-h-full flex-1 flex-col items-center">
                   <h2
                     className={`text-[34px] font-semibold tracking-[-0.03em] animate-[trade-success-fade_0.5s_cubic-bezier(0.32,0.72,0,1)_0.15s_both] ${

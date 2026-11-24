@@ -7,7 +7,13 @@ import {
   type PanInfo,
 } from "framer-motion";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { TextMorph } from "torph/react";
 import { allo } from "@/lib/fonts";
 import { playComboPlace } from "@/lib/combo-sound";
@@ -157,6 +163,8 @@ export function ComboSheet({
     }
   };
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   const onDragEnd = (_: unknown, info: PanInfo) => {
     if (
       info.offset.y > DISMISS_OFFSET_PX ||
@@ -164,6 +172,16 @@ export function ComboSheet({
     ) {
       onOpenChange(false);
     }
+  };
+
+  const startSheetDrag = (event: ReactPointerEvent) => {
+    const target = event.target as HTMLElement;
+    if (target.closest("button, input, textarea, a, [data-no-sheet-drag]")) {
+      return;
+    }
+    const scroller = scrollRef.current;
+    if (scroller && scroller.scrollTop > 0) return;
+    dragControls.start(event);
   };
 
   return (
@@ -196,23 +214,20 @@ export function ComboSheet({
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.55 }}
             onDragEnd={onDragEnd}
+            onPointerDown={startSheetDrag}
             className="relative z-[1] flex max-h-[88%] w-full max-w-[430px] flex-col overflow-hidden rounded-t-[28px] bg-white pb-[max(8px,env(safe-area-inset-bottom))] text-black shadow-[0_-12px_40px_rgba(0,0,0,0.12)]"
           >
-            <div
-              className="flex touch-none justify-center pb-2 pt-2.5"
-              onPointerDown={(event) => dragControls.start(event)}
-              aria-hidden
-            >
+            <div className="flex touch-none justify-center pb-2 pt-2.5" aria-hidden>
               <span className="h-1 w-10 rounded-full bg-black/15" />
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6 pt-2">
+            <div
+              ref={scrollRef}
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6 pt-2"
+            >
               {step === "success" ? (
                 <div className="flex min-h-[22.5rem] flex-col gap-3">
-                  <header
-                    className="relative flex h-8 shrink-0 touch-none items-center justify-center"
-                    onPointerDown={(event) => dragControls.start(event)}
-                  >
+                  <header className="relative flex h-8 shrink-0 touch-none items-center justify-center">
                     <p className="text-base font-semibold leading-none tracking-tight text-black">
                       {picks.length}-picks combo placed
                     </p>
@@ -271,13 +286,7 @@ export function ComboSheet({
 
               {step === "amount" ? (
                 <div className="-mt-3 flex min-h-[22.5rem] flex-col gap-3">
-                  <header
-                    className="relative flex h-8 shrink-0 touch-none items-center justify-between gap-3"
-                    onPointerDown={(event) => {
-                      if ((event.target as HTMLElement).closest("button")) return;
-                      dragControls.start(event);
-                    }}
-                  >
+                  <header className="relative flex h-8 shrink-0 touch-none items-center justify-between gap-3">
                     <button
                       type="button"
                       aria-label="Back to picks"
@@ -383,10 +392,7 @@ export function ComboSheet({
 
               {step === "build" ? (
                 <>
-                  <header
-                    className="relative mb-4 flex h-8 shrink-0 touch-none items-center justify-between gap-3"
-                    onPointerDown={(event) => dragControls.start(event)}
-                  >
+                  <header className="relative mb-4 flex h-8 shrink-0 touch-none items-center justify-between gap-3">
                     <h2 className="truncate text-2xl font-semibold tracking-tight text-black">
                       {heading}
                     </h2>
