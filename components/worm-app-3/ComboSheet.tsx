@@ -40,7 +40,7 @@ const GREEN = "#1DB954";
 const PRIMARY_BTN =
   "flex h-[52px] w-full items-center justify-center rounded-[18px] text-[16px] font-semibold transition-transform duration-150 ease-out active:scale-[0.94]";
 const SECONDARY_BTN =
-  "w-full py-2.5 text-[15px] font-semibold text-black/40 transition-transform duration-150 ease-out active:scale-[0.98]";
+  "flex h-[52px] w-full items-center justify-center rounded-[18px] text-[16px] font-semibold text-black/40 transition-transform duration-150 ease-out active:scale-[0.94]";
 
 export function comboMultiplier(percents: number[]) {
   if (!percents.length) return 0;
@@ -421,19 +421,28 @@ export function ComboSheet({
                           key={pick.id}
                           className="relative flex items-center gap-2 rounded-lg py-1.5"
                         >
-                          {index < picks.length - 1 ? (
-                            <span
-                              aria-hidden
-                              className="absolute bottom-0 left-6 top-8 border-l border-dashed border-black/15"
-                            />
-                          ) : null}
-                          <Emblem
-                            logo={pick.logo}
-                            mark={pick.mark}
-                            label={pick.label}
-                            size={32}
-                            className="relative z-10"
-                          />
+                          <div className="relative z-10 w-8 shrink-0 self-stretch">
+                            {index > 0 ? (
+                              <span
+                                aria-hidden
+                                className="absolute left-1/2 top-0 h-[calc(50%-16px)] w-px -translate-x-1/2 border-l border-dashed border-black/15"
+                              />
+                            ) : null}
+                            {index < picks.length - 1 ? (
+                              <span
+                                aria-hidden
+                                className="absolute bottom-0 left-1/2 top-[calc(50%+16px)] w-px -translate-x-1/2 border-l border-dashed border-black/15"
+                              />
+                            ) : null}
+                            <div className="relative z-10 flex h-full items-center justify-center">
+                              <Emblem
+                                logo={pick.logo}
+                                mark={pick.mark}
+                                label={pick.label}
+                                size={32}
+                              />
+                            </div>
+                          </div>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-xs text-black/45">
                               {pick.subtitle ??
@@ -473,7 +482,7 @@ export function ComboSheet({
                     )}
 
                     {picks.length >= MIN_PICKS ? (
-                      <div className="mt-2 border-t border-black/10 pt-3">
+                      <div className="mt-2 border-t border-dashed border-black/10 pt-3">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-semibold text-black/40">
                             Multiplier
