@@ -53,7 +53,7 @@ export default function WormApp3Layout({
 }) {
   return (
     <div
-      className={`worm-app-frame fixed inset-0 overflow-hidden text-black antialiased ${allo.className}`}
+      className={`worm-app-frame fixed inset-0 overflow-hidden text-black antialiased ${allo.variable} ${allo.className}`}
       style={{ backgroundColor: "#E8E8E8" }}
     >
       {children}

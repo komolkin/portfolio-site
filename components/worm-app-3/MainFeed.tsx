@@ -56,6 +56,8 @@ type Market = {
   topic: Topic;
   question: string;
   thumb: string;
+  /** Optional muted looping clip — fills the card instead of the chance gauge. */
+  video?: string;
   yesPercent: number;
   social: string;
 };
@@ -109,6 +111,16 @@ const FEED_CATEGORIES: FeedCategory[] = [
 
 const MARKETS: Market[] = [
   {
+    id: "nvidia-ceo",
+    category: "Tech",
+    topic: "tech",
+    question: "Jensen Huang out as NVIDIA CEO by December 31, 2026?",
+    thumb: "/worm-app-3/bg/jensen-huang.jpg?v=2",
+    video: "/worm-app-3/bg/jensen-huang.mp4?v=2",
+    yesPercent: 18,
+    social: "Nass and 22 others made a prediction",
+  },
+  {
     id: "gta-vi-nov19",
     category: "GTA VI",
     topic: "culture",
@@ -152,15 +164,6 @@ const MARKETS: Market[] = [
     thumb: "/worm-app-3/bg/barca-madrid.jpg",
     yesPercent: 54,
     social: "Diego and 203 others made a prediction",
-  },
-  {
-    id: "nvidia-ceo",
-    category: "Tech",
-    topic: "tech",
-    question: "Jensen Huang out as NVIDIA CEO by December 31, 2026?",
-    thumb: "/worm-app-3/bg/jensen-huang.jpg",
-    yesPercent: 18,
-    social: "Alex and 22 others made a prediction",
   },
   {
     id: "alcaraz-sinner",
@@ -373,9 +376,9 @@ function toComboPick(market: Market, outcome: Outcome): ComboSheetPick {
 
 function ChanceGauge({ percent }: { percent: number }) {
   const width = 220;
-  const height = 118;
+  const height = 128;
   const stroke = 16;
-  const r = 92;
+  const r = 96;
   const cx = width / 2;
   const cy = height - 4;
   const circumference = Math.PI * r;
@@ -431,7 +434,7 @@ function ChanceGauge({ percent }: { percent: number }) {
   }, [inView, progress, target, targetFilled]);
 
   return (
-    <div ref={rootRef} className="relative mx-auto w-[220px] pb-5">
+    <div ref={rootRef} className="relative mx-auto w-[220px] pb-6">
       <svg
         width={width}
         height={height}
@@ -456,7 +459,7 @@ function ChanceGauge({ percent }: { percent: number }) {
           style={{ strokeDashoffset: dashOffset }}
         />
       </svg>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex translate-y-3 flex-col items-center">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex translate-y-0.5 flex-col items-center">
         <p className="text-[44px] font-semibold leading-none tabular-nums text-black">
           {display}%
         </p>
@@ -593,6 +596,101 @@ function BetReveal({
         </AnimatePresence>
       </div>
     </motion.div>
+  );
+}
+
+function MarketVideoBg({
+  src,
+  poster,
+}: {
+  src: string;
+  poster: string;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setInView(Boolean(entry?.isIntersecting && entry.intersectionRatio >= 0.35)),
+      { threshold: [0, 0.35, 0.6] },
+    );
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = true;
+    video.defaultMuted = true;
+    video.playsInline = true;
+    video.loop = true;
+
+    const restart = () => {
+      try {
+        video.currentTime = 0;
+      } catch {
+        /* ignore */
+      }
+      if (inView) void video.play().catch(() => {});
+    };
+
+    const onTimeUpdate = () => {
+      if (!inView) return;
+      const { duration, currentTime } = video;
+      if (!Number.isFinite(duration) || duration <= 0) return;
+      if (currentTime >= duration - 0.12) restart();
+    };
+
+    video.addEventListener("ended", restart);
+    video.addEventListener("timeupdate", onTimeUpdate);
+
+    if (inView) void video.play().catch(() => {});
+    else video.pause();
+
+    return () => {
+      video.removeEventListener("ended", restart);
+      video.removeEventListener("timeupdate", onTimeUpdate);
+    };
+  }, [inView]);
+
+  return (
+    <div ref={rootRef} aria-hidden className="absolute inset-0 overflow-hidden">
+      <video
+        ref={videoRef}
+        className="absolute inset-0 size-full object-cover [transform:translateZ(0)]"
+        src={src}
+        poster={poster}
+        muted
+        loop
+        playsInline
+        preload="auto"
+        controls={false}
+        disablePictureInPicture
+        disableRemotePlayback
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[42%] bg-gradient-to-b from-black/55 via-black/20 to-transparent"
+      />
+      <div
+        aria-hidden
+        className="api-progressive-blur z-[1] h-[48%]"
+        data-edge="bottom"
+      >
+        <i />
+        <i />
+        <i />
+        <i />
+      </div>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[48%] bg-gradient-to-t from-black/55 via-black/20 to-transparent"
+      />
+    </div>
   );
 }
 
@@ -748,36 +846,60 @@ function MarketCard({
           }
           snapBack();
         }}
-        className={`relative touch-pan-y rounded-[28px] bg-white p-5 shadow-[0_1px_0_rgba(0,0,0,0.04)] ${
-          dragging ? "cursor-grabbing" : "cursor-grab"
-        }`}
+        className={`relative touch-pan-y overflow-hidden rounded-[28px] ${
+          market.video
+            ? "flex min-h-[420px] flex-col bg-black px-5 pb-6 pt-5 text-white"
+            : "bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
+        } ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
       >
-        <div className="flex items-start gap-3">
-          <div className="relative size-16 shrink-0 overflow-hidden rounded-[14px]">
-            <Image
-              src={market.thumb}
-              alt=""
-              fill
-              className="rounded-[14px] object-cover"
-              sizes="64px"
-              draggable={false}
-            />
-          </div>
+        {market.video ? (
+          <MarketVideoBg src={market.video} poster={market.thumb} />
+        ) : null}
+
+        <div className={`relative z-[2] flex items-start gap-3 ${market.video ? "" : ""}`}>
+          {!market.video ? (
+            <div className="relative size-16 shrink-0 overflow-hidden rounded-[14px]">
+              <Image
+                src={market.thumb}
+                alt=""
+                fill
+                className="rounded-[14px] object-cover"
+                sizes="64px"
+                draggable={false}
+              />
+            </div>
+          ) : null}
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-medium text-black/40">
+            <p
+              className={`text-[13px] font-medium ${
+                market.video ? "text-white/65" : "text-black/40"
+              }`}
+            >
               {market.category}
             </p>
-            <h2 className="mt-0.5 text-[17px] font-semibold leading-[1.2] tracking-[-0.02em] text-black">
+            <h2
+              className={`mt-0.5 text-[17px] font-semibold leading-[1.2] tracking-[-0.02em] ${
+                market.video ? "text-white" : "text-black"
+              }`}
+            >
               {market.question}
             </h2>
           </div>
         </div>
 
-        <div className="mt-5 mb-2">
-          <ChanceGauge percent={market.yesPercent} />
-        </div>
+        {market.video ? (
+          <div className="relative z-[2] min-h-[180px] flex-1" aria-hidden />
+        ) : (
+          <div className="mb-2 mt-6">
+            <ChanceGauge percent={market.yesPercent} />
+          </div>
+        )}
 
-        <div className="mt-7 grid grid-cols-2 gap-2.5">
+        <div
+          className={`relative z-[2] grid grid-cols-2 gap-2.5 ${
+            market.video ? "mt-auto" : "mt-8"
+          }`}
+        >
           <button
             type="button"
             onPointerDown={(event) => event.stopPropagation()}
@@ -787,10 +909,14 @@ function MarketCard({
             }}
             className={`flex h-[52px] origin-center items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
               dragOutcome === "No"
-                ? "bg-black/[0.05] text-black/35"
+                ? market.video
+                  ? "bg-white/[0.06] text-white/45"
+                  : "bg-black/[0.05] text-black/35"
                 : yesInCombo || dragOutcome === "Yes"
                   ? "text-white"
-                  : "bg-black/[0.06] text-black"
+                  : market.video
+                    ? "bg-white/[0.06] text-white"
+                    : "bg-black/[0.06] text-black"
             }`}
             style={
               yesInCombo || dragOutcome === "Yes"
@@ -809,10 +935,14 @@ function MarketCard({
             }}
             className={`flex h-[52px] origin-center items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
               dragOutcome === "Yes"
-                ? "bg-black/[0.05] text-black/35"
+                ? market.video
+                  ? "bg-white/[0.06] text-white/45"
+                  : "bg-black/[0.05] text-black/35"
                 : noInCombo || dragOutcome === "No"
                   ? "text-white"
-                  : "bg-black/[0.06] text-black"
+                  : market.video
+                    ? "bg-white/[0.06] text-white"
+                    : "bg-black/[0.06] text-black"
             }`}
             style={
               noInCombo || dragOutcome === "No"
@@ -824,7 +954,11 @@ function MarketCard({
           </button>
         </div>
 
-        <p className="mt-3.5 text-center text-[13px] font-medium text-black/40">
+        <p
+          className={`relative z-[2] mt-4 text-center text-[13px] font-medium ${
+            market.video ? "text-white/60" : "text-black/40"
+          }`}
+        >
           {dragging && comboArmed && dragOutcome
             ? comboOutcomes.has(dragOutcome)
               ? `Release to remove ${dragOutcome} from combo`
@@ -917,46 +1051,89 @@ function CategoryTabs({
   active: FeedCategory["id"];
   onChange: (id: FeedCategory["id"]) => void;
 }) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [fadeLeft, setFadeLeft] = useState(false);
+  const [fadeRight, setFadeRight] = useState(false);
+
+  const updateFades = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    setFadeLeft(el.scrollLeft > 4);
+    setFadeRight(max > 4 && el.scrollLeft < max - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    updateFades();
+    const onScroll = () => updateFades();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    const ro = new ResizeObserver(updateFades);
+    ro.observe(el);
+    window.addEventListener("resize", updateFades);
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      ro.disconnect();
+      window.removeEventListener("resize", updateFades);
+    };
+  }, [updateFades]);
+
   return (
-    <div
-      className="-mx-4 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      role="tablist"
-      aria-label="Categories"
-    >
-      <div className="flex w-max items-center gap-2.5 px-4 py-0.5">
-        {FEED_CATEGORIES.map((category) => {
-          const selected = category.id === active;
-          return (
-            <button
-              key={category.id}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              onClick={() => {
-                hapticTap();
-                onChange(category.id);
-              }}
-              className={`flex h-[34px] shrink-0 items-center gap-1.5 rounded-full pl-1.5 pr-3 transition-[box-shadow,background-color,transform] duration-200 ease-out active:scale-[0.98] ${
-                selected
-                  ? "bg-[#E4E4E6] shadow-[inset_0_1px_3px_rgba(0,0,0,0.14),inset_0_-0.5px_0_rgba(255,255,255,0.65)]"
-                  : "bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)] ring-1 ring-black/[0.03]"
-              }`}
-            >
-              <Image
-                src={category.icon}
-                alt=""
-                width={22}
-                height={22}
-                className="size-[22px] object-contain"
-                draggable={false}
-              />
-              <span className="text-[14px] font-semibold tracking-[-0.01em] text-black">
-                {category.label}
-              </span>
-            </button>
-          );
-        })}
+    <div className="relative -mx-4">
+      <div
+        ref={scrollerRef}
+        className="overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        role="tablist"
+        aria-label="Categories"
+      >
+        <div className="flex w-max items-center gap-2.5 px-4 py-0.5">
+          {FEED_CATEGORIES.map((category) => {
+            const selected = category.id === active;
+            return (
+              <button
+                key={category.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => {
+                  hapticTap();
+                  onChange(category.id);
+                }}
+                className={`flex h-[34px] shrink-0 items-center gap-1.5 rounded-full pl-1.5 pr-3 transition-[box-shadow,background-color,transform] duration-200 ease-out active:scale-[0.98] ${
+                  selected
+                    ? "bg-[#E4E4E6] shadow-[inset_0_1px_3px_rgba(0,0,0,0.14),inset_0_-0.5px_0_rgba(255,255,255,0.65)]"
+                    : "bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)] ring-1 ring-black/[0.03]"
+                }`}
+              >
+                <Image
+                  src={category.icon}
+                  alt=""
+                  width={22}
+                  height={22}
+                  className="size-[22px] object-contain"
+                  draggable={false}
+                />
+                <span className="text-[14px] font-semibold tracking-[-0.01em] text-black">
+                  {category.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute inset-y-0 left-0 z-[1] w-10 bg-gradient-to-r from-[#E8E8E8] to-transparent transition-opacity duration-200 ${
+          fadeLeft ? "opacity-100" : "opacity-0"
+        }`}
+      />
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute inset-y-0 right-0 z-[1] w-10 bg-gradient-to-l from-[#E8E8E8] to-transparent transition-opacity duration-200 ${
+          fadeRight ? "opacity-100" : "opacity-0"
+        }`}
+      />
     </div>
   );
 }

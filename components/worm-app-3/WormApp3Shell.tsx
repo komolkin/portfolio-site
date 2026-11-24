@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { syncWormAppHeight } from "@/lib/wormAppHeight";
+import GetStarted from "./GetStarted";
 import MainFeed from "./MainFeed";
 
 const BG = "#E8E8E8";
 
 export default function WormApp3Shell() {
+  const [started, setStarted] = useState(false);
+
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -40,7 +43,7 @@ export default function WormApp3Shell() {
       className="relative h-full min-h-[var(--worm-app-height,100%)] w-full overflow-hidden text-black"
       style={{ backgroundColor: BG }}
     >
-      <MainFeed />
+      {started ? <MainFeed /> : <GetStarted onComplete={() => setStarted(true)} />}
     </div>
   );
 }
