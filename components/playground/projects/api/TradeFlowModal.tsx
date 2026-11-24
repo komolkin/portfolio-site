@@ -1084,7 +1084,8 @@ export default function TradeFlowModal({
                   </button>
                 </div>
 
-                <div className="relative z-[3] flex min-h-0 flex-1 flex-col items-center overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-6 pb-9 text-center">
+                <div className="relative z-[3] flex h-full min-h-0 flex-1 flex-col items-center overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-6 pb-9 text-center">
+                  <div className="flex w-full min-h-full flex-1 flex-col items-center">
                   <h2
                     className={`text-[34px] font-semibold tracking-[-0.03em] animate-[trade-success-fade_0.5s_cubic-bezier(0.32,0.72,0,1)_0.15s_both] ${
                       light ? "mt-2 text-black" : "mt-4 text-white [text-shadow:0_0_24px_rgba(255,255,255,0.35)]"
@@ -1230,6 +1231,7 @@ export default function TradeFlowModal({
                     >
                       Share
                     </button>
+                  </div>
                   </div>
                 </div>
               </div>

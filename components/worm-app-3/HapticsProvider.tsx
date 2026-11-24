@@ -2,21 +2,19 @@
 
 import { useEffect } from "react";
 import { useWebHaptics } from "web-haptics/react";
-import { bindHapticsTrigger } from "@/lib/haptics";
+import { bindHapticsTrigger, unlockHaptics } from "@/lib/haptics";
 
 /**
- * Same setup as https://haptics.lochie.me — React hook owns the WebHaptics
- * instance. On iOS (no Vibration API) enable the library's audio fallback.
+ * Same entry as https://haptics.lochie.me — `useWebHaptics` owns the instance.
+ * `debug: true` keeps the library's input[switch] + audio technique active even
+ * when Vibration API is present but inert (e.g. http LAN previews).
  */
 export default function HapticsProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const noVibrate =
-    typeof navigator !== "undefined" &&
-    typeof navigator.vibrate !== "function";
-  const { trigger } = useWebHaptics({ debug: noVibrate });
+  const { trigger } = useWebHaptics({ debug: true, showSwitch: false });
 
   useEffect(() => {
     bindHapticsTrigger((input, options) =>
@@ -24,6 +22,16 @@ export default function HapticsProvider({
     );
     return () => bindHapticsTrigger(null);
   }, [trigger]);
+
+  useEffect(() => {
+    const prime = () => unlockHaptics();
+    window.addEventListener("pointerdown", prime, { once: true, capture: true });
+    window.addEventListener("touchstart", prime, { once: true, capture: true });
+    return () => {
+      window.removeEventListener("pointerdown", prime, true);
+      window.removeEventListener("touchstart", prime, true);
+    };
+  }, []);
 
   return children;
 }

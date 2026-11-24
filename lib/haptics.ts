@@ -3,76 +3,100 @@ import { WebHaptics } from "web-haptics";
 type TriggerFn = WebHaptics["trigger"];
 
 let boundTrigger: TriggerFn | null = null;
-let fallback: WebHaptics | null = null;
-let debug = false;
+let client: WebHaptics | null = null;
+let debugFlag = false;
+let unlocked = false;
 
-function audioFallback() {
-  return (
-    typeof navigator !== "undefined" &&
-    typeof navigator.vibrate !== "function"
-  );
-}
-
-function fallbackClient() {
+/**
+ * Lochie's web-haptics (https://haptics.lochie.me):
+ * - Vibration API when available
+ * - Plus hidden `input[switch]` click + optional audio when `debug` is on
+ *
+ * We keep `debug: true` always so the switch/audio path still runs when
+ * `navigator.vibrate` exists but is a no-op (common on http://LAN:port).
+ */
+function getClient() {
   if (typeof window === "undefined") return null;
-  if (!fallback) {
-    // Match https://haptics.lochie.me — audio debug path when Vibration API is missing (iOS).
-    fallback = new WebHaptics({ debug: debug || audioFallback() });
+  if (!client) {
+    client = new WebHaptics({ debug: true, showSwitch: false });
   }
-  return fallback;
+  return client;
 }
 
-/** Wired by HapticsProvider (web-haptics/react), same pattern as the Lochie demo. */
+/** Wired by HapticsProvider (`useWebHaptics` from web-haptics/react). */
 export function bindHapticsTrigger(trigger: TriggerFn | null) {
   boundTrigger = trigger;
 }
 
-const trigger: TriggerFn = (input, options) => {
-  if (boundTrigger) return boundTrigger(input, options);
-  const client = fallbackClient();
-  if (!client) return Promise.resolve();
-  return client.trigger(input, options);
-};
+async function fire(
+  input: Parameters<TriggerFn>[0],
+  options?: Parameters<TriggerFn>[1],
+) {
+  const api = getClient();
+  // Prefer the React-hook instance (same as the demo), else vanilla fallback.
+  const run = boundTrigger ?? api?.trigger.bind(api);
+  if (!run) return;
+
+  // Direct vibrate in this turn — some browsers drop vibrate after awaits.
+  try {
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate(12);
+    }
+  } catch {
+    /* ignore */
+  }
+
+  await run(input, options);
+}
 
 export function setHapticsDebug(on: boolean) {
-  debug = on;
-  const next = on || audioFallback();
-  fallback?.setDebug(next);
+  debugFlag = on;
+  // Library debug stays on for the switch/audio technique; this flag is for /dev/sfx UI.
+  getClient()?.setDebug(true);
 }
 
 export function getHapticsDebug() {
-  return debug;
+  return debugFlag;
 }
 
+/** Call from a real pointer/click gesture so AudioContext can start. */
 export function unlockHaptics() {
-  // Instance is created by the React provider on mount; nothing else to prime.
-  if (!boundTrigger) fallbackClient();
+  if (typeof window === "undefined" || unlocked) return;
+  unlocked = true;
+  // Prime DOM switch + AudioContext inside the user gesture (Lochie's path).
+  void fire([{ duration: 1, intensity: 0.05 }]);
 }
 
 /** Light tap — buttons, chips, toggles */
 export function hapticTap() {
-  void trigger([{ duration: 25, intensity: 0.7 }]);
+  unlockHaptics();
+  void fire([{ duration: 30, intensity: 0.85 }]);
 }
 
-/** Soft tick — drag amount step changes (call from onDrag / pointer handlers) */
+/** Soft tick — drag amount step changes (must run inside pointer gesture) */
 export function hapticStep() {
-  void trigger("selection");
+  unlockHaptics();
+  void fire("selection");
 }
 
 /** Stronger cue — combo arm */
 export function hapticNudge() {
-  void trigger("nudge");
+  unlockHaptics();
+  void fire("nudge");
 }
 
 /** Success confirmation */
 export function hapticSuccess() {
-  void trigger("success");
+  unlockHaptics();
+  void fire("success");
 }
 
 export function hapticWarning() {
-  void trigger("warning");
+  unlockHaptics();
+  void fire("warning");
 }
 
 export function hapticError() {
-  void trigger("error");
+  unlockHaptics();
+  void fire("error");
 }
