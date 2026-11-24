@@ -808,13 +808,13 @@ export default function TradeFlowModal({
         }`}
         style={{
           height: light
-            ? "84%"
+            ? "80vh"
             : success
               ? "100%"
               : step === "amount"
                 ? "auto"
                 : "88%",
-          maxHeight: light ? "92%" : success ? undefined : "92%",
+          maxHeight: light ? "80vh" : success ? undefined : "92%",
           borderTopLeftRadius: light || !success ? "1.75rem" : 0,
           borderTopRightRadius: light || !success ? "1.75rem" : 0,
           backgroundColor: success
