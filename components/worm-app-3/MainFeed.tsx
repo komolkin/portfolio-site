@@ -164,7 +164,6 @@ const MARKETS: Market[] = [
     thumb: "/worm-app-3/logos/gta-vi.png",
     backdrop: "/worm-app-3/logos/gta-vi-backdrop.jpg?v=3",
     yesPercent: 72,
-    social: "Nass and 184 others predicted",
   },
   {
     id: "nba-hawks",
@@ -1011,21 +1010,36 @@ function MarketMediaScrim() {
 }
 
 function MarketImageBg({ src }: { src: string }) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    setReady(false);
+  }, [src]);
+
   return (
     <div
       aria-hidden
-      className="absolute inset-0 overflow-hidden rounded-[28px] [clip-path:inset(0_round_28px)]"
+      className="absolute inset-0 overflow-hidden rounded-[28px] bg-black [clip-path:inset(0_round_28px)]"
     >
       <Image
         src={src}
         alt=""
         fill
-        className="object-cover"
+        className={`object-cover transition-opacity duration-500 ease-out ${
+          ready ? "opacity-100" : "opacity-0"
+        }`}
         sizes="(max-width: 430px) 100vw, 393px"
         priority={false}
         draggable={false}
+        onLoad={() => setReady(true)}
       />
-      <MarketMediaScrim />
+      <div
+        className={`transition-opacity duration-500 ease-out ${
+          ready ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        <MarketMediaScrim />
+      </div>
     </div>
   );
 }
@@ -1040,6 +1054,11 @@ function MarketVideoBg({
   const rootRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [inView, setInView] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    setReady(false);
+  }, [src]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -1059,6 +1078,8 @@ function MarketVideoBg({
     video.defaultMuted = true;
     video.playsInline = true;
     video.loop = true;
+
+    if (video.readyState >= 2) setReady(true);
 
     const restart = () => {
       try {
@@ -1092,11 +1113,13 @@ function MarketVideoBg({
     <div
       ref={rootRef}
       aria-hidden
-      className="absolute inset-0 overflow-hidden rounded-[28px] [clip-path:inset(0_round_28px)]"
+      className="absolute inset-0 overflow-hidden rounded-[28px] bg-black [clip-path:inset(0_round_28px)]"
     >
       <video
         ref={videoRef}
-        className="absolute inset-0 size-full object-cover [transform:translateZ(0)]"
+        className={`absolute inset-0 size-full object-cover [transform:translateZ(0)] transition-opacity duration-500 ease-out ${
+          ready ? "opacity-100" : "opacity-0"
+        }`}
         src={src}
         poster={poster}
         muted
@@ -1106,8 +1129,15 @@ function MarketVideoBg({
         controls={false}
         disablePictureInPicture
         disableRemotePlayback
+        onLoadedData={() => setReady(true)}
       />
-      <MarketMediaScrim />
+      <div
+        className={`transition-opacity duration-500 ease-out ${
+          ready ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        <MarketMediaScrim />
+      </div>
     </div>
   );
 }
@@ -1962,7 +1992,7 @@ function BottomNav({
         aria-current="page"
         className={`${item} rounded-full bg-black/[0.06] text-black`}
       >
-        <svg viewBox="0 0 24 24" width={18} height={18} fill="none" aria-hidden>
+        <svg viewBox="0 0 24 24" width={24} height={24} fill="none" aria-hidden>
           <path
             d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z"
             fill="currentColor"
@@ -1970,7 +2000,7 @@ function BottomNav({
         </svg>
       </button>
       <button type="button" aria-label="Leaderboard" className={`${item} text-black/45`}>
-        <svg viewBox="0 0 24 24" width={20} height={20} fill="none" aria-hidden>
+        <svg viewBox="0 0 24 24" width={22} height={22} fill="none" aria-hidden>
           <path
             d="M7 21V10M12 21V3M17 21v-7"
             stroke="currentColor"
@@ -1989,7 +2019,7 @@ function BottomNav({
         </span>
       </button>
       <button type="button" aria-label="Notifications" className={`${item} text-black/45`}>
-        <svg viewBox="0 0 24 24" width={20} height={20} fill="none" aria-hidden>
+        <svg viewBox="0 0 24 24" width={22} height={22} fill="none" aria-hidden>
           <path
             d="M6 9a6 6 0 1 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9Z"
             stroke="currentColor"
@@ -2005,7 +2035,7 @@ function BottomNav({
         </svg>
       </button>
       <button type="button" aria-label="Profile" className={`${item} text-black/45`}>
-        <svg viewBox="0 0 24 24" width={20} height={20} fill="none" aria-hidden>
+        <svg viewBox="0 0 24 24" width={22} height={22} fill="none" aria-hidden>
           <path
             d="M18 21v-2a4 4 0 0 0-4-4h-4a4 4 0 0 0-4 4v2"
             stroke="currentColor"
