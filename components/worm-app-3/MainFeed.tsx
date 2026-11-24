@@ -156,7 +156,7 @@ const MARKETS: Market[] = [
     topic: "culture",
     question: "Will Grand Theft Auto VI release on PC by December 31, 2026?",
     thumb: "/worm-app-3/logos/gta-vi.png",
-    backdrop: "/worm-app-3/logos/gta-vi-backdrop.jpg?v=2",
+    backdrop: "/worm-app-3/logos/gta-vi-backdrop.jpg?v=3",
     yesPercent: 72,
     social: "Nass and 184 others predicted",
   },
