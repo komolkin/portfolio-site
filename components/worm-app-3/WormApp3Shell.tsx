@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { unlockHaptics } from "@/lib/haptics";
 import { syncWormAppHeight } from "@/lib/wormAppHeight";
 import GetStarted from "./GetStarted";
+import HapticsProvider from "./HapticsProvider";
 import MainFeed from "./MainFeed";
 
 const BG = "#E8E8E8";
@@ -40,11 +42,18 @@ export default function WormApp3Shell() {
   }, []);
 
   return (
-    <div
-      className="relative h-full min-h-[var(--worm-app-height,100%)] w-full overflow-x-clip overflow-y-hidden overscroll-none text-black"
-      style={{ backgroundColor: BG }}
-    >
-      {started ? <MainFeed /> : <GetStarted onComplete={() => setStarted(true)} />}
-    </div>
+    <HapticsProvider>
+      <div
+        className="relative h-full min-h-[var(--worm-app-height,100%)] w-full overflow-x-clip overflow-y-hidden overscroll-none text-black"
+        style={{ backgroundColor: BG }}
+        onPointerDown={unlockHaptics}
+      >
+        {started ? (
+          <MainFeed />
+        ) : (
+          <GetStarted onComplete={() => setStarted(true)} />
+        )}
+      </div>
+    </HapticsProvider>
   );
 }

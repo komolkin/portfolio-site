@@ -25,7 +25,13 @@ import {
   playComboFull,
   playComboRemove,
 } from "@/lib/combo-sound";
-import { hapticNudge, hapticStep, hapticSuccess, hapticTap } from "@/lib/haptics";
+import {
+  hapticNudge,
+  hapticStep,
+  hapticSuccess,
+  hapticTap,
+  unlockHaptics,
+} from "@/lib/haptics";
 import type { PolymarketMarketData } from "@/lib/polymarketscan";
 import TradeFlowModal from "@/components/playground/projects/api/TradeFlowModal";
 import {
@@ -728,12 +734,15 @@ function MarketCard({
   const yesWidth = useTransform(x, (v) => Math.max(0, v));
   const noWidth = useTransform(x, (v) => Math.max(0, -v));
 
-  useMotionValueEvent(x, "change", (latest) => {
+  const syncDragFromX = useCallback(() => {
+    const latest = x.get();
     const nextAmount = amountFromOffset(latest);
     const nextOutcome = outcomeFromOffset(latest);
     const nextCombo = isComboZone(latest);
 
     if (nextAmount !== lastAmountRef.current) {
+      // Must run in the pointer gesture (onDrag), not a motion subscription —
+      // otherwise navigator.vibrate is dropped outside user activation.
       if (nextAmount > 0) hapticStep();
       lastAmountRef.current = nextAmount;
       setDragAmount(nextAmount);
@@ -750,7 +759,7 @@ function MarketCard({
       lastComboArmedRef.current = nextCombo;
       setComboArmed(nextCombo);
     }
-  });
+  }, [noAmountMV, x, yesAmountMV]);
 
   const snapBack = useCallback(() => {
     void animate(x, 0, { type: "spring", stiffness: 420, damping: 36 });
@@ -799,8 +808,12 @@ function MarketCard({
         transition={{ type: "spring", stiffness: 480, damping: 36 }}
         style={{ x, touchAction: "pan-y" }}
         onDragStart={() => {
+          unlockHaptics();
           committedRef.current = false;
           setDragging(true);
+        }}
+        onDrag={() => {
+          syncDragFromX();
         }}
         onDragEnd={(_, info) => {
           setDragging(false);
