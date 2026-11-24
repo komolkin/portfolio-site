@@ -9,7 +9,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { instrumentSans } from "@/lib/fonts";
+import { allo, instrumentSans } from "@/lib/fonts";
 import UserAvatar from "./UserAvatar";
 
 const FILTER_SHEET_CLOSE_PX = 72;
@@ -586,10 +586,18 @@ function DeleteKeyIcon({ className }: { className?: string }) {
 export function AmountKeypad({
   onKey,
   className = "",
+  tone = "dark",
 }: {
   onKey: (key: string) => void;
   className?: string;
+  tone?: "dark" | "light";
 }) {
+  const keyClass =
+    tone === "light"
+      ? "text-black active:bg-black/[0.06]"
+      : "text-white active:bg-white/[0.06]";
+  const keyFont = tone === "light" ? allo.className : instrumentSans.className;
+
   return (
     <div
       className={`grid shrink-0 grid-cols-3 ${className}`}
@@ -605,7 +613,7 @@ export function AmountKeypad({
             type="button"
             aria-label={key === "back" ? "Delete" : key}
             onClick={() => onKey(key)}
-            className={`flex h-[52px] items-center justify-center rounded-2xl text-[26px] font-semibold text-white transition-colors active:bg-white/[0.06] ${instrumentSans.className}`}
+            className={`flex h-[52px] items-center justify-center rounded-2xl text-[26px] font-semibold transition-colors ${keyClass} ${keyFont}`}
           >
             {key === "back" ? <DeleteKeyIcon className="h-6 w-6" /> : key}
           </button>

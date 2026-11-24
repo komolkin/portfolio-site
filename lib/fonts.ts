@@ -12,6 +12,19 @@ export const instrumentSans = Instrument_Sans({
 });
 
 /**
+ * Allo — friendly variable UI face (https://allo.joshpuckett.me).
+ * Axes: wght 100–900, ROND 0–100, opsz auto.
+ */
+export const allo = localFont({
+  src: "../fonts/AlloVariable.woff2",
+  weight: "100 900",
+  style: "normal",
+  display: "swap",
+  variable: "--font-allo",
+  declarations: [{ prop: "font-variation-settings", value: '"ROND" 50' }],
+});
+
+/**
  * Instrument Sans Condensed — local SemiBold for large numeric scores
  * (matches Figma "Instrument Sans Condensed").
  */
