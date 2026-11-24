@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import confetti from "canvas-confetti";
 import NumberFlow from "@number-flow/react";
+import { TextMorph } from "torph/react";
 import type { PolymarketMarketData } from "@/lib/polymarketscan";
 import { getMarketOddsSides } from "@/lib/polymarketscan";
 import { allo, instrumentSans } from "@/lib/fonts";
+import { hapticTap } from "@/lib/haptics";
 import type { UserPlacedTrade } from "./userTrades";
 import type { PolymarketWalletPosition } from "@/lib/polymarketscan";
 import type { SharePositionPayload } from "./SharePositionModal";
@@ -14,6 +17,10 @@ import { AmountKeypad, SheetPager, applyAmountKey, ui } from "./ui";
 const CLOSE_THRESHOLD_PX = 72;
 const QUICK_AMOUNTS = [5, 25, 100] as const;
 
+const nfMaskStyle = {
+  ["--number-flow-mask-height" as string]: "0em",
+} as const;
+
 const CONFETTI_COLORS_LIGHT = [
   "#1DB954",
   "#6B4EFF",
@@ -22,7 +29,7 @@ const CONFETTI_COLORS_LIGHT = [
   "#FFD60A",
   "#00C2FF",
   "#FF8A3D",
-] as const;
+];
 
 const CONFETTI_COLORS_DARK = [
   "#00D54B",
@@ -32,99 +39,98 @@ const CONFETTI_COLORS_DARK = [
   "#FFD60A",
   "#5AD8FF",
   "#FF9B57",
-] as const;
-
-type ConfettiPiece = {
-  id: number;
-  left: string;
-  delay: string;
-  duration: string;
-  size: number;
-  color: string;
-  shape: "circle" | "rect" | "bar";
-  dx: string;
-  rot: string;
-};
-
-function makeConfetti(light: boolean): ConfettiPiece[] {
-  const colors = light ? CONFETTI_COLORS_LIGHT : CONFETTI_COLORS_DARK;
-  const shapes: ConfettiPiece["shape"][] = ["circle", "rect", "bar"];
-  return Array.from({ length: 42 }, (_, id) => {
-    const angle = (id / 42) * Math.PI * 2 + (id % 5) * 0.17;
-    const dist = 38 + (id % 7) * 14;
-    return {
-      id,
-      left: `${42 + Math.sin(angle * 1.7) * 18 + (id % 9) * 2}%`,
-      delay: `${(id % 12) * 0.04}s`,
-      duration: `${1.55 + (id % 8) * 0.12}s`,
-      size: shapeSize(shapes[id % shapes.length]!, id),
-      color: colors[id % colors.length]!,
-      shape: shapes[id % shapes.length]!,
-      dx: `${Math.cos(angle) * dist}px`,
-      rot: `${(id % 2 === 0 ? 1 : -1) * (220 + (id % 10) * 40)}deg`,
-    };
-  });
-}
-
-function shapeSize(shape: ConfettiPiece["shape"], id: number) {
-  if (shape === "bar") return 10 + (id % 4) * 2;
-  if (shape === "rect") return 8 + (id % 3) * 2;
-  return 6 + (id % 4) * 2;
-}
+];
 
 function SuccessConfetti({ light }: { light: boolean }) {
-  const pieces = useMemo(() => makeConfetti(light), [light]);
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const hostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduceMotion(media.matches);
-    const onChange = () => setReduceMotion(media.matches);
-    media.addEventListener("change", onChange);
-    return () => media.removeEventListener("change", onChange);
-  }, []);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const host = hostRef.current;
+    if (!host) return;
 
-  if (reduceMotion) return null;
+    const canvas = document.createElement("canvas");
+    canvas.setAttribute("aria-hidden", "true");
+    Object.assign(canvas.style, {
+      position: "absolute",
+      inset: "0",
+      width: "100%",
+      height: "100%",
+      pointerEvents: "none",
+    });
+    host.appendChild(canvas);
+
+    const fire = confetti.create(canvas, {
+      resize: true,
+      disableForReducedMotion: true,
+    });
+    const colors = light ? CONFETTI_COLORS_LIGHT : CONFETTI_COLORS_DARK;
+    const base = {
+      colors,
+      disableForReducedMotion: true as const,
+      gravity: 0.95,
+      scalar: 0.92,
+      ticks: 240,
+      drift: 0.4,
+    };
+
+    // Spawn above the top edge so pieces enter from the sheet rim (no gap).
+    const top = -0.08;
+    void fire({
+      ...base,
+      particleCount: 70,
+      angle: 270,
+      spread: 110,
+      startVelocity: 28,
+      origin: { x: 0.5, y: top },
+    });
+    void fire({
+      ...base,
+      particleCount: 36,
+      angle: 295,
+      spread: 62,
+      startVelocity: 32,
+      origin: { x: 0.12, y: top },
+    });
+    void fire({
+      ...base,
+      particleCount: 36,
+      angle: 245,
+      spread: 62,
+      startVelocity: 32,
+      origin: { x: 0.88, y: top },
+    });
+
+    const end = Date.now() + 1400;
+    let raf = 0;
+    const shower = () => {
+      void fire({
+        ...base,
+        particleCount: 3,
+        angle: 270,
+        spread: 64,
+        startVelocity: 16 + Math.random() * 10,
+        origin: { x: 0.12 + Math.random() * 0.76, y: -0.1 },
+      });
+      if (Date.now() < end) raf = window.requestAnimationFrame(shower);
+    };
+    raf = window.requestAnimationFrame(shower);
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+      fire.reset();
+      canvas.remove();
+    };
+  }, [light]);
 
   return (
     <div
-      className="pointer-events-none absolute inset-0 z-[2] overflow-hidden"
+      ref={hostRef}
+      className="pointer-events-none absolute inset-x-0 top-0 bottom-0 z-[6] overflow-hidden rounded-[inherit]"
       aria-hidden
-    >
-      {pieces.map((piece) => (
-        <span
-          key={piece.id}
-          className="absolute top-[18%] will-change-transform"
-          style={{
-            left: piece.left,
-            width:
-              piece.shape === "bar"
-                ? piece.size * 0.35
-                : piece.shape === "rect"
-                  ? piece.size * 0.7
-                  : piece.size,
-            height: piece.size,
-            borderRadius:
-              piece.shape === "circle"
-                ? 999
-                : piece.shape === "bar"
-                  ? 999
-                  : 3,
-            background: piece.color,
-            animation: `trade-confetti ${piece.duration} cubic-bezier(0.22, 1, 0.36, 1) ${piece.delay} forwards`,
-            ["--confetti-dx" as string]: piece.dx,
-            ["--confetti-rot" as string]: piece.rot,
-            opacity: 0,
-          }}
-        />
-      ))}
-    </div>
+    />
   );
 }
-
-const nfMaskStyle = {
-  ["--number-flow-mask-height" as string]: "0em",
-} as const;
 
 const WIN_SPARKLES = [
   { top: "2%", left: "4%", size: 12, delay: "0ms", color: "#FFFFFF" },
@@ -832,6 +838,7 @@ export default function TradeFlowModal({
               : `radial-gradient(140% 66% at 50% 100%, rgba(${glowCss}, 0.72) 0%, rgba(${glowCss}, 0.3) 42%, rgba(${glowCss}, 0) 80%)`,
           }}
         />
+        {success ? <SuccessConfetti light={light} /> : null}
         <div
           className={`relative flex shrink-0 touch-none flex-col px-5 pb-1 pt-2 transition-opacity duration-200 ${
             success && !light ? "pointer-events-none opacity-0" : ""
@@ -907,11 +914,16 @@ export default function TradeFlowModal({
                     aria-live="polite"
                   >
                     $
-                    <NumberFlow
-                      value={amount}
-                      format={{ useGrouping: true, maximumFractionDigits: 0 }}
-                      style={nfMaskStyle}
-                    />
+                    <TextMorph
+                      as="span"
+                      numbers
+                      duration={220}
+                      ease={{ stiffness: 480, damping: 36 }}
+                    >
+                      {amount.toLocaleString("en-US", {
+                        maximumFractionDigits: 0,
+                      })}
+                    </TextMorph>
                   </p>
                   <p
                     className={`mt-2 text-[20px] font-medium transition-opacity duration-200 ${muted} ${
@@ -920,11 +932,14 @@ export default function TradeFlowModal({
                     aria-hidden={!amountValid}
                   >
                     to win{" "}
-                    <span
+                    <TextMorph
+                      as="span"
+                      numbers
+                      duration={240}
                       className={`font-semibold text-[#00D54B] ${appFont}`}
                     >
                       {formatUsdCents(toWin)}
-                    </span>
+                    </TextMorph>
                   </p>
                 </div>
                 <div className="min-h-0 flex-1" aria-hidden />
@@ -935,9 +950,10 @@ export default function TradeFlowModal({
                       <button
                         key={value}
                         type="button"
-                        onClick={() =>
-                          setAmountDigits(String(Math.min(value, amountCap)))
-                        }
+                        onClick={() => {
+                          hapticTap();
+                          setAmountDigits(String(Math.min(value, amountCap)));
+                        }}
                         className={`h-10 rounded-full text-[13px] font-semibold transition-colors ${
                           light
                             ? "bg-black/[0.05] text-black hover:bg-black/[0.08]"
@@ -949,7 +965,10 @@ export default function TradeFlowModal({
                     ))}
                     <button
                       type="button"
-                      onClick={() => setAmountDigits(String(amountCap))}
+                      onClick={() => {
+                        hapticTap();
+                        setAmountDigits(String(amountCap));
+                      }}
                       className={`h-10 rounded-full text-[13px] font-semibold transition-colors ${
                         light
                           ? "bg-black/[0.05] text-black hover:bg-black/[0.08]"
@@ -1046,7 +1065,6 @@ export default function TradeFlowModal({
 
             {step === "success" && completed && (
               <div className="relative flex h-full min-h-0 flex-col">
-                <SuccessConfetti light={light} />
                 <div
                   className={`relative z-[3] flex shrink-0 items-center justify-end px-4 ${
                     light ? "pt-1" : "pt-[38px]"
@@ -1237,25 +1255,6 @@ export default function TradeFlowModal({
         @keyframes trade-success-fade {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes trade-confetti {
-          0% {
-            opacity: 0;
-            transform: translate3d(0, 0, 0) rotate(0deg) scale(0.4);
-          }
-          8% {
-            opacity: 1;
-            transform: translate3d(calc(var(--confetti-dx) * 0.25), -18px, 0)
-              rotate(calc(var(--confetti-rot) * 0.15)) scale(1);
-          }
-          70% {
-            opacity: 1;
-          }
-          100% {
-            opacity: 0;
-            transform: translate3d(var(--confetti-dx), 420px, 0)
-              rotate(var(--confetti-rot)) scale(0.85);
-          }
         }
       `}</style>
     </div>

@@ -8,6 +8,7 @@ import {
 } from "framer-motion";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { TextMorph } from "torph/react";
 import { allo } from "@/lib/fonts";
 import { playComboPlace } from "@/lib/combo-sound";
 import { hapticSuccess, hapticTap } from "@/lib/haptics";
@@ -316,14 +317,26 @@ export function ComboSheet({
                   </div>
                   <div className="flex flex-col items-center gap-1 py-6">
                     <p className="text-sm font-semibold text-black/40">Stake</p>
-                    <p className="text-[44px] font-semibold leading-none tabular-nums text-black">
+                    <TextMorph
+                      as="p"
+                      numbers
+                      duration={280}
+                      ease={{ stiffness: 420, damping: 34 }}
+                      className="text-[44px] font-semibold leading-none tabular-nums text-black"
+                    >
                       {formatUsd(stake)}
-                    </p>
+                    </TextMorph>
                     <p className="mt-2 text-sm font-semibold text-black/40">
                       To win{" "}
-                      <span className="tabular-nums" style={{ color: GREEN }}>
+                      <TextMorph
+                        as="span"
+                        numbers
+                        duration={280}
+                        className="tabular-nums"
+                        style={{ color: GREEN }}
+                      >
                         {formatUsd(payout)}
-                      </span>
+                      </TextMorph>
                     </p>
                   </div>
                   <div className="mt-auto flex flex-col gap-3">

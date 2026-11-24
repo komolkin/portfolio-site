@@ -23,6 +23,7 @@
     "@vercel/analytics": "^1.6.1",
     "agentation": "^2.3.3",
     "allo-font": "1.0.3",
+    "canvas-confetti": "^1.9.4",
     "framer-motion": "^12.23.24",
     "glimm": "^0.1.3",
     "hover-tilt": "^1.0.0",
@@ -34,10 +35,12 @@
     "react-dom": "^18.3.1",
     "simple-liquid-glass": "^4.1.0",
     "three": "^0.169.0",
+    "torph": "^0.1.4",
     "web-haptics": "^0.0.6",
     "zod": "^4.2.1"
   },
   "devDependencies": {
+    "@types/canvas-confetti": "^1.9.0",
     "@types/matter-js": "^0.20.2",
     "@types/node": "^20",
     "@types/react": "^18",

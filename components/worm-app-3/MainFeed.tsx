@@ -17,6 +17,7 @@ import {
   useState,
   type RefObject,
 } from "react";
+import { TextMorph } from "torph/react";
 import { allo } from "@/lib/fonts";
 import {
   playComboAdd,
@@ -1011,20 +1012,15 @@ function PicksChip({
       }}
       className="inline-flex min-h-12 origin-center items-center justify-center gap-3 overflow-hidden rounded-full bg-white/85 px-5 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.12)] ring-1 ring-black/[0.04] backdrop-blur-[22px]"
     >
-      <span className="relative inline-grid text-[15px] font-semibold tabular-nums text-black">
-        <AnimatePresence initial={false} mode="popLayout">
-          <motion.span
-            key={label}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="col-start-1 row-start-1"
-          >
-            {label}
-          </motion.span>
-        </AnimatePresence>
-      </span>
+      <TextMorph
+        as="span"
+        numbers
+        duration={320}
+        ease={{ stiffness: 420, damping: 36, mass: 0.75 }}
+        className="text-[15px] font-semibold tabular-nums text-black"
+      >
+        {label}
+      </TextMorph>
       <span className="inline-flex shrink-0 items-center">
         <AnimatePresence initial={false} mode="popLayout">
           {logos.map((pick, index) => (
@@ -1061,26 +1057,18 @@ function PicksChip({
           ))}
         </AnimatePresence>
       </span>
-      <AnimatePresence initial={false} mode="popLayout">
-        {showMultiplier ? (
-          <motion.span
-            key={multiplierLabel}
-            layout
-            initial={{ opacity: 0, scale: 0.85, x: 8 }}
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.85, x: -6 }}
-            transition={{
-              type: "spring",
-              stiffness: 480,
-              damping: 32,
-              mass: 0.7,
-            }}
-            className="shrink-0 text-[15px] font-semibold tabular-nums text-[#1DB954]"
-          >
-            {multiplierLabel}
-          </motion.span>
-        ) : null}
-      </AnimatePresence>
+      {showMultiplier ? (
+        <TextMorph
+          as="span"
+          numbers
+          decimals={2}
+          duration={320}
+          ease={{ stiffness: 480, damping: 34, mass: 0.7 }}
+          className="shrink-0 text-[15px] font-semibold tabular-nums text-[#1DB954]"
+        >
+          {multiplierLabel}
+        </TextMorph>
+      ) : null}
       <span className="inline-flex shrink-0 rotate-180 opacity-55" aria-hidden>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
