@@ -685,13 +685,17 @@ function PositionFooter({
           }`}
           style={{ width: `${fill}%` }}
         >
-          <span
+          <TextMorph
+            as="span"
+            numbers
+            duration={280}
+            ease={{ stiffness: 420, damping: 34 }}
             className={`text-[12px] font-semibold tabular-nums ${
               video ? "text-black" : "text-white"
             }`}
           >
-            {displayPercent}%
-          </span>
+            {`${displayPercent}%`}
+          </TextMorph>
         </div>
         <div
           aria-hidden
@@ -748,9 +752,15 @@ function PositionFooter({
           <span className={video ? "text-white/55" : "text-black/45"}>
             Cash out
           </span>
-          <span className="tabular-nums tracking-[-0.02em]">
+          <TextMorph
+            as="span"
+            numbers
+            duration={280}
+            ease={{ stiffness: 420, damping: 34 }}
+            className="tabular-nums tracking-[-0.02em]"
+          >
             {formatCashUsd(cashOut)}
-          </span>
+          </TextMorph>
         </button>
       </div>
     </div>
