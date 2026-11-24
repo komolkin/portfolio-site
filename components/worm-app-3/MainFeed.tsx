@@ -770,10 +770,17 @@ function PositionFooter({
             video ? "text-white/70" : "text-black/45"
           }`}
         >
-          <span aria-hidden="true" className="inline-flex items-baseline gap-0">
+          <span
+            aria-hidden="true"
+            className="inline-flex items-baseline gap-x-1.5 tracking-normal"
+          >
             <FlowUsd value={position.stake} className={valueTone} />
-            <span className={video ? "text-white/70" : "text-black/45"}>
-              {" → "}
+            <span
+              className={`shrink-0 ${
+                video ? "text-white/55" : "text-black/35"
+              }`}
+            >
+              →
             </span>
             <FlowUsd
               value={valueNow}
