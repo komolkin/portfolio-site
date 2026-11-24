@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import confetti from "canvas-confetti";
 import NumberFlow from "@number-flow/react";
 import { TextMorph } from "torph/react";
@@ -253,6 +259,80 @@ function CloseIcon({ className }: { className?: string }) {
         strokeLinecap="round"
       />
     </svg>
+  );
+}
+
+const SUCCESS_AUTO_CLOSE_MS = 5000;
+const CLOSE_RING_SIZE = 40;
+const CLOSE_RING_STROKE = 2.25;
+
+function CloseCountdownButton({
+  light,
+  onClose,
+}: {
+  light: boolean;
+  onClose: () => void;
+}) {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const delay = reduced ? 0 : SUCCESS_AUTO_CLOSE_MS;
+    const id = window.setTimeout(() => onCloseRef.current(), delay);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  const radius = (CLOSE_RING_SIZE - CLOSE_RING_STROKE) / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  return (
+    <button
+      type="button"
+      aria-label="Close"
+      onClick={onClose}
+      className={`relative flex h-10 w-10 items-center justify-center rounded-full backdrop-blur-md transition-colors ${
+        light
+          ? "bg-black/[0.06] text-black/70 hover:bg-black/[0.1] hover:text-black"
+          : "bg-white/[0.1] text-white/85 hover:bg-white/[0.16] hover:text-white"
+      }`}
+    >
+      <svg
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -rotate-90"
+        width={CLOSE_RING_SIZE}
+        height={CLOSE_RING_SIZE}
+        viewBox={`0 0 ${CLOSE_RING_SIZE} ${CLOSE_RING_SIZE}`}
+      >
+        <circle
+          cx={CLOSE_RING_SIZE / 2}
+          cy={CLOSE_RING_SIZE / 2}
+          r={radius}
+          fill="none"
+          stroke={light ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.14)"}
+          strokeWidth={CLOSE_RING_STROKE}
+        />
+        <circle
+          cx={CLOSE_RING_SIZE / 2}
+          cy={CLOSE_RING_SIZE / 2}
+          r={radius}
+          fill="none"
+          stroke={light ? "#111111" : "#FFFFFF"}
+          strokeWidth={CLOSE_RING_STROKE}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference}
+          className="trade-close-ring"
+          style={
+            {
+              ["--close-ring-length"]: circumference,
+              animationDuration: `${SUCCESS_AUTO_CLOSE_MS}ms`,
+            } as CSSProperties
+          }
+        />
+      </svg>
+      <CloseIcon className="relative z-[1] h-4 w-4" />
+    </button>
   );
 }
 
@@ -1070,18 +1150,7 @@ export default function TradeFlowModal({
                     light ? "pt-1" : "pt-[38px]"
                   }`}
                 >
-                  <button
-                    type="button"
-                    aria-label="Close"
-                    onClick={closeSheet}
-                    className={`flex h-10 w-10 items-center justify-center rounded-full backdrop-blur-md transition-colors ${
-                      light
-                        ? "bg-black/[0.06] text-black/70 hover:bg-black/[0.1] hover:text-black"
-                        : "bg-white/[0.1] text-white/85 hover:bg-white/[0.16] hover:text-white"
-                    }`}
-                  >
-                    <CloseIcon className="h-4 w-4" />
-                  </button>
+                  <CloseCountdownButton light={light} onClose={closeSheet} />
                 </div>
 
                 <div className="relative z-[3] flex h-full min-h-0 flex-1 flex-col items-center overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-contain px-6 pb-9 text-center">
@@ -1257,6 +1326,21 @@ export default function TradeFlowModal({
         @keyframes trade-success-fade {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes trade-close-ring {
+          from { stroke-dashoffset: var(--close-ring-length); }
+          to { stroke-dashoffset: 0; }
+        }
+        .trade-close-ring {
+          animation-name: trade-close-ring;
+          animation-timing-function: linear;
+          animation-fill-mode: forwards;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .trade-close-ring {
+            animation: none !important;
+            stroke-dashoffset: 0 !important;
+          }
         }
       `}</style>
     </div>

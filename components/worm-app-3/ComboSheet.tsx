@@ -232,11 +232,9 @@ export function ComboSheet({
                     </span>
                   </div>
                   <div className="flex flex-1 flex-col items-center justify-center gap-0 rounded-xl px-3 py-10">
-                    <p className="flex items-center justify-center gap-1.5 text-base font-semibold leading-none text-black">
-                      To win
-                      <span className="tabular-nums" style={{ color: GREEN }}>
-                        {multiplier.toFixed(2)}x
-                      </span>
+                    <p className="text-base font-semibold leading-none text-black">
+                      <span className="tabular-nums">{formatUsd(stake)}</span>
+                      {" to win"}
                     </p>
                     <p
                       className="mt-2 text-[52px] font-semibold leading-none tabular-nums"

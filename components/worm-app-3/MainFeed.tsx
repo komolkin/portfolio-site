@@ -608,6 +608,7 @@ function PositionFooter({
   currentPercent,
   video,
   canIncrease,
+  cashingOut,
   onCashOut,
   onAdjust,
 }: {
@@ -615,6 +616,7 @@ function PositionFooter({
   currentPercent: number;
   video: boolean;
   canIncrease: boolean;
+  cashingOut: boolean;
   onCashOut: () => void;
   onAdjust: (delta: number) => void;
 }) {
@@ -623,7 +625,7 @@ function PositionFooter({
   const cashOut = cashOutValue(position, currentPercent);
   const fill = Math.max(4, Math.min(100, currentPercent));
   const canDecrease = position.stake > MIN_POSITION_STAKE;
-  const actionBtn = `flex h-[52px] items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,opacity] duration-150 ease-out active:scale-[0.94] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 ${
+  const actionBtn = `flex h-[52px] items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-200 ease-out active:scale-[0.94] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 ${
     video ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black"
   }`;
 
@@ -687,10 +689,10 @@ function PositionFooter({
         <button
           type="button"
           aria-label="Remove $5 from position"
-          disabled={!canDecrease}
+          disabled={!canDecrease || cashingOut}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={() => {
-            if (!canDecrease) return;
+            if (!canDecrease || cashingOut) return;
             hapticStep();
             onAdjust(-POSITION_ADJUST_STEP);
           }}
@@ -701,10 +703,10 @@ function PositionFooter({
         <button
           type="button"
           aria-label="Add $5 to position"
-          disabled={!canIncrease}
+          disabled={!canIncrease || cashingOut}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={() => {
-            if (!canIncrease) return;
+            if (!canIncrease || cashingOut) return;
             hapticStep();
             onAdjust(POSITION_ADJUST_STEP);
           }}
@@ -715,12 +717,16 @@ function PositionFooter({
         <button
           type="button"
           aria-label={`Cash out ${formatCashUsd(cashOut)}`}
+          disabled={cashingOut}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={() => {
-            hapticTap();
+            if (cashingOut) return;
+            hapticSuccess();
             onCashOut();
           }}
-          className={`${actionBtn} col-span-2 gap-1.5 px-3`}
+          className={`${actionBtn} col-span-2 gap-1.5 px-3 ${
+            cashingOut ? "disabled:!opacity-100" : ""
+          }`}
         >
           <span className={video ? "text-white/55" : "text-black/45"}>
             Cash out
@@ -973,6 +979,8 @@ function MarketCard({
   const [sizeDeltaFlash, setSizeDeltaFlash] = useState<SizeDeltaFlash | null>(
     null,
   );
+  const [cashingOut, setCashingOut] = useState(false);
+  const cashOutTimerRef = useRef<number | null>(null);
   const yesInCombo = comboOutcomes.has("Yes");
   const noInCombo = comboOutcomes.has("No");
   const hasPosition = Boolean(position);
@@ -1017,11 +1025,31 @@ function MarketCard({
       if (sizeDeltaExitTimerRef.current !== null) {
         window.clearTimeout(sizeDeltaExitTimerRef.current);
       }
+      if (cashOutTimerRef.current !== null) {
+        window.clearTimeout(cashOutTimerRef.current);
+      }
     };
   }, []);
 
-  const gaugePercent = hasPosition
-    ? position?.outcome === "No"
+  useEffect(() => {
+    if (!position) setCashingOut(false);
+  }, [position]);
+
+  const startCashOut = useCallback(() => {
+    if (!position || cashingOut) return;
+    setCashingOut(true);
+    if (cashOutTimerRef.current !== null) {
+      window.clearTimeout(cashOutTimerRef.current);
+    }
+    cashOutTimerRef.current = window.setTimeout(() => {
+      cashOutTimerRef.current = null;
+      onCashOut(position);
+      setCashingOut(false);
+    }, 420);
+  }, [cashingOut, onCashOut, position]);
+
+  const gaugePercent = position
+    ? position.outcome === "No"
       ? 100 - livePositionPercent
       : livePositionPercent
     : market.yesPercent;
@@ -1291,91 +1319,108 @@ function MarketCard({
           </motion.div>
         )}
 
-        {position ? (
-          <PositionFooter
-            position={position}
-            currentPercent={livePositionPercent}
-            video={Boolean(market.video)}
-            canIncrease={balance >= POSITION_ADJUST_STEP}
-            onCashOut={() => onCashOut(position)}
-            onAdjust={handleAdjust}
-          />
-        ) : (
-          <>
-            <div
-              className={`relative z-[2] grid grid-cols-2 gap-2.5 ${
-                market.video ? "mt-auto" : "mt-8"
-              }`}
+        <AnimatePresence mode="wait" initial={false}>
+          {position ? (
+            <motion.div
+              key={`position-${position.marketId}`}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -12, scale: 0.98 }}
+              transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
             >
-              <button
-                type="button"
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={() => {
-                  hapticTap();
-                  onCommitTrade(market, "Yes", 0);
-                }}
-                className={`flex h-[52px] origin-center items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
-                  dragOutcome === "No"
-                    ? market.video
-                      ? "bg-white/[0.06] text-white/45"
-                      : "bg-black/[0.05] text-black/35"
-                    : yesInCombo || dragOutcome === "Yes"
-                      ? "text-white"
-                      : market.video
-                        ? "bg-white/[0.06] text-white"
-                        : "bg-black/[0.06] text-black"
+              <PositionFooter
+                position={position}
+                currentPercent={livePositionPercent}
+                video={Boolean(market.video)}
+                canIncrease={balance >= POSITION_ADJUST_STEP}
+                cashingOut={cashingOut}
+                onCashOut={startCashOut}
+                onAdjust={handleAdjust}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="trade-actions"
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div
+                className={`relative z-[2] grid grid-cols-2 gap-2.5 ${
+                  market.video ? "mt-auto" : "mt-8"
                 }`}
-                style={
-                  yesInCombo || dragOutcome === "Yes"
-                    ? { backgroundColor: YES }
-                    : undefined
-                }
               >
-                Yes {market.yesPercent}%
-              </button>
-              <button
-                type="button"
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={() => {
-                  hapticTap();
-                  onCommitTrade(market, "No", 0);
-                }}
-                className={`flex h-[52px] origin-center items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
-                  dragOutcome === "Yes"
-                    ? market.video
-                      ? "bg-white/[0.06] text-white/45"
-                      : "bg-black/[0.05] text-black/35"
-                    : noInCombo || dragOutcome === "No"
-                      ? "text-white"
-                      : market.video
-                        ? "bg-white/[0.06] text-white"
-                        : "bg-black/[0.06] text-black"
-                }`}
-                style={
-                  noInCombo || dragOutcome === "No"
-                    ? { backgroundColor: NO }
-                    : undefined
-                }
-              >
-                No {noPercent}%
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={() => {
+                    hapticTap();
+                    onCommitTrade(market, "Yes", 0);
+                  }}
+                  className={`flex h-[52px] origin-center items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
+                    dragOutcome === "No"
+                      ? market.video
+                        ? "bg-white/[0.06] text-white/45"
+                        : "bg-black/[0.05] text-black/35"
+                      : yesInCombo || dragOutcome === "Yes"
+                        ? "text-white"
+                        : market.video
+                          ? "bg-white/[0.06] text-white"
+                          : "bg-black/[0.06] text-black"
+                  }`}
+                  style={
+                    yesInCombo || dragOutcome === "Yes"
+                      ? { backgroundColor: YES }
+                      : undefined
+                  }
+                >
+                  Yes {market.yesPercent}%
+                </button>
+                <button
+                  type="button"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={() => {
+                    hapticTap();
+                    onCommitTrade(market, "No", 0);
+                  }}
+                  className={`flex h-[52px] origin-center items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
+                    dragOutcome === "Yes"
+                      ? market.video
+                        ? "bg-white/[0.06] text-white/45"
+                        : "bg-black/[0.05] text-black/35"
+                      : noInCombo || dragOutcome === "No"
+                        ? "text-white"
+                        : market.video
+                          ? "bg-white/[0.06] text-white"
+                          : "bg-black/[0.06] text-black"
+                  }`}
+                  style={
+                    noInCombo || dragOutcome === "No"
+                      ? { backgroundColor: NO }
+                      : undefined
+                  }
+                >
+                  No {noPercent}%
+                </button>
+              </div>
 
-            <p
-              className={`relative z-[2] mt-4 text-center text-[13px] font-medium ${
-                market.video ? "text-white/60" : "text-black/40"
-              }`}
-            >
-              {dragging && comboArmed && dragOutcome
-                ? comboOutcomes.has(dragOutcome)
-                  ? `Release to remove ${dragOutcome} from combo`
-                  : `Release to add ${dragOutcome} to combo`
-                : dragging && dragOutcome && dragAmount > 0
-                  ? `Release to predict $${dragAmount} on ${dragOutcome}`
-                  : market.social}
-            </p>
-          </>
-        )}
+              <p
+                className={`relative z-[2] mt-4 text-center text-[13px] font-medium ${
+                  market.video ? "text-white/60" : "text-black/40"
+                }`}
+              >
+                {dragging && comboArmed && dragOutcome
+                  ? comboOutcomes.has(dragOutcome)
+                    ? `Release to remove ${dragOutcome} from combo`
+                    : `Release to add ${dragOutcome} to combo`
+                  : dragging && dragOutcome && dragAmount > 0
+                    ? `Release to predict $${dragAmount} on ${dragOutcome}`
+                    : market.social}
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.article>
       <style>{`
         @keyframes worm-size-delta-enter {
@@ -1889,12 +1934,8 @@ export default function MainFeed() {
   const comboPicksRef = useRef(comboPicks);
   comboPicksRef.current = comboPicks;
   const feedRef = useRef<HTMLDivElement>(null);
-  const entranceDoneRef = useRef(false);
-  const animateFeedEntrance = !entranceDoneRef.current;
-
-  useEffect(() => {
-    entranceDoneRef.current = true;
-  }, []);
+  const [feedMotionKey, setFeedMotionKey] = useState(0);
+  const prevCategoryRef = useRef<FeedCategory["id"] | null>(null);
 
   const tradeMarket = useMemo(
     () => (tradeFlow ? toTradeMarket(tradeFlow.market) : null),
@@ -1914,6 +1955,21 @@ export default function MainFeed() {
       );
     });
   }, [activeCategory, searchQuery]);
+
+  useEffect(() => {
+    if (prevCategoryRef.current === null) {
+      prevCategoryRef.current = activeCategory;
+      return;
+    }
+    if (prevCategoryRef.current === activeCategory) return;
+    prevCategoryRef.current = activeCategory;
+    setFeedMotionKey((key) => key + 1);
+    feedRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [activeCategory]);
+
+  const changeCategory = useCallback((id: FeedCategory["id"]) => {
+    setActiveCategory(id);
+  }, []);
 
   const openTrade = useCallback(
     (market: Market, outcome: Outcome, amount: number) => {
@@ -2043,21 +2099,19 @@ export default function MainFeed() {
             <SearchBar value={searchQuery} onChange={setSearchQuery} />
             <CategoryTabs
               active={activeCategory}
-              onChange={setActiveCategory}
+              onChange={changeCategory}
             />
           </div>
           {visibleMarkets.length > 0 ? (
             visibleMarkets.map((market, index) => (
               <motion.div
-                key={market.id}
+                key={`${feedMotionKey}-${market.id}`}
                 className="relative min-w-0 overflow-visible"
-                initial={
-                  animateFeedEntrance ? { opacity: 0, y: 22 } : false
-                }
+                initial={{ opacity: 0, y: 22 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{
                   duration: 0.4,
-                  delay: animateFeedEntrance ? 0.05 + index * 0.055 : 0,
+                  delay: 0.05 + index * 0.055,
                   ease: [0.22, 1, 0.36, 1],
                 }}
               >
