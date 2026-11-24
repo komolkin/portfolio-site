@@ -87,7 +87,8 @@ type Market = {
   /** Optional full-bleed still — same immersive chrome as video. */
   backdrop?: string;
   yesPercent: number;
-  social: string;
+  /** Optional social proof under Yes/No — omit on quieter cards. */
+  social?: string;
 };
 
 type Outcome = "Yes" | "No";
@@ -199,7 +200,6 @@ const MARKETS: Market[] = [
     question: "Will Barcelona beat Real Madrid this weekend?",
     thumb: "/worm-app-3/bg/barca-madrid.jpg",
     yesPercent: 54,
-    social: "Diego and 203 others predicted",
   },
   {
     id: "alcaraz-sinner",
@@ -208,7 +208,6 @@ const MARKETS: Market[] = [
     question: "Will Alcaraz beat Sinner in their next meeting?",
     thumb: "/worm-app-3/bg/alcaraz-sinner.jpg",
     yesPercent: 48,
-    social: "Elena and 91 others predicted",
   },
   {
     id: "traitors-quit",
@@ -235,7 +234,6 @@ const MARKETS: Market[] = [
     question: "Will the Knicks win by 10+ vs the Spurs?",
     thumb: "/worm-app-3/bg/knicks-spurs.jpg",
     yesPercent: 33,
-    social: "Noah and 54 others predicted",
   },
   {
     id: "faze-wildcard",
@@ -262,7 +260,6 @@ const MARKETS: Market[] = [
     question: "Will Sevilla vs Valencia end in a draw?",
     thumb: "/worm-app-3/bg/sevilla-valencia.jpg",
     yesPercent: 28,
-    social: "Sofia and 41 others predicted",
   },
   {
     id: "djokovic-medvedev",
@@ -271,7 +268,6 @@ const MARKETS: Market[] = [
     question: "Will Djokovic beat Medvedev in straight sets?",
     thumb: "/worm-app-3/bg/djokovic-medvedev.jpg",
     yesPercent: 39,
-    social: "Tom and 63 others predicted",
   },
   {
     id: "liquid-bcgame",
@@ -325,7 +321,6 @@ const MARKETS: Market[] = [
     question: "Will Atlético Madrid keep a clean sheet vs Getafe?",
     thumb: "/worm-app-3/bg/getafe-atletico.jpg",
     yesPercent: 46,
-    social: "Luis and 38 others predicted",
   },
   {
     id: "apple-foldable",
@@ -343,7 +338,6 @@ const MARKETS: Market[] = [
     question: "Will Solana reclaim $300 this quarter?",
     thumb: "/worm-app-3/logos/bitcoin.png",
     yesPercent: 29,
-    social: "Jade and 67 others predicted",
   },
   {
     id: "oscars-best-picture",
@@ -1600,19 +1594,25 @@ function MarketCard({
                 </button>
               </div>
 
-              <p
-                className={`relative z-[2] mt-4 text-center text-[13px] font-medium ${
-                  immersive ? "text-white/60" : "text-black/40"
-                }`}
-              >
-                {dragging && comboArmed && dragOutcome
+              {(() => {
+                const footerHint = dragging && comboArmed && dragOutcome
                   ? comboOutcomes.has(dragOutcome)
                     ? `Release to remove ${dragOutcome} from combo`
                     : `Release to add ${dragOutcome} to combo`
                   : dragging && dragOutcome && dragAmount > 0
                     ? `Release to predict $${dragAmount} on ${dragOutcome}`
-                    : market.social}
-              </p>
+                    : market.social;
+                if (!footerHint) return null;
+                return (
+                  <p
+                    className={`relative z-[2] mt-4 text-center text-[13px] font-medium ${
+                      immersive ? "text-white/60" : "text-black/40"
+                    }`}
+                  >
+                    {footerHint}
+                  </p>
+                );
+              })()}
             </motion.div>
           )}
         </AnimatePresence>
@@ -1972,7 +1972,7 @@ function BottomNav({
         type="button"
         aria-label="Home"
         aria-current="page"
-        className={`${item} rounded-full bg-black text-white`}
+        className={`${item} rounded-full bg-black/[0.06] text-black`}
       >
         <svg viewBox="0 0 24 24" width={18} height={18} fill="none" aria-hidden>
           <path
