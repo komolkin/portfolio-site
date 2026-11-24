@@ -50,10 +50,24 @@ const COMBO_OVERDRAG_PX = 72;
 const COMBO_ARM_PX = MAX_DRAG_PX + 28;
 const BET_STEP = 5;
 const COMMIT_AMOUNT = 5;
+const MIN_POSITION_STAKE = 5;
+const POSITION_ADJUST_STEP = 5;
+const SIZE_DELTA_HOLD_MS = 900;
+const SIZE_DELTA_EXIT_MS = 480;
+const LIVE_PERCENT_MIN = 75;
+const LIVE_PERCENT_MAX = 88;
+const LIVE_PERCENT_TICK_MS = 900;
 const AMOUNT_FONT_MIN = 36;
 const AMOUNT_FONT_MAX = 58;
 const MAX_COMBO_PICKS = 8;
 const MAX_CHIP_LOGOS = 3;
+
+type SizeDeltaFlash = {
+  sessionId: number;
+  amount: number;
+  bumpId: number;
+  exiting: boolean;
+};
 
 type Topic = "sports" | "crypto" | "culture" | "tech" | "politics";
 
@@ -70,6 +84,13 @@ type Market = {
 };
 
 type Outcome = "Yes" | "No";
+
+type PlacedPosition = {
+  marketId: string;
+  outcome: Outcome;
+  stake: number;
+  entryPercent: number;
+};
 
 type TradeFlowState = {
   market: Market;
@@ -395,6 +416,7 @@ function ChanceGauge({ percent }: { percent: number }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
   const [display, setDisplay] = useState(0);
+  const displayRef = useRef(0);
   const playedRef = useRef(false);
   const progress = useMotionValue(0);
   const dashOffset = useTransform(progress, (p) => circumference - p);
@@ -415,15 +437,29 @@ function ChanceGauge({ percent }: { percent: number }) {
   }, []);
 
   useEffect(() => {
-    // Play once when first in view; keep the filled state while dragging.
     if (!inView) return;
     if (playedRef.current) {
-      progress.set(targetFilled);
-      setDisplay(target);
-      return;
+      const controls = animate(progress, targetFilled, {
+        duration: 0.45,
+        ease: [0.22, 1, 0.36, 1],
+      });
+      const valueControls = animate(displayRef.current, target, {
+        duration: 0.45,
+        ease: [0.22, 1, 0.36, 1],
+        onUpdate: (v) => {
+          const next = Math.round(v);
+          displayRef.current = next;
+          setDisplay(next);
+        },
+      });
+      return () => {
+        controls.stop();
+        valueControls.stop();
+      };
     }
     playedRef.current = true;
     progress.set(0);
+    displayRef.current = 0;
     setDisplay(0);
     const controls = animate(progress, targetFilled, {
       duration: 0.95,
@@ -432,7 +468,11 @@ function ChanceGauge({ percent }: { percent: number }) {
     const valueControls = animate(0, target, {
       duration: 0.95,
       ease: [0.22, 1, 0.36, 1],
-      onUpdate: (v) => setDisplay(Math.round(v)),
+      onUpdate: (v) => {
+        const next = Math.round(v);
+        displayRef.current = next;
+        setDisplay(next);
+      },
     });
     return () => {
       controls.stop();
@@ -489,6 +529,209 @@ function toWinFromAmount(amount: number, percent: number) {
 function formatToWin(value: number) {
   const rounded = Math.round(value);
   return `$${rounded.toLocaleString("en-US")}`;
+}
+
+function formatCashUsd(value: number) {
+  const safe = Math.max(0, Number.isFinite(value) ? value : 0);
+  if (safe >= 100) return `$${Math.round(safe).toLocaleString("en-US")}`;
+  return `$${safe.toFixed(safe >= 10 ? 0 : 2).replace(/\.00$/, "")}`;
+}
+
+function cashOutValue(position: PlacedPosition, currentPercent: number) {
+  if (position.entryPercent <= 0) return position.stake;
+  const shares = position.stake / (position.entryPercent / 100);
+  return shares * (Math.max(1, currentPercent) / 100);
+}
+
+function useAnimatedCount(target: number, durationMs = 140) {
+  const [display, setDisplay] = useState(0);
+  const displayRef = useRef(0);
+
+  useEffect(() => {
+    const from = displayRef.current;
+    if (from === target) {
+      setDisplay(target);
+      return;
+    }
+    const start = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - (1 - t) ** 3;
+      const next = Math.round(from + (target - from) * eased);
+      displayRef.current = next;
+      setDisplay(next);
+      if (t < 1) raf = requestAnimationFrame(tick);
+      else {
+        displayRef.current = target;
+        setDisplay(target);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, durationMs]);
+
+  return display;
+}
+
+function SizeDeltaFlashLabel({
+  amount,
+  exiting,
+  video,
+}: {
+  amount: number;
+  exiting: boolean;
+  video: boolean;
+}) {
+  const animatedAbs = useAnimatedCount(Math.abs(amount));
+  const exitClass =
+    amount > 0 ? "worm-size-delta-exit-up" : "worm-size-delta-exit-down";
+
+  return (
+    <span
+      className={`inline-flex items-baseline text-[72px] font-semibold leading-none tracking-tight tabular-nums ${
+        video ? "text-white" : "text-black"
+      } ${exiting ? exitClass : "worm-size-delta-enter"}`}
+    >
+      {amount > 0 ? "+$" : "-$"}
+      {animatedAbs.toLocaleString("en-US")}
+    </span>
+  );
+}
+
+function clampLivePercent(value: number) {
+  return Math.min(LIVE_PERCENT_MAX, Math.max(LIVE_PERCENT_MIN, value));
+}
+
+function PositionFooter({
+  position,
+  currentPercent,
+  video,
+  canIncrease,
+  onCashOut,
+  onAdjust,
+}: {
+  position: PlacedPosition;
+  currentPercent: number;
+  video: boolean;
+  canIncrease: boolean;
+  onCashOut: () => void;
+  onAdjust: (delta: number) => void;
+}) {
+  const displayPercent = Math.round(currentPercent);
+  const toWin = toWinFromAmount(position.stake, currentPercent);
+  const cashOut = cashOutValue(position, currentPercent);
+  const fill = Math.max(4, Math.min(100, currentPercent));
+  const canDecrease = position.stake > MIN_POSITION_STAKE;
+  const actionBtn = `flex h-[52px] items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,opacity] duration-150 ease-out active:scale-[0.94] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 ${
+    video ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black"
+  }`;
+
+  return (
+    <div
+      className={`relative z-[2] flex flex-col gap-3 ${
+        video ? "mt-auto" : "mt-8"
+      }`}
+    >
+      <div className="min-w-0">
+        <p
+          className={`text-[17px] font-semibold tracking-[-0.02em] ${
+            video ? "text-white" : "text-black"
+          }`}
+        >
+          {position.outcome}
+        </p>
+        <p
+          className={`mt-1 text-[40px] font-semibold leading-none tabular-nums tracking-[-0.03em] ${
+            video ? "text-white/70" : "text-black/45"
+          }`}
+        >
+          <span className={video ? "text-white" : "text-black"}>
+            {formatCashUsd(position.stake)}
+          </span>
+          {" → "}
+          <span style={{ color: YES }}>{formatCashUsd(toWin)}</span>
+        </p>
+      </div>
+
+      <div
+        className={`relative h-7 overflow-hidden rounded-full ${
+          video ? "bg-white/[0.1]" : "bg-black/[0.06]"
+        }`}
+        aria-label={`${displayPercent}% chance`}
+      >
+        <div
+          className={`absolute inset-y-0 left-0 flex items-center justify-end rounded-full pr-2.5 transition-[width] duration-500 ease-out ${
+            video ? "bg-white" : "bg-black"
+          }`}
+          style={{ width: `${fill}%` }}
+        >
+          <span
+            className={`text-[12px] font-semibold tabular-nums ${
+              video ? "text-black" : "text-white"
+            }`}
+          >
+            {displayPercent}%
+          </span>
+        </div>
+        <div
+          aria-hidden
+          className={`absolute inset-y-1 z-[1] w-px border-l border-dashed ${
+            video ? "border-black/25" : "border-white/35"
+          }`}
+          style={{ left: "50%" }}
+        />
+      </div>
+
+      <div className="grid grid-cols-4 gap-2.5">
+        <button
+          type="button"
+          aria-label="Remove $5 from position"
+          disabled={!canDecrease}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={() => {
+            if (!canDecrease) return;
+            hapticStep();
+            onAdjust(-POSITION_ADJUST_STEP);
+          }}
+          className={`${actionBtn} col-span-1 tabular-nums`}
+        >
+          -$5
+        </button>
+        <button
+          type="button"
+          aria-label="Add $5 to position"
+          disabled={!canIncrease}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={() => {
+            if (!canIncrease) return;
+            hapticStep();
+            onAdjust(POSITION_ADJUST_STEP);
+          }}
+          className={`${actionBtn} col-span-1 tabular-nums`}
+        >
+          +$5
+        </button>
+        <button
+          type="button"
+          aria-label={`Cash out ${formatCashUsd(cashOut)}`}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={() => {
+            hapticTap();
+            onCashOut();
+          }}
+          className={`${actionBtn} col-span-2 gap-1.5 px-3`}
+        >
+          <span className={video ? "text-white/55" : "text-black/45"}>
+            Cash out
+          </span>
+          <span className="tabular-nums tracking-[-0.02em]">
+            {formatCashUsd(cashOut)}
+          </span>
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function BetReveal({
@@ -706,21 +949,38 @@ function MarketVideoBg({
 function MarketCard({
   market,
   comboOutcomes,
+  position,
+  balance,
   onCommitTrade,
   onToggleCombo,
+  onCashOut,
+  onAdjustPosition,
 }: {
   market: Market;
   comboOutcomes: Set<Outcome>;
+  position: PlacedPosition | null;
+  balance: number;
   onCommitTrade: (market: Market, outcome: Outcome, amount: number) => void;
   onToggleCombo: (market: Market, outcome: Outcome) => void;
+  onCashOut: (position: PlacedPosition) => void;
+  onAdjustPosition: (marketId: string, delta: number) => number;
 }) {
   const noPercent = 100 - market.yesPercent;
   const [dragAmount, setDragAmount] = useState(0);
   const [dragOutcome, setDragOutcome] = useState<Outcome | null>(null);
   const [comboArmed, setComboArmed] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [sizeDeltaFlash, setSizeDeltaFlash] = useState<SizeDeltaFlash | null>(
+    null,
+  );
   const yesInCombo = comboOutcomes.has("Yes");
   const noInCombo = comboOutcomes.has("No");
+  const hasPosition = Boolean(position);
+  const positionPercent =
+    position?.outcome === "No" ? noPercent : market.yesPercent;
+  const [livePositionPercent, setLivePositionPercent] = useState(() =>
+    clampLivePercent(positionPercent),
+  );
   const x = useMotionValue(0);
   const yesAmountMV = useMotionValue(0);
   const noAmountMV = useMotionValue(0);
@@ -728,6 +988,91 @@ function MarketCard({
   const lastAmountRef = useRef(0);
   const lastOutcomeRef = useRef<Outcome | null>(null);
   const lastComboArmedRef = useRef(false);
+  const sizeDeltaSessionRef = useRef(0);
+  const sizeDeltaStackedRef = useRef(0);
+  const sizeDeltaBumpRef = useRef(0);
+  const sizeDeltaHoldTimerRef = useRef<number | null>(null);
+  const sizeDeltaExitTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setLivePositionPercent(clampLivePercent(positionPercent));
+  }, [positionPercent, position?.marketId, position?.outcome]);
+
+  useEffect(() => {
+    if (!hasPosition) return;
+    const id = window.setInterval(() => {
+      setLivePositionPercent((prev) => {
+        const step = (Math.random() - 0.48) * 2.4;
+        return clampLivePercent(prev + step);
+      });
+    }, LIVE_PERCENT_TICK_MS);
+    return () => window.clearInterval(id);
+  }, [hasPosition, position?.marketId]);
+
+  useEffect(() => {
+    return () => {
+      if (sizeDeltaHoldTimerRef.current !== null) {
+        window.clearTimeout(sizeDeltaHoldTimerRef.current);
+      }
+      if (sizeDeltaExitTimerRef.current !== null) {
+        window.clearTimeout(sizeDeltaExitTimerRef.current);
+      }
+    };
+  }, []);
+
+  const gaugePercent = hasPosition
+    ? position?.outcome === "No"
+      ? 100 - livePositionPercent
+      : livePositionPercent
+    : market.yesPercent;
+
+  const flashSizeDelta = useCallback((applied: number) => {
+    if (applied === 0) return;
+
+    const isNewSession =
+      sizeDeltaHoldTimerRef.current === null &&
+      sizeDeltaExitTimerRef.current === null;
+    if (isNewSession) {
+      sizeDeltaSessionRef.current += 1;
+      sizeDeltaStackedRef.current = applied;
+    } else {
+      sizeDeltaStackedRef.current += applied;
+    }
+
+    sizeDeltaBumpRef.current += 1;
+    setSizeDeltaFlash({
+      sessionId: sizeDeltaSessionRef.current,
+      amount: sizeDeltaStackedRef.current,
+      bumpId: sizeDeltaBumpRef.current,
+      exiting: false,
+    });
+
+    if (sizeDeltaHoldTimerRef.current !== null) {
+      window.clearTimeout(sizeDeltaHoldTimerRef.current);
+    }
+    if (sizeDeltaExitTimerRef.current !== null) {
+      window.clearTimeout(sizeDeltaExitTimerRef.current);
+      sizeDeltaExitTimerRef.current = null;
+    }
+
+    sizeDeltaHoldTimerRef.current = window.setTimeout(() => {
+      sizeDeltaHoldTimerRef.current = null;
+      setSizeDeltaFlash((prev) => (prev ? { ...prev, exiting: true } : null));
+      sizeDeltaExitTimerRef.current = window.setTimeout(() => {
+        setSizeDeltaFlash(null);
+        sizeDeltaStackedRef.current = 0;
+        sizeDeltaExitTimerRef.current = null;
+      }, SIZE_DELTA_EXIT_MS);
+    }, SIZE_DELTA_HOLD_MS);
+  }, []);
+
+  const handleAdjust = useCallback(
+    (delta: number) => {
+      const applied = onAdjustPosition(market.id, delta);
+      flashSizeDelta(applied);
+    },
+    [flashSizeDelta, market.id, onAdjustPosition],
+  );
 
   const yesOpacity = useTransform(x, [0, 20, 48], [0, 0.7, 1]);
   const noOpacity = useTransform(x, [0, -20, -48], [0, 0.7, 1]);
@@ -776,27 +1121,31 @@ function MarketCard({
   return (
     <div className="relative overflow-visible">
       {/* Left→right reveals Yes; right→left reveals No */}
-      <BetReveal
-        side="Yes"
-        amountMV={yesAmountMV}
-        percent={market.yesPercent}
-        comboArmed={dragOutcome === "Yes" && comboArmed}
-        comboRemove={yesInCombo}
-        opacity={yesOpacity}
-        width={yesWidth}
-      />
-      <BetReveal
-        side="No"
-        amountMV={noAmountMV}
-        percent={noPercent}
-        comboArmed={dragOutcome === "No" && comboArmed}
-        comboRemove={noInCombo}
-        opacity={noOpacity}
-        width={noWidth}
-      />
+      {!hasPosition ? (
+        <>
+          <BetReveal
+            side="Yes"
+            amountMV={yesAmountMV}
+            percent={market.yesPercent}
+            comboArmed={dragOutcome === "Yes" && comboArmed}
+            comboRemove={yesInCombo}
+            opacity={yesOpacity}
+            width={yesWidth}
+          />
+          <BetReveal
+            side="No"
+            amountMV={noAmountMV}
+            percent={noPercent}
+            comboArmed={dragOutcome === "No" && comboArmed}
+            comboRemove={noInCombo}
+            opacity={noOpacity}
+            width={noWidth}
+          />
+        </>
+      ) : null}
 
       <motion.article
-        drag="x"
+        drag={hasPosition ? false : "x"}
         dragConstraints={{
           left: -(MAX_DRAG_PX + COMBO_OVERDRAG_PX),
           right: MAX_DRAG_PX + COMBO_OVERDRAG_PX,
@@ -804,18 +1153,21 @@ function MarketCard({
         dragElastic={0.12}
         dragDirectionLock
         dragMomentum={false}
-        whileDrag={{ scale: 0.97 }}
+        whileDrag={hasPosition ? undefined : { scale: 0.97 }}
         transition={{ type: "spring", stiffness: 480, damping: 36 }}
         style={{ x, touchAction: "pan-y" }}
         onDragStart={() => {
+          if (hasPosition) return;
           unlockHaptics();
           committedRef.current = false;
           setDragging(true);
         }}
         onDrag={() => {
+          if (hasPosition) return;
           syncDragFromX();
         }}
         onDragEnd={(_, info) => {
+          if (hasPosition) return;
           setDragging(false);
           const offset = x.get();
           const amount = amountFromOffset(offset);
@@ -867,10 +1219,30 @@ function MarketCard({
           market.video
             ? "flex min-h-[504px] flex-col bg-black px-5 pb-6 pt-5 text-white"
             : "bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
-        } ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
+        } ${
+          hasPosition
+            ? "cursor-default"
+            : dragging
+              ? "cursor-grabbing"
+              : "cursor-grab"
+        }`}
       >
         {market.video ? (
           <MarketVideoBg src={market.video} poster={market.thumb} />
+        ) : null}
+
+        {sizeDeltaFlash && sizeDeltaFlash.amount !== 0 ? (
+          <div
+            key={sizeDeltaFlash.sessionId}
+            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center -translate-y-10"
+            aria-hidden
+          >
+            <SizeDeltaFlashLabel
+              amount={sizeDeltaFlash.amount}
+              exiting={sizeDeltaFlash.exiting}
+              video={Boolean(market.video)}
+            />
+          </div>
         ) : null}
 
         <div className={`relative z-[2] flex items-start gap-3 ${market.video ? "" : ""}`}>
@@ -907,84 +1279,137 @@ function MarketCard({
         {market.video ? (
           <div className="relative z-[2] min-h-[180px] flex-1" aria-hidden />
         ) : (
-          <div className="mb-2 mt-6">
-            <ChanceGauge percent={market.yesPercent} />
-          </div>
+          <motion.div
+            className="relative z-[2] mb-2 mt-6"
+            initial={false}
+            animate={{
+              opacity: sizeDeltaFlash && sizeDeltaFlash.amount !== 0 ? 0 : 1,
+            }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <ChanceGauge percent={gaugePercent} />
+          </motion.div>
         )}
 
-        <div
-          className={`relative z-[2] grid grid-cols-2 gap-2.5 ${
-            market.video ? "mt-auto" : "mt-8"
-          }`}
-        >
-          <button
-            type="button"
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={() => {
-              hapticTap();
-              onCommitTrade(market, "Yes", 0);
-            }}
-            className={`flex h-[52px] origin-center items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
-              dragOutcome === "No"
-                ? market.video
-                  ? "bg-white/[0.06] text-white/45"
-                  : "bg-black/[0.05] text-black/35"
-                : yesInCombo || dragOutcome === "Yes"
-                  ? "text-white"
-                  : market.video
-                    ? "bg-white/[0.06] text-white"
-                    : "bg-black/[0.06] text-black"
-            }`}
-            style={
-              yesInCombo || dragOutcome === "Yes"
-                ? { backgroundColor: YES }
-                : undefined
-            }
-          >
-            Yes {market.yesPercent}%
-          </button>
-          <button
-            type="button"
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={() => {
-              hapticTap();
-              onCommitTrade(market, "No", 0);
-            }}
-            className={`flex h-[52px] origin-center items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
-              dragOutcome === "Yes"
-                ? market.video
-                  ? "bg-white/[0.06] text-white/45"
-                  : "bg-black/[0.05] text-black/35"
-                : noInCombo || dragOutcome === "No"
-                  ? "text-white"
-                  : market.video
-                    ? "bg-white/[0.06] text-white"
-                    : "bg-black/[0.06] text-black"
-            }`}
-            style={
-              noInCombo || dragOutcome === "No"
-                ? { backgroundColor: NO }
-                : undefined
-            }
-          >
-            No {noPercent}%
-          </button>
-        </div>
+        {position ? (
+          <PositionFooter
+            position={position}
+            currentPercent={livePositionPercent}
+            video={Boolean(market.video)}
+            canIncrease={balance >= POSITION_ADJUST_STEP}
+            onCashOut={() => onCashOut(position)}
+            onAdjust={handleAdjust}
+          />
+        ) : (
+          <>
+            <div
+              className={`relative z-[2] grid grid-cols-2 gap-2.5 ${
+                market.video ? "mt-auto" : "mt-8"
+              }`}
+            >
+              <button
+                type="button"
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={() => {
+                  hapticTap();
+                  onCommitTrade(market, "Yes", 0);
+                }}
+                className={`flex h-[52px] origin-center items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
+                  dragOutcome === "No"
+                    ? market.video
+                      ? "bg-white/[0.06] text-white/45"
+                      : "bg-black/[0.05] text-black/35"
+                    : yesInCombo || dragOutcome === "Yes"
+                      ? "text-white"
+                      : market.video
+                        ? "bg-white/[0.06] text-white"
+                        : "bg-black/[0.06] text-black"
+                }`}
+                style={
+                  yesInCombo || dragOutcome === "Yes"
+                    ? { backgroundColor: YES }
+                    : undefined
+                }
+              >
+                Yes {market.yesPercent}%
+              </button>
+              <button
+                type="button"
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={() => {
+                  hapticTap();
+                  onCommitTrade(market, "No", 0);
+                }}
+                className={`flex h-[52px] origin-center items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
+                  dragOutcome === "Yes"
+                    ? market.video
+                      ? "bg-white/[0.06] text-white/45"
+                      : "bg-black/[0.05] text-black/35"
+                    : noInCombo || dragOutcome === "No"
+                      ? "text-white"
+                      : market.video
+                        ? "bg-white/[0.06] text-white"
+                        : "bg-black/[0.06] text-black"
+                }`}
+                style={
+                  noInCombo || dragOutcome === "No"
+                    ? { backgroundColor: NO }
+                    : undefined
+                }
+              >
+                No {noPercent}%
+              </button>
+            </div>
 
-        <p
-          className={`relative z-[2] mt-4 text-center text-[13px] font-medium ${
-            market.video ? "text-white/60" : "text-black/40"
-          }`}
-        >
-          {dragging && comboArmed && dragOutcome
-            ? comboOutcomes.has(dragOutcome)
-              ? `Release to remove ${dragOutcome} from combo`
-              : `Release to add ${dragOutcome} to combo`
-            : dragging && dragOutcome && dragAmount > 0
-              ? `Release to predict $${dragAmount} on ${dragOutcome}`
-              : market.social}
-        </p>
+            <p
+              className={`relative z-[2] mt-4 text-center text-[13px] font-medium ${
+                market.video ? "text-white/60" : "text-black/40"
+              }`}
+            >
+              {dragging && comboArmed && dragOutcome
+                ? comboOutcomes.has(dragOutcome)
+                  ? `Release to remove ${dragOutcome} from combo`
+                  : `Release to add ${dragOutcome} to combo`
+                : dragging && dragOutcome && dragAmount > 0
+                  ? `Release to predict $${dragAmount} on ${dragOutcome}`
+                  : market.social}
+            </p>
+          </>
+        )}
       </motion.article>
+      <style>{`
+        @keyframes worm-size-delta-enter {
+          0% { opacity: 0; transform: translate3d(0, 18px, 0) scale(0.72); }
+          55% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.08); }
+          100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        }
+        @keyframes worm-size-delta-exit-up {
+          0% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+          100% { opacity: 0; transform: translate3d(0, -42px, 0) scale(0.92); }
+        }
+        @keyframes worm-size-delta-exit-down {
+          0% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+          100% { opacity: 0; transform: translate3d(0, 42px, 0) scale(0.92); }
+        }
+        .worm-size-delta-enter {
+          animation: worm-size-delta-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        .worm-size-delta-exit-up {
+          animation: worm-size-delta-exit-up 480ms cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+        .worm-size-delta-exit-down {
+          animation: worm-size-delta-exit-down 480ms cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .worm-size-delta-enter,
+          .worm-size-delta-exit-up,
+          .worm-size-delta-exit-down {
+            animation: none !important;
+            opacity: 1;
+            transform: none;
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -1453,6 +1878,9 @@ function BottomChrome({
 export default function MainFeed() {
   const [tradeFlow, setTradeFlow] = useState<TradeFlowState | null>(null);
   const [balance, setBalance] = useState(3400);
+  const [positions, setPositions] = useState<Record<string, PlacedPosition>>(
+    {},
+  );
   const [activeCategory, setActiveCategory] =
     useState<FeedCategory["id"]>("trending");
   const [searchQuery, setSearchQuery] = useState("");
@@ -1496,6 +1924,74 @@ export default function MainFeed() {
 
   const closeTrade = useCallback(() => setTradeFlow(null), []);
 
+  const cashOutPosition = useCallback((position: PlacedPosition) => {
+    const market = MARKETS.find((item) => item.id === position.marketId);
+    const currentPercent = market
+      ? position.outcome === "Yes"
+        ? market.yesPercent
+        : 100 - market.yesPercent
+      : position.entryPercent;
+    const payout = cashOutValue(position, currentPercent);
+    hapticSuccess();
+    setBalance((prev) => prev + payout);
+    setPositions((prev) => {
+      const next = { ...prev };
+      delete next[position.marketId];
+      return next;
+    });
+  }, []);
+
+  const positionsRef = useRef(positions);
+  positionsRef.current = positions;
+  const balanceRef = useRef(balance);
+  balanceRef.current = balance;
+
+  const adjustPosition = useCallback((marketId: string, delta: number) => {
+    const existing = positionsRef.current[marketId];
+    if (!existing) return 0;
+
+    if (delta > 0) {
+      if (balanceRef.current < POSITION_ADJUST_STEP) return 0;
+      const applied = POSITION_ADJUST_STEP;
+      const market = MARKETS.find((item) => item.id === marketId);
+      const currentPercent = market
+        ? existing.outcome === "Yes"
+          ? market.yesPercent
+          : 100 - market.yesPercent
+        : existing.entryPercent;
+      const nextStake = existing.stake + applied;
+      const nextEntry = Math.round(
+        (existing.entryPercent * existing.stake + currentPercent * applied) /
+          nextStake,
+      );
+      setBalance((prev) => Math.max(0, prev - applied));
+      setPositions((prev) => ({
+        ...prev,
+        [marketId]: {
+          ...existing,
+          stake: nextStake,
+          entryPercent: nextEntry,
+        },
+      }));
+      return applied;
+    }
+
+    const remove = Math.min(
+      POSITION_ADJUST_STEP,
+      existing.stake - MIN_POSITION_STAKE,
+    );
+    if (remove <= 0) return 0;
+    setBalance((prev) => prev + remove);
+    setPositions((prev) => ({
+      ...prev,
+      [marketId]: {
+        ...existing,
+        stake: existing.stake - remove,
+      },
+    }));
+    return -remove;
+  }, []);
+
   const comboByMarket = useMemo(() => {
     const map = new Map<string, Set<Outcome>>();
     for (const pick of comboPicks) {
@@ -1538,7 +2034,7 @@ export default function MainFeed() {
         ref={feedRef}
         className="h-full overflow-x-clip overflow-y-auto overscroll-y-contain [overscroll-behavior-x:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         style={{
-          paddingTop: "max(12px, env(safe-area-inset-top, 0px))",
+          paddingTop: "max(16px, env(safe-area-inset-top, 0px))",
           paddingBottom: "calc(168px + env(safe-area-inset-bottom, 0px))",
         }}
       >
@@ -1568,8 +2064,12 @@ export default function MainFeed() {
                 <MarketCard
                   market={market}
                   comboOutcomes={comboByMarket.get(market.id) ?? new Set()}
+                  position={positions[market.id] ?? null}
+                  balance={balance}
                   onCommitTrade={openTrade}
                   onToggleCombo={toggleCombo}
+                  onCashOut={cashOutPosition}
+                  onAdjustPosition={adjustPosition}
                 />
               </motion.div>
             ))
@@ -1623,7 +2123,33 @@ export default function MainFeed() {
             theme="light"
             onClose={closeTrade}
             onComplete={(trade) => {
+              const outcome: Outcome =
+                trade.outcome.toLowerCase() === "no" ? "No" : "Yes";
+              const entryPercent = Math.round(
+                Math.max(1, Math.min(99, trade.price * 100)),
+              );
               setBalance((prev) => Math.max(0, prev - trade.amountUsd));
+              setPositions((prev) => {
+                const existing = prev[tradeFlow.market.id];
+                const sameSide = existing?.outcome === outcome;
+                return {
+                  ...prev,
+                  [tradeFlow.market.id]: {
+                    marketId: tradeFlow.market.id,
+                    outcome,
+                    stake: sameSide
+                      ? existing.stake + trade.amountUsd
+                      : trade.amountUsd,
+                    entryPercent: sameSide
+                      ? Math.round(
+                          (existing.entryPercent * existing.stake +
+                            entryPercent * trade.amountUsd) /
+                            (existing.stake + trade.amountUsd),
+                        )
+                      : entryPercent,
+                  },
+                };
+              });
             }}
             onShare={() => {}}
           />

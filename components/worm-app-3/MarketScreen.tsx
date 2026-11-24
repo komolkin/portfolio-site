@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { allo, instrumentSansCondensed } from "@/lib/fonts";
+import { allo } from "@/lib/fonts";
 
 /** Endpoint coords for Figma chart paths (viewBox 259×132). */
 const CHART_END_A = { x: 257.9, y: 1.35 };
@@ -220,9 +220,7 @@ function MatchOddsChart({
         >
           {shortLabel(top.label)}
         </span>
-        <span
-          className={`${instrumentSansCondensed.className} mt-0.5 text-[28px] font-semibold tabular-nums leading-none text-white`}
-        >
+        <span className="mt-0.5 text-[28px] font-semibold tabular-nums leading-none text-white">
           {top.percent}%
         </span>
       </div>
@@ -236,9 +234,7 @@ function MatchOddsChart({
         >
           {shortLabel(bottom.label)}
         </span>
-        <span
-          className={`${instrumentSansCondensed.className} mt-0.5 text-[28px] font-semibold tabular-nums leading-none text-white`}
-        >
+        <span className="mt-0.5 text-[28px] font-semibold tabular-nums leading-none text-white">
           {bottom.percent}%
         </span>
       </div>
@@ -468,9 +464,7 @@ export default function MarketScreen({
                     <p className="text-[13px] font-medium text-white/45">
                       {kickoff.day}
                     </p>
-                    <p
-                      className={`mt-1 flex items-baseline justify-center gap-2 leading-none ${instrumentSansCondensed.className}`}
-                    >
+                    <p className="mt-1 flex items-baseline justify-center gap-2 leading-none">
                       <span className="text-[28px] font-semibold text-white/50">
                         in
                       </span>

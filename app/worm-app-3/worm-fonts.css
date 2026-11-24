@@ -1,0 +1,10 @@
+/* Allo only inside the worm-app-3 frame — override shared UI faces. */
+.worm-app-frame {
+  font-family: var(--font-allo), Allo, sans-serif;
+  font-variation-settings: "ROND" 50;
+}
+
+.worm-app-frame :where(*) {
+  font-family: inherit !important;
+  font-variation-settings: inherit;
+}

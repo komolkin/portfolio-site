@@ -3,6 +3,7 @@
 "use client";
 import "./fonts.css";
 import { useEffect, useRef } from "react";
+import { allo } from "@/lib/fonts";
 import { prefersReducedMotion, usePause } from "./runtime/use-pause";
 import { RollType } from "./engine";
 import { DEFAULT_PHRASES, FONT_VAR, FONT_WEIGHT, type Phrases } from "./params";
@@ -31,14 +32,17 @@ export default function RollTypeCard({
 
   useEffect(() => {
     const element = canvas.current;
-    if (!element) return;
+    const host = box.current;
+    if (!element || !host) return;
     let cancelled = false;
+    // Prefer next/font Allo; fall back to CSS var resolved inside the Allo-scoped host.
     const probe = document.createElement("span");
-    probe.style.cssText = `position:absolute;visibility:hidden;font-family:var(${fontVar})`;
+    probe.style.cssText = `position:absolute;visibility:hidden;pointer-events:none;font-family:var(${fontVar});font-variation-settings:"ROND" 50`;
     probe.textContent = "Ag";
-    document.body.appendChild(probe);
-    const family = getComputedStyle(probe).fontFamily || "sans-serif";
+    host.appendChild(probe);
+    const probed = getComputedStyle(probe).fontFamily;
     probe.remove();
+    const family = allo.style.fontFamily || probed || "Allo, sans-serif";
 
     const build = () => {
       if (cancelled) return;
@@ -49,8 +53,11 @@ export default function RollTypeCard({
       else if (running.current) next.start();
     };
     const first = family.split(",")[0].replace(/["']/g, "").trim();
-    if (document.fonts?.load) document.fonts.load(`${weight} 1em "${first}"`).then(build, build);
-    else build();
+    const loadFace = document.fonts?.load
+      ? document.fonts.load(`${weight} 1em "${first}"`)
+      : Promise.resolve();
+    const ready = document.fonts?.ready ?? Promise.resolve();
+    void Promise.all([loadFace, ready]).then(build, build);
 
     let timer = 0;
     const onResize = () => {

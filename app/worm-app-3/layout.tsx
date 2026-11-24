@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { allo } from "@/lib/fonts";
+import "./worm-fonts.css";
 
 export const metadata: Metadata = {
   title: "Worm 3",

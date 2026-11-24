@@ -1,4 +1,4 @@
-/* The font variables Roll type reads, each a system stack. VARIABLE: put the project's own face first in each. */
+/* The font variables Roll type reads. VARIABLE: project's face first — Allo only for worm-app-3. */
 :root {
-  --visual-sans: var(--font-allo), Allo, system-ui, sans-serif;
+  --visual-sans: var(--font-allo, "Allo"), "Allo", sans-serif;
 }

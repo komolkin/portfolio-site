@@ -82,14 +82,27 @@ export class RollType {
     return `${this.weight} ${size}px ${this.family}`;
   }
 
+  private applyFont(
+    ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    size = this.size,
+  ) {
+    ctx.font = this.font(size);
+    ctx.fontKerning = 'normal';
+    // Match Allo UI axis used across worm-app-3.
+    if ('fontVariationSettings' in ctx) {
+      (
+        ctx as CanvasRenderingContext2D & { fontVariationSettings?: string }
+      ).fontVariationSettings = '"ROND" 50';
+    }
+  }
+
   measure() {
     const ctx = this.ctx;
     if (!ctx) return;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.font = this.font(100);
+    this.applyFont(ctx, 100);
     this.size = (100 * CAP) / (ctx.measureText('H').actualBoundingBoxAscent || 70);
-    ctx.font = this.font();
-    ctx.fontKerning = 'normal';
+    this.applyFont(ctx);
     const space = ctx.measureText(' ').width;
     this.layouts = this.phrases.map(phrase => {
       const words: Word[] = [];
@@ -176,8 +189,7 @@ export class RollType {
     const c = canvas.getContext('2d') as CanvasRenderingContext2D | null;
     if (!c) return null;
     c.setTransform(k, 0, 0, k, 0, 0);
-    c.font = this.font();
-    c.fontKerning = 'normal';
+    this.applyFont(c);
     c.textBaseline = 'alphabetic';
     c.fillStyle = ink;
     c.fillText(word.text, PAD + word.pen - word.left, PAD + word.ascent);
@@ -224,8 +236,7 @@ export class RollType {
     ctx.globalAlpha = 1;
     ctx.fillStyle = ground;
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    ctx.font = this.font();
-    ctx.fontKerning = 'normal';
+    this.applyFont(ctx);
     ctx.textBaseline = 'alphabetic';
     ctx.textAlign = 'left';
     for (let q = -n; q < 2 * n; q++) {
