@@ -6,6 +6,7 @@ import GetStarted from "./GetStarted";
 import MainFeed from "./MainFeed";
 
 const BG = "#E8E8E8";
+const STAGE = "#121214";
 
 export default function WormApp3Shell() {
   const [started, setStarted] = useState(false);
@@ -15,8 +16,8 @@ export default function WormApp3Shell() {
     const body = document.body;
     const prevHtmlBg = html.style.backgroundColor;
     const prevBodyBg = body.style.backgroundColor;
-    html.style.backgroundColor = BG;
-    body.style.backgroundColor = BG;
+    html.style.backgroundColor = STAGE;
+    body.style.backgroundColor = STAGE;
     html.classList.add("worm-app-active");
     syncWormAppHeight();
 

@@ -170,7 +170,7 @@ export function ComboSheet({
     <AnimatePresence>
       {open ? (
         <motion.div
-          className={`fixed inset-0 z-50 flex items-end justify-center text-black ${allo.className}`}
+          className={`absolute inset-0 z-50 flex items-end justify-center text-black ${allo.className}`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -196,7 +196,7 @@ export function ComboSheet({
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.55 }}
             onDragEnd={onDragEnd}
-            className="relative z-[1] flex max-h-[88dvh] w-full max-w-[430px] flex-col overflow-hidden rounded-t-[28px] bg-white pb-[max(8px,env(safe-area-inset-bottom))] text-black shadow-[0_-12px_40px_rgba(0,0,0,0.12)]"
+            className="relative z-[1] flex max-h-[88%] w-full max-w-[430px] flex-col overflow-hidden rounded-t-[28px] bg-white pb-[max(8px,env(safe-area-inset-bottom))] text-black shadow-[0_-12px_40px_rgba(0,0,0,0.12)]"
           >
             <div
               className="flex touch-none justify-center pb-2 pt-2.5"

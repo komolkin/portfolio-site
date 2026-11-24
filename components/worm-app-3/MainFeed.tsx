@@ -509,7 +509,7 @@ function BetReveal({
   return (
     <motion.div
       aria-hidden
-      className={`absolute inset-y-0 flex items-center justify-center overflow-hidden ${
+      className={`absolute inset-y-0 flex items-center justify-center overflow-visible ${
         isYes ? "left-0" : "right-0"
       }`}
       style={{ opacity, width }}
@@ -748,7 +748,7 @@ function MarketCard({
   }, [x]);
 
   return (
-    <div className="relative overflow-hidden rounded-[28px]">
+    <div className="relative overflow-visible">
       {/* Left→right reveals Yes; right→left reveals No */}
       <BetReveal
         side="Yes"
@@ -1523,6 +1523,7 @@ export default function MainFeed() {
             visibleMarkets.map((market, index) => (
               <motion.div
                 key={market.id}
+                className="relative overflow-visible"
                 initial={
                   animateFeedEntrance ? { opacity: 0, y: 22 } : false
                 }
