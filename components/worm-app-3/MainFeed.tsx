@@ -861,23 +861,11 @@ function PositionFooter({
             hapticSuccess();
             onCashOut();
           }}
-          className={`${actionBtn} col-span-2 gap-1.5 px-3 ${
+          className={`${actionBtn} col-span-2 px-3 ${
             cashingOut ? "disabled:!opacity-100" : ""
           }`}
         >
-          <span className="inline-flex items-center gap-1.5 leading-none">
-            <span className={video ? "text-white/55" : "text-black/45"}>
-              Cash out
-            </span>
-            <span aria-hidden="true" className="inline-flex items-baseline">
-              <FlowUsd
-                value={valueNow}
-                showCents
-                className="tabular-nums tracking-[-0.02em]"
-                centsClassName={`tabular-nums tracking-[-0.02em] ${valueCentsTone}`}
-              />
-            </span>
-          </span>
+          Cash out
         </button>
       </div>
     </div>
