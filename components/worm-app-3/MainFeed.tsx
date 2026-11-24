@@ -516,12 +516,12 @@ function BetReveal({
   return (
     <motion.div
       aria-hidden
-      className={`absolute inset-y-0 flex items-center justify-center overflow-hidden ${
+      className={`absolute inset-y-0 flex items-center justify-center overflow-visible ${
         isYes ? "left-0" : "right-0"
       }`}
       style={{ opacity, width }}
     >
-      <div className="relative z-[1] flex w-[120px] flex-col items-center justify-center px-2">
+      <div className="relative z-[1] flex min-w-[120px] flex-col items-center justify-center px-2">
         <AnimatePresence mode="wait" initial={false}>
           {comboArmed ? (
             <motion.div
@@ -765,7 +765,7 @@ function MarketCard({
   }, [noAmountMV, x, yesAmountMV]);
 
   return (
-    <div className="relative overflow-hidden rounded-[28px]">
+    <div className="relative overflow-visible">
       {/* Left→right reveals Yes; right→left reveals No */}
       <BetReveal
         side="Yes"
@@ -1518,12 +1518,12 @@ export default function MainFeed() {
 
   return (
     <div
-      className={`relative h-full w-full overflow-hidden text-black ${allo.className}`}
+      className={`relative h-full w-full overflow-x-clip overflow-y-hidden text-black ${allo.className}`}
       style={{ backgroundColor: BG }}
     >
       <div
         ref={feedRef}
-        className="h-full overflow-x-hidden overflow-y-auto overscroll-y-contain [overscroll-behavior-x:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="h-full overflow-x-clip overflow-y-auto overscroll-y-contain [overscroll-behavior-x:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         style={{
           paddingTop: "max(12px, env(safe-area-inset-top, 0px))",
           paddingBottom: "calc(168px + env(safe-area-inset-bottom, 0px))",
@@ -1541,7 +1541,7 @@ export default function MainFeed() {
             visibleMarkets.map((market, index) => (
               <motion.div
                 key={market.id}
-                className="relative min-w-0 overflow-hidden"
+                className="relative min-w-0 overflow-visible"
                 initial={
                   animateFeedEntrance ? { opacity: 0, y: 22 } : false
                 }

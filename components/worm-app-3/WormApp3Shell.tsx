@@ -41,7 +41,7 @@ export default function WormApp3Shell() {
 
   return (
     <div
-      className="relative h-full min-h-[var(--worm-app-height,100%)] w-full overflow-hidden overscroll-none text-black"
+      className="relative h-full min-h-[var(--worm-app-height,100%)] w-full overflow-x-clip overflow-y-hidden overscroll-none text-black"
       style={{ backgroundColor: BG }}
     >
       {started ? <MainFeed /> : <GetStarted onComplete={() => setStarted(true)} />}

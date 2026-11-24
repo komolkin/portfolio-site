@@ -62,7 +62,7 @@ export default function WormApp3Layout({
       style={{ backgroundColor: STAGE }}
     >
       <div
-        className="relative h-full w-full overflow-hidden md:aspect-[393/852] md:h-[min(852px,calc(100svh-56px))] md:w-auto md:max-w-[min(393px,calc(100vw-56px))] md:rounded-[44px] md:shadow-[0_24px_80px_rgba(0,0,0,0.45)] md:ring-1 md:ring-white/10 md:[--worm-app-height:100%]"
+        className="relative h-full w-full overflow-x-clip overflow-y-hidden md:aspect-[393/852] md:h-[min(852px,calc(100svh-56px))] md:w-auto md:max-w-[min(393px,calc(100vw-56px))] md:rounded-[44px] md:shadow-[0_24px_80px_rgba(0,0,0,0.45)] md:ring-1 md:ring-white/10 md:[--worm-app-height:100%]"
         style={{ backgroundColor: APP_BG }}
       >
         {children}
