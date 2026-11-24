@@ -37,7 +37,7 @@ const BG = "#E8E8E8";
 const YES = "#1DB954";
 const NO = "#FF3B5C";
 
-const MAX_BET = 100;
+const MAX_BET = 25;
 const MAX_DRAG_PX = 168;
 const COMBO_OVERDRAG_PX = 72;
 const COMBO_ARM_PX = MAX_DRAG_PX + 28;
@@ -83,6 +83,11 @@ const FEED_CATEGORIES: FeedCategory[] = [
     icon: "/worm-app-3/categories/arrow.png?v=3",
   },
   {
+    id: "culture",
+    label: "Culture",
+    icon: "/worm-app-3/categories/alien.png?v=3",
+  },
+  {
     id: "sports",
     label: "Sports",
     icon: "/worm-app-3/categories/soccer.png?v=3",
@@ -91,11 +96,6 @@ const FEED_CATEGORIES: FeedCategory[] = [
     id: "crypto",
     label: "Crypto",
     icon: "/worm-app-3/categories/cash.png?v=3",
-  },
-  {
-    id: "culture",
-    label: "Culture",
-    icon: "/worm-app-3/categories/alien.png?v=3",
   },
   {
     id: "tech",
@@ -124,8 +124,8 @@ const MARKETS: Market[] = [
     id: "gta-vi-nov19",
     category: "GTA VI",
     topic: "culture",
-    question: "Will Grand Theft Auto VI release on November 19, 2026?",
-    thumb: "/worm-app-3/logos/gta-vi-cover.png",
+    question: "Will Grand Theft Auto VI release on PC by December 31, 2026?",
+    thumb: "/worm-app-3/logos/gta-vi-cover.png?v=2",
     yesPercent: 72,
     social: "Nass and 184 others made a prediction",
   },
@@ -474,27 +474,37 @@ function amountFontSize(amount: number) {
   return AMOUNT_FONT_MIN + t * (AMOUNT_FONT_MAX - AMOUNT_FONT_MIN);
 }
 
+function toWinFromAmount(amount: number, percent: number) {
+  if (amount <= 0 || percent <= 0) return 0;
+  return amount / (percent / 100);
+}
+
+function formatToWin(value: number) {
+  const rounded = Math.round(value);
+  return `$${rounded.toLocaleString("en-US")}`;
+}
+
 function BetReveal({
   side,
   amount,
+  percent,
   comboArmed,
   comboRemove,
   opacity,
   width,
-  scaleX,
 }: {
   side: Outcome;
   amount: number;
+  percent: number;
   comboArmed: boolean;
   comboRemove: boolean;
   opacity: ReturnType<typeof useTransform<number, number>>;
   width: ReturnType<typeof useTransform<number, number>>;
-  scaleX: ReturnType<typeof useTransform<number, number>>;
 }) {
-  const accent = side === "Yes" ? YES : NO;
   const fontSize = amountFontSize(amount);
   const dollarSize = fontSize * 0.62;
   const isYes = side === "Yes";
+  const toWin = toWinFromAmount(amount, percent);
 
   return (
     <motion.div
@@ -504,18 +514,6 @@ function BetReveal({
       }`}
       style={{ opacity, width }}
     >
-      <motion.div
-        className={`absolute inset-y-0 ${
-          isYes
-            ? "left-0 origin-left rounded-l-[28px]"
-            : "right-0 origin-right rounded-r-[28px]"
-        }`}
-        style={{
-          width: "100%",
-          backgroundColor: accent,
-          scaleX,
-        }}
-      />
       <div className="relative z-[1] flex flex-col items-center justify-center px-2">
         <AnimatePresence mode="wait" initial={false}>
           {comboArmed ? (
@@ -527,7 +525,7 @@ function BetReveal({
               transition={{ type: "spring", stiffness: 480, damping: 28 }}
               className="flex flex-col items-center"
             >
-              <span className="flex size-[56px] items-center justify-center rounded-full bg-white text-black shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
+              <span className="flex size-[56px] items-center justify-center rounded-full bg-black text-white">
                 <svg
                   viewBox="0 0 24 24"
                   width={28}
@@ -552,7 +550,7 @@ function BetReveal({
                   )}
                 </svg>
               </span>
-              <p className="mt-2.5 text-center text-[13px] font-bold text-white">
+              <p className="mt-2.5 text-center text-[13px] font-bold text-black">
                 {comboRemove ? "Remove from combo" : "Add to combo"}
               </p>
             </motion.div>
@@ -560,16 +558,19 @@ function BetReveal({
             <motion.div
               key="amount"
               initial={{ opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
+              animate={{
+                opacity: amount > 0 ? 1 : 0,
+                scale: amount > 0 ? 1 : 0.96,
+              }}
               exit={{ opacity: 0, scale: 0.92 }}
-              transition={{ duration: 0.12 }}
+              transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col items-center justify-center"
             >
-              <p className="text-[13px] font-semibold tracking-[0.02em] text-white/70">
+              <p className="text-[13px] font-semibold tracking-[0.02em] text-black/45">
                 Predict
               </p>
               <p
-                className="mt-1 flex items-baseline justify-center text-white transition-[font-size] duration-100 ease-out"
+                className="mt-1 flex items-baseline justify-center text-black transition-[font-size] duration-100 ease-out"
                 style={{ fontSize }}
               >
                 <span
@@ -582,15 +583,9 @@ function BetReveal({
                   {amount}
                 </span>
               </p>
-              <motion.p
-                className="mt-1 text-[13px] font-bold text-white/80"
-                animate={{
-                  scale: 1 + (amount / MAX_BET) * 1.15,
-                }}
-                transition={{ type: "spring", stiffness: 420, damping: 28 }}
-              >
-                {side}
-              </motion.p>
+              <p className="mt-1 whitespace-nowrap text-[13px] font-bold text-black">
+                To win {formatToWin(toWin)}
+              </p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -658,7 +653,11 @@ function MarketVideoBg({
   }, [inView]);
 
   return (
-    <div ref={rootRef} aria-hidden className="absolute inset-0 overflow-hidden">
+    <div
+      ref={rootRef}
+      aria-hidden
+      className="absolute inset-0 overflow-hidden rounded-[28px] [clip-path:inset(0_round_28px)]"
+    >
       <video
         ref={videoRef}
         className="absolute inset-0 size-full object-cover [transform:translateZ(0)]"
@@ -678,7 +677,7 @@ function MarketVideoBg({
       />
       <div
         aria-hidden
-        className="api-progressive-blur z-[1] h-[48%]"
+        className="api-progressive-blur z-[1] h-[48%] overflow-hidden rounded-b-[28px]"
         data-edge="bottom"
       >
         <i />
@@ -688,7 +687,7 @@ function MarketVideoBg({
       </div>
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[48%] bg-gradient-to-t from-black/55 via-black/20 to-transparent"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[48%] rounded-b-[28px] bg-gradient-to-t from-black/55 via-black/20 to-transparent"
       />
     </div>
   );
@@ -722,16 +721,6 @@ function MarketCard({
   const noOpacity = useTransform(x, [0, -20, -48], [0, 0.7, 1]);
   const yesWidth = useTransform(x, (v) => Math.max(0, v));
   const noWidth = useTransform(x, (v) => Math.max(0, -v));
-  const yesScaleX = useTransform(
-    x,
-    [0, MAX_DRAG_PX * 0.55, MAX_DRAG_PX, MAX_DRAG_PX + COMBO_OVERDRAG_PX],
-    [0.92, 1, 1.06, 1.18],
-  );
-  const noScaleX = useTransform(
-    x,
-    [0, -MAX_DRAG_PX * 0.55, -MAX_DRAG_PX, -(MAX_DRAG_PX + COMBO_OVERDRAG_PX)],
-    [0.92, 1, 1.06, 1.18],
-  );
 
   useMotionValueEvent(x, "change", (latest) => {
     const nextAmount = amountFromOffset(latest);
@@ -764,20 +753,20 @@ function MarketCard({
       <BetReveal
         side="Yes"
         amount={dragOutcome === "Yes" ? dragAmount : 0}
+        percent={market.yesPercent}
         comboArmed={dragOutcome === "Yes" && comboArmed}
         comboRemove={yesInCombo}
         opacity={yesOpacity}
         width={yesWidth}
-        scaleX={yesScaleX}
       />
       <BetReveal
         side="No"
         amount={dragOutcome === "No" ? dragAmount : 0}
+        percent={noPercent}
         comboArmed={dragOutcome === "No" && comboArmed}
         comboRemove={noInCombo}
         opacity={noOpacity}
         width={noWidth}
-        scaleX={noScaleX}
       />
 
       <motion.article
@@ -1441,6 +1430,12 @@ export default function MainFeed() {
   const comboPicksRef = useRef(comboPicks);
   comboPicksRef.current = comboPicks;
   const feedRef = useRef<HTMLDivElement>(null);
+  const entranceDoneRef = useRef(false);
+  const animateFeedEntrance = !entranceDoneRef.current;
+
+  useEffect(() => {
+    entranceDoneRef.current = true;
+  }, []);
 
   const tradeMarket = useMemo(
     () => (tradeFlow ? toTradeMarket(tradeFlow.market) : null),
@@ -1525,14 +1520,26 @@ export default function MainFeed() {
             />
           </div>
           {visibleMarkets.length > 0 ? (
-            visibleMarkets.map((market) => (
-              <MarketCard
+            visibleMarkets.map((market, index) => (
+              <motion.div
                 key={market.id}
-                market={market}
-                comboOutcomes={comboByMarket.get(market.id) ?? new Set()}
-                onCommitTrade={openTrade}
-                onToggleCombo={toggleCombo}
-              />
+                initial={
+                  animateFeedEntrance ? { opacity: 0, y: 22 } : false
+                }
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.4,
+                  delay: animateFeedEntrance ? 0.05 + index * 0.055 : 0,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+              >
+                <MarketCard
+                  market={market}
+                  comboOutcomes={comboByMarket.get(market.id) ?? new Set()}
+                  onCommitTrade={openTrade}
+                  onToggleCombo={toggleCombo}
+                />
+              </motion.div>
             ))
           ) : (
             <p className="px-2 py-16 text-center text-[15px] font-medium text-black/40">
