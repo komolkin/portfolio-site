@@ -18,6 +18,7 @@ import {
   useState,
   type RefObject,
 } from "react";
+import NumberFlow from "@number-flow/react";
 import { TextMorph } from "torph/react";
 import { allo } from "@/lib/fonts";
 import {
@@ -57,7 +58,10 @@ const SIZE_DELTA_EXIT_MS = 480;
 const LIVE_PERCENT_HIGH_MIN = 75;
 const LIVE_PERCENT_HIGH_MAX = 88;
 const LIVE_PERCENT_BAND = 5;
-const LIVE_PERCENT_TICK_MS = 900;
+const LIVE_PERCENT_TICK_MS = 9000;
+/** Most ticks are no-ops so price moves feel rare. */
+const LIVE_PERCENT_MOVE_CHANCE = 0.1;
+const LIVE_PERCENT_STEP = 0.65;
 const AMOUNT_FONT_MIN = 36;
 const AMOUNT_FONT_MAX = 58;
 const MAX_COMBO_PICKS = 8;
@@ -552,6 +556,97 @@ function formatCashUsd(value: number) {
   return `$${safe.toFixed(safe >= 10 ? 0 : 2).replace(/\.00$/, "")}`;
 }
 
+/** Under $100 always include cents (for live mark-to-market readout). */
+function formatCashUsdPrecise(value: number) {
+  const safe = Math.max(0, Number.isFinite(value) ? value : 0);
+  if (safe >= 100) return `$${Math.round(safe).toLocaleString("en-US")}`;
+  return `$${safe.toFixed(2)}`;
+}
+
+const nfMaskStyle = {
+  ["--number-flow-mask-height" as string]: "0em",
+} as const;
+
+function FlowUsd({
+  value,
+  className,
+  centsClassName,
+  showCents = false,
+}: {
+  value: number;
+  className?: string;
+  centsClassName?: string;
+  /** When true and value is under $100, render dimmable cents. */
+  showCents?: boolean;
+}) {
+  const safe = Math.max(0, Number.isFinite(value) ? value : 0);
+  const withCents = showCents && safe < 100;
+
+  if (!withCents) {
+    return (
+      <span className={`inline-flex items-baseline ${className ?? ""}`}>
+        $
+        <NumberFlow
+          value={Math.round(safe)}
+          trend={0}
+          format={{ useGrouping: true, maximumFractionDigits: 0 }}
+          style={nfMaskStyle}
+        />
+      </span>
+    );
+  }
+
+  let whole = Math.floor(safe);
+  let cents = Math.round((safe - whole) * 100);
+  if (cents >= 100) {
+    whole += 1;
+    cents = 0;
+  }
+
+  return (
+    <span className={`inline-flex items-baseline ${className ?? ""}`}>
+      $
+      <NumberFlow
+        value={whole}
+        trend={0}
+        format={{ useGrouping: true, maximumFractionDigits: 0 }}
+        style={nfMaskStyle}
+      />
+      <span className={centsClassName}>
+        .
+        <NumberFlow
+          value={cents}
+          trend={0}
+          format={{
+            minimumIntegerDigits: 2,
+            maximumFractionDigits: 0,
+            useGrouping: false,
+          }}
+          style={nfMaskStyle}
+        />
+      </span>
+    </span>
+  );
+}
+
+function FlowPercent({
+  value,
+  className,
+}: {
+  value: number;
+  className?: string;
+}) {
+  return (
+    <NumberFlow
+      value={Math.round(value)}
+      suffix="%"
+      trend={0}
+      className={className}
+      style={nfMaskStyle}
+    />
+  );
+}
+
 function useAnimatedCount(target: number, durationMs = 140) {
   const [display, setDisplay] = useState(0);
   const displayRef = useRef(0);
@@ -623,32 +718,6 @@ function clampLivePercent(value: number, anchor: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-const MORPH_EASE = { stiffness: 420, damping: 34 } as const;
-
-/** TextMorph keeps an sr-only copy in the DOM; hide the host from a11y trees. */
-function MorphAmount({
-  value,
-  className,
-  compact = false,
-}: {
-  value: string;
-  className?: string;
-  /** Skip digit-slot padding — needed inside overflow-clipped bars. */
-  compact?: boolean;
-}) {
-  return (
-    <TextMorph
-      as="span"
-      numbers={!compact}
-      duration={280}
-      ease={MORPH_EASE}
-      className={`align-middle leading-none [&_[torph-sr]]:sr-only ${className ?? ""}`}
-    >
-      {value}
-    </TextMorph>
-  );
-}
-
 function PositionFooter({
   position,
   currentPercent,
@@ -670,7 +739,9 @@ function PositionFooter({
   const stakeLabel = formatCashUsd(position.stake);
   // Mark-to-market: equals stake near entry, reaches full to-win only at 100%.
   const valueNow = cashOutValue(position, currentPercent);
-  const valueLabel = formatCashUsd(valueNow);
+  const valueLabel = formatCashUsdPrecise(valueNow);
+  const valueTone = video ? "text-white" : "text-black";
+  const valueCentsTone = video ? "text-white/45" : "text-black/35";
   const fill = Math.max(4, Math.min(100, currentPercent));
   const entryMark = Math.max(1, Math.min(99, position.entryPercent));
   const entryOverFill = entryMark <= fill;
@@ -699,15 +770,16 @@ function PositionFooter({
             video ? "text-white/70" : "text-black/45"
           }`}
         >
-          <span aria-hidden="true">
-            <MorphAmount
-              value={stakeLabel}
-              className={video ? "text-white" : "text-black"}
-            />
-            {" → "}
-            <MorphAmount
-              value={valueLabel}
-              className={video ? "text-white" : "text-black"}
+          <span aria-hidden="true" className="inline-flex items-baseline gap-0">
+            <FlowUsd value={position.stake} className={valueTone} />
+            <span className={video ? "text-white/70" : "text-black/45"}>
+              {" → "}
+            </span>
+            <FlowUsd
+              value={valueNow}
+              showCents
+              className={valueTone}
+              centsClassName={valueCentsTone}
             />
           </span>
         </p>
@@ -726,9 +798,8 @@ function PositionFooter({
           style={{ width: `${fill}%` }}
         >
           <span aria-hidden="true" className="flex h-full items-center">
-            <MorphAmount
-              compact
-              value={`${displayPercent}%`}
+            <FlowPercent
+              value={displayPercent}
               className={`text-[12px] font-semibold tabular-nums ${
                 video ? "text-black" : "text-white"
               }`}
@@ -797,11 +868,12 @@ function PositionFooter({
             <span className={video ? "text-white/55" : "text-black/45"}>
               Cash out
             </span>
-            <span aria-hidden="true" className="inline-flex items-center">
-              <MorphAmount
-                compact
-                value={valueLabel}
+            <span aria-hidden="true" className="inline-flex items-baseline">
+              <FlowUsd
+                value={valueNow}
+                showCents
                 className="tabular-nums tracking-[-0.02em]"
+                centsClassName={`tabular-nums tracking-[-0.02em] ${valueCentsTone}`}
               />
             </span>
           </span>
@@ -1109,8 +1181,9 @@ function MarketCard({
   useEffect(() => {
     if (!hasPosition) return;
     const id = window.setInterval(() => {
+      if (Math.random() > LIVE_PERCENT_MOVE_CHANCE) return;
       setLivePositionPercent((prev) => {
-        const step = (Math.random() - 0.48) * 2.4;
+        const step = (Math.random() - 0.5) * LIVE_PERCENT_STEP * 2;
         return clampLivePercent(prev + step, positionPercent);
       });
     }, LIVE_PERCENT_TICK_MS);
