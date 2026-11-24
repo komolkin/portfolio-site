@@ -146,7 +146,7 @@ const MARKETS: Market[] = [
     thumb: "/worm-app-3/bg/jensen-huang.jpg?v=2",
     video: "/worm-app-3/bg/jensen-huang.mp4?v=2",
     yesPercent: 18,
-    social: "Nass and 22 others made a prediction",
+    social: "Nass and 22 others predicted",
   },
   {
     id: "gta-vi-nov19",
@@ -155,7 +155,7 @@ const MARKETS: Market[] = [
     question: "Will Grand Theft Auto VI release on PC by December 31, 2026?",
     thumb: "/worm-app-3/logos/gta-vi-cover.png?v=2",
     yesPercent: 72,
-    social: "Nass and 184 others made a prediction",
+    social: "Nass and 184 others predicted",
   },
   {
     id: "nba-hawks",
@@ -164,7 +164,7 @@ const MARKETS: Market[] = [
     question: "Will the Hawks beat the Pistons tomorrow?",
     thumb: "/worm-app-3/bg/hawks-pistons.jpg",
     yesPercent: 45,
-    social: "Jordan and 31 others made a prediction",
+    social: "Jordan and 31 others predicted",
   },
   {
     id: "btc-100k",
@@ -173,7 +173,7 @@ const MARKETS: Market[] = [
     question: "Will Bitcoin close above $100,000 this month?",
     thumb: "/worm-app-3/logos/bitcoin.png",
     yesPercent: 62,
-    social: "Sam and 48 others made a prediction",
+    social: "Sam and 48 others predicted",
   },
   {
     id: "lakers-celtics",
@@ -182,7 +182,7 @@ const MARKETS: Market[] = [
     question: "Will the Lakers cover −3.5 vs the Celtics?",
     thumb: "/worm-app-3/bg/lakers-celtics.jpg",
     yesPercent: 41,
-    social: "Maya and 76 others made a prediction",
+    social: "Maya and 76 others predicted",
   },
   {
     id: "barca-madrid",
@@ -191,7 +191,7 @@ const MARKETS: Market[] = [
     question: "Will Barcelona beat Real Madrid this weekend?",
     thumb: "/worm-app-3/bg/barca-madrid.jpg",
     yesPercent: 54,
-    social: "Diego and 203 others made a prediction",
+    social: "Diego and 203 others predicted",
   },
   {
     id: "alcaraz-sinner",
@@ -200,7 +200,7 @@ const MARKETS: Market[] = [
     question: "Will Alcaraz beat Sinner in their next meeting?",
     thumb: "/worm-app-3/bg/alcaraz-sinner.jpg",
     yesPercent: 48,
-    social: "Elena and 91 others made a prediction",
+    social: "Elena and 91 others predicted",
   },
   {
     id: "traitors-quit",
@@ -209,7 +209,7 @@ const MARKETS: Market[] = [
     question: "Will a contestant voluntarily quit the game during Season 4?",
     thumb: "/worm-app-3/bg/heroic-imperial.jpg",
     yesPercent: 30,
-    social: "Chris and 9 others made a prediction",
+    social: "Chris and 9 others predicted",
   },
   {
     id: "eth-5k",
@@ -218,7 +218,7 @@ const MARKETS: Market[] = [
     question: "Will Ethereum hit $5,000 before March 2027?",
     thumb: "/worm-app-3/logos/bitcoin.png",
     yesPercent: 37,
-    social: "Priya and 118 others made a prediction",
+    social: "Priya and 118 others predicted",
   },
   {
     id: "knicks-spurs",
@@ -227,7 +227,7 @@ const MARKETS: Market[] = [
     question: "Will the Knicks win by 10+ vs the Spurs?",
     thumb: "/worm-app-3/bg/knicks-spurs.jpg",
     yesPercent: 33,
-    social: "Noah and 54 others made a prediction",
+    social: "Noah and 54 others predicted",
   },
   {
     id: "faze-wildcard",
@@ -236,7 +236,7 @@ const MARKETS: Market[] = [
     question: "Will FaZe beat Wildcard in the next BO3?",
     thumb: "/worm-app-3/bg/faze-wildcard.jpg",
     yesPercent: 61,
-    social: "Rex and 87 others made a prediction",
+    social: "Rex and 87 others predicted",
   },
   {
     id: "openai-ipo",
@@ -245,7 +245,7 @@ const MARKETS: Market[] = [
     question: "Will OpenAI file for an IPO before 2028?",
     thumb: "/worm-app-3/bg/jensen-huang.jpg",
     yesPercent: 44,
-    social: "Leen and 156 others made a prediction",
+    social: "Leen and 156 others predicted",
   },
   {
     id: "sevilla-valencia",
@@ -254,7 +254,7 @@ const MARKETS: Market[] = [
     question: "Will Sevilla vs Valencia end in a draw?",
     thumb: "/worm-app-3/bg/sevilla-valencia.jpg",
     yesPercent: 28,
-    social: "Sofia and 41 others made a prediction",
+    social: "Sofia and 41 others predicted",
   },
   {
     id: "djokovic-medvedev",
@@ -263,7 +263,7 @@ const MARKETS: Market[] = [
     question: "Will Djokovic beat Medvedev in straight sets?",
     thumb: "/worm-app-3/bg/djokovic-medvedev.jpg",
     yesPercent: 39,
-    social: "Tom and 63 others made a prediction",
+    social: "Tom and 63 others predicted",
   },
   {
     id: "liquid-bcgame",
@@ -272,7 +272,7 @@ const MARKETS: Market[] = [
     question: "Will Team Liquid win against BC.Game?",
     thumb: "/worm-app-3/bg/liquid-bcgame.jpg",
     yesPercent: 57,
-    social: "Kai and 72 others made a prediction",
+    social: "Kai and 72 others predicted",
   },
   {
     id: "fed-cut",
@@ -281,7 +281,7 @@ const MARKETS: Market[] = [
     question: "Will the Fed cut rates at the next meeting?",
     thumb: "/worm-app-3/bg/fed-rates.jpg",
     yesPercent: 52,
-    social: "Tanya and 134 others made a prediction",
+    social: "Tanya and 134 others predicted",
   },
   {
     id: "midterm-turnout",
@@ -290,7 +290,7 @@ const MARKETS: Market[] = [
     question: "Will midterm turnout top 50% of eligible voters?",
     thumb: "/worm-app-3/bg/ballot.jpg",
     yesPercent: 41,
-    social: "Leen and 88 others made a prediction",
+    social: "Leen and 88 others predicted",
   },
   {
     id: "scotus-ai",
@@ -299,7 +299,7 @@ const MARKETS: Market[] = [
     question: "Will the Supreme Court take up an AI copyright case this term?",
     thumb: "/worm-app-3/bg/lady-justice.jpg",
     yesPercent: 58,
-    social: "Nass and 112 others made a prediction",
+    social: "Nass and 112 others predicted",
   },
   {
     id: "shutdown-week",
@@ -308,7 +308,7 @@ const MARKETS: Market[] = [
     question: "Will a government shutdown last longer than a week?",
     thumb: "/worm-app-3/bg/dc-monument.jpg",
     yesPercent: 37,
-    social: "Foad and 76 others made a prediction",
+    social: "Foad and 76 others predicted",
   },
   {
     id: "getafe-atletico",
@@ -317,7 +317,7 @@ const MARKETS: Market[] = [
     question: "Will Atlético Madrid keep a clean sheet vs Getafe?",
     thumb: "/worm-app-3/bg/getafe-atletico.jpg",
     yesPercent: 46,
-    social: "Luis and 38 others made a prediction",
+    social: "Luis and 38 others predicted",
   },
   {
     id: "apple-foldable",
@@ -326,7 +326,7 @@ const MARKETS: Market[] = [
     question: "Will Apple announce a foldable iPhone in 2027?",
     thumb: "/worm-app-3/logos/apple.png",
     yesPercent: 35,
-    social: "Foad and 99 others made a prediction",
+    social: "Foad and 99 others predicted",
   },
   {
     id: "sol-300",
@@ -335,7 +335,7 @@ const MARKETS: Market[] = [
     question: "Will Solana reclaim $300 this quarter?",
     thumb: "/worm-app-3/logos/bitcoin.png",
     yesPercent: 29,
-    social: "Jade and 67 others made a prediction",
+    social: "Jade and 67 others predicted",
   },
   {
     id: "oscars-best-picture",
@@ -344,7 +344,7 @@ const MARKETS: Market[] = [
     question: "Will a non-English film win Best Picture this year?",
     thumb: "/worm-app-3/bg/nba-2.jpg",
     yesPercent: 24,
-    social: "Ari and 51 others made a prediction",
+    social: "Ari and 51 others predicted",
   },
 ];
 
