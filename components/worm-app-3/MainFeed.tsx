@@ -1612,26 +1612,15 @@ function MarketCard({
                 </button>
               </div>
 
-              {(() => {
-                const footerHint =
-                  dragging && comboArmed && dragOutcome
-                    ? comboOutcomes.has(dragOutcome)
-                      ? `Release to remove ${dragOutcome} from combo`
-                      : `Release to add ${dragOutcome} to combo`
-                    : dragging
-                      ? null
-                      : market.social;
-                if (!footerHint) return null;
-                return (
-                  <p
-                    className={`relative z-[2] mt-4 text-center text-[13px] font-medium ${
-                      immersive ? "text-white/60" : "text-black/40"
-                    }`}
-                  >
-                    {footerHint}
-                  </p>
-                );
-              })()}
+              {market.social ? (
+                <p
+                  className={`relative z-[2] mt-4 text-center text-[13px] font-medium ${
+                    immersive ? "text-white/60" : "text-black/40"
+                  }`}
+                >
+                  {market.social}
+                </p>
+              ) : null}
             </motion.div>
           )}
         </AnimatePresence>
