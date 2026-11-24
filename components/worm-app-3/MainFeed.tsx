@@ -79,6 +79,8 @@ type Market = {
   thumb: string;
   /** Optional muted looping clip — fills the card instead of the chance gauge. */
   video?: string;
+  /** Optional full-bleed still — same immersive chrome as video. */
+  backdrop?: string;
   yesPercent: number;
   social: string;
 };
@@ -153,7 +155,8 @@ const MARKETS: Market[] = [
     category: "GTA VI",
     topic: "culture",
     question: "Will Grand Theft Auto VI release on PC by December 31, 2026?",
-    thumb: "/worm-app-3/logos/gta-vi-cover.png?v=2",
+    thumb: "/worm-app-3/logos/gta-vi.png",
+    backdrop: "/worm-app-3/logos/gta-vi-backdrop.jpg?v=2",
     yesPercent: 72,
     social: "Nass and 184 others predicted",
   },
@@ -652,7 +655,9 @@ function PositionFooter({
             {formatCashUsd(position.stake)}
           </span>
           {" → "}
-          <span style={{ color: YES }}>{formatCashUsd(toWin)}</span>
+          <span className={video ? "text-white" : "text-black"}>
+            {formatCashUsd(toWin)}
+          </span>
         </p>
       </div>
 
@@ -853,6 +858,51 @@ function BetReveal({
   );
 }
 
+function MarketMediaScrim() {
+  return (
+    <>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[42%] bg-gradient-to-b from-black/55 via-black/20 to-transparent"
+      />
+      <div
+        aria-hidden
+        className="api-progressive-blur z-[1] h-[48%] overflow-hidden rounded-b-[28px]"
+        data-edge="bottom"
+      >
+        <i />
+        <i />
+        <i />
+        <i />
+      </div>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[48%] rounded-b-[28px] bg-gradient-to-t from-black/55 via-black/20 to-transparent"
+      />
+    </>
+  );
+}
+
+function MarketImageBg({ src }: { src: string }) {
+  return (
+    <div
+      aria-hidden
+      className="absolute inset-0 overflow-hidden rounded-[28px] [clip-path:inset(0_round_28px)]"
+    >
+      <Image
+        src={src}
+        alt=""
+        fill
+        className="object-cover"
+        sizes="(max-width: 430px) 100vw, 393px"
+        priority={false}
+        draggable={false}
+      />
+      <MarketMediaScrim />
+    </div>
+  );
+}
+
 function MarketVideoBg({
   src,
   poster,
@@ -930,24 +980,7 @@ function MarketVideoBg({
         disablePictureInPicture
         disableRemotePlayback
       />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[42%] bg-gradient-to-b from-black/55 via-black/20 to-transparent"
-      />
-      <div
-        aria-hidden
-        className="api-progressive-blur z-[1] h-[48%] overflow-hidden rounded-b-[28px]"
-        data-edge="bottom"
-      >
-        <i />
-        <i />
-        <i />
-        <i />
-      </div>
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[48%] rounded-b-[28px] bg-gradient-to-t from-black/55 via-black/20 to-transparent"
-      />
+      <MarketMediaScrim />
     </div>
   );
 }
@@ -984,6 +1017,7 @@ function MarketCard({
   const yesInCombo = comboOutcomes.has("Yes");
   const noInCombo = comboOutcomes.has("No");
   const hasPosition = Boolean(position);
+  const immersive = Boolean(market.video || market.backdrop);
   const positionPercent =
     position?.outcome === "No" ? noPercent : market.yesPercent;
   const [livePositionPercent, setLivePositionPercent] = useState(() =>
@@ -1244,7 +1278,7 @@ function MarketCard({
           snapBack();
         }}
         className={`relative touch-pan-y overflow-hidden rounded-[28px] will-change-transform ${
-          market.video
+          immersive
             ? "flex min-h-[504px] flex-col bg-black px-5 pb-6 pt-5 text-white"
             : "bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
         } ${
@@ -1257,6 +1291,8 @@ function MarketCard({
       >
         {market.video ? (
           <MarketVideoBg src={market.video} poster={market.thumb} />
+        ) : market.backdrop ? (
+          <MarketImageBg src={market.backdrop} />
         ) : null}
 
         {sizeDeltaFlash && sizeDeltaFlash.amount !== 0 ? (
@@ -1268,13 +1304,13 @@ function MarketCard({
             <SizeDeltaFlashLabel
               amount={sizeDeltaFlash.amount}
               exiting={sizeDeltaFlash.exiting}
-              video={Boolean(market.video)}
+              video={immersive}
             />
           </div>
         ) : null}
 
-        <div className={`relative z-[2] flex items-start gap-3 ${market.video ? "" : ""}`}>
-          {!market.video ? (
+        <div className="relative z-[2] flex items-start gap-3">
+          {!immersive ? (
             <div className="relative size-16 shrink-0 overflow-hidden rounded-[14px]">
               <Image
                 src={market.thumb}
@@ -1289,14 +1325,14 @@ function MarketCard({
           <div className="min-w-0 flex-1">
             <p
               className={`text-[13px] font-medium ${
-                market.video ? "text-white/65" : "text-black/40"
+                immersive ? "text-white/65" : "text-black/40"
               }`}
             >
               {market.category}
             </p>
             <h2
               className={`mt-0.5 text-[17px] font-semibold leading-[1.2] tracking-[-0.02em] ${
-                market.video ? "text-white" : "text-black"
+                immersive ? "text-white" : "text-black"
               }`}
             >
               {market.question}
@@ -1304,7 +1340,7 @@ function MarketCard({
           </div>
         </div>
 
-        {market.video ? (
+        {immersive ? (
           <div className="relative z-[2] min-h-[180px] flex-1" aria-hidden />
         ) : (
           <motion.div
@@ -1331,7 +1367,7 @@ function MarketCard({
               <PositionFooter
                 position={position}
                 currentPercent={livePositionPercent}
-                video={Boolean(market.video)}
+                video={immersive}
                 canIncrease={balance >= POSITION_ADJUST_STEP}
                 cashingOut={cashingOut}
                 onCashOut={startCashOut}
@@ -1348,7 +1384,7 @@ function MarketCard({
             >
               <div
                 className={`relative z-[2] grid grid-cols-2 gap-2.5 ${
-                  market.video ? "mt-auto" : "mt-8"
+                  immersive ? "mt-auto" : "mt-8"
                 }`}
               >
                 <button
@@ -1360,12 +1396,12 @@ function MarketCard({
                   }}
                   className={`flex h-[52px] origin-center items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
                     dragOutcome === "No"
-                      ? market.video
+                      ? immersive
                         ? "bg-white/[0.06] text-white/45"
                         : "bg-black/[0.05] text-black/35"
                       : yesInCombo || dragOutcome === "Yes"
                         ? "text-white"
-                        : market.video
+                        : immersive
                           ? "bg-white/[0.06] text-white"
                           : "bg-black/[0.06] text-black"
                   }`}
@@ -1386,12 +1422,12 @@ function MarketCard({
                   }}
                   className={`flex h-[52px] origin-center items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
                     dragOutcome === "Yes"
-                      ? market.video
+                      ? immersive
                         ? "bg-white/[0.06] text-white/45"
                         : "bg-black/[0.05] text-black/35"
                       : noInCombo || dragOutcome === "No"
                         ? "text-white"
-                        : market.video
+                        : immersive
                           ? "bg-white/[0.06] text-white"
                           : "bg-black/[0.06] text-black"
                   }`}
@@ -1407,7 +1443,7 @@ function MarketCard({
 
               <p
                 className={`relative z-[2] mt-4 text-center text-[13px] font-medium ${
-                  market.video ? "text-white/60" : "text-black/40"
+                  immersive ? "text-white/60" : "text-black/40"
                 }`}
               >
                 {dragging && comboArmed && dragOutcome
