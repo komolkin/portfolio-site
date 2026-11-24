@@ -935,13 +935,8 @@ function PicksChip({
   onOpen: () => void;
 }) {
   const count = picks.length;
-  const empty = count === 0;
   const logos = picks.slice(-MAX_CHIP_LOGOS);
-  const label = empty
-    ? "Build a Combo"
-    : count === 1
-      ? "1 pick"
-      : `${count} picks`;
+  const label = count === 1 ? "1 pick" : `${count} picks`;
   const multiplier = useMemo(
     () => comboMultiplier(picks.map((pick) => pick.percent ?? 50)),
     [picks],
@@ -956,6 +951,8 @@ function PicksChip({
 
   const bump = count > prevCount.current;
 
+  if (count === 0) return null;
+
   return (
     <motion.button
       type="button"
@@ -963,9 +960,17 @@ function PicksChip({
       layout
       onClick={onOpen}
       whileTap={{ scale: 0.96 }}
-      animate={bump ? { scale: [1, 1.04, 1] } : { scale: 1 }}
+      initial={{ opacity: 0, y: 12, scale: 0.96 }}
+      animate={
+        bump
+          ? { opacity: 1, y: 0, scale: [1, 1.04, 1] }
+          : { opacity: 1, y: 0, scale: 1 }
+      }
+      exit={{ opacity: 0, y: 10, scale: 0.96 }}
       transition={{
         layout: { type: "spring", stiffness: 420, damping: 36, mass: 0.75 },
+        opacity: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
+        y: { type: "spring", stiffness: 420, damping: 34 },
         scale: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
       }}
       className="inline-flex min-h-12 origin-center items-center justify-center gap-3 overflow-hidden rounded-full bg-white/85 px-5 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.12)] ring-1 ring-black/[0.04] backdrop-blur-[22px]"
@@ -1204,7 +1209,11 @@ function BottomChrome({
           animate={{ y: tabHidden ? 72 : 0 }}
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         >
-          <PicksChip picks={picks} onOpen={onOpenCombo} />
+          <AnimatePresence initial={false}>
+            {picks.length > 0 ? (
+              <PicksChip key="picks-chip" picks={picks} onOpen={onOpenCombo} />
+            ) : null}
+          </AnimatePresence>
         </motion.div>
         <BottomNav balance={balance} hidden={tabHidden} />
       </div>
