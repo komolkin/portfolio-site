@@ -1613,13 +1613,14 @@ function MarketCard({
               </div>
 
               {(() => {
-                const footerHint = dragging && comboArmed && dragOutcome
-                  ? comboOutcomes.has(dragOutcome)
-                    ? `Release to remove ${dragOutcome} from combo`
-                    : `Release to add ${dragOutcome} to combo`
-                  : dragging && dragOutcome && dragAmount > 0
-                    ? `Release to predict $${dragAmount} on ${dragOutcome}`
-                    : market.social;
+                const footerHint =
+                  dragging && comboArmed && dragOutcome
+                    ? comboOutcomes.has(dragOutcome)
+                      ? `Release to remove ${dragOutcome} from combo`
+                      : `Release to add ${dragOutcome} to combo`
+                    : dragging
+                      ? null
+                      : market.social;
                 if (!footerHint) return null;
                 return (
                   <p
