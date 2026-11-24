@@ -7,6 +7,7 @@ import {
   useMotionValue,
   useMotionValueEvent,
   useTransform,
+  type MotionValue,
 } from "framer-motion";
 import Image from "next/image";
 import {
@@ -486,7 +487,7 @@ function formatToWin(value: number) {
 
 function BetReveal({
   side,
-  amount,
+  amountMV,
   percent,
   comboArmed,
   comboRemove,
@@ -494,27 +495,33 @@ function BetReveal({
   width,
 }: {
   side: Outcome;
-  amount: number;
+  amountMV: MotionValue<number>;
   percent: number;
   comboArmed: boolean;
   comboRemove: boolean;
   opacity: ReturnType<typeof useTransform<number, number>>;
   width: ReturnType<typeof useTransform<number, number>>;
 }) {
+  const [amount, setAmount] = useState(0);
+  useMotionValueEvent(amountMV, "change", (value) => {
+    setAmount((prev) => (prev === value ? prev : value));
+  });
+
   const fontSize = amountFontSize(amount);
   const dollarSize = fontSize * 0.62;
   const isYes = side === "Yes";
   const toWin = toWinFromAmount(amount, percent);
+  const showAmount = amount > 0;
 
   return (
     <motion.div
       aria-hidden
-      className={`absolute inset-y-0 flex items-center justify-center overflow-visible ${
+      className={`absolute inset-y-0 flex items-center justify-center overflow-hidden ${
         isYes ? "left-0" : "right-0"
       }`}
       style={{ opacity, width }}
     >
-      <div className="relative z-[1] flex flex-col items-center justify-center px-2">
+      <div className="relative z-[1] flex w-[120px] flex-col items-center justify-center px-2">
         <AnimatePresence mode="wait" initial={false}>
           {comboArmed ? (
             <motion.div
@@ -554,14 +561,11 @@ function BetReveal({
                 {comboRemove ? "Remove from combo" : "Add to combo"}
               </p>
             </motion.div>
-          ) : (
+          ) : showAmount ? (
             <motion.div
               key="amount"
               initial={{ opacity: 0, scale: 0.92 }}
-              animate={{
-                opacity: amount > 0 ? 1 : 0,
-                scale: amount > 0 ? 1 : 0.96,
-              }}
+              animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.92 }}
               transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col items-center justify-center"
@@ -587,7 +591,7 @@ function BetReveal({
                 To win {formatToWin(toWin)}
               </p>
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </div>
     </motion.div>
@@ -709,12 +713,14 @@ function MarketCard({
   const [dragOutcome, setDragOutcome] = useState<Outcome | null>(null);
   const [comboArmed, setComboArmed] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [cardPressed, setCardPressed] = useState(false);
   const yesInCombo = comboOutcomes.has("Yes");
   const noInCombo = comboOutcomes.has("No");
   const x = useMotionValue(0);
+  const yesAmountMV = useMotionValue(0);
+  const noAmountMV = useMotionValue(0);
   const committedRef = useRef(false);
   const lastAmountRef = useRef(0);
+  const lastOutcomeRef = useRef<Outcome | null>(null);
   const lastComboArmedRef = useRef(false);
 
   const yesOpacity = useTransform(x, [0, 20, 48], [0, 0.7, 1]);
@@ -724,35 +730,46 @@ function MarketCard({
 
   useMotionValueEvent(x, "change", (latest) => {
     const nextAmount = amountFromOffset(latest);
+    const nextOutcome = outcomeFromOffset(latest);
     const nextCombo = isComboZone(latest);
+
     if (nextAmount !== lastAmountRef.current) {
       if (nextAmount > 0) hapticStep();
       lastAmountRef.current = nextAmount;
+      setDragAmount(nextAmount);
+    }
+    yesAmountMV.set(nextOutcome === "Yes" ? nextAmount : 0);
+    noAmountMV.set(nextOutcome === "No" ? nextAmount : 0);
+
+    if (nextOutcome !== lastOutcomeRef.current) {
+      lastOutcomeRef.current = nextOutcome;
+      setDragOutcome(nextOutcome);
     }
     if (nextCombo !== lastComboArmedRef.current) {
       if (nextCombo) hapticNudge();
       lastComboArmedRef.current = nextCombo;
+      setComboArmed(nextCombo);
     }
-    setDragAmount(nextAmount);
-    setDragOutcome(outcomeFromOffset(latest));
-    setComboArmed(nextCombo);
   });
 
   const snapBack = useCallback(() => {
     void animate(x, 0, { type: "spring", stiffness: 420, damping: 36 });
     lastAmountRef.current = 0;
+    lastOutcomeRef.current = null;
     lastComboArmedRef.current = false;
+    yesAmountMV.set(0);
+    noAmountMV.set(0);
     setDragAmount(0);
     setDragOutcome(null);
     setComboArmed(false);
-  }, [x]);
+  }, [noAmountMV, x, yesAmountMV]);
 
   return (
-    <div className="relative overflow-visible">
+    <div className="relative overflow-hidden rounded-[28px]">
       {/* Left→right reveals Yes; right→left reveals No */}
       <BetReveal
         side="Yes"
-        amount={dragOutcome === "Yes" ? dragAmount : 0}
+        amountMV={yesAmountMV}
         percent={market.yesPercent}
         comboArmed={dragOutcome === "Yes" && comboArmed}
         comboRemove={yesInCombo}
@@ -761,7 +778,7 @@ function MarketCard({
       />
       <BetReveal
         side="No"
-        amount={dragOutcome === "No" ? dragAmount : 0}
+        amountMV={noAmountMV}
         percent={noPercent}
         comboArmed={dragOutcome === "No" && comboArmed}
         comboRemove={noInCombo}
@@ -775,26 +792,18 @@ function MarketCard({
           left: -(MAX_DRAG_PX + COMBO_OVERDRAG_PX),
           right: MAX_DRAG_PX + COMBO_OVERDRAG_PX,
         }}
-        dragElastic={0.16}
+        dragElastic={0.12}
         dragDirectionLock
         dragMomentum={false}
-        animate={{ scale: cardPressed || dragging ? 0.97 : 1 }}
+        whileDrag={{ scale: 0.97 }}
         transition={{ type: "spring", stiffness: 480, damping: 36 }}
-        style={{ x }}
-        onPointerDown={(event) => {
-          if ((event.target as HTMLElement | null)?.closest("button")) return;
-          setCardPressed(true);
-        }}
-        onPointerUp={() => setCardPressed(false)}
-        onPointerCancel={() => setCardPressed(false)}
-        onPointerLeave={() => setCardPressed(false)}
+        style={{ x, touchAction: "pan-y" }}
         onDragStart={() => {
           committedRef.current = false;
           setDragging(true);
         }}
         onDragEnd={(_, info) => {
           setDragging(false);
-          setCardPressed(false);
           const offset = x.get();
           const amount = amountFromOffset(offset);
           const outcome = outcomeFromOffset(offset);
@@ -804,7 +813,10 @@ function MarketCard({
             hapticSuccess();
             void animate(x, 0, { type: "spring", stiffness: 380, damping: 34 });
             lastAmountRef.current = 0;
+            lastOutcomeRef.current = null;
             lastComboArmedRef.current = false;
+            yesAmountMV.set(0);
+            noAmountMV.set(0);
             setDragAmount(0);
             setDragOutcome(null);
             setComboArmed(false);
@@ -826,7 +838,10 @@ function MarketCard({
             const finalAmount = Math.max(COMMIT_AMOUNT, amount);
             void animate(x, 0, { type: "spring", stiffness: 380, damping: 34 });
             lastAmountRef.current = 0;
+            lastOutcomeRef.current = null;
             lastComboArmedRef.current = false;
+            yesAmountMV.set(0);
+            noAmountMV.set(0);
             setDragAmount(0);
             setDragOutcome(null);
             setComboArmed(false);
@@ -835,7 +850,7 @@ function MarketCard({
           }
           snapBack();
         }}
-        className={`relative touch-pan-y overflow-hidden rounded-[28px] ${
+        className={`relative touch-pan-y overflow-hidden rounded-[28px] will-change-transform ${
           market.video
             ? "flex min-h-[504px] flex-col bg-black px-5 pb-6 pt-5 text-white"
             : "bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
@@ -1069,10 +1084,10 @@ function CategoryTabs({
   }, [updateFades]);
 
   return (
-    <div className="relative -mx-4">
+    <div className="relative -mx-4 min-w-0">
       <div
         ref={scrollerRef}
-        className="overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="overflow-x-auto overscroll-x-contain [overscroll-behavior-y:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         role="tablist"
         aria-label="Categories"
       >
@@ -1391,16 +1406,19 @@ function BottomChrome({
         paddingBottom: "max(28px, env(safe-area-inset-bottom, 0px))",
       }}
     >
-      <div
+      <motion.div
         aria-hidden
         className="api-progressive-blur h-[150px]"
         data-edge="bottom"
+        initial={false}
+        animate={{ opacity: tabHidden ? 0 : 1 }}
+        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
       >
         <i />
         <i />
         <i />
         <i />
-      </div>
+      </motion.div>
       <div className="pointer-events-auto relative z-[1] flex flex-col items-center gap-3 px-5 pb-1">
         <motion.div
           initial={false}
@@ -1500,19 +1518,19 @@ export default function MainFeed() {
 
   return (
     <div
-      className={`relative h-full w-full text-black ${allo.className}`}
+      className={`relative h-full w-full overflow-hidden text-black ${allo.className}`}
       style={{ backgroundColor: BG }}
     >
       <div
         ref={feedRef}
-        className="h-full overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="h-full overflow-x-hidden overflow-y-auto overscroll-y-contain [overscroll-behavior-x:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         style={{
           paddingTop: "max(12px, env(safe-area-inset-top, 0px))",
           paddingBottom: "calc(168px + env(safe-area-inset-bottom, 0px))",
         }}
       >
-        <div className="flex flex-col gap-4 px-4">
-          <div className="flex flex-col gap-3.5">
+        <div className="flex w-full min-w-0 flex-col gap-4 px-4">
+          <div className="flex min-w-0 flex-col gap-3.5">
             <SearchBar value={searchQuery} onChange={setSearchQuery} />
             <CategoryTabs
               active={activeCategory}
@@ -1523,7 +1541,7 @@ export default function MainFeed() {
             visibleMarkets.map((market, index) => (
               <motion.div
                 key={market.id}
-                className="relative overflow-visible"
+                className="relative min-w-0 overflow-hidden"
                 initial={
                   animateFeedEntrance ? { opacity: 0, y: 22 } : false
                 }

@@ -14,22 +14,24 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/worm-app-3/favicon-32.png?v=5",
+        url: "/worm-app-3/w-favicon-32.png?v=6",
         sizes: "32x32",
         type: "image/png",
       },
       {
-        url: "/worm-app-3/icon-192.png?v=5",
+        url: "/worm-app-3/w-icon-192.png?v=6",
         sizes: "192x192",
         type: "image/png",
       },
       {
-        url: "/worm-app-3/icon-512.png?v=5",
+        url: "/worm-app-3/w-icon-512.png?v=6",
         sizes: "512x512",
         type: "image/png",
       },
     ],
-    apple: [{ url: "/worm-app-3/apple-touch-icon.png?v=5", sizes: "180x180" }],
+    apple: [
+      { url: "/worm-app-3/w-apple-touch-icon.png?v=6", sizes: "180x180" },
+    ],
   },
   other: {
     "mobile-web-app-capable": "yes",
