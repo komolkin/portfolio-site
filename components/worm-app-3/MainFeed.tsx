@@ -651,13 +651,25 @@ function PositionFooter({
             video ? "text-white/70" : "text-black/45"
           }`}
         >
-          <span className={video ? "text-white" : "text-black"}>
+          <TextMorph
+            as="span"
+            numbers
+            duration={280}
+            ease={{ stiffness: 420, damping: 34 }}
+            className={video ? "text-white" : "text-black"}
+          >
             {formatCashUsd(position.stake)}
-          </span>
+          </TextMorph>
           {" → "}
-          <span className={video ? "text-white" : "text-black"}>
+          <TextMorph
+            as="span"
+            numbers
+            duration={280}
+            ease={{ stiffness: 420, damping: 34 }}
+            className={video ? "text-white" : "text-black"}
+          >
             {formatCashUsd(toWin)}
-          </span>
+          </TextMorph>
         </p>
       </div>
 
