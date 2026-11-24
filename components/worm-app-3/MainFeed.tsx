@@ -54,8 +54,9 @@ const MIN_POSITION_STAKE = 5;
 const POSITION_ADJUST_STEP = 5;
 const SIZE_DELTA_HOLD_MS = 900;
 const SIZE_DELTA_EXIT_MS = 480;
-const LIVE_PERCENT_MIN = 75;
-const LIVE_PERCENT_MAX = 88;
+const LIVE_PERCENT_HIGH_MIN = 75;
+const LIVE_PERCENT_HIGH_MAX = 88;
+const LIVE_PERCENT_BAND = 5;
 const LIVE_PERCENT_TICK_MS = 900;
 const AMOUNT_FONT_MIN = 36;
 const AMOUNT_FONT_MAX = 58;
@@ -529,6 +530,17 @@ function toWinFromAmount(amount: number, percent: number) {
   return amount / (percent / 100);
 }
 
+/**
+ * Mark-to-market value at the current chance of your outcome.
+ * At entry ≈ stake; at 100% = full to-win (stake / entry%).
+ */
+function cashOutValue(position: PlacedPosition, currentPercent: number) {
+  if (position.entryPercent <= 0) return position.stake;
+  return (
+    position.stake * (Math.max(1, currentPercent) / position.entryPercent)
+  );
+}
+
 function formatToWin(value: number) {
   const rounded = Math.round(value);
   return `$${rounded.toLocaleString("en-US")}`;
@@ -538,12 +550,6 @@ function formatCashUsd(value: number) {
   const safe = Math.max(0, Number.isFinite(value) ? value : 0);
   if (safe >= 100) return `$${Math.round(safe).toLocaleString("en-US")}`;
   return `$${safe.toFixed(safe >= 10 ? 0 : 2).replace(/\.00$/, "")}`;
-}
-
-function cashOutValue(position: PlacedPosition, currentPercent: number) {
-  if (position.entryPercent <= 0) return position.stake;
-  const shares = position.stake / (position.entryPercent / 100);
-  return shares * (Math.max(1, currentPercent) / 100);
 }
 
 function useAnimatedCount(target: number, durationMs = 140) {
@@ -602,8 +608,45 @@ function SizeDeltaFlashLabel({
   );
 }
 
-function clampLivePercent(value: number) {
-  return Math.min(LIVE_PERCENT_MAX, Math.max(LIVE_PERCENT_MIN, value));
+function livePercentBounds(anchor: number): [number, number] {
+  const a = Math.max(1, Math.min(99, anchor));
+  // High-probability sides keep the fuller 75–88 bar; others hug true odds.
+  if (a >= 70) return [LIVE_PERCENT_HIGH_MIN, LIVE_PERCENT_HIGH_MAX];
+  return [
+    Math.max(1, Math.round(a - LIVE_PERCENT_BAND)),
+    Math.min(99, Math.round(a + LIVE_PERCENT_BAND)),
+  ];
+}
+
+function clampLivePercent(value: number, anchor: number) {
+  const [min, max] = livePercentBounds(anchor);
+  return Math.min(max, Math.max(min, value));
+}
+
+const MORPH_EASE = { stiffness: 420, damping: 34 } as const;
+
+/** TextMorph keeps an sr-only copy in the DOM; hide the host from a11y trees. */
+function MorphAmount({
+  value,
+  className,
+  compact = false,
+}: {
+  value: string;
+  className?: string;
+  /** Skip digit-slot padding — needed inside overflow-clipped bars. */
+  compact?: boolean;
+}) {
+  return (
+    <TextMorph
+      as="span"
+      numbers={!compact}
+      duration={280}
+      ease={MORPH_EASE}
+      className={`align-middle leading-none [&_[torph-sr]]:sr-only ${className ?? ""}`}
+    >
+      {value}
+    </TextMorph>
+  );
 }
 
 function PositionFooter({
@@ -624,9 +667,13 @@ function PositionFooter({
   onAdjust: (delta: number) => void;
 }) {
   const displayPercent = Math.round(currentPercent);
-  const toWin = toWinFromAmount(position.stake, currentPercent);
-  const cashOut = cashOutValue(position, currentPercent);
+  const stakeLabel = formatCashUsd(position.stake);
+  // Mark-to-market: equals stake near entry, reaches full to-win only at 100%.
+  const valueNow = cashOutValue(position, currentPercent);
+  const valueLabel = formatCashUsd(valueNow);
   const fill = Math.max(4, Math.min(100, currentPercent));
+  const entryMark = Math.max(1, Math.min(99, position.entryPercent));
+  const entryOverFill = entryMark <= fill;
   const canDecrease = position.stake > MIN_POSITION_STAKE;
   const actionBtn = `flex h-[52px] items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-200 ease-out active:scale-[0.94] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 ${
     video ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black"
@@ -647,34 +694,27 @@ function PositionFooter({
           {position.outcome}
         </p>
         <p
+          aria-label={`${stakeLabel} → ${valueLabel}`}
           className={`mt-1 text-[40px] font-semibold leading-none tabular-nums tracking-[-0.03em] ${
             video ? "text-white/70" : "text-black/45"
           }`}
         >
-          <TextMorph
-            as="span"
-            numbers
-            duration={280}
-            ease={{ stiffness: 420, damping: 34 }}
-            className={video ? "text-white" : "text-black"}
-          >
-            {formatCashUsd(position.stake)}
-          </TextMorph>
-          {" → "}
-          <TextMorph
-            as="span"
-            numbers
-            duration={280}
-            ease={{ stiffness: 420, damping: 34 }}
-            className={video ? "text-white" : "text-black"}
-          >
-            {formatCashUsd(toWin)}
-          </TextMorph>
+          <span aria-hidden="true">
+            <MorphAmount
+              value={stakeLabel}
+              className={video ? "text-white" : "text-black"}
+            />
+            {" → "}
+            <MorphAmount
+              value={valueLabel}
+              className={video ? "text-white" : "text-black"}
+            />
+          </span>
         </p>
       </div>
 
       <div
-        className={`relative h-7 overflow-hidden rounded-full ${
+        className={`relative h-7 rounded-full ${
           video ? "bg-white/[0.1]" : "bg-black/[0.06]"
         }`}
         aria-label={`${displayPercent}% chance`}
@@ -685,24 +725,28 @@ function PositionFooter({
           }`}
           style={{ width: `${fill}%` }}
         >
-          <TextMorph
-            as="span"
-            numbers
-            duration={280}
-            ease={{ stiffness: 420, damping: 34 }}
-            className={`text-[12px] font-semibold tabular-nums ${
-              video ? "text-black" : "text-white"
-            }`}
-          >
-            {`${displayPercent}%`}
-          </TextMorph>
+          <span aria-hidden="true" className="flex h-full items-center">
+            <MorphAmount
+              compact
+              value={`${displayPercent}%`}
+              className={`text-[12px] font-semibold tabular-nums ${
+                video ? "text-black" : "text-white"
+              }`}
+            />
+          </span>
         </div>
         <div
           aria-hidden
           className={`absolute inset-y-1 z-[1] w-px border-l border-dashed ${
-            video ? "border-black/25" : "border-white/35"
+            video
+              ? entryOverFill
+                ? "border-black/25"
+                : "border-white/45"
+              : entryOverFill
+                ? "border-white/35"
+                : "border-black/25"
           }`}
-          style={{ left: "50%" }}
+          style={{ left: `${entryMark}%` }}
         />
       </div>
 
@@ -737,7 +781,7 @@ function PositionFooter({
         </button>
         <button
           type="button"
-          aria-label={`Cash out ${formatCashUsd(cashOut)}`}
+          aria-label={`Cash out ${valueLabel}`}
           disabled={cashingOut}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={() => {
@@ -749,18 +793,18 @@ function PositionFooter({
             cashingOut ? "disabled:!opacity-100" : ""
           }`}
         >
-          <span className={video ? "text-white/55" : "text-black/45"}>
-            Cash out
+          <span className="inline-flex items-center gap-1.5 leading-none">
+            <span className={video ? "text-white/55" : "text-black/45"}>
+              Cash out
+            </span>
+            <span aria-hidden="true" className="inline-flex items-center">
+              <MorphAmount
+                compact
+                value={valueLabel}
+                className="tabular-nums tracking-[-0.02em]"
+              />
+            </span>
           </span>
-          <TextMorph
-            as="span"
-            numbers
-            duration={280}
-            ease={{ stiffness: 420, damping: 34 }}
-            className="tabular-nums tracking-[-0.02em]"
-          >
-            {formatCashUsd(cashOut)}
-          </TextMorph>
         </button>
       </div>
     </div>
@@ -1043,7 +1087,7 @@ function MarketCard({
   const positionPercent =
     position?.outcome === "No" ? noPercent : market.yesPercent;
   const [livePositionPercent, setLivePositionPercent] = useState(() =>
-    clampLivePercent(positionPercent),
+    clampLivePercent(positionPercent, positionPercent),
   );
   const x = useMotionValue(0);
   const yesAmountMV = useMotionValue(0);
@@ -1059,7 +1103,7 @@ function MarketCard({
   const sizeDeltaExitTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    setLivePositionPercent(clampLivePercent(positionPercent));
+    setLivePositionPercent(clampLivePercent(positionPercent, positionPercent));
   }, [positionPercent, position?.marketId, position?.outcome]);
 
   useEffect(() => {
@@ -1067,11 +1111,11 @@ function MarketCard({
     const id = window.setInterval(() => {
       setLivePositionPercent((prev) => {
         const step = (Math.random() - 0.48) * 2.4;
-        return clampLivePercent(prev + step);
+        return clampLivePercent(prev + step, positionPercent);
       });
     }, LIVE_PERCENT_TICK_MS);
     return () => window.clearInterval(id);
-  }, [hasPosition, position?.marketId]);
+  }, [hasPosition, position?.marketId, positionPercent]);
 
   useEffect(() => {
     return () => {
