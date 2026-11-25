@@ -711,6 +711,16 @@ function clampLivePercent(value: number, anchor: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+/** Stable slight sticker tilt from market + outcome (−7°…7°). */
+function outcomeStickerTilt(marketId: string, outcome: Outcome) {
+  const key = `${marketId}:${outcome}`;
+  let hash = 0;
+  for (let i = 0; i < key.length; i += 1) {
+    hash = (hash * 33 + key.charCodeAt(i)) | 0;
+  }
+  return (Math.abs(hash) % 15) - 7;
+}
+
 function PositionFooter({
   position,
   currentPercent,
@@ -739,6 +749,9 @@ function PositionFooter({
   const entryMark = Math.max(1, Math.min(99, position.entryPercent));
   const entryOverFill = entryMark <= fill;
   const canDecrease = position.stake > MIN_POSITION_STAKE;
+  const isYes = position.outcome === "Yes";
+  const stickerTilt = outcomeStickerTilt(position.marketId, position.outcome);
+  const stickerColor = isYes ? YES : NO;
   const actionBtn = `flex h-[52px] items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-200 ease-out active:scale-[0.94] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 ${
     video ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black"
   }`;
@@ -751,9 +764,12 @@ function PositionFooter({
     >
       <div className="min-w-0">
         <p
-          className={`text-[17px] font-semibold tracking-[-0.02em] ${
-            video ? "text-white" : "text-black"
-          }`}
+          aria-label={position.outcome}
+          className="mb-1 inline-flex w-fit origin-left select-none items-center rounded-[14px] px-3.5 py-1.5 text-[34px] font-extrabold leading-none tracking-[-0.05em] text-white"
+          style={{
+            transform: `rotate(${stickerTilt}deg)`,
+            backgroundColor: stickerColor,
+          }}
         >
           {position.outcome}
         </p>
