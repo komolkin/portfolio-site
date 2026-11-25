@@ -1848,9 +1848,11 @@ function CategoryTabs({
 function PicksChip({
   picks,
   onOpen,
+  shakeKey = 0,
 }: {
   picks: ComboSheetPick[];
   onOpen: () => void;
+  shakeKey?: number;
 }) {
   const count = picks.length;
   const logos = picks.slice(-MAX_CHIP_LOGOS);
@@ -1862,10 +1864,18 @@ function PicksChip({
   const showMultiplier = count >= 2;
   const multiplierLabel = `${multiplier.toFixed(2)}x`;
   const prevCount = useRef(count);
+  const [shaking, setShaking] = useState(false);
 
   useEffect(() => {
     prevCount.current = count;
   }, [count]);
+
+  useEffect(() => {
+    if (!shakeKey) return;
+    setShaking(true);
+    const id = window.setTimeout(() => setShaking(false), 420);
+    return () => window.clearTimeout(id);
+  }, [shakeKey]);
 
   const bump = count > prevCount.current;
 
@@ -1883,9 +1893,16 @@ function PicksChip({
       whileTap={{ scale: 0.96 }}
       initial={{ opacity: 0, y: 12, scale: 0.96 }}
       animate={
-        bump
-          ? { opacity: 1, y: 0, scale: [1, 1.04, 1] }
-          : { opacity: 1, y: 0, scale: 1 }
+        shaking
+          ? {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              x: [0, -9, 9, -7, 7, -4, 4, 0],
+            }
+          : bump
+            ? { opacity: 1, y: 0, scale: [1, 1.04, 1], x: 0 }
+            : { opacity: 1, y: 0, scale: 1, x: 0 }
       }
       exit={{ opacity: 0, y: 10, scale: 0.96 }}
       transition={{
@@ -1893,6 +1910,9 @@ function PicksChip({
         opacity: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
         y: { type: "spring", stiffness: 420, damping: 34 },
         scale: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+        x: shaking
+          ? { duration: 0.4, ease: [0.36, 0.07, 0.19, 0.97] }
+          : { duration: 0.2 },
       }}
       className="inline-flex min-h-12 origin-center items-center justify-center gap-3 overflow-hidden rounded-full bg-black px-5 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.28)] ring-1 ring-white/10"
     >
@@ -2068,11 +2088,13 @@ function BottomChrome({
   picks,
   balance,
   onOpenCombo,
+  shakeKey = 0,
 }: {
   feedRef: RefObject<HTMLDivElement | null>;
   picks: ComboSheetPick[];
   balance: number;
   onOpenCombo: () => void;
+  shakeKey?: number;
 }) {
   const [tabHidden, setTabHidden] = useState(false);
   const lastScrollY = useRef(0);
@@ -2129,7 +2151,12 @@ function BottomChrome({
         >
           <AnimatePresence initial={false}>
             {picks.length > 0 ? (
-              <PicksChip key="picks-chip" picks={picks} onOpen={onOpenCombo} />
+              <PicksChip
+                key="picks-chip"
+                picks={picks}
+                onOpen={onOpenCombo}
+                shakeKey={shakeKey}
+              />
             ) : null}
           </AnimatePresence>
         </motion.div>
@@ -2150,6 +2177,7 @@ export default function MainFeed() {
   const [searchQuery, setSearchQuery] = useState("");
   const [comboPicks, setComboPicks] = useState<ComboSheetPick[]>([]);
   const [comboOpen, setComboOpen] = useState(false);
+  const [comboShakeKey, setComboShakeKey] = useState(0);
   const comboPicksRef = useRef(comboPicks);
   comboPicksRef.current = comboPicks;
   const feedRef = useRef<HTMLDivElement>(null);
@@ -2278,6 +2306,14 @@ export default function MainFeed() {
     return map;
   }, [comboPicks]);
 
+  const scrollToNextMarket = useCallback((fromIndex: number) => {
+    const feed = feedRef.current;
+    if (!feed) return;
+    const wraps = feed.querySelectorAll<HTMLElement>("[data-market-wrap]");
+    const next = wraps[fromIndex + 1];
+    next?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
+
   const toggleCombo = useCallback((market: Market, outcome: Outcome) => {
     const pick = toComboPick(market, outcome);
     const prev = comboPicksRef.current;
@@ -2287,17 +2323,22 @@ export default function MainFeed() {
       comboPicksRef.current = updated;
       setComboPicks(updated);
       playComboRemove(updated.length);
-      return;
+      return false;
     }
+    const alreadyInGroup = prev.some((item) => item.groupId === pick.groupId);
     const withoutGroup = prev.filter((item) => item.groupId !== pick.groupId);
     if (withoutGroup.length >= MAX_COMBO_PICKS) {
       playComboFull();
-      return;
+      hapticNudge();
+      setComboShakeKey((key) => key + 1);
+      return false;
     }
     const updated = [...withoutGroup, pick];
     comboPicksRef.current = updated;
     setComboPicks(updated);
     playComboAdd(updated.length);
+    // Only advance when a new market joins the combo (not Yes↔No swap).
+    return !alreadyInGroup;
   }, []);
 
   return (
@@ -2325,6 +2366,7 @@ export default function MainFeed() {
             visibleMarkets.map((market, index) => (
               <motion.div
                 key={`${feedMotionKey}-${market.id}`}
+                data-market-wrap
                 className="relative min-w-0 overflow-visible"
                 initial={{ opacity: 0, y: 22 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -2340,7 +2382,14 @@ export default function MainFeed() {
                   position={positions[market.id] ?? null}
                   balance={balance}
                   onCommitTrade={openTrade}
-                  onToggleCombo={toggleCombo}
+                  onToggleCombo={(m, outcome) => {
+                    const added = toggleCombo(m, outcome);
+                    if (added) {
+                      window.requestAnimationFrame(() =>
+                        scrollToNextMarket(index),
+                      );
+                    }
+                  }}
                   onCashOut={cashOutPosition}
                   onAdjustPosition={adjustPosition}
                 />
@@ -2361,6 +2410,7 @@ export default function MainFeed() {
         picks={comboPicks}
         balance={balance}
         onOpenCombo={() => setComboOpen(true)}
+        shakeKey={comboShakeKey}
       />
 
       <ComboSheet
