@@ -56,12 +56,13 @@ import {
 
 const BG = "#E8E8E8";
 
-const MAX_BET = 25;
+const MIN_BET = 1;
+const MAX_BET = 10;
 const MAX_DRAG_PX = 168;
 const COMBO_OVERDRAG_PX = 72;
 const COMBO_ARM_PX = MAX_DRAG_PX + 28;
-const BET_STEP = 5;
-const COMMIT_AMOUNT = 5;
+const BET_STEP = 1;
+const COMMIT_AMOUNT = 1;
 const SIZE_DELTA_HOLD_MS = 900;
 const SIZE_DELTA_EXIT_MS = 480;
 const LIVE_PERCENT_HIGH_MIN = 75;
@@ -492,11 +493,12 @@ function toTradeMarket(market: Market): PolymarketMarketData {
 
 function amountFromOffset(offsetX: number) {
   const abs = Math.abs(offsetX);
-  // Hold $0 until the bet panel is fully revealed, then dial amount.
+  // Hold $0 until the bet panel is fully revealed, then dial $MIN_BET–$MAX_BET.
   const deadzone = MAX_DRAG_PX * 0.78;
   if (abs <= deadzone) return 0;
   const progress = Math.min(1, (abs - deadzone) / (MAX_DRAG_PX - deadzone));
-  return Math.round((progress * MAX_BET) / BET_STEP) * BET_STEP;
+  const raw = MIN_BET + progress * (MAX_BET - MIN_BET);
+  return Math.round(raw / BET_STEP) * BET_STEP;
 }
 
 function isComboZone(offsetX: number) {
@@ -865,9 +867,19 @@ function MarketMediaScrim() {
 
 function MarketImageBg({ src }: { src: string }) {
   const [ready, setReady] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
     setReady(false);
+    const img = imgRef.current;
+    // Cached images often skip `onLoad` after hydration — paint if already complete.
+    if (img?.complete && img.naturalWidth > 0) {
+      setReady(true);
+      return;
+    }
+    // Never leave the card black if load events are swallowed.
+    const fallback = window.setTimeout(() => setReady(true), 900);
+    return () => window.clearTimeout(fallback);
   }, [src]);
 
   return (
@@ -875,18 +887,20 @@ function MarketImageBg({ src }: { src: string }) {
       aria-hidden
       className="pointer-events-none absolute inset-0 overflow-hidden rounded-[28px] bg-black [clip-path:inset(0_round_28px)]"
     >
-      <Image
+      {/* Local public assets — skip next/image optimizer (query/cache edge cases). */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={imgRef}
         src={src}
         alt=""
-        fill
-        className={`object-cover transition-opacity duration-500 ease-out ${
+        className={`absolute inset-0 size-full object-cover transition-opacity duration-500 ease-out ${
           ready ? "opacity-100" : "opacity-0"
         }`}
-        sizes="(max-width: 430px) 100vw, 393px"
-        priority
+        decoding="async"
+        fetchPriority="high"
         draggable={false}
         onLoad={() => setReady(true)}
-        onLoadingComplete={() => setReady(true)}
+        onError={() => setReady(true)}
       />
       <div
         className={`transition-opacity duration-500 ease-out ${
