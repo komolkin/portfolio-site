@@ -1967,9 +1967,11 @@ function PicksChip({
 function BottomNav({
   balance,
   hidden,
+  onHomeClick,
 }: {
   balance: number;
   hidden: boolean;
+  onHomeClick?: () => void;
 }) {
   const item =
     "relative flex h-full min-w-0 flex-1 items-center justify-center";
@@ -1993,6 +1995,10 @@ function BottomNav({
         type="button"
         aria-label="Home"
         aria-current="page"
+        onClick={() => {
+          hapticTap();
+          onHomeClick?.();
+        }}
         className={`${item} rounded-full bg-black/[0.06] text-black`}
       >
         <svg viewBox="0 0 24 24" width={24} height={24} fill="none" aria-hidden>
@@ -2144,7 +2150,15 @@ function BottomChrome({
             ) : null}
           </AnimatePresence>
         </motion.div>
-        {elevated ? null : <BottomNav balance={balance} hidden={tabHidden} />}
+        {elevated ? null : (
+          <BottomNav
+            balance={balance}
+            hidden={tabHidden}
+            onHomeClick={() => {
+              feedRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
+        )}
       </div>
     </div>
   );
