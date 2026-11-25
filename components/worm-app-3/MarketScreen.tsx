@@ -23,6 +23,7 @@ import {
 } from "@/components/StreamingWords";
 import {
   PositionFooter,
+  POSITION_ADJUST_STEP,
   type PlacedPosition,
 } from "./PositionFooter";
 
@@ -1267,7 +1268,7 @@ export default function MarketScreen({
             position={position}
             currentPercent={livePositionPercent}
             video={false}
-            canIncrease={(balance ?? 0) >= 5}
+            canIncrease={(balance ?? 0) >= POSITION_ADJUST_STEP}
             cashingOut={cashingOut}
             stickerReady={stickerReady}
             className="mt-5"

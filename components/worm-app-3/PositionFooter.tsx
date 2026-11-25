@@ -19,8 +19,8 @@ export type PlacedPosition = {
 
 export const YES_COLOR = "#1DB954";
 export const NO_COLOR = "#FF3B5C";
-export const MIN_POSITION_STAKE = 5;
-export const POSITION_ADJUST_STEP = 5;
+export const MIN_POSITION_STAKE = 1;
+export const POSITION_ADJUST_STEP = 1;
 
 /**
  * Mark-to-market value at the current chance of your outcome.
@@ -257,7 +257,7 @@ export function PositionFooter({
       <div className="grid grid-cols-4 gap-2.5">
         <button
           type="button"
-          aria-label="Remove $5 from position"
+          aria-label="Remove $1 from position"
           disabled={!canDecrease || cashingOut}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={() => {
@@ -267,11 +267,11 @@ export function PositionFooter({
           }}
           className={`${actionBtn} col-span-1 tabular-nums`}
         >
-          -$5
+          -$1
         </button>
         <button
           type="button"
-          aria-label="Add $5 to position"
+          aria-label="Add $1 to position"
           disabled={!canIncrease || cashingOut}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={() => {
@@ -281,7 +281,7 @@ export function PositionFooter({
           }}
           className={`${actionBtn} col-span-1 tabular-nums`}
         >
-          +$5
+          +$1
         </button>
         <button
           type="button"
