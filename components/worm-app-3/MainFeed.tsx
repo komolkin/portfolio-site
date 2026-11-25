@@ -154,7 +154,7 @@ const MARKETS: Market[] = [
     category: "Tech",
     topic: "tech",
     question: "Jensen Huang out as NVIDIA CEO by December 31, 2026?",
-    thumb: "/worm-app-3/bg/jensen-huang.jpg?v=2",
+    thumb: "/worm-app-3/bg/jensen-huang.jpg",
     video: "/worm-app-3/bg/alexes-nakamoto.mp4",
     yesPercent: 18,
     social: "Nass and 22 others predicted",
@@ -165,7 +165,7 @@ const MARKETS: Market[] = [
     topic: "culture",
     question: "Will Grand Theft Auto VI release on PC by December 31, 2026?",
     thumb: "/worm-app-3/logos/gta-vi.png",
-    backdrop: "/worm-app-3/logos/gta-vi-backdrop.jpg?v=3",
+    backdrop: "/worm-app-3/logos/gta-vi-backdrop.jpg",
     yesPercent: 72,
   },
   {
@@ -221,6 +221,15 @@ const MARKETS: Market[] = [
     social: "Chris and 9 others predicted",
   },
   {
+    id: "grammys-album",
+    category: "Grammys",
+    topic: "culture",
+    question: "Will a hip-hop album win Album of the Year at the next Grammys?",
+    thumb: "/worm-app-3/bg/assembly-hall.jpg",
+    yesPercent: 34,
+    social: "Maya and 64 others predicted",
+  },
+  {
     id: "eth-5k",
     category: "Crypto",
     topic: "crypto",
@@ -254,6 +263,24 @@ const MARKETS: Market[] = [
     thumb: "/worm-app-3/bg/jensen-huang.jpg",
     yesPercent: 44,
     social: "Leen and 156 others predicted",
+  },
+  {
+    id: "box-office-billion",
+    category: "Box Office",
+    topic: "culture",
+    question: "Will any film cross $1B worldwide in 2026?",
+    thumb: "/worm-app-3/bg/nba-2.jpg",
+    yesPercent: 61,
+    social: "Ari and 93 others predicted",
+  },
+  {
+    id: "netflix-top-title",
+    category: "Netflix",
+    topic: "culture",
+    question: "Will a non-English series be Netflix’s #1 title this month?",
+    thumb: "/worm-app-3/bg/heroic-imperial.jpg",
+    yesPercent: 47,
+    social: "Sam and 41 others predicted",
   },
   {
     id: "sevilla-valencia",
@@ -343,12 +370,67 @@ const MARKETS: Market[] = [
   },
   {
     id: "oscars-best-picture",
-    category: "Awards",
+    category: "Oscars",
     topic: "culture",
     question: "Will a non-English film win Best Picture this year?",
-    thumb: "/worm-app-3/bg/nba-2.jpg",
+    thumb: "/worm-app-3/bg/assembly-hall.jpg",
     yesPercent: 24,
     social: "Ari and 51 others predicted",
+  },
+  {
+    id: "met-gala-theme",
+    category: "Met Gala",
+    topic: "culture",
+    question: "Will the next Met Gala theme leak more than 30 days early?",
+    thumb: "/worm-app-3/bg/assembly-hall.jpg",
+    yesPercent: 42,
+    social: "Leen and 27 others predicted",
+  },
+  {
+    id: "spotify-global-1",
+    category: "Music",
+    topic: "culture",
+    question: "Will a solo female artist hold Spotify’s Global #1 for 7+ days?",
+    thumb: "/worm-app-3/bg/nba-3.jpg",
+    yesPercent: 55,
+    social: "Priya and 82 others predicted",
+  },
+  {
+    id: "fortnite-collab",
+    category: "Fortnite",
+    topic: "culture",
+    question: "Will Fortnite launch a new music-artist collab before April 2027?",
+    thumb: "/worm-app-3/logos/gta-vi-cover.png",
+    yesPercent: 68,
+    social: "Rex and 119 others predicted",
+  },
+  {
+    id: "coachella-headliner",
+    category: "Coachella",
+    topic: "culture",
+    question: "Will Coachella announce all three weekend headliners before New Year’s?",
+    thumb: "/worm-app-3/bg/soccer-2.jpg",
+    yesPercent: 39,
+    social: "Chris and 36 others predicted",
+  },
+  {
+    id: "stranger-things-finale",
+    category: "TV",
+    topic: "culture",
+    question: "Will Stranger Things’ final season top 50M views in its first week?",
+    thumb: "/worm-app-3/bg/soccer-3.jpg",
+    yesPercent: 71,
+    social: "Jordan and 204 others predicted",
+  },
+  {
+    id: "gta-trailer-3",
+    category: "GTA VI",
+    topic: "culture",
+    question: "Will Rockstar drop another GTA VI trailer before summer 2027?",
+    thumb: "/worm-app-3/logos/gta-vi.png",
+    backdrop: "/worm-app-3/logos/gta-vi-backdrop.jpg",
+    yesPercent: 58,
+    social: "Kai and 143 others predicted",
   },
 ];
 
@@ -743,7 +825,10 @@ function BetReveal({
                 </span>
               </p>
               <p className="mt-1 whitespace-nowrap text-[13px] font-bold text-black">
-                To win {formatToWin(toWin)}
+                To win{" "}
+                <span className="tabular-nums text-[#1DB954]">
+                  {formatToWin(toWin)}
+                </span>
               </p>
             </motion.div>
           ) : null}
@@ -798,9 +883,10 @@ function MarketImageBg({ src }: { src: string }) {
           ready ? "opacity-100" : "opacity-0"
         }`}
         sizes="(max-width: 430px) 100vw, 393px"
-        priority={false}
+        priority
         draggable={false}
         onLoad={() => setReady(true)}
+        onLoadingComplete={() => setReady(true)}
       />
       <div
         className={`transition-opacity duration-500 ease-out ${

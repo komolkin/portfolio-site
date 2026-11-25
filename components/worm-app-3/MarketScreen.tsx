@@ -36,7 +36,7 @@ export type MarketContextItem = {
 };
 
 const CONTEXT_IMAGE_POOL = [
-  "/worm-app-3/bg/jensen-huang.jpg?v=2",
+  "/worm-app-3/bg/jensen-huang.jpg",
   "/worm-app-3/bg/fed-rates.jpg",
   "/worm-app-3/bg/dc-monument.jpg",
   "/worm-app-3/bg/assembly-hall.jpg",
@@ -44,7 +44,7 @@ const CONTEXT_IMAGE_POOL = [
   "/worm-app-3/bg/ballot.jpg",
   "/worm-app-3/bg/nba-2.jpg",
   "/worm-app-3/bg/hawks-pistons.jpg",
-  "/worm-app-3/logos/gta-vi-backdrop.jpg?v=3",
+  "/worm-app-3/logos/gta-vi-backdrop.jpg",
 ];
 
 function buildLocalContextItems(
@@ -125,22 +125,45 @@ function NewsThumb({
 function ContextStream({
   text,
   sheetOpenedAt,
+  animate,
+  onAnimated,
 }: {
   text: string;
   sheetOpenedAt: number;
+  /** False when returning from Context — show text immediately. */
+  animate: boolean;
+  onAnimated?: () => void;
 }) {
+  // Lock for this mount so parent flipping `animate` mid-stream can't remount us.
+  const shouldAnimate = useRef(animate).current;
   const words = useMemo(() => splitWords(text), [text]);
-  const [play, setPlay] = useState(false);
+  const [play, setPlay] = useState(!shouldAnimate);
+  const onAnimatedRef = useRef(onAnimated);
+  onAnimatedRef.current = onAnimated;
 
   useEffect(() => {
+    if (!shouldAnimate) {
+      setPlay(true);
+      return;
+    }
     setPlay(false);
-    // Wait out the sheet spring if text arrives early, otherwise start ASAP.
+    // Wait out the sheet spring if needed; always at least one frame after skeleton.
     const now =
       typeof performance !== "undefined" ? performance.now() : Date.now();
-    const wait = Math.max(0, 450 - (now - sheetOpenedAt));
-    const id = window.setTimeout(() => setPlay(true), wait);
-    return () => window.clearTimeout(id);
-  }, [sheetOpenedAt, text]);
+    const wait = Math.max(40, Math.max(0, 450 - (now - sheetOpenedAt)));
+    const startId = window.setTimeout(() => {
+      setPlay(true);
+      // Remember for the next mount (e.g. back from Context) — don't remount this one.
+      onAnimatedRef.current?.();
+    }, wait);
+    return () => {
+      window.clearTimeout(startId);
+    };
+  }, [shouldAnimate, sheetOpenedAt, text, words.length]);
+
+  if (!shouldAnimate) {
+    return <>{text}</>;
+  }
 
   return (
     <>
@@ -184,17 +207,34 @@ function ContextStream({
 function AiOverview({
   text,
   loading,
+  animate = true,
+  onAnimated,
   onOpen,
 }: {
   text: string | null;
   loading?: boolean;
+  animate?: boolean;
+  onAnimated?: () => void;
   onOpen?: () => void;
 }) {
-  // Skeleton mounts with the sheet — use that clock so a fast fetch still
-  // streams after the sheet spring, not during it.
+  // Sheet-open clock — stream waits out the spring only when the fetch is fast.
   const sheetOpenedAtRef = useRef(
     typeof performance !== "undefined" ? performance.now() : Date.now(),
   );
+  // Bump when leaving skeleton so ContextStream always mounts fresh and plays.
+  const [revealId, setRevealId] = useState(0);
+  // Keep the streaming instance mounted even after parent marks overviewStreamed.
+  const holdingStreamRef = useRef(false);
+
+  useEffect(() => {
+    if (loading) {
+      holdingStreamRef.current = false;
+      return;
+    }
+    if (!text || !animate) return;
+    holdingStreamRef.current = true;
+    setRevealId((id) => id + 1);
+  }, [animate, loading, text]);
 
   if (loading) {
     return (
@@ -218,6 +258,8 @@ function AiOverview({
   }
 
   if (!text) return null;
+
+  const playStream = holdingStreamRef.current || animate;
 
   return (
     <button
@@ -247,11 +289,19 @@ function AiOverview({
         </svg>
       </div>
       <p className="mt-2 max-h-[5.25rem] overflow-hidden text-[15px] leading-snug text-black/65">
-        <ContextStream
-          key={text}
-          text={text}
-          sheetOpenedAt={sheetOpenedAtRef.current}
-        />
+        {playStream ? (
+          revealId > 0 ? (
+            <ContextStream
+              key={`${text}-${revealId}`}
+              text={text}
+              sheetOpenedAt={sheetOpenedAtRef.current}
+              animate
+              onAnimated={onAnimated}
+            />
+          ) : null
+        ) : (
+          text
+        )}
       </p>
     </button>
   );
@@ -768,6 +818,8 @@ export default function MarketScreen({
   const [contextLoading, setContextLoading] = useState(!pick.context);
   const [overview, setOverview] = useState<string | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(true);
+  // Survives main↔context page swaps so the stream only plays once per fetch.
+  const [overviewStreamed, setOverviewStreamed] = useState(false);
 
   useEffect(() => {
     setContextItems(localContextItems);
@@ -828,6 +880,7 @@ export default function MarketScreen({
     const controller = new AbortController();
     setOverview(null);
     setOverviewLoading(true);
+    setOverviewStreamed(false);
 
     const params = new URLSearchParams({
       title: pick.title,
@@ -1058,7 +1111,7 @@ export default function MarketScreen({
             exit={{ opacity: 0, x: 18 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
           >
-            <p className="mt-3 text-[28px] font-semibold leading-tight tracking-[-0.02em] text-black">
+            <p className="mt-5 text-[28px] font-semibold leading-tight tracking-[-0.02em] text-black">
               Context
             </p>
             {overview ? (
@@ -1190,7 +1243,12 @@ export default function MarketScreen({
         <AiOverview
           text={overview}
           loading={overviewLoading}
-          onOpen={() => setSheetPage("context")}
+          animate={!overviewStreamed}
+          onAnimated={() => setOverviewStreamed(true)}
+          onOpen={() => {
+            setOverviewStreamed(true);
+            setSheetPage("context");
+          }}
         />
 
         {/* Odds chart — sports matchups only */}
