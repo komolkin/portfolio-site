@@ -1,8 +1,409 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import {
+  AnimatePresence,
+  LayoutGroup,
+  motion,
+  useDragControls,
+  type PanInfo,
+} from "framer-motion";
+import Image from "next/image";
 import { allo } from "@/lib/fonts";
+import {
+  splitWords,
+  WORD_DURATION,
+  WORD_STAGGER,
+} from "@/components/StreamingWords";
+import {
+  PositionFooter,
+  type PlacedPosition,
+} from "./PositionFooter";
+
+export type MarketContextItem = {
+  id: string;
+  image: string;
+  source: string;
+  headline: string;
+  time: string;
+  url?: string;
+};
+
+const CONTEXT_IMAGE_POOL = [
+  "/worm-app-3/bg/jensen-huang.jpg?v=2",
+  "/worm-app-3/bg/fed-rates.jpg",
+  "/worm-app-3/bg/dc-monument.jpg",
+  "/worm-app-3/bg/assembly-hall.jpg",
+  "/worm-app-3/bg/lady-justice.jpg",
+  "/worm-app-3/bg/ballot.jpg",
+  "/worm-app-3/bg/nba-2.jpg",
+  "/worm-app-3/bg/hawks-pistons.jpg",
+  "/worm-app-3/logos/gta-vi-backdrop.jpg?v=3",
+];
+
+function buildLocalContextItems(
+  pickId: string,
+  fallbackImage?: string,
+): MarketContextItem[] {
+  const seed = hashString(pickId);
+  const copy = [
+    {
+      source: "Worm Wire",
+      time: "1h ago",
+      headline: "Fresh reporting tied to this market’s latest odds move",
+    },
+    {
+      source: "Market Pulse",
+      time: "4h ago",
+      headline: "Traders are watching volume spikes into the next resolve window",
+    },
+    {
+      source: "Briefing",
+      time: "Yesterday",
+      headline: "What changed this week — and what still looks priced in",
+    },
+    {
+      source: "Notes",
+      time: "2d ago",
+      headline: "Context that helps frame Yes vs No going into settlement",
+    },
+  ];
+
+  return copy.map((item, index) => {
+    const poolIndex = (seed + index * 3) % CONTEXT_IMAGE_POOL.length;
+    return {
+      id: `${pickId}-ctx-${index}`,
+      image:
+        index === 0 && fallbackImage
+          ? fallbackImage
+          : CONTEXT_IMAGE_POOL[poolIndex]!,
+      ...item,
+    };
+  });
+}
+
+function NewsThumb({
+  src,
+  className,
+}: {
+  src: string;
+  className?: string;
+}) {
+  const localImage = src.startsWith("/worm-app-3/");
+  if (localImage) {
+    return (
+      <Image
+        src={src}
+        alt=""
+        fill
+        className={className ?? "object-cover"}
+        sizes="120px"
+        draggable={false}
+      />
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt=""
+      className={`absolute inset-0 size-full object-cover ${className ?? ""}`}
+      loading="lazy"
+      decoding="async"
+      draggable={false}
+    />
+  );
+}
+
+/** CSS word stream — nested sheet Framer trees skip motion `initial` animations. */
+function ContextStream({
+  text,
+  sheetOpenedAt,
+}: {
+  text: string;
+  sheetOpenedAt: number;
+}) {
+  const words = useMemo(() => splitWords(text), [text]);
+  const [play, setPlay] = useState(false);
+
+  useEffect(() => {
+    setPlay(false);
+    // Wait out the sheet spring if text arrives early, otherwise start ASAP.
+    const now =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
+    const wait = Math.max(0, 450 - (now - sheetOpenedAt));
+    const id = window.setTimeout(() => setPlay(true), wait);
+    return () => window.clearTimeout(id);
+  }, [sheetOpenedAt, text]);
+
+  return (
+    <>
+      <style>{`
+        @keyframes worm-context-word-in {
+          from { opacity: 0; transform: translateY(0.3em); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          @keyframes worm-context-word-in {
+            from { opacity: 1; transform: none; }
+            to { opacity: 1; transform: none; }
+          }
+        }
+      `}</style>
+      {words.map((word, index) => (
+        <span key={`${text.slice(0, 24)}-${index}-${word}`}>
+          <span
+            className="inline-block"
+            style={
+              play
+                ? {
+                    animationName: "worm-context-word-in",
+                    animationDuration: `${WORD_DURATION}s`,
+                    animationTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
+                    animationDelay: `${index * WORD_STAGGER}s`,
+                    animationFillMode: "both",
+                  }
+                : { opacity: 0 }
+            }
+          >
+            {word}
+          </span>
+          {index < words.length - 1 ? " " : null}
+        </span>
+      ))}
+    </>
+  );
+}
+
+function AiOverview({
+  text,
+  loading,
+  onOpen,
+}: {
+  text: string | null;
+  loading?: boolean;
+  onOpen?: () => void;
+}) {
+  // Skeleton mounts with the sheet — use that clock so a fast fetch still
+  // streams after the sheet spring, not during it.
+  const sheetOpenedAtRef = useRef(
+    typeof performance !== "undefined" ? performance.now() : Date.now(),
+  );
+
+  if (loading) {
+    return (
+      <div
+        className="mt-6 w-full rounded-[24px] bg-black/[0.045] px-4 py-3.5"
+        aria-busy
+        aria-label="Loading context"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="h-[15px] w-[72px] animate-pulse rounded-full bg-black/[0.08]" />
+          <div className="size-[18px] animate-pulse rounded-full bg-black/[0.06]" />
+        </div>
+        <div className="mt-3 space-y-1.5" aria-hidden>
+          <div className="h-3.5 w-full animate-pulse rounded-full bg-black/[0.07]" />
+          <div className="h-3.5 w-[96%] animate-pulse rounded-full bg-black/[0.07]" />
+          <div className="h-3.5 w-[88%] animate-pulse rounded-full bg-black/[0.06]" />
+          <div className="h-3.5 w-[64%] animate-pulse rounded-full bg-black/[0.05]" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!text) return null;
+
+  return (
+    <button
+      type="button"
+      aria-label="Context"
+      disabled={!onOpen}
+      onClick={onOpen}
+      className="mt-6 w-full rounded-[24px] bg-black/[0.045] px-4 py-3.5 text-left transition-[transform,background-color] duration-150 ease-out active:scale-[0.985] disabled:active:scale-100"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[15px] font-semibold text-black">Context</p>
+        <svg
+          viewBox="0 0 20 20"
+          width={18}
+          height={18}
+          className="size-[18px] shrink-0 text-black/35"
+          fill="none"
+          aria-hidden
+        >
+          <path
+            d="M7.5 4.5 13 10l-5.5 5.5"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+      <p className="mt-2 max-h-[5.25rem] overflow-hidden text-[15px] leading-snug text-black/65">
+        <ContextStream
+          key={text}
+          text={text}
+          sheetOpenedAt={sheetOpenedAtRef.current}
+        />
+      </p>
+    </button>
+  );
+}
+
+function ContextRail({
+  items,
+  loading,
+}: {
+  items: MarketContextItem[];
+  loading?: boolean;
+}) {
+  if (!loading && items.length === 0) return null;
+
+  return (
+    <section className="mt-6" aria-label="Context">
+      <p className="px-0 text-[15px] font-semibold text-black">Context</p>
+      <div
+        data-no-sheet-drag
+        className="-mx-4 mt-3 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        <div className="flex w-max snap-x snap-mandatory gap-3 px-4">
+          {loading
+            ? Array.from({ length: 4 }, (_, index) => (
+                <div
+                  key={`ctx-skel-${index}`}
+                  className="w-[204px] shrink-0 snap-start"
+                  aria-hidden
+                >
+                  <div className="aspect-[4/3] animate-pulse rounded-[16px] bg-black/[0.06]" />
+                  <div className="mt-2.5 h-4 w-[92%] animate-pulse rounded bg-black/[0.06]" />
+                  <div className="mt-1.5 h-3 w-2/3 animate-pulse rounded bg-black/[0.05]" />
+                </div>
+              ))
+            : items.map((item) => {
+                const body = (
+                  <>
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-[16px] bg-black/[0.06]">
+                      <NewsThumb src={item.image} />
+                    </div>
+                    <p className="mt-2.5 line-clamp-3 text-[14px] font-semibold leading-snug tracking-[-0.01em] text-black">
+                      {item.headline}
+                    </p>
+                    <p className="mt-1.5 text-[12px] font-medium text-black/40">
+                      {item.source}
+                      <span className="mx-1 text-black/25">·</span>
+                      {item.time}
+                    </p>
+                  </>
+                );
+
+                if (item.url) {
+                  return (
+                    <a
+                      key={item.id}
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-[204px] shrink-0 snap-start text-left transition-opacity duration-150 active:opacity-70"
+                    >
+                      {body}
+                    </a>
+                  );
+                }
+
+                return (
+                  <article
+                    key={item.id}
+                    className="w-[204px] shrink-0 snap-start"
+                  >
+                    {body}
+                  </article>
+                );
+              })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ContextNewsList({
+  items,
+  loading,
+}: {
+  items: MarketContextItem[];
+  loading?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-3 pt-1" data-no-sheet-drag>
+      {loading
+        ? Array.from({ length: 5 }, (_, index) => (
+            <div
+              key={`ctx-list-skel-${index}`}
+              className="flex gap-3 rounded-[20px] bg-black/[0.04] p-3"
+              aria-hidden
+            >
+              <div className="size-[72px] shrink-0 animate-pulse rounded-[14px] bg-black/[0.06]" />
+              <div className="min-w-0 flex-1 space-y-2 pt-1">
+                <div className="h-3.5 w-[92%] animate-pulse rounded bg-black/[0.06]" />
+                <div className="h-3.5 w-[70%] animate-pulse rounded bg-black/[0.05]" />
+                <div className="h-3 w-1/3 animate-pulse rounded bg-black/[0.04]" />
+              </div>
+            </div>
+          ))
+        : items.map((item) => {
+            const body = (
+              <>
+                <div className="relative size-[72px] shrink-0 overflow-hidden rounded-[14px] bg-black/[0.06]">
+                  <NewsThumb src={item.image} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-3 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-black">
+                    {item.headline}
+                  </p>
+                  <p className="mt-1.5 text-[12px] font-medium text-black/40">
+                    {item.source}
+                    <span className="mx-1 text-black/25">·</span>
+                    {item.time}
+                  </p>
+                </div>
+              </>
+            );
+
+            if (item.url) {
+              return (
+                <a
+                  key={item.id}
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex gap-3 rounded-[20px] bg-black/[0.04] p-3 text-left transition-transform duration-150 ease-out active:scale-[0.985]"
+                >
+                  {body}
+                </a>
+              );
+            }
+
+            return (
+              <article
+                key={item.id}
+                className="flex gap-3 rounded-[20px] bg-black/[0.04] p-3"
+              >
+                {body}
+              </article>
+            );
+          })}
+    </div>
+  );
+}
+
+const DISMISS_OFFSET_PX = 100;
+const DISMISS_VELOCITY = 650;
 
 /** Endpoint coords for Figma chart paths (viewBox 259×132). */
 const CHART_END_A = { x: 257.9, y: 1.35 };
@@ -30,6 +431,7 @@ export type MarketScreenPick = {
   video?: string;
   /** Live games use ¢ trade pills; upcoming uses circle + combo buttons. */
   live?: boolean;
+  context?: MarketContextItem[];
   options: MarketScreenOption[];
   crypto?: {
     price: string;
@@ -83,22 +485,6 @@ function splitKickoff(title: string): { day: string; time: string } | null {
   return { day: match[1], time: match[2] };
 }
 
-function marketCategory(market: MarketScreenMarket): string {
-  if (market.kind === "crypto") return "Crypto";
-  if (market.kind === "topic") {
-    const key = `${market.id} ${market.title}`.toLowerCase();
-    if (key.includes("nvidia") || key.includes("ceo")) return "Tech";
-    return "Politics";
-  }
-  const key = `${market.id} ${market.title}`.toLowerCase();
-  if (key.includes("nba") || key.includes("basketball")) return "Basketball";
-  if (key.includes("laliga") || key.includes("soccer") || key.includes("football"))
-    return "Soccer";
-  if (key.includes("atp") || key.includes("tennis")) return "Tennis";
-  if (key.includes("cs2") || key.includes("esport")) return "Esports";
-  return "Sports";
-}
-
 function Emblem({
   logo,
   mark,
@@ -131,7 +517,7 @@ function Emblem({
 
   return (
     <span
-      className="flex shrink-0 items-center justify-center rounded-full bg-white/10 font-semibold tracking-tight text-white"
+      className="flex shrink-0 items-center justify-center rounded-full bg-black/[0.06] font-semibold tracking-tight text-black/70"
       style={{ width: size, height: size, fontSize }}
       aria-hidden
     >
@@ -220,7 +606,7 @@ function MatchOddsChart({
         >
           {shortLabel(top.label)}
         </span>
-        <span className="mt-0.5 text-[28px] font-semibold tabular-nums leading-none text-white">
+        <span className="mt-0.5 text-[28px] font-semibold tabular-nums leading-none text-black">
           {top.percent}%
         </span>
       </div>
@@ -234,7 +620,7 @@ function MatchOddsChart({
         >
           {shortLabel(bottom.label)}
         </span>
-        <span className="mt-0.5 text-[28px] font-semibold tabular-nums leading-none text-white">
+        <span className="mt-0.5 text-[28px] font-semibold tabular-nums leading-none text-black">
           {bottom.percent}%
         </span>
       </div>
@@ -261,8 +647,8 @@ function ComboAddButton({
       aria-pressed={selected}
       disabled={blocked}
       onClick={onToggle}
-      className={`relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full transition-colors duration-200 disabled:opacity-35 ${
-        selected ? "bg-white/25 text-white" : "bg-[rgba(38,38,38,0.6)]"
+      className={`relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full transition-[transform,colors] duration-150 ease-out active:scale-[0.94] disabled:opacity-35 disabled:active:scale-100 ${
+        selected ? "bg-black text-white" : "bg-black/[0.06] text-black"
       }`}
     >
       <AnimatePresence initial={false} mode="popLayout">
@@ -301,14 +687,21 @@ function ComboAddButton({
             exit={{ opacity: 0, scale: 0.55 }}
             transition={{ type: "spring", stiffness: 520, damping: 28 }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/worm-app-3/icons/plus.svg"
-              alt=""
+            <svg
+              viewBox="0 0 20 20"
               width={20}
               height={20}
               className="size-5"
-            />
+              fill="none"
+              aria-hidden
+            >
+              <path
+                d="M10 4v12M4 10h12"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
           </motion.span>
         )}
       </AnimatePresence>
@@ -316,25 +709,40 @@ function ComboAddButton({
   );
 }
 
-/** Clean market detail — no hero media (Polymarket-style). */
+/** Market detail sheet — swipe down or tap backdrop to close. */
 export default function MarketScreen({
   market,
   pick,
   selectedIds,
   atLimit,
+  position,
+  balance,
+  stickerReady = true,
   onBack,
   onToggle,
   onTrade,
+  onCashOut,
+  onAdjustPosition,
 }: {
   market: MarketScreenMarket;
   pick: MarketScreenPick;
   selectedIds: Set<string>;
   atLimit: boolean;
+  position?: PlacedPosition | null;
+  balance?: number;
+  stickerReady?: boolean;
   onBack: () => void;
   onToggle: (option: MarketScreenOption) => void;
   onTrade?: (option: MarketScreenOption) => void;
+  onCashOut?: (position: PlacedPosition) => void;
+  onAdjustPosition?: (marketId: string, delta: number) => number;
 }) {
   const [tab, setTab] = useState<"comments" | "rules">("comments");
+  const [sheetPage, setSheetPage] = useState<"main" | "context">("main");
+  const [cashingOut, setCashingOut] = useState(false);
+  const cashOutTimerRef = useRef<number | null>(null);
+  const dragControls = useDragControls();
+  const scrollRef = useRef<HTMLDivElement>(null);
   const teamOptions = useMemo(
     () =>
       pick.options.filter(
@@ -351,86 +759,328 @@ export default function MarketScreen({
     const n = 0.8 + (hashString(pick.id) % 40) / 10;
     return `$${n.toFixed(1)}K`;
   }, [pick.id]);
+  const localContextItems = useMemo(
+    () => pick.context ?? buildLocalContextItems(pick.id, pick.background),
+    [pick.background, pick.context, pick.id],
+  );
+  const [contextItems, setContextItems] =
+    useState<MarketContextItem[]>(localContextItems);
+  const [contextLoading, setContextLoading] = useState(!pick.context);
+  const [overview, setOverview] = useState<string | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState(true);
+
+  useEffect(() => {
+    setContextItems(localContextItems);
+  }, [localContextItems]);
+
+  useEffect(() => {
+    if (pick.context?.length) {
+      setContextLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setContextLoading(true);
+
+    const params = new URLSearchParams({
+      marketId: pick.id,
+      title: pick.title,
+      category: market.title,
+    });
+    if (pick.background) params.set("fallbackImage", pick.background);
+
+    void fetch(`/api/worm-app-3/market-context?${params.toString()}`, {
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Context fetch failed");
+        const data = (await response.json()) as {
+          items?: MarketContextItem[];
+        };
+        if (!Array.isArray(data.items) || data.items.length === 0) {
+          setContextItems(localContextItems);
+          return;
+        }
+        setContextItems(data.items);
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setContextItems(localContextItems);
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("[market-context]", error);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setContextLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [
+    localContextItems,
+    market.title,
+    pick.background,
+    pick.context,
+    pick.id,
+    pick.title,
+  ]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setOverview(null);
+    setOverviewLoading(true);
+
+    const params = new URLSearchParams({
+      title: pick.title,
+      category: market.title,
+    });
+
+    void fetch(`/api/worm-app-3/market-overview?${params.toString()}`, {
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Overview fetch failed");
+        const data = (await response.json()) as {
+          overview?: string | null;
+        };
+        setOverview(data.overview?.trim() || null);
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setOverview(null);
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("[market-overview]", error);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setOverviewLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [market.title, pick.id, pick.title]);
+
+  const positionPercent = useMemo(() => {
+    if (!position) return pick.options[0]?.percent ?? 50;
+    const match = pick.options.find(
+      (option) =>
+        option.label.toLowerCase() === position.outcome.toLowerCase(),
+    );
+    return match?.percent ?? position.entryPercent;
+  }, [pick.options, position]);
+
+  const [livePositionPercent, setLivePositionPercent] = useState(
+    positionPercent,
+  );
+
+  useEffect(() => {
+    setLivePositionPercent(positionPercent);
+  }, [positionPercent, position?.marketId, position?.outcome]);
+
+  useEffect(() => {
+    if (!position) {
+      setCashingOut(false);
+      return;
+    }
+    const id = window.setInterval(() => {
+      setLivePositionPercent((prev) => {
+        const delta = (Math.random() > 0.5 ? 1 : -1) * (1 + Math.random());
+        return Math.max(1, Math.min(99, prev + delta));
+      });
+    }, 3000);
+    return () => window.clearInterval(id);
+  }, [position]);
+
+  useEffect(() => {
+    return () => {
+      if (cashOutTimerRef.current !== null) {
+        window.clearTimeout(cashOutTimerRef.current);
+      }
+    };
+  }, []);
+
+  const startCashOut = () => {
+    if (!position || cashingOut || !onCashOut) return;
+    setCashingOut(true);
+    if (cashOutTimerRef.current !== null) {
+      window.clearTimeout(cashOutTimerRef.current);
+    }
+    cashOutTimerRef.current = window.setTimeout(() => {
+      cashOutTimerRef.current = null;
+      onCashOut(position);
+      setCashingOut(false);
+    }, 420);
+  };
+
+  useEffect(() => {
+    setSheetPage("main");
+  }, [pick.id]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onBack();
+      if (event.key !== "Escape") return;
+      if (sheetPage === "context") {
+        setSheetPage("main");
+        return;
+      }
+      onBack();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onBack]);
+  }, [onBack, sheetPage]);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [sheetPage]);
+
+  const onDragEnd = (_: unknown, info: PanInfo) => {
+    if (
+      info.offset.y > DISMISS_OFFSET_PX ||
+      info.velocity.y > DISMISS_VELOCITY
+    ) {
+      onBack();
+    }
+  };
+
+  const startSheetDrag = (event: ReactPointerEvent) => {
+    const target = event.target as HTMLElement;
+    if (target.closest("button, input, textarea, a, [data-no-sheet-drag]")) {
+      return;
+    }
+    const scroller = scrollRef.current;
+    if (scroller && scroller.scrollTop > 0) return;
+    dragControls.start(event);
+  };
 
   return (
-    <div
-      className={`absolute inset-0 z-40 flex flex-col bg-black text-white ${allo.className}`}
-      role="dialog"
-      aria-modal="true"
-      aria-label={pick.title}
+    <motion.div
+      className={`absolute inset-0 z-40 flex items-end justify-center text-black ${allo.className}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(88px+env(safe-area-inset-bottom,0px))] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <header
-          className="flex items-center justify-between pt-[max(20px,calc(env(safe-area-inset-top,0px)+10px))]"
-        >
-          <button
-            type="button"
-            onClick={onBack}
-            aria-label="Back"
-            className="flex size-10 items-center justify-center rounded-full bg-white/10 text-white"
-          >
-            <svg
-              viewBox="0 0 20 20"
-              width={20}
-              height={20}
-              className="size-5"
-              fill="none"
-              aria-hidden
+      <button
+        type="button"
+        aria-label="Close market"
+        className="absolute inset-0 bg-black/35"
+        onClick={onBack}
+      />
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-label={pick.title}
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.9 }}
+        drag="y"
+        dragControls={dragControls}
+        dragListener={false}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 0.55 }}
+        onDragEnd={onDragEnd}
+        onPointerDown={startSheetDrag}
+        className={`relative z-[1] flex h-[96%] max-h-[96%] w-full max-w-[430px] flex-col overflow-hidden rounded-t-[28px] bg-white pb-[max(12px,env(safe-area-inset-bottom,0px))] text-black shadow-[0_-12px_40px_rgba(0,0,0,0.12)] ${allo.className}`}
+      >
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-[3] rounded-t-[28px] pt-2.5">
+          <div className="flex touch-none justify-center pb-1" aria-hidden>
+            <span className="h-1 w-10 rounded-full bg-black/15" />
+          </div>
+          <header className="pointer-events-auto flex items-center justify-between px-4 pt-1">
+            <button
+              type="button"
+              onClick={() =>
+                sheetPage === "context" ? setSheetPage("main") : onBack()
+              }
+              aria-label={sheetPage === "context" ? "Back to market" : "Back"}
+              className="flex size-10 items-center justify-center rounded-full bg-black/[0.06] text-black backdrop-blur-md"
             >
-              <path
-                d="M12.5 4.5 7 10l5.5 5.5"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-          <p className="min-w-0 truncate px-2 text-center text-[14px] font-medium text-white/55">
-            <span className="text-white/40">{marketCategory(market)}</span>
-            <span className="mx-1.5 text-white/25">›</span>
-            <span className="text-white">
-              {market.kind === "topic" ? "NVIDIA" : market.title}
-            </span>
-          </p>
-          <button
-            type="button"
-            aria-label="Share"
-            className="flex size-10 items-center justify-center rounded-full bg-white/10 text-white"
-          >
-            <svg
-              viewBox="0 0 20 20"
-              width={18}
-              height={18}
-              className="size-[18px]"
-              fill="none"
-              aria-hidden
+              <svg
+                viewBox="0 0 20 20"
+                width={20}
+                height={20}
+                className="size-5"
+                fill="none"
+                aria-hidden
+              >
+                <path
+                  d="M12.5 4.5 7 10l5.5 5.5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+            <span className="size-10 shrink-0" aria-hidden />
+            <button
+              type="button"
+              aria-label="Share"
+              className={`flex size-10 items-center justify-center rounded-full bg-black/[0.06] text-black backdrop-blur-md ${
+                sheetPage === "context" ? "invisible" : ""
+              }`}
             >
-              <path
-                d="M11 4h5v5M16 4 9 11"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M15 11.5V15a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 4 15V7A1.5 1.5 0 0 1 5.5 5.5H9"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
-        </header>
+              <svg
+                viewBox="0 0 20 20"
+                width={18}
+                height={18}
+                className="size-[18px]"
+                fill="none"
+                aria-hidden
+              >
+                <path
+                  d="M11 4h5v5M16 4 9 11"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M15 11.5V15a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 4 15V7A1.5 1.5 0 0 1 5.5 5.5H9"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          </header>
+        </div>
 
+        <div
+          ref={scrollRef}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-[58px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+        <AnimatePresence mode="wait" initial={false}>
+        {sheetPage === "context" ? (
+          <motion.div
+            key="context-page"
+            initial={{ opacity: 0, x: 28 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 18 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <p className="mt-3 text-[28px] font-semibold leading-tight tracking-[-0.02em] text-black">
+              Context
+            </p>
+            {overview ? (
+              <p className="mt-3 text-[15px] leading-snug text-black/55">
+                {overview}
+              </p>
+            ) : null}
+            <div className="mt-5">
+              <ContextNewsList
+                items={contextItems}
+                loading={contextLoading}
+              />
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="main-page"
+            initial={{ opacity: 0, x: -18 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -12 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          >
         {/* Matchup header */}
         {market.kind === "sports" && left && right ? (
           <div className="mt-5">
@@ -448,10 +1098,10 @@ export default function MarketScreen({
                   size={44}
                 />
                 <div className="min-w-0">
-                  <p className="truncate text-[16px] font-semibold leading-tight text-white">
+                  <p className="truncate text-[16px] font-semibold leading-tight text-black">
                     {left.label}
                   </p>
-                  <p className="mt-0.5 text-[12px] font-medium leading-none text-white/40">
+                  <p className="mt-0.5 text-[12px] font-medium leading-none text-black/40">
                     Home
                   </p>
                 </div>
@@ -461,26 +1111,26 @@ export default function MarketScreen({
                   <p className="text-[13px] font-semibold text-[#FF3B30]">Live</p>
                 ) : kickoff ? (
                   <>
-                    <p className="text-[13px] font-medium text-white/45">
+                    <p className="text-[13px] font-medium text-black/45">
                       {kickoff.day}
                     </p>
                     <p className="mt-1 flex items-baseline justify-center gap-2 leading-none">
-                      <span className="text-[28px] font-semibold text-white/50">
+                      <span className="text-[28px] font-semibold text-black/40">
                         in
                       </span>
-                      <span className="text-[28px] font-semibold tabular-nums tracking-tight text-white">
+                      <span className="text-[28px] font-semibold tabular-nums tracking-tight text-black">
                         {formatCountdown(countdown)}
                       </span>
                     </p>
                   </>
                 ) : (
-                  <p className="text-[15px] font-semibold text-white">
+                  <p className="text-[15px] font-semibold text-black">
                     {pick.title}
                   </p>
                 )}
                 <button
                   type="button"
-                  className="mt-3 h-8 rounded-full px-4 text-[13px] font-medium text-white/75 ring-1 ring-inset ring-white/25"
+                  className="mt-3 h-8 rounded-full px-4 text-[13px] font-medium text-black/60 ring-1 ring-inset ring-black/10"
                 >
                   Standings
                 </button>
@@ -498,10 +1148,10 @@ export default function MarketScreen({
                   size={44}
                 />
                 <div className="min-w-0">
-                  <p className="truncate text-[16px] font-semibold leading-tight text-white">
+                  <p className="truncate text-[16px] font-semibold leading-tight text-black">
                     {right.label}
                   </p>
-                  <p className="mt-0.5 text-[12px] font-medium leading-none text-white/40">
+                  <p className="mt-0.5 text-[12px] font-medium leading-none text-black/40">
                     Away
                   </p>
                 </div>
@@ -509,161 +1159,195 @@ export default function MarketScreen({
             </div>
           </div>
         ) : (
-          <div className="mt-5 text-center">
-            <p className="text-[20px] font-semibold leading-snug text-white">
-              {market.kind === "topic" ? market.title : pick.title}
+          <div className="mt-1 text-center">
+            {pick.background ? (
+              <div className="mx-auto relative mb-4 size-[88px] overflow-hidden rounded-[12px]">
+                <Image
+                  src={pick.background}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  sizes="88px"
+                  priority
+                  draggable={false}
+                />
+              </div>
+            ) : null}
+            <p className="text-[14px] font-medium text-black/45">
+              {market.title}
+            </p>
+            <p className="mt-0.5 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] text-black">
+              {pick.title}
             </p>
             {pick.crypto ? (
-              <p className="mt-2 text-[14px] text-white/50">
+              <p className="mt-2 text-[14px] text-black/45">
                 {pick.crypto.price} · {pick.crypto.delta} {pick.crypto.deltaHint}
               </p>
             ) : null}
           </div>
         )}
 
+        <AiOverview
+          text={overview}
+          loading={overviewLoading}
+          onOpen={() => setSheetPage("context")}
+        />
+
         {/* Odds chart — sports matchups only */}
         {market.kind === "sports" && left && right ? (
           <div className="mt-7">
             <MatchOddsChart left={left} right={right} />
-            <p className="mt-2 text-[12px] tabular-nums text-white/40">
+            <p className="mt-2 text-[12px] tabular-nums text-black/35">
               24h Vol {volume}
             </p>
           </div>
         ) : null}
 
-        {/* Outcome rows — live: ¢ pills; upcoming: feed-style bars + circle + */}
-        <div className="mt-6 flex flex-col gap-2">
-          {pick.options.map((option, index) => {
-            const selected = selectedIds.has(option.id);
-            const blocked = !selected && atLimit;
-            const priceColor =
-              index === 0 ? option.color : "rgba(255,255,255,0.12)";
-            const priceText = index === 0 ? "#fff" : "rgba(255,255,255,0.85)";
+        {/* Active position, or outcome rows */}
+        {position ? (
+          <PositionFooter
+            position={position}
+            currentPercent={livePositionPercent}
+            video={false}
+            canIncrease={(balance ?? 0) >= 5}
+            cashingOut={cashingOut}
+            stickerReady={stickerReady}
+            className="mt-5"
+            onCashOut={startCashOut}
+            onAdjust={(delta) => onAdjustPosition?.(position.marketId, delta)}
+          />
+        ) : (
+          <div className="mt-6 flex flex-col gap-2">
+            {pick.options.map((option) => {
+              const selected = selectedIds.has(option.id);
+              const blocked = !selected && atLimit;
 
-            if (isLive) {
+              if (isLive) {
+                return (
+                  <div key={option.id} className="flex items-center gap-3">
+                    <Emblem
+                      logo={option.logo}
+                      mark={option.mark}
+                      label={option.label}
+                      size={28}
+                    />
+                    <p className="min-w-0 flex-1 truncate text-[15px] font-semibold text-black">
+                      {option.label}
+                    </p>
+                    <p className="shrink-0 text-[15px] font-semibold tabular-nums text-black/45">
+                      {option.percent}%
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onTrade ? onTrade(option) : onToggle(option)
+                      }
+                      className="h-10 shrink-0 rounded-full px-3.5 text-[14px] font-semibold tabular-nums text-white transition-transform duration-150 ease-out active:scale-[0.94]"
+                      style={{ backgroundColor: option.color }}
+                      aria-label={`Trade ${option.label} at ${cents(option.percent)}`}
+                    >
+                      {cents(option.percent)}
+                    </button>
+                  </div>
+                );
+              }
+
               return (
-                <div key={option.id} className="flex items-center gap-3">
-                  <Emblem
-                    logo={option.logo}
-                    mark={option.mark}
-                    label={option.label}
-                    size={28}
-                  />
-                  <p className="min-w-0 flex-1 truncate text-[15px] font-semibold text-white">
-                    {option.label}
-                  </p>
-                  <p className="shrink-0 text-[15px] font-semibold tabular-nums text-white/55">
-                    {option.percent}%
-                  </p>
+                <div
+                  key={option.id}
+                  className="flex w-full items-start gap-2 overflow-hidden"
+                >
                   <button
                     type="button"
-                    onClick={() =>
-                      onTrade ? onTrade(option) : onToggle(option)
-                    }
-                    className="h-10 shrink-0 rounded-full px-3.5 text-[14px] font-semibold tabular-nums"
-                    style={{ backgroundColor: priceColor, color: priceText }}
-                    aria-label={`Trade ${option.label} at ${cents(option.percent)}`}
+                    aria-label={`Trade ${option.label} · ${option.percent}%`}
+                    onClick={() => onTrade?.(option)}
+                    className="relative flex h-[52px] min-w-0 flex-1 origin-center items-center justify-between overflow-hidden rounded-[18px] bg-black/[0.06] px-4 text-left transition-transform duration-150 ease-out active:scale-[0.94]"
                   >
-                    {cents(option.percent)}
-                  </button>
-                </div>
-              );
-            }
-
-            return (
-              <div
-                key={option.id}
-                className="flex w-full items-start gap-2 overflow-hidden"
-              >
-                <button
-                  type="button"
-                  aria-label={`Trade ${option.label} · ${option.percent}%`}
-                  onClick={() => onTrade?.(option)}
-                  className="relative flex h-12 min-w-0 flex-1 items-center justify-between overflow-hidden rounded-full bg-[rgba(38,38,38,0.6)] pl-3 pr-4 text-left"
-                >
-                  <div
-                    aria-hidden
-                    className="absolute inset-y-0 left-0 opacity-70"
-                    style={{
-                      width: `${option.percent}%`,
-                      backgroundColor: option.color,
-                    }}
-                  />
-                  <div className="relative z-[1] flex items-center gap-2.5 overflow-hidden">
-                    {option.logo || option.mark ? (
-                      <Emblem
-                        logo={option.logo}
-                        mark={option.mark}
-                        label={option.label}
-                        size={24}
-                      />
-                    ) : null}
-                    <span className="truncate text-[16px] font-medium text-white">
-                      {option.label}
-                    </span>
-                  </div>
-                  <span className="relative z-[1] shrink-0 text-[20px] font-semibold tabular-nums text-white">
-                    {option.percent}%
-                  </span>
-                </button>
-                <ComboAddButton
-                  selected={selected}
-                  blocked={blocked}
-                  label={option.label}
-                  onToggle={() => onToggle(option)}
-                />
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-6 flex items-end border-b border-white/10">
-          <div className="flex gap-5">
-            {(
-              [
-                ["comments", "Comments"],
-                ["rules", "Rules"],
-              ] as const
-            ).map(([id, label]) => {
-              const active = tab === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setTab(id)}
-                  className={`relative pb-2.5 text-[15px] font-semibold transition-colors duration-200 ${
-                    active ? "text-white" : "text-white/40"
-                  }`}
-                >
-                  {label}
-                  {active ? (
-                    <motion.span
-                      layoutId="market-tab-underline"
-                      className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-white"
-                      transition={{
-                        type: "spring",
-                        stiffness: 420,
-                        damping: 34,
-                      }}
+                    <div
+                      aria-hidden
+                      className="absolute inset-y-0 left-0 bg-black/[0.12]"
+                      style={{ width: `${option.percent}%` }}
                     />
-                  ) : null}
-                </button>
+                    <div className="relative z-[1] flex items-center gap-2.5 overflow-hidden">
+                      {option.logo || option.mark ? (
+                        <Emblem
+                          logo={option.logo}
+                          mark={option.mark}
+                          label={option.label}
+                          size={24}
+                        />
+                      ) : null}
+                      <span className="truncate text-[16px] font-semibold text-black">
+                        {option.label}
+                      </span>
+                    </div>
+                    <span className="relative z-[1] shrink-0 text-[16px] font-semibold tabular-nums text-black">
+                      {option.percent}%
+                    </span>
+                  </button>
+                  <ComboAddButton
+                    selected={selected}
+                    blocked={blocked}
+                    label={option.label}
+                    onToggle={() => onToggle(option)}
+                  />
+                </div>
               );
             })}
           </div>
+        )}
+
+        <div className="mt-6 flex items-end border-b border-black/10">
+          <LayoutGroup id="market-sheet-tabs">
+            <div className="flex gap-5">
+              {(
+                [
+                  ["comments", "Comments"],
+                  ["rules", "Rules"],
+                ] as const
+              ).map(([id, label]) => {
+                const active = tab === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setTab(id)}
+                    className={`relative pb-2.5 text-[15px] font-semibold transition-colors duration-200 ease-out ${
+                      active ? "text-black" : "text-black/35"
+                    }`}
+                  >
+                    {label}
+                    {active ? (
+                      <motion.span
+                        layoutId="market-sheet-tab-underline"
+                        aria-hidden
+                        className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-black"
+                        transition={{
+                          type: "spring",
+                          stiffness: 520,
+                          damping: 38,
+                          mass: 0.8,
+                        }}
+                      />
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          </LayoutGroup>
         </div>
 
         {tab === "comments" ? (
           <div className="mt-4 flex flex-col gap-4">
-            <div className="flex h-11 items-center rounded-full bg-white/[0.08] px-4 text-[14px] text-white/40">
+            <div className="flex h-11 items-center rounded-full bg-black/[0.05] px-4 text-[14px] text-black/35">
               Sign in to comment
             </div>
-            <p className="text-center text-[14px] text-white/35">
+            <p className="text-center text-[14px] text-black/35">
               No comments yet
             </p>
           </div>
         ) : (
-          <p className="mt-4 text-[14px] leading-relaxed text-white/70">
+          <p className="mt-4 text-[14px] leading-relaxed text-black/60">
             {market.kind === "sports"
               ? `This market resolves to the side that wins. ${pick.title}. Overtime and series maps count.`
               : market.kind === "topic"
@@ -671,7 +1355,11 @@ export default function MarketScreen({
                 : `This market resolves to Yes if the target is met at the listed deadline, otherwise No.`}
           </p>
         )}
-      </div>
-    </div>
+          </motion.div>
+        )}
+        </AnimatePresence>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }

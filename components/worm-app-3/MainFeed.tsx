@@ -18,7 +18,6 @@ import {
   useState,
   type RefObject,
 } from "react";
-import NumberFlow from "@number-flow/react";
 import { TextMorph } from "torph/react";
 import { allo } from "@/lib/fonts";
 import {
@@ -40,10 +39,22 @@ import {
   comboMultiplier,
   type ComboSheetPick,
 } from "./ComboSheet";
+import MarketScreen, {
+  type MarketScreenMarket,
+  type MarketScreenOption,
+  type MarketScreenPick,
+} from "./MarketScreen";
+import {
+  cashOutValue,
+  MIN_POSITION_STAKE,
+  NO_COLOR as NO,
+  POSITION_ADJUST_STEP,
+  PositionFooter,
+  YES_COLOR as YES,
+  type PlacedPosition,
+} from "./PositionFooter";
 
 const BG = "#E8E8E8";
-const YES = "#1DB954";
-const NO = "#FF3B5C";
 
 const MAX_BET = 25;
 const MAX_DRAG_PX = 168;
@@ -51,8 +62,6 @@ const COMBO_OVERDRAG_PX = 72;
 const COMBO_ARM_PX = MAX_DRAG_PX + 28;
 const BET_STEP = 5;
 const COMMIT_AMOUNT = 5;
-const MIN_POSITION_STAKE = 5;
-const POSITION_ADJUST_STEP = 5;
 const SIZE_DELTA_HOLD_MS = 900;
 const SIZE_DELTA_EXIT_MS = 480;
 const LIVE_PERCENT_HIGH_MIN = 75;
@@ -93,13 +102,6 @@ type Market = {
 };
 
 type Outcome = "Yes" | "No";
-
-type PlacedPosition = {
-  marketId: string;
-  outcome: Outcome;
-  stake: number;
-  entryPercent: number;
-};
 
 type TradeFlowState = {
   market: Market;
@@ -350,6 +352,40 @@ const MARKETS: Market[] = [
   },
 ];
 
+function toMarketScreenData(market: Market): {
+  market: MarketScreenMarket;
+  pick: MarketScreenPick;
+} {
+  const noPercent = 100 - market.yesPercent;
+  return {
+    market: {
+      id: market.id,
+      kind: market.topic === "crypto" ? "crypto" : "topic",
+      title: market.category,
+    },
+    pick: {
+      id: market.id,
+      title: market.question,
+      background: market.backdrop ?? market.thumb,
+      video: market.video,
+      options: [
+        {
+          id: `${market.id}-Yes`,
+          label: "Yes",
+          percent: market.yesPercent,
+          color: YES,
+        },
+        {
+          id: `${market.id}-No`,
+          label: "No",
+          percent: noPercent,
+          color: NO,
+        },
+      ],
+    },
+  };
+}
+
 function toTradeMarket(market: Market): PolymarketMarketData {
   const yes = market.yesPercent / 100;
   const no = 1 - yes;
@@ -528,117 +564,9 @@ function toWinFromAmount(amount: number, percent: number) {
   return amount / (percent / 100);
 }
 
-/**
- * Mark-to-market value at the current chance of your outcome.
- * At entry ≈ stake; at 100% = full to-win (stake / entry%).
- */
-function cashOutValue(position: PlacedPosition, currentPercent: number) {
-  if (position.entryPercent <= 0) return position.stake;
-  return (
-    position.stake * (Math.max(1, currentPercent) / position.entryPercent)
-  );
-}
-
 function formatToWin(value: number) {
   const rounded = Math.round(value);
   return `$${rounded.toLocaleString("en-US")}`;
-}
-
-function formatCashUsd(value: number) {
-  const safe = Math.max(0, Number.isFinite(value) ? value : 0);
-  if (safe >= 100) return `$${Math.round(safe).toLocaleString("en-US")}`;
-  return `$${safe.toFixed(safe >= 10 ? 0 : 2).replace(/\.00$/, "")}`;
-}
-
-/** Under $100 always include cents (for live mark-to-market readout). */
-function formatCashUsdPrecise(value: number) {
-  const safe = Math.max(0, Number.isFinite(value) ? value : 0);
-  if (safe >= 100) return `$${Math.round(safe).toLocaleString("en-US")}`;
-  return `$${safe.toFixed(2)}`;
-}
-
-const nfMaskStyle = {
-  ["--number-flow-mask-height" as string]: "0em",
-} as const;
-
-function FlowUsd({
-  value,
-  className,
-  centsClassName,
-  showCents = false,
-}: {
-  value: number;
-  className?: string;
-  centsClassName?: string;
-  /** When true and value is under $100, render dimmable cents. */
-  showCents?: boolean;
-}) {
-  const safe = Math.max(0, Number.isFinite(value) ? value : 0);
-  const withCents = showCents && safe < 100;
-
-  if (!withCents) {
-    return (
-      <span className={`inline-flex items-baseline ${className ?? ""}`}>
-        $
-        <NumberFlow
-          value={Math.round(safe)}
-          trend={0}
-          format={{ useGrouping: true, maximumFractionDigits: 0 }}
-          style={nfMaskStyle}
-        />
-      </span>
-    );
-  }
-
-  let whole = Math.floor(safe);
-  let cents = Math.round((safe - whole) * 100);
-  if (cents >= 100) {
-    whole += 1;
-    cents = 0;
-  }
-
-  return (
-    <span className={`inline-flex items-baseline ${className ?? ""}`}>
-      $
-      <NumberFlow
-        value={whole}
-        trend={0}
-        format={{ useGrouping: true, maximumFractionDigits: 0 }}
-        style={nfMaskStyle}
-      />
-      <span className={centsClassName}>
-        .
-        <NumberFlow
-          value={cents}
-          trend={0}
-          format={{
-            minimumIntegerDigits: 2,
-            maximumFractionDigits: 0,
-            useGrouping: false,
-          }}
-          style={nfMaskStyle}
-        />
-      </span>
-    </span>
-  );
-}
-
-function FlowPercent({
-  value,
-  className,
-}: {
-  value: number;
-  className?: string;
-}) {
-  return (
-    <NumberFlow
-      value={Math.round(value)}
-      suffix="%"
-      trend={0}
-      className={className}
-      style={nfMaskStyle}
-    />
-  );
 }
 
 function useAnimatedCount(target: number, durationMs = 140) {
@@ -710,199 +638,6 @@ function livePercentBounds(anchor: number): [number, number] {
 function clampLivePercent(value: number, anchor: number) {
   const [min, max] = livePercentBounds(anchor);
   return Math.min(max, Math.max(min, value));
-}
-
-/** Stable slight sticker tilt from market + outcome (−7°…7°). */
-function outcomeStickerTilt(marketId: string, outcome: Outcome) {
-  const key = `${marketId}:${outcome}`;
-  let hash = 0;
-  for (let i = 0; i < key.length; i += 1) {
-    hash = (hash * 33 + key.charCodeAt(i)) | 0;
-  }
-  return (Math.abs(hash) % 15) - 7;
-}
-
-function PositionFooter({
-  position,
-  currentPercent,
-  video,
-  canIncrease,
-  cashingOut,
-  stickerReady,
-  onCashOut,
-  onAdjust,
-}: {
-  position: PlacedPosition;
-  currentPercent: number;
-  video: boolean;
-  canIncrease: boolean;
-  cashingOut: boolean;
-  /** False while the success sheet is open — sticker lands when it becomes true. */
-  stickerReady: boolean;
-  onCashOut: () => void;
-  onAdjust: (delta: number) => void;
-}) {
-  const displayPercent = Math.round(currentPercent);
-  const stakeLabel = formatCashUsd(position.stake);
-  // Mark-to-market: equals stake near entry, reaches full to-win only at 100%.
-  const valueNow = cashOutValue(position, currentPercent);
-  const valueLabel = formatCashUsdPrecise(valueNow);
-  const valueTone = video ? "text-white" : "text-black";
-  const valueCentsTone = video ? "text-white/45" : "text-black/35";
-  const fill = Math.max(4, Math.min(100, currentPercent));
-  const entryMark = Math.max(1, Math.min(99, position.entryPercent));
-  const entryOverFill = entryMark <= fill;
-  const canDecrease = position.stake > MIN_POSITION_STAKE;
-  const isYes = position.outcome === "Yes";
-  const stickerTilt = outcomeStickerTilt(position.marketId, position.outcome);
-  const stickerColor = isYes ? YES : NO;
-  const actionBtn = `flex h-[52px] items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-200 ease-out active:scale-[0.94] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 ${
-    video ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black"
-  }`;
-
-  return (
-    <div
-      className={`relative z-[2] flex flex-col gap-3 ${
-        video ? "mt-auto" : "mt-8"
-      }`}
-    >
-      <div className="min-w-0">
-        <div className="mb-1 flex min-h-[51px] items-end">
-          <AnimatePresence initial={false}>
-            {stickerReady ? (
-              <motion.p
-                key={`${position.marketId}-${position.outcome}`}
-                aria-label={position.outcome}
-                initial={{ scale: 1.72, opacity: 0, rotate: stickerTilt - 4 }}
-                animate={{ scale: 1, opacity: 1, rotate: stickerTilt }}
-                exit={{ scale: 0.85, opacity: 0 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 460,
-                  damping: 16,
-                  mass: 0.72,
-                  opacity: { duration: 0.16, ease: [0.22, 1, 0.36, 1] },
-                }}
-                className="inline-flex w-fit origin-left select-none items-center rounded-[14px] px-3.5 py-1.5 text-[34px] font-extrabold leading-none tracking-[-0.05em] text-white"
-                style={{ backgroundColor: stickerColor }}
-              >
-                {position.outcome}
-              </motion.p>
-            ) : null}
-          </AnimatePresence>
-        </div>
-        <p
-          aria-label={`${stakeLabel} → ${valueLabel}`}
-          className={`mt-1 text-[40px] font-semibold leading-none tabular-nums tracking-[-0.03em] ${
-            video ? "text-white/70" : "text-black/45"
-          }`}
-        >
-          <span
-            aria-hidden="true"
-            className="inline-flex items-baseline gap-x-1.5 tracking-normal"
-          >
-            <FlowUsd value={position.stake} className={valueTone} />
-            <span
-              className={`shrink-0 ${
-                video ? "text-white/55" : "text-black/35"
-              }`}
-            >
-              →
-            </span>
-            <FlowUsd
-              value={valueNow}
-              showCents
-              className={valueTone}
-              centsClassName={valueCentsTone}
-            />
-          </span>
-        </p>
-      </div>
-
-      <div
-        className={`relative h-7 rounded-full ${
-          video ? "bg-white/[0.1]" : "bg-black/[0.06]"
-        }`}
-        aria-label={`${displayPercent}% chance`}
-      >
-        <div
-          className={`absolute inset-y-0 left-0 flex items-center justify-end rounded-full pr-2.5 transition-[width] duration-500 ease-out ${
-            video ? "bg-white" : "bg-black"
-          }`}
-          style={{ width: `${fill}%` }}
-        >
-          <span aria-hidden="true" className="flex h-full items-center">
-            <FlowPercent
-              value={displayPercent}
-              className={`text-[12px] font-semibold tabular-nums ${
-                video ? "text-black" : "text-white"
-              }`}
-            />
-          </span>
-        </div>
-        <div
-          aria-hidden
-          className={`absolute inset-y-1 z-[1] w-px border-l border-dashed ${
-            video
-              ? entryOverFill
-                ? "border-black/25"
-                : "border-white/45"
-              : entryOverFill
-                ? "border-white/35"
-                : "border-black/25"
-          }`}
-          style={{ left: `${entryMark}%` }}
-        />
-      </div>
-
-      <div className="grid grid-cols-4 gap-2.5">
-        <button
-          type="button"
-          aria-label="Remove $5 from position"
-          disabled={!canDecrease || cashingOut}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={() => {
-            if (!canDecrease || cashingOut) return;
-            hapticStep();
-            onAdjust(-POSITION_ADJUST_STEP);
-          }}
-          className={`${actionBtn} col-span-1 tabular-nums`}
-        >
-          -$5
-        </button>
-        <button
-          type="button"
-          aria-label="Add $5 to position"
-          disabled={!canIncrease || cashingOut}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={() => {
-            if (!canIncrease || cashingOut) return;
-            hapticStep();
-            onAdjust(POSITION_ADJUST_STEP);
-          }}
-          className={`${actionBtn} col-span-1 tabular-nums`}
-        >
-          +$5
-        </button>
-        <button
-          type="button"
-          aria-label={`Cash out ${valueLabel}`}
-          disabled={cashingOut}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={() => {
-            if (cashingOut) return;
-            hapticSuccess();
-            onCashOut();
-          }}
-          className={`${actionBtn} col-span-2 px-3 ${
-            cashingOut ? "disabled:!opacity-100" : ""
-          }`}
-        >
-          Cash out
-        </button>
-      </div>
-    </div>
-  );
 }
 
 function BetReveal({
@@ -1053,7 +788,7 @@ function MarketImageBg({ src }: { src: string }) {
   return (
     <div
       aria-hidden
-      className="absolute inset-0 overflow-hidden rounded-[28px] bg-black [clip-path:inset(0_round_28px)]"
+      className="pointer-events-none absolute inset-0 overflow-hidden rounded-[28px] bg-black [clip-path:inset(0_round_28px)]"
     >
       <Image
         src={src}
@@ -1221,7 +956,7 @@ function MarketVideoBg({
           hapticTap();
           setMuted((prev) => !prev);
         }}
-        className="pointer-events-auto absolute right-4 top-1/2 z-[3] grid size-12 -translate-y-1/2 place-items-center rounded-[18px] bg-white/[0.06] text-white transition-transform duration-150 ease-out active:scale-[0.94]"
+        className="pointer-events-auto absolute right-4 top-1/2 z-[3] grid size-12 -translate-y-1/2 place-items-center rounded-full bg-white/[0.06] text-white backdrop-blur-md transition-transform duration-150 ease-out active:scale-[0.94]"
       >
         <VolumeIcon muted={muted} />
       </button>
@@ -1235,6 +970,7 @@ function MarketCard({
   position,
   balance,
   stickerReady,
+  onOpenMarket,
   onCommitTrade,
   onToggleCombo,
   onCashOut,
@@ -1245,6 +981,7 @@ function MarketCard({
   position: PlacedPosition | null;
   balance: number;
   stickerReady: boolean;
+  onOpenMarket: (market: Market) => void;
   onCommitTrade: (market: Market, outcome: Outcome, amount: number) => void;
   onToggleCombo: (market: Market, outcome: Outcome) => void;
   onCashOut: (position: PlacedPosition) => void;
@@ -1278,6 +1015,7 @@ function MarketCard({
   const lastComboArmedRef = useRef(false);
   const comboLongPressTimerRef = useRef<number | null>(null);
   const comboLongPressFiredRef = useRef(false);
+  const [cardPressed, setCardPressed] = useState(false);
   const sizeDeltaSessionRef = useRef(0);
   const sizeDeltaStackedRef = useRef(0);
   const sizeDeltaBumpRef = useRef(0);
@@ -1513,14 +1251,39 @@ function MarketCard({
         dragElastic={0.12}
         dragDirectionLock
         dragMomentum={false}
-        whileDrag={hasPosition ? undefined : { scale: 0.97 }}
+        animate={{ scale: cardPressed || dragging ? 0.97 : 1 }}
         transition={{ type: "spring", stiffness: 480, damping: 36 }}
         style={{ x, touchAction: "pan-y" }}
+        onPointerDown={(event) => {
+          const target = event.target as HTMLElement | null;
+          // Controls keep their own press scale — don't shrink the whole card.
+          if (target?.closest("button, a, input, [data-no-card-tap]")) {
+            setCardPressed(false);
+            return;
+          }
+          setCardPressed(true);
+        }}
+        onPointerUp={() => setCardPressed(false)}
+        onPointerCancel={() => setCardPressed(false)}
+        onPointerLeave={() => {
+          if (!dragging) setCardPressed(false);
+        }}
+        onTap={(event) => {
+          if (dragging) return;
+          const target = event.target as HTMLElement | null;
+          // Yes/No, unmute, cash out, etc. stay independent of card open.
+          if (target?.closest("button, a, input, [data-no-card-tap]")) return;
+          // Stale long-press flag from combo toggle must not block card open.
+          comboLongPressFiredRef.current = false;
+          hapticTap();
+          onOpenMarket(market);
+        }}
         onDragStart={() => {
           if (hasPosition) return;
           unlockHaptics();
           committedRef.current = false;
           setDragging(true);
+          setCardPressed(true);
         }}
         onDrag={() => {
           if (hasPosition) return;
@@ -1529,6 +1292,7 @@ function MarketCard({
         onDragEnd={(_, info) => {
           if (hasPosition) return;
           setDragging(false);
+          setCardPressed(false);
           const offset = x.get();
           const amount = amountFromOffset(offset);
           const outcome = outcomeFromOffset(offset);
@@ -1607,15 +1371,15 @@ function MarketCard({
           </div>
         ) : null}
 
-        <div className="relative z-[2] flex items-start gap-3">
+        <div className="relative z-[2] flex min-w-0 items-start gap-3">
           {!immersive ? (
-            <div className="relative size-16 shrink-0 overflow-hidden rounded-[14px]">
+            <div className="relative size-[72px] shrink-0 overflow-hidden rounded-[10px]">
               <Image
                 src={market.thumb}
                 alt=""
                 fill
-                className="rounded-[14px] object-cover"
-                sizes="64px"
+                className="object-cover"
+                sizes="72px"
                 draggable={false}
               />
             </div>
@@ -1629,7 +1393,7 @@ function MarketCard({
               {market.category}
             </p>
             <h2
-              className={`mt-0.5 text-[17px] font-semibold leading-[1.2] tracking-[-0.02em] ${
+              className={`mt-0.5 text-[22px] font-semibold leading-[1.2] tracking-[-0.02em] ${
                 immersive ? "text-white" : "text-black"
               }`}
             >
@@ -2216,12 +1980,15 @@ function BottomChrome({
   balance,
   onOpenCombo,
   shakeKey = 0,
+  elevated = false,
 }: {
   feedRef: RefObject<HTMLDivElement | null>;
   picks: ComboSheetPick[];
   balance: number;
   onOpenCombo: () => void;
   shakeKey?: number;
+  /** Sit above MarketScreen; keep combo chip, hide feed tab bar. */
+  elevated?: boolean;
 }) {
   const [tabHidden, setTabHidden] = useState(false);
   const lastScrollY = useRef(0);
@@ -2250,9 +2017,13 @@ function BottomChrome({
     return () => feed.removeEventListener("scroll", onScroll);
   }, [feedRef]);
 
+  const hideChrome = elevated ? false : tabHidden;
+
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-20"
+      className={`pointer-events-none absolute inset-x-0 bottom-0 ${
+        elevated ? "z-[45]" : "z-20"
+      }`}
       style={{
         paddingBottom: "max(28px, env(safe-area-inset-bottom, 0px))",
       }}
@@ -2262,7 +2033,7 @@ function BottomChrome({
         className="api-progressive-blur h-[150px]"
         data-edge="bottom"
         initial={false}
-        animate={{ opacity: tabHidden ? 0 : 1 }}
+        animate={{ opacity: elevated ? 0.85 : hideChrome ? 0 : 1 }}
         transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
       >
         <i />
@@ -2273,7 +2044,7 @@ function BottomChrome({
       <div className="pointer-events-auto relative z-[1] flex flex-col items-center gap-3 px-5 pb-1">
         <motion.div
           initial={false}
-          animate={{ y: tabHidden ? 72 : 0 }}
+          animate={{ y: hideChrome ? 72 : 0 }}
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         >
           <AnimatePresence initial={false}>
@@ -2287,7 +2058,7 @@ function BottomChrome({
             ) : null}
           </AnimatePresence>
         </motion.div>
-        <BottomNav balance={balance} hidden={tabHidden} />
+        {elevated ? null : <BottomNav balance={balance} hidden={tabHidden} />}
       </div>
     </div>
   );
@@ -2305,6 +2076,7 @@ export default function MainFeed() {
   const [comboPicks, setComboPicks] = useState<ComboSheetPick[]>([]);
   const [comboOpen, setComboOpen] = useState(false);
   const [comboShakeKey, setComboShakeKey] = useState(0);
+  const [openMarket, setOpenMarket] = useState<Market | null>(null);
   /** Market ids whose outcome sticker is held until the success sheet closes. */
   const [heldStickers, setHeldStickers] = useState<Set<string>>(
     () => new Set(),
@@ -2357,6 +2129,12 @@ export default function MainFeed() {
     },
     [],
   );
+
+  const openMarketPage = useCallback((market: Market) => {
+    setOpenMarket(market);
+  }, []);
+
+  const closeMarketPage = useCallback(() => setOpenMarket(null), []);
 
   const closeTrade = useCallback(() => {
     const closingId = tradeFlowRef.current?.market.id;
@@ -2484,6 +2262,10 @@ export default function MainFeed() {
     return !alreadyInGroup;
   }, []);
 
+  const openMarketScreen = openMarket
+    ? toMarketScreenData(openMarket)
+    : null;
+
   return (
     <div
       className={`relative h-full w-full overflow-x-clip overflow-y-hidden text-black ${allo.className}`}
@@ -2525,6 +2307,7 @@ export default function MainFeed() {
                   position={positions[market.id] ?? null}
                   balance={balance}
                   stickerReady={!heldStickers.has(market.id)}
+                  onOpenMarket={openMarketPage}
                   onCommitTrade={openTrade}
                   onToggleCombo={(m, outcome) => {
                     const added = toggleCombo(m, outcome);
@@ -2555,6 +2338,7 @@ export default function MainFeed() {
         balance={balance}
         onOpenCombo={() => setComboOpen(true)}
         shakeKey={comboShakeKey}
+        elevated={Boolean(openMarket)}
       />
 
       <ComboSheet
@@ -2575,6 +2359,43 @@ export default function MainFeed() {
           if (!opts?.silent) playComboRemove(0);
         }}
       />
+
+      <AnimatePresence>
+        {openMarket && openMarketScreen ? (
+          <MarketScreen
+            key={openMarket.id}
+            market={openMarketScreen.market}
+            pick={openMarketScreen.pick}
+            selectedIds={
+              new Set(
+                [...(comboByMarket.get(openMarket.id) ?? [])].map(
+                  (outcome) => `${openMarket.id}-${outcome}`,
+                ),
+              )
+            }
+            atLimit={
+              comboPicks.length >= MAX_COMBO_PICKS &&
+              !comboByMarket.get(openMarket.id)?.size
+            }
+            position={positions[openMarket.id] ?? null}
+            balance={balance}
+            stickerReady={!heldStickers.has(openMarket.id)}
+            onBack={closeMarketPage}
+            onTrade={(option: MarketScreenOption) => {
+              const outcome: Outcome =
+                option.label.toLowerCase() === "no" ? "No" : "Yes";
+              openTrade(openMarket, outcome, 0);
+            }}
+            onToggle={(option: MarketScreenOption) => {
+              const outcome: Outcome =
+                option.label.toLowerCase() === "no" ? "No" : "Yes";
+              toggleCombo(openMarket, outcome);
+            }}
+            onCashOut={cashOutPosition}
+            onAdjustPosition={adjustPosition}
+          />
+        ) : null}
+      </AnimatePresence>
 
       {tradeFlow && tradeMarket ? (
         <div className="absolute inset-0 z-50">

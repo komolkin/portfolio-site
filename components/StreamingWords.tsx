@@ -110,9 +110,12 @@ export function assignSegmentWordDelays<
 export function StreamingWords({
   words,
   animatedWordKeysRef,
+  wordClassName = "inline",
 }: {
   words: StreamingWord[];
   animatedWordKeysRef?: MutableRefObject<Set<string>>;
+  /** Use `inline-block` when a parent line-clamp/overflow box would kill transforms. */
+  wordClassName?: string;
 }) {
   const prefersReducedMotion = useReducedMotion();
 
@@ -124,7 +127,7 @@ export function StreamingWords({
         return (
           <motion.span
             key={key}
-            className="inline"
+            className={wordClassName}
             initial={
               prefersReducedMotion || hasAnimated
                 ? false

@@ -540,7 +540,7 @@ export function ComboSheet({
                     )}
 
                     {picks.length >= MIN_PICKS ? (
-                      <div className="mt-1 border-t border-dashed border-black/10 pt-2">
+                      <div className="mt-1 border-t border-dashed border-black/10 py-3.5">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-semibold text-black/40">
                             Multiplier
