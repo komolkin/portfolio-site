@@ -607,19 +607,21 @@ export default function TradeFlowModal({
       (side) => side.label.toLowerCase() === outcome.toLowerCase(),
     ) ?? oddsSides[0];
   const entryPrice = selectedSide?.price ?? market.yesPrice;
-  const headerTitle =
-    (market.groupItemTitle ?? "").trim() || shortenTitle(market.title);
+  const fullHeaderTitle =
+    (market.groupItemTitle ?? "").trim() || market.title.trim();
   const team = outcomeTeam(market, outcome);
   const binary = isBinaryOutcome(outcome);
-  const outcomeTitle = team?.name ?? (binary ? headerTitle : outcome);
+  // Full title — CSS line-clamp handles 2-line truncation on amount/success.
+  const outcomeTitle = team?.name ?? (binary ? fullHeaderTitle : outcome);
   const outcomeImage = team?.logo ?? market.image;
-  const outcomeSubtitle = `${binary ? `${outcome} · ` : ""}${Math.round(
-    entryPrice * 100,
-  )}% Chance`;
+  const outcomeIsNo = outcome.toLowerCase() === "no";
+  const outcomeStickerColor = outcomeIsNo
+    ? "#FF3B5C"
+    : selectedSide?.side === "no"
+      ? "#FF3B5C"
+      : "#1DB954";
+  const outcomeStickerTilt = outcomeIsNo ? -5 : 5;
 
-  const matchupTitle = market.liveGame
-    ? `${market.liveGame.away.name} vs ${market.liveGame.home.name}`
-    : headerTitle;
   const glow = glowRgb(
     (team as { color?: string | null } | null)?.color,
     selectedSide?.side === "no" ? [255, 55, 95] : [0, 213, 75],
@@ -1005,12 +1007,19 @@ export default function TradeFlowModal({
                     </div>
                   )}
                   <h2
-                    className={`mt-2.5 max-w-[260px] truncate text-[16px] font-semibold ${ink}`}
+                    className={`mt-2.5 max-w-[280px] text-[16px] font-semibold leading-[1.25] line-clamp-2 ${ink}`}
                   >
                     {outcomeTitle}
                   </h2>
-                  <p className={`mt-0.5 text-[15px] ${muted}`}>
-                    {outcomeSubtitle}
+                  <p
+                    aria-label={outcome}
+                    className="mt-3 inline-flex w-fit origin-center select-none items-center rounded-[12px] px-3.5 py-1.5 text-[24px] font-extrabold leading-none tracking-[-0.04em] text-white"
+                    style={{
+                      backgroundColor: outcomeStickerColor,
+                      transform: `rotate(${outcomeStickerTilt}deg)`,
+                    }}
+                  >
+                    {outcome}
                   </p>
                 </div>
 
@@ -1219,29 +1228,30 @@ export default function TradeFlowModal({
                         <img
                           src={outcomeImage}
                           alt=""
-                          className={`h-16 w-16 ${
+                          className={`h-14 w-14 ${
                             team?.logo
-                          ? "object-contain"
-                          : light
-                            ? "rounded-[14px] object-cover"
-                            : "rounded-full object-cover"
+                              ? "object-contain"
+                              : light
+                                ? "rounded-[14px] object-cover"
+                                : "rounded-full object-cover"
                           }`}
                         />
                       ) : null}
                       <p
-                        className={`mt-3 text-balance text-[20px] font-semibold leading-tight tracking-[-0.02em] ${ink}`}
+                        className={`mt-2.5 max-w-[280px] text-[16px] font-semibold leading-[1.25] line-clamp-2 ${ink}`}
                       >
-                        {matchupTitle}
+                        {outcomeTitle}
                       </p>
-                      <span
-                        className={`mt-2.5 rounded-lg px-2.5 py-1 text-[12px] font-medium ${
-                          light
-                            ? "bg-black/[0.05] text-black/80"
-                            : "bg-white/[0.1] text-white/90"
-                        }`}
+                      <p
+                        aria-label={outcome}
+                        className="mt-3 inline-flex w-fit origin-center select-none items-center rounded-[12px] px-3.5 py-1.5 text-[24px] font-extrabold leading-none tracking-[-0.04em] text-white"
+                        style={{
+                          backgroundColor: outcomeStickerColor,
+                          transform: `rotate(${outcomeStickerTilt}deg)`,
+                        }}
                       >
-                        {team?.name ?? outcome}
-                      </span>
+                        {outcome}
+                      </p>
 
                       {completed.trade.userCaption?.trim() ||
                       completed.trade.userGifUrl ? (
