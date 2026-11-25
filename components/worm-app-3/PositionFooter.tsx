@@ -1,8 +1,12 @@
 "use client";
 
 import NumberFlow from "@number-flow/react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { hapticStep, hapticSuccess } from "@/lib/haptics";
+import {
+  OutcomeSticker,
+  outcomeStickerTilt,
+} from "@/components/worm-app-3/OutcomeSticker";
 
 export type PositionOutcome = "Yes" | "No";
 
@@ -126,16 +130,6 @@ function FlowPercent({
   );
 }
 
-/** Stable slight sticker tilt from market + outcome (−7°…7°). */
-function outcomeStickerTilt(marketId: string, outcome: PositionOutcome) {
-  const key = `${marketId}:${outcome}`;
-  let hash = 0;
-  for (let i = 0; i < key.length; i += 1) {
-    hash = (hash * 33 + key.charCodeAt(i)) | 0;
-  }
-  return (Math.abs(hash) % 15) - 7;
-}
-
 export function PositionFooter({
   position,
   currentPercent,
@@ -169,9 +163,9 @@ export function PositionFooter({
   const entryMark = Math.max(1, Math.min(99, position.entryPercent));
   const entryOverFill = entryMark <= fill;
   const canDecrease = position.stake > MIN_POSITION_STAKE;
-  const isYes = position.outcome === "Yes";
-  const stickerTilt = outcomeStickerTilt(position.marketId, position.outcome);
-  const stickerColor = isYes ? YES_COLOR : NO_COLOR;
+  const stickerTilt = outcomeStickerTilt(
+    `${position.marketId}:${position.outcome}`,
+  );
   const actionBtn = `flex h-[52px] items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-200 ease-out active:scale-[0.94] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 ${
     video ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black"
   }`;
@@ -183,27 +177,16 @@ export function PositionFooter({
       }`}
     >
       <div className="min-w-0">
-        <div className="mb-1 flex min-h-[51px] items-end">
+        <div className="mb-1.5 flex min-h-[54px] items-end overflow-visible pb-0.5 pl-0.5">
           <AnimatePresence initial={false}>
             {stickerReady ? (
-              <motion.p
+              <OutcomeSticker
                 key={`${position.marketId}-${position.outcome}`}
-                aria-label={position.outcome}
-                initial={{ scale: 1.72, opacity: 0, rotate: stickerTilt - 4 }}
-                animate={{ scale: 1, opacity: 1, rotate: stickerTilt }}
-                exit={{ scale: 0.85, opacity: 0 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 460,
-                  damping: 16,
-                  mass: 0.72,
-                  opacity: { duration: 0.16, ease: [0.22, 1, 0.36, 1] },
-                }}
-                className="inline-flex w-fit origin-left select-none items-center rounded-[14px] px-3.5 py-1.5 text-[34px] font-extrabold leading-none tracking-[-0.05em] text-white"
-                style={{ backgroundColor: stickerColor }}
-              >
-                {position.outcome}
-              </motion.p>
+                label={position.outcome}
+                tilt={stickerTilt}
+                size="lg"
+                animated
+              />
             ) : null}
           </AnimatePresence>
         </div>

@@ -19,6 +19,10 @@ import type { PolymarketWalletPosition } from "@/lib/polymarketscan";
 import type { SharePositionPayload } from "./SharePositionModal";
 import { GifThumb, TakeComposer } from "./richMessage";
 import { AmountKeypad, SheetPager, applyAmountKey, ui } from "./ui";
+import {
+  OutcomeSticker,
+  outcomeStickerToneFromLabel,
+} from "@/components/worm-app-3/OutcomeSticker";
 
 const CLOSE_THRESHOLD_PX = 72;
 const QUICK_AMOUNTS = [5, 25, 100] as const;
@@ -614,12 +618,11 @@ export default function TradeFlowModal({
   // Full title — CSS line-clamp handles 2-line truncation on amount/success.
   const outcomeTitle = team?.name ?? (binary ? fullHeaderTitle : outcome);
   const outcomeImage = team?.logo ?? market.image;
-  const outcomeIsNo = outcome.toLowerCase() === "no";
-  const outcomeStickerColor = outcomeIsNo
-    ? "#FF3B5C"
-    : selectedSide?.side === "no"
-      ? "#FF3B5C"
-      : "#1DB954";
+  const outcomeIsNo =
+    outcome.toLowerCase() === "no" || selectedSide?.side === "no";
+  const outcomeStickerTone = outcomeIsNo
+    ? "no"
+    : outcomeStickerToneFromLabel(outcome);
   const outcomeStickerTilt = outcomeIsNo ? -5 : 5;
 
   const glow = glowRgb(
@@ -1011,16 +1014,14 @@ export default function TradeFlowModal({
                   >
                     {outcomeTitle}
                   </h2>
-                  <p
-                    aria-label={outcome}
-                    className="mt-3 inline-flex w-fit origin-center select-none items-center rounded-[12px] px-3.5 py-1.5 text-[24px] font-extrabold leading-none tracking-[-0.04em] text-white"
-                    style={{
-                      backgroundColor: outcomeStickerColor,
-                      transform: `rotate(${outcomeStickerTilt}deg)`,
-                    }}
-                  >
-                    {outcome}
-                  </p>
+                  <div className="mt-3 flex justify-center overflow-visible pb-1">
+                    <OutcomeSticker
+                      label={outcome}
+                      tone={outcomeStickerTone}
+                      tilt={outcomeStickerTilt}
+                      size="lg"
+                    />
+                  </div>
                 </div>
 
                 <div className="min-h-0 flex-1" aria-hidden />
@@ -1242,16 +1243,14 @@ export default function TradeFlowModal({
                       >
                         {outcomeTitle}
                       </p>
-                      <p
-                        aria-label={outcome}
-                        className="mt-3 inline-flex w-fit origin-center select-none items-center rounded-[12px] px-3.5 py-1.5 text-[24px] font-extrabold leading-none tracking-[-0.04em] text-white"
-                        style={{
-                          backgroundColor: outcomeStickerColor,
-                          transform: `rotate(${outcomeStickerTilt}deg)`,
-                        }}
-                      >
-                        {outcome}
-                      </p>
+                      <div className="mt-3 flex justify-center overflow-visible pb-1">
+                        <OutcomeSticker
+                          label={outcome}
+                          tone={outcomeStickerTone}
+                          tilt={outcomeStickerTilt}
+                          size="lg"
+                        />
+                      </div>
 
                       {completed.trade.userCaption?.trim() ||
                       completed.trade.userGifUrl ? (
