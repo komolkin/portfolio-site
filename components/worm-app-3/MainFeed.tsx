@@ -727,6 +727,7 @@ function PositionFooter({
   video,
   canIncrease,
   cashingOut,
+  stickerReady,
   onCashOut,
   onAdjust,
 }: {
@@ -735,6 +736,8 @@ function PositionFooter({
   video: boolean;
   canIncrease: boolean;
   cashingOut: boolean;
+  /** False while the success sheet is open — sticker lands when it becomes true. */
+  stickerReady: boolean;
   onCashOut: () => void;
   onAdjust: (delta: number) => void;
 }) {
@@ -763,16 +766,30 @@ function PositionFooter({
       }`}
     >
       <div className="min-w-0">
-        <p
-          aria-label={position.outcome}
-          className="mb-1 inline-flex w-fit origin-left select-none items-center rounded-[14px] px-3.5 py-1.5 text-[34px] font-extrabold leading-none tracking-[-0.05em] text-white"
-          style={{
-            transform: `rotate(${stickerTilt}deg)`,
-            backgroundColor: stickerColor,
-          }}
-        >
-          {position.outcome}
-        </p>
+        <div className="mb-1 flex min-h-[51px] items-end">
+          <AnimatePresence initial={false}>
+            {stickerReady ? (
+              <motion.p
+                key={`${position.marketId}-${position.outcome}`}
+                aria-label={position.outcome}
+                initial={{ scale: 1.72, opacity: 0, rotate: stickerTilt - 4 }}
+                animate={{ scale: 1, opacity: 1, rotate: stickerTilt }}
+                exit={{ scale: 0.85, opacity: 0 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 460,
+                  damping: 16,
+                  mass: 0.72,
+                  opacity: { duration: 0.16, ease: [0.22, 1, 0.36, 1] },
+                }}
+                className="inline-flex w-fit origin-left select-none items-center rounded-[14px] px-3.5 py-1.5 text-[34px] font-extrabold leading-none tracking-[-0.05em] text-white"
+                style={{ backgroundColor: stickerColor }}
+              >
+                {position.outcome}
+              </motion.p>
+            ) : null}
+          </AnimatePresence>
+        </div>
         <p
           aria-label={`${stakeLabel} → ${valueLabel}`}
           className={`mt-1 text-[40px] font-semibold leading-none tabular-nums tracking-[-0.03em] ${
@@ -1163,6 +1180,7 @@ function MarketCard({
   comboOutcomes,
   position,
   balance,
+  stickerReady,
   onCommitTrade,
   onToggleCombo,
   onCashOut,
@@ -1172,6 +1190,7 @@ function MarketCard({
   comboOutcomes: Set<Outcome>;
   position: PlacedPosition | null;
   balance: number;
+  stickerReady: boolean;
   onCommitTrade: (market: Market, outcome: Outcome, amount: number) => void;
   onToggleCombo: (market: Market, outcome: Outcome) => void;
   onCashOut: (position: PlacedPosition) => void;
@@ -1557,6 +1576,7 @@ function MarketCard({
                 video={immersive}
                 canIncrease={balance >= POSITION_ADJUST_STEP}
                 cashingOut={cashingOut}
+                stickerReady={stickerReady}
                 onCashOut={startCashOut}
                 onAdjust={handleAdjust}
               />
@@ -1864,6 +1884,7 @@ function PicksChip({
   const showMultiplier = count >= 2;
   const multiplierLabel = `${multiplier.toFixed(2)}x`;
   const prevCount = useRef(count);
+  const prevShakeKey = useRef(shakeKey);
   const [shaking, setShaking] = useState(false);
 
   useEffect(() => {
@@ -1871,6 +1892,9 @@ function PicksChip({
   }, [count]);
 
   useEffect(() => {
+    // Ignore mount / remount — only shake when the key bumps while visible.
+    if (shakeKey === prevShakeKey.current) return;
+    prevShakeKey.current = shakeKey;
     if (!shakeKey) return;
     setShaking(true);
     const id = window.setTimeout(() => setShaking(false), 420);
@@ -2178,8 +2202,14 @@ export default function MainFeed() {
   const [comboPicks, setComboPicks] = useState<ComboSheetPick[]>([]);
   const [comboOpen, setComboOpen] = useState(false);
   const [comboShakeKey, setComboShakeKey] = useState(0);
+  /** Market ids whose outcome sticker is held until the success sheet closes. */
+  const [heldStickers, setHeldStickers] = useState<Set<string>>(
+    () => new Set(),
+  );
   const comboPicksRef = useRef(comboPicks);
   comboPicksRef.current = comboPicks;
+  const tradeFlowRef = useRef(tradeFlow);
+  tradeFlowRef.current = tradeFlow;
   const feedRef = useRef<HTMLDivElement>(null);
   const [feedMotionKey, setFeedMotionKey] = useState(0);
   const prevCategoryRef = useRef<FeedCategory["id"] | null>(null);
@@ -2225,7 +2255,17 @@ export default function MainFeed() {
     [],
   );
 
-  const closeTrade = useCallback(() => setTradeFlow(null), []);
+  const closeTrade = useCallback(() => {
+    const closingId = tradeFlowRef.current?.market.id;
+    setTradeFlow(null);
+    if (!closingId) return;
+    setHeldStickers((prev) => {
+      if (!prev.has(closingId)) return prev;
+      const next = new Set(prev);
+      next.delete(closingId);
+      return next;
+    });
+  }, []);
 
   const cashOutPosition = useCallback((position: PlacedPosition) => {
     const market = MARKETS.find((item) => item.id === position.marketId);
@@ -2381,6 +2421,7 @@ export default function MainFeed() {
                   comboOutcomes={comboByMarket.get(market.id) ?? new Set()}
                   position={positions[market.id] ?? null}
                   balance={balance}
+                  stickerReady={!heldStickers.has(market.id)}
                   onCommitTrade={openTrade}
                   onToggleCombo={(m, outcome) => {
                     const added = toggleCombo(m, outcome);
@@ -2452,6 +2493,11 @@ export default function MainFeed() {
                 Math.max(1, Math.min(99, trade.price * 100)),
               );
               setBalance((prev) => Math.max(0, prev - trade.amountUsd));
+              setHeldStickers((prev) => {
+                const next = new Set(prev);
+                next.add(tradeFlow.market.id);
+                return next;
+              });
               setPositions((prev) => {
                 const existing = prev[tradeFlow.market.id];
                 const sameSide = existing?.outcome === outcome;

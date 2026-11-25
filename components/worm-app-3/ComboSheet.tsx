@@ -18,6 +18,10 @@ import { TextMorph } from "torph/react";
 import { allo } from "@/lib/fonts";
 import { playComboPlace } from "@/lib/combo-sound";
 import { hapticSuccess, hapticTap } from "@/lib/haptics";
+import {
+  AmountKeypad,
+  applyAmountKey,
+} from "@/components/playground/projects/api/ui";
 
 export type ComboSheetPick = {
   id: string;
@@ -32,7 +36,8 @@ export type ComboSheetPick = {
 const MIN_PICKS = 2;
 const MAX_SLOTS = 8;
 const COMBO_EDGE = 0.35;
-const AMOUNT_CHIPS = [5, 10, 25, 50] as const;
+const STAKE_CAP = 100;
+const QUICK_AMOUNTS = [5, 25, 100] as const;
 const DISMISS_OFFSET_PX = 100;
 const DISMISS_VELOCITY = 650;
 const GREEN = "#1DB954";
@@ -112,7 +117,7 @@ export function ComboSheet({
   onClear: (opts?: { silent?: boolean }) => void;
 }) {
   const [step, setStep] = useState<Step>("build");
-  const [stake, setStake] = useState(10);
+  const [amountDigits, setAmountDigits] = useState("");
   const [copied, setCopied] = useState(false);
   const dragControls = useDragControls();
 
@@ -120,14 +125,27 @@ export function ComboSheet({
     () => comboMultiplier(picks.map((pick) => pick.percent ?? 50)),
     [picks],
   );
+  const stake = amountDigits === "" ? 0 : Number(amountDigits);
+  const stakeValid = stake >= 1;
   const payout = stake * multiplier;
   const canStake = picks.length >= MIN_PICKS;
   const heading =
     picks.length >= 2 ? `${picks.length} picks Combo` : "Build Combo";
 
+  const pressKey = (key: string) => {
+    setAmountDigits((prev) => applyAmountKey(prev, key, STAKE_CAP));
+  };
+  const pressKeyRef = useRef(pressKey);
+  pressKeyRef.current = pressKey;
+  const stakeValidRef = useRef(stakeValid);
+  stakeValidRef.current = stakeValid;
+  const stepRef = useRef(step);
+  stepRef.current = step;
+
   useEffect(() => {
     if (!open) {
       setStep("build");
+      setAmountDigits("");
       setCopied(false);
     }
   }, [open]);
@@ -135,7 +153,23 @@ export function ComboSheet({
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onOpenChange(false);
+      if (event.key === "Escape") {
+        onOpenChange(false);
+        return;
+      }
+      if (stepRef.current !== "amount") return;
+      if (/^\d$/.test(event.key)) {
+        event.preventDefault();
+        pressKeyRef.current(event.key);
+      } else if (event.key === "Backspace") {
+        event.preventDefault();
+        pressKeyRef.current("back");
+      } else if (event.key === "Enter" && stakeValidRef.current) {
+        event.preventDefault();
+        hapticSuccess();
+        playComboPlace();
+        setStep("success");
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -274,7 +308,7 @@ export function ComboSheet({
                       hapticTap();
                       onClear({ silent: true });
                       setStep("build");
-                      setStake(10);
+                      setAmountDigits("");
                       onOpenChange(false);
                     }}
                     className={SECONDARY_BTN}
@@ -285,7 +319,7 @@ export function ComboSheet({
               ) : null}
 
               {step === "amount" ? (
-                <div className="-mt-3 flex min-h-[22.5rem] flex-col gap-3">
+                <div className="-mt-3 flex min-h-[28rem] flex-col gap-3">
                   <header className="relative flex h-8 shrink-0 touch-none items-center justify-between gap-3">
                     <button
                       type="button"
@@ -322,23 +356,35 @@ export function ComboSheet({
                       ))}
                     </span>
                   </div>
-                  <div className="flex flex-col items-center gap-1 py-6">
+                  <div className="flex flex-col items-center py-2">
                     <p className="text-sm font-semibold text-black/40">Stake</p>
-                    <TextMorph
-                      as="p"
-                      numbers
-                      duration={280}
-                      ease={{ stiffness: 420, damping: 34 }}
-                      className="text-[44px] font-semibold leading-none tabular-nums text-black"
+                    <p
+                      className="mt-1 inline-flex items-baseline justify-center text-[44px] font-semibold leading-none tracking-tight tabular-nums text-black"
+                      aria-live="polite"
                     >
-                      {formatUsd(stake)}
-                    </TextMorph>
-                    <p className="mt-2 text-sm font-semibold text-black/40">
+                      $
+                      <TextMorph
+                        as="span"
+                        numbers
+                        duration={220}
+                        ease={{ stiffness: 480, damping: 36 }}
+                      >
+                        {stake.toLocaleString("en-US", {
+                          maximumFractionDigits: 0,
+                        })}
+                      </TextMorph>
+                    </p>
+                    <p
+                      className={`mt-2 text-sm font-semibold text-black/40 transition-opacity duration-200 ${
+                        stakeValid ? "opacity-100" : "opacity-0"
+                      }`}
+                      aria-hidden={!stakeValid}
+                    >
                       To win{" "}
                       <TextMorph
                         as="span"
                         numbers
-                        duration={280}
+                        duration={240}
                         className="tabular-nums"
                         style={{ color: GREEN }}
                       >
@@ -346,45 +392,57 @@ export function ComboSheet({
                       </TextMorph>
                     </p>
                   </div>
-                  <div className="mt-auto flex flex-col gap-3">
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {AMOUNT_CHIPS.map((chip) => (
+                  <div className="mt-auto flex flex-col gap-2" data-no-sheet-drag>
+                    <div className="grid shrink-0 grid-cols-4 gap-2">
+                      {QUICK_AMOUNTS.map((value) => (
                         <button
-                          key={chip}
+                          key={value}
                           type="button"
                           onClick={() => {
                             hapticTap();
-                            setStake((value) => value + chip);
+                            setAmountDigits(
+                              String(Math.min(value, STAKE_CAP)),
+                            );
                           }}
-                          className="rounded-full bg-black/[0.06] px-3.5 py-2 text-sm font-semibold text-black transition-transform duration-150 ease-out active:scale-[0.98]"
+                          className="h-10 rounded-full bg-black/[0.05] text-[13px] font-semibold text-black transition-colors hover:bg-black/[0.08]"
                         >
-                          +${chip}
+                          ${value}
                         </button>
                       ))}
                       <button
                         type="button"
                         onClick={() => {
                           hapticTap();
-                          setStake(100);
+                          setAmountDigits(String(STAKE_CAP));
                         }}
-                        className="rounded-full bg-black/[0.06] px-3.5 py-2 text-sm font-semibold text-black transition-transform duration-150 ease-out active:scale-[0.98]"
+                        className="h-10 rounded-full bg-black/[0.05] text-[13px] font-semibold text-black transition-colors hover:bg-black/[0.08]"
                       >
                         Max
                       </button>
                     </div>
+                    <AmountKeypad
+                      onKey={(key) => {
+                        hapticTap();
+                        pressKey(key);
+                      }}
+                      tone="light"
+                    />
                     <button
                       type="button"
-                      disabled={stake <= 0}
+                      disabled={!stakeValid}
                       onClick={() => {
+                        if (!stakeValid) return;
                         hapticSuccess();
                         playComboPlace();
                         setStep("success");
                       }}
-                      className={`${PRIMARY_BTN} text-white disabled:active:scale-100 ${
-                        stake > 0 ? "bg-black" : "bg-black/40"
+                      className={`${PRIMARY_BTN} disabled:active:scale-100 ${
+                        stakeValid
+                          ? "bg-black text-white"
+                          : "bg-black/[0.06] text-black/30"
                       }`}
                     >
-                      Place combo
+                      {stakeValid ? "Place combo" : "Enter amount"}
                     </button>
                   </div>
                 </div>
