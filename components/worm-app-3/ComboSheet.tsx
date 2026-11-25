@@ -257,7 +257,7 @@ export function ComboSheet({
 
             <div
               ref={scrollRef}
-              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6 pt-2"
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-2 pt-2"
             >
               {step === "success" ? (
                 <div className="flex min-h-[22.5rem] flex-col gap-3">
@@ -468,7 +468,7 @@ export function ComboSheet({
                     </div>
                   </header>
 
-                  <div className="mb-4">
+                  <div className="mb-2">
                     {picks.length === 0 ? (
                       <p className="py-8 text-center text-sm font-semibold text-black/40">
                         Pick 2 or more markets
@@ -540,7 +540,7 @@ export function ComboSheet({
                     )}
 
                     {picks.length >= MIN_PICKS ? (
-                      <div className="mt-2 border-t border-dashed border-black/10 pt-3">
+                      <div className="mt-1 border-t border-dashed border-black/10 pt-2">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-semibold text-black/40">
                             Multiplier

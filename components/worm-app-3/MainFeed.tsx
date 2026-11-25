@@ -153,7 +153,7 @@ const MARKETS: Market[] = [
     topic: "tech",
     question: "Jensen Huang out as NVIDIA CEO by December 31, 2026?",
     thumb: "/worm-app-3/bg/jensen-huang.jpg?v=2",
-    video: "/worm-app-3/bg/jensen-huang.mp4?v=2",
+    video: "/worm-app-3/bg/alexes-nakamoto.mp4",
     yesPercent: 18,
     social: "Nass and 22 others predicted",
   },
@@ -1078,6 +1078,39 @@ function MarketImageBg({ src }: { src: string }) {
   );
 }
 
+function VolumeIcon({ muted }: { muted: boolean }) {
+  if (muted) {
+    return (
+      <svg viewBox="0 0 24 24" className="size-6" fill="none" aria-hidden>
+        <path
+          d="M4 9h3.2L12 5v14l-4.8-4H4V9Z"
+          fill="currentColor"
+        />
+        <path
+          d="M16 9.5l4.5 4.5M20.5 9.5 16 14"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" className="size-6" fill="none" aria-hidden>
+      <path
+        d="M4 9h3.2L12 5v14l-4.8-4H4V9Z"
+        fill="currentColor"
+      />
+      <path
+        d="M15 8.5a4.2 4.2 0 0 1 0 7M17.4 6.2a7.2 7.2 0 0 1 0 11.6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function MarketVideoBg({
   src,
   poster,
@@ -1089,9 +1122,11 @@ function MarketVideoBg({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [inView, setInView] = useState(false);
   const [ready, setReady] = useState(false);
+  const [muted, setMuted] = useState(true);
 
   useEffect(() => {
     setReady(false);
+    setMuted(true);
   }, [src]);
 
   useEffect(() => {
@@ -1106,10 +1141,14 @@ function MarketVideoBg({
   }, []);
 
   useEffect(() => {
+    if (!inView) setMuted(true);
+  }, [inView]);
+
+  useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    video.muted = true;
-    video.defaultMuted = true;
+    video.muted = muted;
+    video.defaultMuted = muted;
     video.playsInline = true;
     video.loop = true;
 
@@ -1141,22 +1180,22 @@ function MarketVideoBg({
       video.removeEventListener("ended", restart);
       video.removeEventListener("timeupdate", onTimeUpdate);
     };
-  }, [inView]);
+  }, [inView, muted]);
 
   return (
     <div
       ref={rootRef}
-      aria-hidden
-      className="absolute inset-0 overflow-hidden rounded-[28px] bg-black [clip-path:inset(0_round_28px)]"
+      className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-[28px] bg-black [clip-path:inset(0_round_28px)]"
     >
       <video
         ref={videoRef}
+        aria-hidden
         className={`absolute inset-0 size-full object-cover [transform:translateZ(0)] transition-opacity duration-500 ease-out ${
           ready ? "opacity-100" : "opacity-0"
         }`}
         src={src}
         poster={poster}
-        muted
+        muted={muted}
         loop
         playsInline
         preload="auto"
@@ -1166,12 +1205,26 @@ function MarketVideoBg({
         onLoadedData={() => setReady(true)}
       />
       <div
+        aria-hidden
         className={`transition-opacity duration-500 ease-out ${
           ready ? "opacity-100" : "opacity-0"
         }`}
       >
         <MarketMediaScrim />
       </div>
+      <button
+        type="button"
+        aria-label={muted ? "Unmute video" : "Mute video"}
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.stopPropagation();
+          hapticTap();
+          setMuted((prev) => !prev);
+        }}
+        className="pointer-events-auto absolute right-4 top-1/2 z-[3] grid size-12 -translate-y-1/2 place-items-center rounded-[18px] bg-white/[0.06] text-white transition-transform duration-150 ease-out active:scale-[0.94]"
+      >
+        <VolumeIcon muted={muted} />
+      </button>
     </div>
   );
 }
@@ -1586,7 +1639,10 @@ function MarketCard({
         </div>
 
         {immersive ? (
-          <div className="relative z-[2] min-h-[180px] flex-1" aria-hidden />
+          <div
+            className="pointer-events-none relative z-[2] min-h-[180px] flex-1"
+            aria-hidden
+          />
         ) : (
           <motion.div
             className="relative z-[2] mb-2 mt-6"
