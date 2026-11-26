@@ -10,17 +10,17 @@ const COLORS = {
   red: { r: 255, g: 77, b: 94 },
 } as const;
 
-/** Translucent wash so the card video/image stays visible underneath. */
-const GRADIENT = {
+/** Bottom-only glow — no full-card wash. */
+const BOTTOM_GLOW_MEDIA = {
   green:
-    "radial-gradient(120% 85% at 50% -10%, rgba(93,217,120,0.34) 0%, rgba(93,217,120,0.12) 40%, transparent 70%), linear-gradient(180deg, rgba(93,217,120,0.1) 0%, rgba(8,10,12,0.28) 100%)",
-  red: "radial-gradient(120% 85% at 50% -10%, rgba(255,77,94,0.3) 0%, rgba(255,77,94,0.1) 40%, transparent 70%), linear-gradient(180deg, rgba(255,77,94,0.08) 0%, rgba(8,10,12,0.28) 100%)",
+    "linear-gradient(0deg, rgba(93,217,120,0.34) 0%, rgba(93,217,120,0.14) 38%, transparent 100%)",
+  red: "linear-gradient(0deg, rgba(255,77,94,0.3) 0%, rgba(255,77,94,0.12) 38%, transparent 100%)",
 } as const;
 
-const BOTTOM_GLOW = {
+const BOTTOM_GLOW_LIGHT = {
   green:
-    "linear-gradient(0deg, rgba(93,217,120,0.22) 0%, rgba(93,217,120,0.08) 42%, transparent 100%)",
-  red: "linear-gradient(0deg, rgba(255,77,94,0.2) 0%, rgba(255,77,94,0.07) 42%, transparent 100%)",
+    "linear-gradient(0deg, rgba(93,217,120,0.32) 0%, rgba(93,217,120,0.12) 42%, transparent 100%)",
+  red: "linear-gradient(0deg, rgba(255,77,94,0.28) 0%, rgba(255,77,94,0.1) 42%, transparent 100%)",
 } as const;
 
 type Particle = {
@@ -36,11 +36,15 @@ type Particle = {
 /** Controller-style green/red wash + drifting triangle particles. */
 export function MarketCardAtmosphere({
   variant,
+  tone = "media",
 }: {
   variant: AtmosphereVariant;
+  /** `light` for white cards; `media` over video/image. */
+  tone?: "media" | "light";
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const bottomGlow = tone === "light" ? BOTTOM_GLOW_LIGHT : BOTTOM_GLOW_MEDIA;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -194,12 +198,8 @@ export function MarketCardAtmosphere({
       aria-hidden
     >
       <div
-        className="absolute inset-0 transition-[background] duration-500 ease-out"
-        style={{ background: GRADIENT[variant] }}
-      />
-      <div
-        className="absolute inset-x-0 bottom-0 h-[46%] transition-[background] duration-500 ease-out"
-        style={{ background: BOTTOM_GLOW[variant] }}
+        className="absolute inset-x-0 bottom-0 h-[38%] transition-[background] duration-500 ease-out"
+        style={{ background: bottomGlow[variant] }}
       />
       <canvas ref={canvasRef} className="absolute left-0 top-0" />
     </div>

@@ -9,6 +9,8 @@ import {
 } from "react";
 import confetti from "canvas-confetti";
 import NumberFlow from "@number-flow/react";
+import { accentPair } from "glimm";
+import { GlimmScope, type GlimmScopeHandle } from "glimm/react";
 import { TextMorph } from "torph/react";
 import type { PolymarketMarketData } from "@/lib/polymarketscan";
 import { getMarketOddsSides } from "@/lib/polymarketscan";
@@ -23,6 +25,9 @@ import {
   OutcomeSticker,
   outcomeStickerToneFromLabel,
 } from "@/components/worm-app-3/OutcomeSticker";
+
+const SUCCESS_GLIMM_YES = accentPair("#1DB954", "#6B4EFF");
+const SUCCESS_GLIMM_NO = accentPair("#FF3B5C", "#6B4EFF");
 
 const CLOSE_THRESHOLD_PX = 72;
 const QUICK_AMOUNTS = [5, 25, 100] as const;
@@ -583,12 +588,15 @@ export default function TradeFlowModal({
   const [stepDir, setStepDir] = useState<1 | -1>(1);
   const [outcome] = useState(initialOutcome ?? oddsSides[0]?.label ?? "Yes");
   const [amountDigits, setAmountDigits] = useState(() => {
-    if (initialAmount == null || !Number.isFinite(initialAmount)) return "";
+    const fallback = Math.min(1, Math.floor(maxAmount));
+    if (initialAmount == null || !Number.isFinite(initialAmount)) {
+      return fallback > 0 ? String(fallback) : "";
+    }
     const capped = Math.max(
       0,
       Math.min(Math.floor(maxAmount), Math.floor(initialAmount)),
     );
-    return capped > 0 ? String(capped) : "";
+    return capped > 0 ? String(capped) : fallback > 0 ? String(fallback) : "";
   });
   const [takeOpen, setTakeOpen] = useState(false);
   const [takeMessage, setTakeMessage] = useState("");
@@ -605,6 +613,8 @@ export default function TradeFlowModal({
   const closeTimerRef = useRef<number | null>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const glimmScopeRef = useRef<GlimmScopeHandle>(null);
+  const glimmRootRef = useRef<HTMLDivElement>(null);
 
   const selectedSide =
     oddsSides.find(
@@ -698,9 +708,28 @@ export default function TradeFlowModal({
       pnlUsd: 0,
       image: market.image,
     };
-    setCompleted({ trade, position });
-    onComplete(trade, position);
-    goTo("success");
+
+    const revealSuccess = () => {
+      setCompleted({ trade, position });
+      onComplete(trade, position);
+      goTo("success");
+    };
+
+    const root = glimmRootRef.current;
+    const box = root?.getBoundingClientRect();
+    const at: [number, number] | undefined = box
+      ? [box.width / 2, box.height - 20]
+      : undefined;
+
+    if (!glimmScopeRef.current) {
+      revealSuccess();
+      return;
+    }
+
+    glimmScopeRef.current.play({
+      at,
+      change: revealSuccess,
+    });
   };
 
   const submitTradeRef = useRef(submitTrade);
@@ -890,7 +919,29 @@ export default function TradeFlowModal({
   );
 
   return (
-    <div className="absolute inset-0 z-40">
+    <div ref={glimmRootRef} className="absolute inset-0 z-40">
+      <GlimmScope
+        ref={glimmScopeRef}
+        direction="btt"
+        origin={[0.5, 1]}
+        originOffset={[0, 16]}
+        curve={0.12}
+        span={1}
+        fade={[0.08, 0.7]}
+        sweepMs={1500}
+        gatherMs={420}
+        palette={outcomeIsNo ? SUCCESS_GLIMM_NO : SUCCESS_GLIMM_YES}
+        brightness={light ? 1 : 0.88}
+        peakAlpha={1.05}
+        bandTight={22}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+        }}
+      >
+        <div className="relative h-full w-full">
       <div
         className={`absolute inset-0 transition-opacity duration-300 ${
           nested
@@ -1386,6 +1437,8 @@ export default function TradeFlowModal({
           }
         }
       `}</style>
+        </div>
+      </GlimmScope>
     </div>
   );
 }

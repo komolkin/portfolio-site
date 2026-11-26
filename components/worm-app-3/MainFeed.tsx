@@ -1106,13 +1106,13 @@ function MarketCard({
   const [livePositionPercent, setLivePositionPercent] = useState(() =>
     clampLivePercent(positionPercent, positionPercent),
   );
-  // Controller-style wash over media once a position is open.
+  // Controller-style wash once a position is open (media + white cards).
   const atmosphereVariant =
     position &&
     cashOutValue(position, livePositionPercent) >= position.stake
       ? "green"
       : "red";
-  const useAtmosphere = hasPosition && immersive;
+  const useAtmosphere = hasPosition;
   const chrome = immersive;
   const x = useMotionValue(0);
   const yesAmountMV = useMotionValue(0);
@@ -1418,7 +1418,9 @@ function MarketCard({
         className={`relative touch-pan-y overflow-hidden rounded-[28px] will-change-transform ${
           chrome
             ? "flex min-h-[504px] flex-col bg-black px-5 pb-6 pt-5 text-white"
-            : "bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
+            : hasPosition
+              ? "flex min-h-[420px] flex-col bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
+              : "bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
         } ${
           hasPosition
             ? "cursor-default"
@@ -1433,7 +1435,10 @@ function MarketCard({
           <MarketImageBg src={market.backdrop} />
         ) : null}
         {useAtmosphere ? (
-          <MarketCardAtmosphere variant={atmosphereVariant} />
+          <MarketCardAtmosphere
+            variant={atmosphereVariant}
+            tone={immersive ? "media" : "light"}
+          />
         ) : null}
 
         {sizeDeltaFlash && sizeDeltaFlash.amount !== 0 ? (
@@ -1486,6 +1491,11 @@ function MarketCard({
             className="pointer-events-none relative z-[2] min-h-[180px] flex-1"
             aria-hidden
           />
+        ) : hasPosition ? (
+          <div
+            className="pointer-events-none relative z-[2] min-h-[72px] flex-1"
+            aria-hidden
+          />
         ) : (
           <motion.div
             className="relative z-[2] mb-2 mt-6"
@@ -1507,6 +1517,7 @@ function MarketCard({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -12, scale: 0.98 }}
               transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+              className={chrome || hasPosition ? "mt-auto" : undefined}
             >
               <PositionFooter
                 position={position}
@@ -1517,6 +1528,7 @@ function MarketCard({
                 stickerReady={stickerReady}
                 onCashOut={startCashOut}
                 onAdjust={handleAdjust}
+                className={hasPosition && !chrome ? "mt-0" : undefined}
               />
             </motion.div>
           ) : (
@@ -1818,10 +1830,20 @@ function PicksChip({
   const prevCount = useRef(count);
   const prevShakeKey = useRef(shakeKey);
   const [shaking, setShaking] = useState(false);
+  const popScale = useMotionValue(1);
 
   useEffect(() => {
+    if (count > prevCount.current) {
+      popScale.set(0.92);
+      void animate(popScale, 1, {
+        type: "spring",
+        stiffness: 620,
+        damping: 14,
+        mass: 0.45,
+      });
+    }
     prevCount.current = count;
-  }, [count]);
+  }, [count, popScale]);
 
   useEffect(() => {
     // Ignore mount / remount — only shake when the key bumps while visible.
@@ -1832,8 +1854,6 @@ function PicksChip({
     const id = window.setTimeout(() => setShaking(false), 420);
     return () => window.clearTimeout(id);
   }, [shakeKey]);
-
-  const bump = count > prevCount.current;
 
   if (count === 0) return null;
 
@@ -1847,7 +1867,7 @@ function PicksChip({
         onOpen();
       }}
       whileTap={{ scale: 0.96 }}
-      initial={{ opacity: 0, y: 12, scale: 0.96 }}
+      initial={{ opacity: 0, y: 12, scale: 0.92 }}
       animate={
         shaking
           ? {
@@ -1856,21 +1876,20 @@ function PicksChip({
               scale: 1,
               x: [0, -9, 9, -7, 7, -4, 4, 0],
             }
-          : bump
-            ? { opacity: 1, y: 0, scale: [1, 1.04, 1], x: 0 }
-            : { opacity: 1, y: 0, scale: 1, x: 0 }
+          : { opacity: 1, y: 0, x: 0 }
       }
+      style={shaking ? undefined : { scale: popScale }}
       exit={{ opacity: 0, y: 10, scale: 0.96 }}
       transition={{
         layout: { type: "spring", stiffness: 420, damping: 36, mass: 0.75 },
         opacity: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
         y: { type: "spring", stiffness: 420, damping: 34 },
-        scale: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+        scale: { type: "spring", stiffness: 480, damping: 28, mass: 0.6 },
         x: shaking
           ? { duration: 0.4, ease: [0.36, 0.07, 0.19, 0.97] }
           : { duration: 0.2 },
       }}
-      className="inline-flex min-h-12 origin-center items-center justify-center gap-3 overflow-hidden rounded-full bg-black px-5 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.28)] ring-1 ring-white/10"
+      className="relative inline-flex min-h-12 origin-center items-center justify-center gap-3 overflow-hidden rounded-full bg-black px-5 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.28)] ring-1 ring-white/10"
     >
       <TextMorph
         as="span"
@@ -2306,14 +2325,6 @@ export default function MainFeed() {
     return map;
   }, [comboPicks]);
 
-  const scrollToNextMarket = useCallback((fromIndex: number) => {
-    const feed = feedRef.current;
-    if (!feed) return;
-    const wraps = feed.querySelectorAll<HTMLElement>("[data-market-wrap]");
-    const next = wraps[fromIndex + 1];
-    next?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, []);
-
   const toggleCombo = useCallback((market: Market, outcome: Outcome) => {
     const pick = toComboPick(market, outcome);
     const prev = comboPicksRef.current;
@@ -2388,14 +2399,7 @@ export default function MainFeed() {
                   stickerReady={!heldStickers.has(market.id)}
                   onOpenMarket={openMarketPage}
                   onCommitTrade={openTrade}
-                  onToggleCombo={(m, outcome) => {
-                    const added = toggleCombo(m, outcome);
-                    if (added) {
-                      window.requestAnimationFrame(() =>
-                        scrollToNextMarket(index),
-                      );
-                    }
-                  }}
+                  onToggleCombo={toggleCombo}
                   onCashOut={cashOutPosition}
                   onAdjustPosition={adjustPosition}
                 />
