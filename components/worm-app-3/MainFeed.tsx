@@ -76,7 +76,6 @@ const AMOUNT_FONT_MIN = 36;
 const AMOUNT_FONT_MAX = 58;
 const MAX_COMBO_PICKS = 8;
 const MAX_CHIP_LOGOS = 3;
-const COMBO_LONG_PRESS_MS = 420;
 
 type SizeDeltaFlash = {
   sessionId: number;
@@ -1113,8 +1112,6 @@ function MarketCard({
   const lastAmountRef = useRef(0);
   const lastOutcomeRef = useRef<Outcome | null>(null);
   const lastComboArmedRef = useRef(false);
-  const comboLongPressTimerRef = useRef<number | null>(null);
-  const comboLongPressFiredRef = useRef(false);
   const [cardPressed, setCardPressed] = useState(false);
   const sizeDeltaSessionRef = useRef(0);
   const sizeDeltaStackedRef = useRef(0);
@@ -1162,39 +1159,11 @@ function MarketCard({
       if (cashOutTimerRef.current !== null) {
         window.clearTimeout(cashOutTimerRef.current);
       }
-      if (comboLongPressTimerRef.current !== null) {
-        window.clearTimeout(comboLongPressTimerRef.current);
-      }
     };
   }, []);
 
-  const clearComboLongPress = useCallback(() => {
-    if (comboLongPressTimerRef.current !== null) {
-      window.clearTimeout(comboLongPressTimerRef.current);
-      comboLongPressTimerRef.current = null;
-    }
-  }, []);
-
-  const startComboLongPress = useCallback(
-    (outcome: Outcome) => {
-      comboLongPressFiredRef.current = false;
-      clearComboLongPress();
-      comboLongPressTimerRef.current = window.setTimeout(() => {
-        comboLongPressTimerRef.current = null;
-        comboLongPressFiredRef.current = true;
-        hapticSuccess();
-        onToggleCombo(market, outcome);
-      }, COMBO_LONG_PRESS_MS);
-    },
-    [clearComboLongPress, market, onToggleCombo],
-  );
-
   const onOutcomeClick = useCallback(
     (outcome: Outcome) => {
-      if (comboLongPressFiredRef.current) {
-        comboLongPressFiredRef.current = false;
-        return;
-      }
       hapticTap();
       onCommitTrade(market, outcome, 0);
     },
@@ -1373,8 +1342,6 @@ function MarketCard({
           const target = event.target as HTMLElement | null;
           // Yes/No, unmute, cash out, etc. stay independent of card open.
           if (target?.closest("button, a, input, [data-no-card-tap]")) return;
-          // Stale long-press flag from combo toggle must not block card open.
-          comboLongPressFiredRef.current = false;
           hapticTap();
           onOpenMarket(market);
         }}
@@ -1555,16 +1522,9 @@ function MarketCard({
               >
                 <button
                   type="button"
-                  onPointerDown={(event) => {
-                    event.stopPropagation();
-                    startComboLongPress("Yes");
-                  }}
-                  onPointerUp={clearComboLongPress}
-                  onPointerLeave={clearComboLongPress}
-                  onPointerCancel={clearComboLongPress}
-                  onContextMenu={(event) => event.preventDefault()}
+                  onPointerDown={(event) => event.stopPropagation()}
                   onClick={() => onOutcomeClick("Yes")}
-                  className={`flex h-[52px] origin-center select-none items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out [-webkit-touch-callout:none] active:scale-[0.94] ${
+                  className={`flex h-[52px] origin-center select-none items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
                     dragOutcome === "No"
                       ? immersive
                         ? "bg-white/[0.06] text-white/45"
@@ -1585,16 +1545,9 @@ function MarketCard({
                 </button>
                 <button
                   type="button"
-                  onPointerDown={(event) => {
-                    event.stopPropagation();
-                    startComboLongPress("No");
-                  }}
-                  onPointerUp={clearComboLongPress}
-                  onPointerLeave={clearComboLongPress}
-                  onPointerCancel={clearComboLongPress}
-                  onContextMenu={(event) => event.preventDefault()}
+                  onPointerDown={(event) => event.stopPropagation()}
                   onClick={() => onOutcomeClick("No")}
-                  className={`flex h-[52px] origin-center select-none items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out [-webkit-touch-callout:none] active:scale-[0.94] ${
+                  className={`flex h-[52px] origin-center select-none items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
                     dragOutcome === "Yes"
                       ? immersive
                         ? "bg-white/[0.06] text-white/45"
