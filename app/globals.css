@@ -574,6 +574,24 @@ body > * {
   animation: live-preview-ember-edge 3.6s ease-in-out infinite;
 }
 
+.live-preview-ember-glow-red {
+  background: radial-gradient(
+    60% 70% at 70% 80%,
+    rgba(255, 77, 94, 0.34) 0%,
+    rgba(180, 28, 52, 0.16) 40%,
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+  animation: live-preview-ember-glow 7.5s ease-in-out infinite;
+}
+
+.live-preview-ember-edge-red {
+  box-shadow:
+    inset 0 -22px 36px -16px rgba(255, 77, 94, 0.3),
+    inset 0 0 0 1px rgba(255, 77, 94, 0.24);
+  animation: live-preview-ember-edge 3.6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .live-preview-shiny-glow,
   .live-preview-shiny-border-spin,
@@ -584,8 +602,10 @@ body > * {
   .live-preview-prism-border-spin,
   .live-preview-ember-glow,
   .live-preview-ember-glow-green,
+  .live-preview-ember-glow-red,
   .live-preview-ember-edge,
-  .live-preview-ember-edge-green {
+  .live-preview-ember-edge-green,
+  .live-preview-ember-edge-red {
     animation: none;
   }
 

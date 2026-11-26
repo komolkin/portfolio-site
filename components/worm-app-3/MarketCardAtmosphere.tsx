@@ -10,19 +10,6 @@ const COLORS = {
   red: { r: 255, g: 77, b: 94 },
 } as const;
 
-/** Bottom-only glow — no full-card wash. */
-const BOTTOM_GLOW_MEDIA = {
-  green:
-    "linear-gradient(0deg, rgba(93,217,120,0.34) 0%, rgba(93,217,120,0.14) 38%, transparent 100%)",
-  red: "linear-gradient(0deg, rgba(255,77,94,0.3) 0%, rgba(255,77,94,0.12) 38%, transparent 100%)",
-} as const;
-
-const BOTTOM_GLOW_LIGHT = {
-  green:
-    "linear-gradient(0deg, rgba(93,217,120,0.32) 0%, rgba(93,217,120,0.12) 42%, transparent 100%)",
-  red: "linear-gradient(0deg, rgba(255,77,94,0.28) 0%, rgba(255,77,94,0.1) 42%, transparent 100%)",
-} as const;
-
 type Particle = {
   x: number;
   y: number;
@@ -33,18 +20,24 @@ type Particle = {
   phase: number;
 };
 
-/** Controller-style green/red wash + drifting triangle particles. */
+/** Ember glow/edge (portfolio card effect) + drifting triangle particles. */
 export function MarketCardAtmosphere({
   variant,
-  tone = "media",
 }: {
   variant: AtmosphereVariant;
-  /** `light` for white cards; `media` over video/image. */
+  /** Kept for call-site compatibility; ember works on media + light cards. */
   tone?: "media" | "light";
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const bottomGlow = tone === "light" ? BOTTOM_GLOW_LIGHT : BOTTOM_GLOW_MEDIA;
+  const emberGlow =
+    variant === "green"
+      ? "live-preview-ember-glow-green"
+      : "live-preview-ember-glow-red";
+  const emberEdge =
+    variant === "green"
+      ? "live-preview-ember-edge-green"
+      : "live-preview-ember-edge-red";
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -197,10 +190,8 @@ export function MarketCardAtmosphere({
       className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-[28px]"
       aria-hidden
     >
-      <div
-        className="absolute inset-x-0 bottom-0 h-[38%] transition-[background] duration-500 ease-out"
-        style={{ background: bottomGlow[variant] }}
-      />
+      <div className={`absolute -inset-[35%] ${emberGlow}`} />
+      <div className={`absolute inset-0 rounded-[28px] ${emberEdge}`} />
       <canvas ref={canvasRef} className="absolute left-0 top-0" />
     </div>
   );
