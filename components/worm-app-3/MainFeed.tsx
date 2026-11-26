@@ -78,6 +78,79 @@ const AMOUNT_FONT_MAX = 58;
 const MAX_COMBO_PICKS = 8;
 const MAX_CHIP_LOGOS = 3;
 
+type ComboShortcutLeg = {
+  marketId: string;
+  outcome: Outcome;
+};
+
+type ComboShortcut = {
+  id: string;
+  title: string;
+  legs: ComboShortcutLeg[];
+};
+
+/** Preset combos — folder tiles under search. */
+const COMBO_SHORTCUTS: ComboShortcut[] = [
+  {
+    id: "sports",
+    title: "Sports",
+    legs: [
+      { marketId: "nba-hawks", outcome: "No" },
+      { marketId: "lakers-celtics", outcome: "No" },
+      { marketId: "barca-madrid", outcome: "Yes" },
+      { marketId: "faze-wildcard", outcome: "Yes" },
+    ],
+  },
+  {
+    id: "actors",
+    title: "Actors",
+    legs: [
+      { marketId: "grammys-album", outcome: "No" },
+      { marketId: "oscars-best-picture", outcome: "No" },
+      { marketId: "stranger-things-finale", outcome: "Yes" },
+      { marketId: "met-gala-theme", outcome: "No" },
+    ],
+  },
+  {
+    id: "gta-vi",
+    title: "GTA VI",
+    legs: [
+      { marketId: "gta-vi-nov19", outcome: "Yes" },
+      { marketId: "gta-trailer-3", outcome: "Yes" },
+      { marketId: "fortnite-collab", outcome: "Yes" },
+      { marketId: "box-office-billion", outcome: "Yes" },
+    ],
+  },
+  {
+    id: "crypto",
+    title: "Crypto",
+    legs: [
+      { marketId: "btc-100k", outcome: "Yes" },
+      { marketId: "eth-5k", outcome: "No" },
+      { marketId: "sol-300", outcome: "No" },
+    ],
+  },
+  {
+    id: "politics",
+    title: "Politics",
+    legs: [
+      { marketId: "fed-cut", outcome: "Yes" },
+      { marketId: "scotus-ai", outcome: "Yes" },
+      { marketId: "midterm-turnout", outcome: "No" },
+      { marketId: "shutdown-week", outcome: "No" },
+    ],
+  },
+  {
+    id: "tech",
+    title: "Tech",
+    legs: [
+      { marketId: "nvidia-ceo", outcome: "No" },
+      { marketId: "openai-ipo", outcome: "No" },
+      { marketId: "apple-foldable", outcome: "No" },
+    ],
+  },
+];
+
 type SizeDeltaFlash = {
   sessionId: number;
   amount: number;
@@ -1655,6 +1728,96 @@ function formatCompactBalance(value: number) {
   return `$${Math.round(safe)}`;
 }
 
+function resolveShortcutPicks(shortcut: ComboShortcut): ComboSheetPick[] {
+  const picks: ComboSheetPick[] = [];
+  for (const leg of shortcut.legs) {
+    const market = MARKETS.find((item) => item.id === leg.marketId);
+    if (!market) continue;
+    picks.push(toComboPick(market, leg.outcome));
+    if (picks.length >= MAX_COMBO_PICKS) break;
+  }
+  return picks;
+}
+
+function ComboShortcuts({
+  onSelect,
+}: {
+  onSelect: (shortcut: ComboShortcut) => void;
+}) {
+  const shortcuts = useMemo(
+    () =>
+      COMBO_SHORTCUTS.map((shortcut) => {
+        const picks = resolveShortcutPicks(shortcut);
+        const icons = picks
+          .map((pick) => pick.logo)
+          .filter((logo): logo is string => Boolean(logo))
+          .slice(0, 4);
+        const multiplier = comboMultiplier(
+          picks.map((pick) => pick.percent ?? 50),
+        );
+        return { shortcut, icons, multiplier, pickCount: picks.length };
+      }).filter((item) => item.pickCount >= 2),
+    [],
+  );
+
+  if (shortcuts.length === 0) return null;
+
+  return (
+    <div className="relative -mx-4 min-w-0">
+      <div
+        className="flex gap-3 overflow-x-auto overscroll-x-contain px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
+        {shortcuts.map(({ shortcut, icons, multiplier }) => (
+          <button
+            key={shortcut.id}
+            type="button"
+            onClick={() => {
+              hapticTap();
+              onSelect(shortcut);
+            }}
+            className="flex w-[calc((100%-2.25rem)/3.5)] shrink-0 flex-col items-center text-center transition-transform duration-150 ease-out active:scale-[0.94]"
+          >
+            <span
+              aria-hidden
+              className="flex aspect-square w-full items-center justify-center rounded-[24px] bg-black/[0.07]"
+            >
+              <span className="grid size-[68%] grid-cols-2 gap-1">
+                {Array.from({ length: 4 }).map((_, index) => {
+                  const src = icons[index];
+                  return (
+                    <span
+                      key={`${shortcut.id}-slot-${index}`}
+                      className="relative overflow-hidden rounded-[7px] bg-black/[0.06]"
+                    >
+                      {src ? (
+                        <Image
+                          src={src}
+                          alt=""
+                          fill
+                          className="object-cover"
+                          sizes="36px"
+                          draggable={false}
+                        />
+                      ) : null}
+                    </span>
+                  );
+                })}
+              </span>
+            </span>
+            <span className="mt-2 w-full truncate text-[13px] font-semibold leading-tight tracking-[-0.01em] text-black">
+              {shortcut.title}
+            </span>
+            <span className="mt-0.5 text-[12px] font-semibold tabular-nums text-black/40">
+              {multiplier.toFixed(multiplier >= 10 ? 1 : 2)}x
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SearchBar({
   value,
   onChange,
@@ -2352,6 +2515,15 @@ export default function MainFeed() {
     return !alreadyInGroup;
   }, []);
 
+  const applyComboShortcut = useCallback((shortcut: ComboShortcut) => {
+    const picks = resolveShortcutPicks(shortcut);
+    if (picks.length < 2) return;
+    comboPicksRef.current = picks;
+    setComboPicks(picks);
+    playComboAdd(picks.length);
+    hapticSuccess();
+  }, []);
+
   const openMarketScreen = openMarket
     ? toMarketScreenData(openMarket)
     : null;
@@ -2371,11 +2543,8 @@ export default function MainFeed() {
       >
         <div className="flex w-full min-w-0 flex-col gap-4 px-4">
           <div className="flex min-w-0 flex-col gap-3.5">
-            <SearchBar value={searchQuery} onChange={setSearchQuery} />
-            <CategoryTabs
-              active={activeCategory}
-              onChange={changeCategory}
-            />
+            {/* SearchBar + CategoryTabs hidden for now */}
+            <ComboShortcuts onSelect={applyComboShortcut} />
           </div>
           {visibleMarkets.length > 0 ? (
             visibleMarkets.map((market, index) => (
