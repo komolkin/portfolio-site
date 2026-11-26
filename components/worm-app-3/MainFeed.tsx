@@ -44,6 +44,7 @@ import MarketScreen, {
   type MarketScreenOption,
   type MarketScreenPick,
 } from "./MarketScreen";
+import { MarketCardAtmosphere } from "./MarketCardAtmosphere";
 import {
   cashOutValue,
   MIN_POSITION_STAKE,
@@ -1105,6 +1106,14 @@ function MarketCard({
   const [livePositionPercent, setLivePositionPercent] = useState(() =>
     clampLivePercent(positionPercent, positionPercent),
   );
+  // Controller-style wash over media once a position is open.
+  const atmosphereVariant =
+    position &&
+    cashOutValue(position, livePositionPercent) >= position.stake
+      ? "green"
+      : "red";
+  const useAtmosphere = hasPosition && immersive;
+  const chrome = immersive;
   const x = useMotionValue(0);
   const yesAmountMV = useMotionValue(0);
   const noAmountMV = useMotionValue(0);
@@ -1407,7 +1416,7 @@ function MarketCard({
           snapBack();
         }}
         className={`relative touch-pan-y overflow-hidden rounded-[28px] will-change-transform ${
-          immersive
+          chrome
             ? "flex min-h-[504px] flex-col bg-black px-5 pb-6 pt-5 text-white"
             : "bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
         } ${
@@ -1423,6 +1432,9 @@ function MarketCard({
         ) : market.backdrop ? (
           <MarketImageBg src={market.backdrop} />
         ) : null}
+        {useAtmosphere ? (
+          <MarketCardAtmosphere variant={atmosphereVariant} />
+        ) : null}
 
         {sizeDeltaFlash && sizeDeltaFlash.amount !== 0 ? (
           <div
@@ -1433,13 +1445,13 @@ function MarketCard({
             <SizeDeltaFlashLabel
               amount={sizeDeltaFlash.amount}
               exiting={sizeDeltaFlash.exiting}
-              video={immersive}
+              video={chrome}
             />
           </div>
         ) : null}
 
         <div className="relative z-[2] flex min-w-0 items-start gap-3">
-          {!immersive ? (
+          {!chrome ? (
             <div className="relative size-[72px] shrink-0 overflow-hidden rounded-[10px]">
               <Image
                 src={market.thumb}
@@ -1454,14 +1466,14 @@ function MarketCard({
           <div className="min-w-0 flex-1">
             <p
               className={`text-[13px] font-medium ${
-                immersive ? "text-white/65" : "text-black/40"
+                chrome ? "text-white/65" : "text-black/40"
               }`}
             >
               {market.category}
             </p>
             <h2
               className={`mt-0.5 text-[22px] font-semibold leading-[1.2] tracking-[-0.02em] ${
-                immersive ? "text-white" : "text-black"
+                chrome ? "text-white" : "text-black"
               }`}
             >
               {market.question}
@@ -1469,7 +1481,7 @@ function MarketCard({
           </div>
         </div>
 
-        {immersive ? (
+        {chrome ? (
           <div
             className="pointer-events-none relative z-[2] min-h-[180px] flex-1"
             aria-hidden
@@ -1499,7 +1511,7 @@ function MarketCard({
               <PositionFooter
                 position={position}
                 currentPercent={livePositionPercent}
-                video={immersive}
+                video={chrome}
                 canIncrease={balance >= POSITION_ADJUST_STEP}
                 cashingOut={cashingOut}
                 stickerReady={stickerReady}
@@ -1517,7 +1529,7 @@ function MarketCard({
             >
               <div
                 className={`relative z-[2] grid grid-cols-2 gap-2.5 ${
-                  immersive ? "mt-auto" : "mt-8"
+                  chrome ? "mt-auto" : "mt-8"
                 }`}
               >
                 <button
@@ -1526,12 +1538,12 @@ function MarketCard({
                   onClick={() => onOutcomeClick("Yes")}
                   className={`flex h-[52px] origin-center select-none items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
                     dragOutcome === "No"
-                      ? immersive
+                      ? chrome
                         ? "bg-white/[0.06] text-white/45"
                         : "bg-black/[0.05] text-black/35"
                       : yesInCombo || dragOutcome === "Yes"
                         ? "text-white"
-                        : immersive
+                        : chrome
                           ? "bg-white/[0.06] text-white"
                           : "bg-black/[0.06] text-black"
                   }`}
@@ -1549,12 +1561,12 @@ function MarketCard({
                   onClick={() => onOutcomeClick("No")}
                   className={`flex h-[52px] origin-center select-none items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,background-color,color,opacity] duration-150 ease-out active:scale-[0.94] ${
                     dragOutcome === "Yes"
-                      ? immersive
+                      ? chrome
                         ? "bg-white/[0.06] text-white/45"
                         : "bg-black/[0.05] text-black/35"
                       : noInCombo || dragOutcome === "No"
                         ? "text-white"
-                        : immersive
+                        : chrome
                           ? "bg-white/[0.06] text-white"
                           : "bg-black/[0.06] text-black"
                   }`}
@@ -1571,7 +1583,7 @@ function MarketCard({
               {market.social ? (
                 <p
                   className={`relative z-[2] mt-4 text-center text-[13px] font-medium ${
-                    immersive ? "text-white/60" : "text-black/40"
+                    chrome ? "text-white/60" : "text-black/40"
                   }`}
                 >
                   {market.social}
