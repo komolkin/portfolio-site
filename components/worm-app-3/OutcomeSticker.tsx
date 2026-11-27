@@ -1,10 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { caveat } from "@/lib/fonts";
 
 export type OutcomeStickerTone = "yes" | "no";
 
-/** Allo-style cut sticker: soft fill + mid stroke + dark outer stroke. */
+/** Hand-written marker sticker: soft fill + mid stroke + dark outer stroke. */
 const STICKER_TONES = {
   yes: {
     fill: "#9AFFB8",
@@ -20,19 +21,19 @@ const STICKER_TONES = {
 
 const SIZE = {
   md: {
-    className: "text-[24px] tracking-[-0.04em]",
-    outerStroke: 8,
-    midStroke: 4,
+    className: "text-[28px] tracking-[-0.02em]",
+    outerStroke: 7,
+    midStroke: 3.5,
   },
   lg: {
-    className: "text-[42px] tracking-[-0.06em]",
-    outerStroke: 11,
-    midStroke: 5.5,
+    className: "text-[48px] tracking-[-0.02em]",
+    outerStroke: 10,
+    midStroke: 5,
   },
   xl: {
-    className: "text-[72px] tracking-[-0.07em]",
-    outerStroke: 16,
-    midStroke: 8,
+    className: "text-[84px] tracking-[-0.02em]",
+    outerStroke: 14,
+    midStroke: 7,
   },
 } as const;
 
@@ -67,10 +68,7 @@ export function OutcomeSticker({
 }) {
   const tone = STICKER_TONES[toneProp ?? outcomeStickerToneFromLabel(label)];
   const scale = SIZE[size];
-  const sharedClass = `relative inline-block select-none font-extrabold leading-none ${scale.className} ${className}`;
-  const sharedStyle = {
-    fontVariationSettings: '"ROND" 85, "wght" 850',
-  } as const;
+  const sharedClass = `relative inline-block select-none font-bold leading-none ${caveat.className} ${scale.className} ${className}`;
 
   const layers = (
     <>
@@ -107,7 +105,7 @@ export function OutcomeSticker({
       <span
         aria-label={label}
         className={`${sharedClass} origin-center`}
-        style={{ ...sharedStyle, transform: `rotate(${tilt}deg)` }}
+        style={{ transform: `rotate(${tilt}deg)` }}
       >
         {layers}
       </span>
@@ -128,7 +126,6 @@ export function OutcomeSticker({
         opacity: { duration: 0.16, ease: [0.22, 1, 0.36, 1] },
       }}
       className={`${sharedClass} origin-center`}
-      style={sharedStyle}
     >
       {layers}
     </motion.span>

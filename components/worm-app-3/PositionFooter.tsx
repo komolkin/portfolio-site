@@ -180,7 +180,7 @@ export function PositionFooter({
         className ?? (video ? "mt-auto" : "mt-8")
       }`}
     >
-      <div className="flex min-h-[88px] flex-1 items-center justify-center overflow-visible">
+      <div className="flex min-h-[88px] flex-1 items-center justify-center overflow-visible p-6">
         <AnimatePresence initial={false}>
           {stickerReady ? (
             <motion.div

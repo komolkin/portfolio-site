@@ -1,5 +1,15 @@
 import localFont from "next/font/local";
-import { Instrument_Sans } from "next/font/google";
+import { Caveat, Instrument_Sans } from "next/font/google";
+
+/**
+ * Hand-written sticker face for Yes/No outcomes.
+ */
+export const caveat = Caveat({
+  subsets: ["latin", "latin-ext"],
+  weight: ["600", "700"],
+  display: "swap",
+  variable: "--font-caveat",
+});
 
 /**
  * Site-wide Instrument Sans (Google).

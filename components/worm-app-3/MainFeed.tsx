@@ -1180,11 +1180,13 @@ function MarketCard({
     clampLivePercent(positionPercent, positionPercent),
   );
   // Controller-style wash once a position is open (media + white cards).
-  const atmosphereVariant =
+  const atmosphereVariant: "green" | "red" =
     position &&
     cashOutValue(position, livePositionPercent) >= position.stake
       ? "green"
       : "red";
+  const lastAtmosphereRef = useRef<"green" | "red">(atmosphereVariant);
+  if (position) lastAtmosphereRef.current = atmosphereVariant;
   const useAtmosphere = hasPosition;
   const chrome = immersive;
   const x = useMotionValue(0);
@@ -1252,21 +1254,20 @@ function MarketCard({
     [market, onCommitTrade],
   );
 
-  useEffect(() => {
-    if (!position) setCashingOut(false);
-  }, [position]);
-
   const startCashOut = useCallback(() => {
     if (!position || cashingOut) return;
     setCashingOut(true);
     if (cashOutTimerRef.current !== null) {
       window.clearTimeout(cashOutTimerRef.current);
     }
+    // 1) Fade position UI out, 2) clear position, 3) hold layout while height morphs.
     cashOutTimerRef.current = window.setTimeout(() => {
-      cashOutTimerRef.current = null;
       onCashOut(position);
-      setCashingOut(false);
-    }, 420);
+      cashOutTimerRef.current = window.setTimeout(() => {
+        cashOutTimerRef.current = null;
+        setCashingOut(false);
+      }, 460);
+    }, 480);
   }, [cashingOut, onCashOut, position]);
 
   const gaugePercent = position
@@ -1394,6 +1395,7 @@ function MarketCard({
       ) : null}
 
       <motion.article
+        layout
         drag={hasPosition ? false : "x"}
         dragConstraints={{
           left: -(MAX_DRAG_PX + COMBO_OVERDRAG_PX),
@@ -1403,7 +1405,10 @@ function MarketCard({
         dragDirectionLock
         dragMomentum={false}
         animate={{ scale: cardPressed || dragging ? 0.97 : 1 }}
-        transition={{ type: "spring", stiffness: 480, damping: 36 }}
+        transition={{
+          layout: { duration: 0.48, ease: [0.22, 1, 0.36, 1] },
+          scale: { type: "spring", stiffness: 480, damping: 36 },
+        }}
         style={{ x, touchAction: "pan-y" }}
         onPointerDown={(event) => {
           const target = event.target as HTMLElement | null;
@@ -1491,11 +1496,11 @@ function MarketCard({
         className={`relative touch-pan-y overflow-hidden rounded-[28px] will-change-transform ${
           chrome
             ? "flex min-h-[504px] flex-col bg-black px-5 pb-6 pt-5 text-white"
-            : hasPosition
+            : hasPosition || cashingOut
               ? "flex min-h-[420px] flex-col bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
               : "bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
         } ${
-          hasPosition
+          hasPosition || cashingOut
             ? "cursor-default"
             : dragging
               ? "cursor-grabbing"
@@ -1507,12 +1512,25 @@ function MarketCard({
         ) : market.backdrop ? (
           <MarketImageBg src={market.backdrop} />
         ) : null}
-        {useAtmosphere ? (
-          <MarketCardAtmosphere
-            variant={atmosphereVariant}
-            tone={immersive ? "media" : "light"}
-          />
-        ) : null}
+        <AnimatePresence>
+          {useAtmosphere || cashingOut ? (
+            <motion.div
+              key={`atmosphere-${market.id}`}
+              className="pointer-events-none absolute inset-0 z-[1]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: cashingOut ? 0 : 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <MarketCardAtmosphere
+                variant={
+                  position ? atmosphereVariant : lastAtmosphereRef.current
+                }
+                tone={immersive ? "media" : "light"}
+              />
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
 
         {sizeDeltaFlash && sizeDeltaFlash.amount !== 0 ? (
           <div
@@ -1567,11 +1585,12 @@ function MarketCard({
         ) : !hasPosition ? (
           <motion.div
             className="relative z-[2] mb-2 mt-6"
-            initial={false}
+            initial={{ opacity: 0, y: 10 }}
             animate={{
               opacity: sizeDeltaFlash && sizeDeltaFlash.amount !== 0 ? 0 : 1,
+              y: 0,
             }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           >
             <ChanceGauge percent={gaugePercent} />
           </motion.div>
@@ -1581,10 +1600,14 @@ function MarketCard({
           {position ? (
             <motion.div
               key={`position-${position.marketId}`}
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -12, scale: 0.98 }}
-              transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+              initial={{ opacity: 0, y: 16, scale: 0.98 }}
+              animate={{
+                opacity: cashingOut ? 0 : 1,
+                y: cashingOut ? 14 : 0,
+                scale: cashingOut ? 0.96 : 1,
+              }}
+              exit={{ opacity: 0, y: 12, scale: 0.97 }}
+              transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
               className={
                 chrome || hasPosition
                   ? "relative z-[2] mt-auto flex min-h-0 flex-1 flex-col"
@@ -1598,9 +1621,10 @@ function MarketCard({
                 canIncrease={balance >= POSITION_ADJUST_STEP}
                 cashingOut={cashingOut}
                 stickerReady={stickerReady}
-                stickerFaded={Boolean(
-                  sizeDeltaFlash && sizeDeltaFlash.amount !== 0,
-                )}
+                stickerFaded={
+                  cashingOut ||
+                  Boolean(sizeDeltaFlash && sizeDeltaFlash.amount !== 0)
+                }
                 onCashOut={startCashOut}
                 onAdjust={handleAdjust}
                 className={hasPosition || chrome ? "mt-0" : undefined}
@@ -1609,10 +1633,10 @@ function MarketCard({
           ) : (
             <motion.div
               key="trade-actions"
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+              initial={{ opacity: 0, y: 18, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.98 }}
+              transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
             >
               <div
                 className={`relative z-[2] grid grid-cols-2 gap-2.5 ${

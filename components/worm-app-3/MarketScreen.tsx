@@ -22,9 +22,11 @@ import {
   WORD_DURATION,
   WORD_STAGGER,
 } from "@/components/StreamingWords";
+import { MarketCardAtmosphere } from "./MarketCardAtmosphere";
 import {
   PositionFooter,
   POSITION_ADJUST_STEP,
+  cashOutValue,
   type PlacedPosition,
 } from "./PositionFooter";
 
@@ -129,12 +131,15 @@ function ContextStream({
   sheetOpenedAt,
   animate,
   onAnimated,
+  onComplete,
 }: {
   text: string;
   sheetOpenedAt: number;
   /** False when returning from Context — show text immediately. */
   animate: boolean;
   onAnimated?: () => void;
+  /** Fires after the last word finishes animating in. */
+  onComplete?: () => void;
 }) {
   // Lock for this mount so parent flipping `animate` mid-stream can't remount us.
   const shouldAnimate = useRef(animate).current;
@@ -142,10 +147,13 @@ function ContextStream({
   const [play, setPlay] = useState(!shouldAnimate);
   const onAnimatedRef = useRef(onAnimated);
   onAnimatedRef.current = onAnimated;
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     if (!shouldAnimate) {
       setPlay(true);
+      onCompleteRef.current?.();
       return;
     }
     setPlay(false);
@@ -153,13 +161,19 @@ function ContextStream({
     const now =
       typeof performance !== "undefined" ? performance.now() : Date.now();
     const wait = Math.max(40, Math.max(0, 450 - (now - sheetOpenedAt)));
+    const streamMs =
+      (Math.max(0, words.length - 1) * WORD_STAGGER + WORD_DURATION) * 1000;
     const startId = window.setTimeout(() => {
       setPlay(true);
       // Remember for the next mount (e.g. back from Context) — don't remount this one.
       onAnimatedRef.current?.();
     }, wait);
+    const completeId = window.setTimeout(() => {
+      onCompleteRef.current?.();
+    }, wait + streamMs);
     return () => {
       window.clearTimeout(startId);
+      window.clearTimeout(completeId);
     };
   }, [shouldAnimate, sheetOpenedAt, text, words.length]);
 
@@ -227,70 +241,54 @@ function AiOverview({
   const [revealId, setRevealId] = useState(0);
   // Keep the streaming instance mounted even after parent marks overviewStreamed.
   const holdingStreamRef = useRef(false);
+  const [ctaReady, setCtaReady] = useState(!animate);
 
   useEffect(() => {
     if (loading) {
       holdingStreamRef.current = false;
+      setCtaReady(false);
       return;
     }
-    if (!text || !animate) return;
+    if (!text) {
+      setCtaReady(false);
+      return;
+    }
+    if (!animate) {
+      setCtaReady(true);
+      return;
+    }
     holdingStreamRef.current = true;
+    setCtaReady(false);
     setRevealId((id) => id + 1);
   }, [animate, loading, text]);
 
   if (loading) {
     return (
-      <div
-        className="mt-6 w-full rounded-[24px] bg-black/[0.045] px-4 py-3.5"
-        aria-busy
-        aria-label="Loading context"
-      >
-        <div className="flex items-center justify-between gap-3">
-          <div className="h-[15px] w-[72px] animate-pulse rounded-full bg-black/[0.08]" />
-          <div className="size-[18px] animate-pulse rounded-full bg-black/[0.06]" />
-        </div>
-        <div className="mt-3 space-y-1.5" aria-hidden>
+      <div className="mt-4" aria-busy aria-label="Loading context">
+        <div className="space-y-1.5" aria-hidden>
           <div className="h-3.5 w-full animate-pulse rounded-full bg-black/[0.07]" />
           <div className="h-3.5 w-[96%] animate-pulse rounded-full bg-black/[0.07]" />
           <div className="h-3.5 w-[88%] animate-pulse rounded-full bg-black/[0.06]" />
           <div className="h-3.5 w-[64%] animate-pulse rounded-full bg-black/[0.05]" />
         </div>
+        <div className="mt-3 h-[15px] w-[96px] animate-pulse rounded-full bg-black/[0.06]" />
       </div>
     );
   }
 
-  if (!text) return null;
+  if (!text) {
+    return (
+      <p className="mt-4 text-[14px] leading-relaxed text-black/45">
+        No context yet
+      </p>
+    );
+  }
 
   const playStream = holdingStreamRef.current || animate;
 
   return (
-    <button
-      type="button"
-      aria-label="Context"
-      disabled={!onOpen}
-      onClick={onOpen}
-      className="mt-6 w-full rounded-[24px] bg-black/[0.045] px-4 py-3.5 text-left transition-[transform,background-color] duration-150 ease-out active:scale-[0.985] disabled:active:scale-100"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-[15px] font-semibold text-black">Context</p>
-        <svg
-          viewBox="0 0 20 20"
-          width={18}
-          height={18}
-          className="size-[18px] shrink-0 text-black/35"
-          fill="none"
-          aria-hidden
-        >
-          <path
-            d="M7.5 4.5 13 10l-5.5 5.5"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </div>
-      <p className="mt-2 max-h-[5.25rem] overflow-hidden text-[15px] leading-snug text-black/65">
+    <div className="mt-4">
+      <p className="text-[15px] leading-snug text-black/65">
         {playStream ? (
           revealId > 0 ? (
             <ContextStream
@@ -299,13 +297,35 @@ function AiOverview({
               sheetOpenedAt={sheetOpenedAtRef.current}
               animate
               onAnimated={onAnimated}
+              onComplete={() => setCtaReady(true)}
             />
           ) : null
         ) : (
           text
         )}
       </p>
-    </button>
+      {onOpen ? (
+        <AnimatePresence>
+          {ctaReady ? (
+            <motion.div
+              key="dive-deeper"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 4 }}
+              transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <button
+                type="button"
+                onClick={onOpen}
+                className="mt-4 flex h-[52px] w-full items-center justify-center rounded-[18px] bg-black/[0.06] text-[16px] font-semibold text-black transition-transform duration-150 ease-out active:scale-[0.94]"
+              >
+                Dive deeper
+              </button>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      ) : null}
+    </div>
   );
 }
 
@@ -792,7 +812,7 @@ export default function MarketScreen({
   onCashOut?: (position: PlacedPosition) => void;
   onAdjustPosition?: (marketId: string, delta: number) => number;
 }) {
-  const [tab, setTab] = useState<"comments" | "rules">("comments");
+  const [tab, setTab] = useState<"context" | "comments" | "rules">("context");
   const [sheetPage, setSheetPage] = useState<"main" | "context">("main");
   const [cashingOut, setCashingOut] = useState(false);
   const cashOutTimerRef = useRef<number | null>(null);
@@ -975,6 +995,11 @@ export default function MarketScreen({
   const [livePositionPercent, setLivePositionPercent] = useState(
     positionPercent,
   );
+  const atmosphereVariant =
+    position &&
+    cashOutValue(position, livePositionPercent) >= position.stake
+      ? "green"
+      : "red";
 
   useEffect(() => {
     setLivePositionPercent(positionPercent);
@@ -1144,10 +1169,16 @@ export default function MarketScreen({
         className={`relative z-[1] flex w-full max-w-[430px] flex-col overflow-hidden rounded-t-[28px] bg-white pb-[max(12px,env(safe-area-inset-bottom,0px))] text-black shadow-[0_-12px_40px_rgba(0,0,0,0.12)] ${allo.className}`}
         style={{ height: SHEET_HEIGHT, maxHeight: SHEET_HEIGHT }}
       >
-        <div className="absolute inset-x-0 top-0 z-[3] rounded-t-[28px] pt-1.5">
+        {position ? (
+          <MarketCardAtmosphere
+            variant={atmosphereVariant}
+            tone="light"
+          />
+        ) : null}
+        <div className="absolute inset-x-0 top-0 z-[3] rounded-t-[28px] pt-1">
           <div
             data-sheet-handle
-            className="flex touch-none justify-center px-8 pb-3 pt-2"
+            className="flex touch-none justify-center px-8 pb-1.5 pt-1"
             aria-hidden
             onPointerDown={(event) => {
               event.stopPropagation();
@@ -1158,7 +1189,7 @@ export default function MarketScreen({
           </div>
           <header
             data-sheet-handle
-            className="flex touch-none items-center justify-between px-4 pt-0.5"
+            className="flex touch-none items-center justify-between px-4"
           >
             <button
               type="button"
@@ -1221,7 +1252,7 @@ export default function MarketScreen({
 
         <div
           ref={scrollRef}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-y-none px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-[58px] [overscroll-behavior-y:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-none px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-[52px] [overscroll-behavior-y:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
         <AnimatePresence mode="wait" initial={false}>
         {sheetPage === "context" ? (
@@ -1374,17 +1405,6 @@ export default function MarketScreen({
           </div>
         )}
 
-        <AiOverview
-          text={overview}
-          loading={overviewLoading}
-          animate={!overviewStreamed}
-          onAnimated={() => setOverviewStreamed(true)}
-          onOpen={() => {
-            setOverviewStreamed(true);
-            setSheetPage("context");
-          }}
-        />
-
         {/* Odds chart — sports matchups only */}
         {market.kind === "sports" && left && right ? (
           <div className="mt-7">
@@ -1408,42 +1428,87 @@ export default function MarketScreen({
             onCashOut={startCashOut}
             onAdjust={(delta) => onAdjustPosition?.(position.marketId, delta)}
           />
+        ) : isLive ? (
+          <div className="mt-6 flex flex-col gap-2">
+            {pick.options.map((option) => (
+              <div key={option.id} className="flex items-center gap-3">
+                <Emblem
+                  logo={option.logo}
+                  mark={option.mark}
+                  label={option.label}
+                  size={28}
+                />
+                <p className="min-w-0 flex-1 truncate text-[15px] font-semibold text-black">
+                  {option.label}
+                </p>
+                <p className="shrink-0 text-[15px] font-semibold tabular-nums text-black/45">
+                  {option.percent}%
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onTrade ? onTrade(option) : onToggle(option)
+                  }
+                  className="h-10 shrink-0 rounded-full px-3.5 text-[14px] font-semibold tabular-nums text-white transition-transform duration-150 ease-out active:scale-[0.94]"
+                  style={{ backgroundColor: option.color }}
+                  aria-label={`Trade ${option.label} at ${cents(option.percent)}`}
+                >
+                  {cents(option.percent)}
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : pick.options.length === 2 ? (
+          <div className="mt-6 flex items-center gap-2">
+            {(() => {
+              const left = pick.options[0]!;
+              const right = pick.options[1]!;
+              const leftSelected = selectedIds.has(left.id);
+              const rightSelected = selectedIds.has(right.id);
+              return (
+                <>
+                  <ComboAddButton
+                    selected={leftSelected}
+                    blocked={!leftSelected && atLimit}
+                    label={left.label}
+                    onToggle={() => onToggle(left)}
+                  />
+                  {[left, right].map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      aria-label={`Trade ${option.label} · ${option.percent}%`}
+                      onClick={() => onTrade?.(option)}
+                      className="relative flex h-[52px] min-w-0 flex-1 origin-center items-center justify-between overflow-hidden rounded-[18px] bg-black/[0.06] px-3 text-left transition-transform duration-150 ease-out active:scale-[0.94]"
+                    >
+                      <div
+                        aria-hidden
+                        className="absolute inset-y-0 left-0 bg-black/[0.12]"
+                        style={{ width: `${option.percent}%` }}
+                      />
+                      <span className="relative z-[1] truncate text-[16px] font-semibold text-black">
+                        {option.label}
+                      </span>
+                      <span className="relative z-[1] shrink-0 text-[16px] font-semibold tabular-nums text-black">
+                        {option.percent}%
+                      </span>
+                    </button>
+                  ))}
+                  <ComboAddButton
+                    selected={rightSelected}
+                    blocked={!rightSelected && atLimit}
+                    label={right.label}
+                    onToggle={() => onToggle(right)}
+                  />
+                </>
+              );
+            })()}
+          </div>
         ) : (
           <div className="mt-6 flex flex-col gap-2">
             {pick.options.map((option) => {
               const selected = selectedIds.has(option.id);
               const blocked = !selected && atLimit;
-
-              if (isLive) {
-                return (
-                  <div key={option.id} className="flex items-center gap-3">
-                    <Emblem
-                      logo={option.logo}
-                      mark={option.mark}
-                      label={option.label}
-                      size={28}
-                    />
-                    <p className="min-w-0 flex-1 truncate text-[15px] font-semibold text-black">
-                      {option.label}
-                    </p>
-                    <p className="shrink-0 text-[15px] font-semibold tabular-nums text-black/45">
-                      {option.percent}%
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onTrade ? onTrade(option) : onToggle(option)
-                      }
-                      className="h-10 shrink-0 rounded-full px-3.5 text-[14px] font-semibold tabular-nums text-white transition-transform duration-150 ease-out active:scale-[0.94]"
-                      style={{ backgroundColor: option.color }}
-                      aria-label={`Trade ${option.label} at ${cents(option.percent)}`}
-                    >
-                      {cents(option.percent)}
-                    </button>
-                  </div>
-                );
-              }
-
               return (
                 <div
                   key={option.id}
@@ -1494,6 +1559,7 @@ export default function MarketScreen({
             <div className="flex gap-5">
               {(
                 [
+                  ["context", "Context"],
                   ["comments", "Comments"],
                   ["rules", "Rules"],
                 ] as const
@@ -1529,7 +1595,18 @@ export default function MarketScreen({
           </LayoutGroup>
         </div>
 
-        {tab === "comments" ? (
+        {tab === "context" ? (
+          <AiOverview
+            text={overview}
+            loading={overviewLoading}
+            animate={!overviewStreamed}
+            onAnimated={() => setOverviewStreamed(true)}
+            onOpen={() => {
+              setOverviewStreamed(true);
+              setSheetPage("context");
+            }}
+          />
+        ) : tab === "comments" ? (
           <div className="mt-4 flex flex-col gap-4">
             <div className="flex h-11 items-center rounded-full bg-black/[0.05] px-4 text-[14px] text-black/35">
               Sign in to comment
