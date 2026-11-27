@@ -1400,7 +1400,7 @@ export default function TradeFlowModal({
         }
         @keyframes trade-confirm-morph {
           from { left: var(--confirm-x); top: var(--confirm-y); width: var(--confirm-width); border-radius: 18px; }
-          35% { top: var(--confirm-y); width: 52px; border-radius: 26px; }
+          to { left: 50%; top: 50%; width: 52px; border-radius: 26px; }
         }
         .trade-confirm-spinner {
           animation: trade-confirm-spin 700ms linear infinite;
