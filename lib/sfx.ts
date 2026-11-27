@@ -1,7 +1,15 @@
-type Env = { attack: number; decay: number; peak: number; offset?: number };
+type Env = {
+  attack: number;
+  decay: number;
+  peak: number;
+  offset?: number;
+  linearAttack?: boolean;
+  endGain?: number;
+  sweep?: { frequency: number; duration: number };
+};
 export type Layer =
-  | ({ kind: "noise"; filterType: BiquadFilterType; filterFrequency: number; filterQ: number } & Env)
-  | ({ kind: "tone"; waveform: OscillatorType; frequency: number } & Env);
+  | ({ kind: "noise"; filterType: BiquadFilterType; filterFrequency: number; filterQ: number; sustained?: boolean } & Env)
+  | ({ kind: "tone"; waveform: OscillatorType; frequency: number; lowpass?: number } & Env);
 export type Preset = { masterGain: number; layers: Layer[] };
 
 type AudioWindow = Window & {
@@ -14,6 +22,7 @@ const JITTER_HZ = 600;
 
 let ctx: AudioContext | null = null;
 let noise: AudioBuffer | null = null;
+let sustainedNoise: AudioBuffer | null = null;
 let booted = false;
 let enabled = true;
 let readStore = false;
@@ -138,12 +147,26 @@ function noiseBuffer(c: AudioContext) {
   return buf;
 }
 
-function envelope(g: GainNode, t: number, attack: number, decay: number, peak: number) {
+function fullNoiseBuffer(c: AudioContext) {
+  if (sustainedNoise) return sustainedNoise;
+  sustainedNoise = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
+  const data = sustainedNoise.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  return sustainedNoise;
+}
+
+function envelope(g: GainNode, t: number, { attack, decay, peak, linearAttack, endGain = 0.001 }: Env) {
   const a = Math.max(0.001, attack);
   const d = Math.max(0.001, decay);
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak), t + a);
-  g.gain.exponentialRampToValueAtTime(0.001, t + a + d);
+  if (linearAttack) g.gain.linearRampToValueAtTime(peak, t + a);
+  else g.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak), t + a);
+  g.gain.exponentialRampToValueAtTime(endGain, t + a + d);
+}
+
+function setFrequency(param: AudioParam, frequency: number, t: number, sweep?: Env["sweep"]) {
+  param.setValueAtTime(frequency, t);
+  if (sweep) param.exponentialRampToValueAtTime(sweep.frequency, t + sweep.duration);
 }
 
 export function playPreset(preset: Preset) {
@@ -161,25 +184,33 @@ export function playPreset(preset: Preset) {
       for (const layer of preset.layers) {
         const t = t0 + (layer.offset ?? 0);
         const g = c.createGain();
-        envelope(g, t, layer.attack, layer.decay, layer.peak);
+        envelope(g, t, layer);
         const stopAt = t + layer.attack + layer.decay + 0.02;
         if (layer.kind === "noise") {
           const src = c.createBufferSource();
-          src.buffer = noiseBuffer(c);
+          src.buffer = layer.sustained ? fullNoiseBuffer(c) : noiseBuffer(c);
+          src.loop = Boolean(layer.sustained);
           const f = c.createBiquadFilter();
           f.type = layer.filterType;
-          f.frequency.value = layer.filterFrequency;
+          setFrequency(f.frequency, layer.filterFrequency, t, layer.sweep);
           f.Q.value = layer.filterQ;
           src.connect(f);
           f.connect(g);
           g.connect(master);
-          src.start(t);
+          src.start(t, layer.sustained ? Math.random() * 1.5 : 0);
           src.stop(stopAt);
         } else {
           const osc = c.createOscillator();
           osc.type = layer.waveform;
-          osc.frequency.value = layer.frequency;
-          osc.connect(g);
+          setFrequency(osc.frequency, layer.frequency, t, layer.sweep);
+          if (layer.lowpass) {
+            const filter = c.createBiquadFilter();
+            filter.type = "lowpass";
+            filter.frequency.value = layer.lowpass;
+            osc.connect(filter).connect(g);
+          } else {
+            osc.connect(g);
+          }
           g.connect(master);
           osc.start(t);
           osc.stop(stopAt);

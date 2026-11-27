@@ -148,6 +148,15 @@ const FEED_CATEGORIES: FeedCategory[] = [
 
 const MARKETS: Market[] = [
   {
+    id: "margaret-qualley-bond",
+    category: "Film",
+    topic: "culture",
+    question: "Will Margaret Qualley star as a Bond girl alongside Robert Pattinson?",
+    thumb: "/worm-app-3/bg/margaret-qualley.png",
+    backdrop: "/worm-app-3/bg/margaret-qualley.png",
+    yesPercent: 50,
+  },
+  {
     id: "nvidia-ceo",
     category: "Tech",
     topic: "tech",
@@ -1057,6 +1066,7 @@ function MarketCard({
   const lastOutcomeRef = useRef<Outcome | null>(null);
   const lastComboArmedRef = useRef(false);
   const [cardPressed, setCardPressed] = useState(false);
+  const cardTapRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
 
   useEffect(() => {
     setLivePositionPercent(clampLivePercent(positionPercent, positionPercent));
@@ -1187,27 +1197,44 @@ function MarketCard({
           x,
           touchAction: "pan-y",
         }}
-        onPointerDown={(event) => {
-          const target = event.target as HTMLElement | null;
-          // Controls keep their own press scale — don't shrink the whole card.
-          if (target?.closest("button, a, input, [data-no-card-tap]")) {
-            setCardPressed(false);
-            return;
-          }
-          setCardPressed(true);
-        }}
-        onPointerUp={() => setCardPressed(false)}
-        onPointerCancel={() => setCardPressed(false)}
-        onPointerLeave={() => {
-          if (!dragging) setCardPressed(false);
-        }}
-        onTap={(event) => {
-          if (dragging) return;
-          const target = event.target as HTMLElement | null;
-          // Yes/No, unmute, cash out, etc. stay independent of card open.
-          if (target?.closest("button, a, input, [data-no-card-tap]")) return;
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget || event.repeat) return;
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
           hapticTap();
           onOpenMarket(market);
+        }}
+        onPointerDown={(event) => {
+          if (!event.isPrimary || event.button !== 0) return;
+          const target = event.target as Element;
+          // Controls keep their own press scale — don't shrink the whole card.
+          if (target.closest("button, a, input, [data-no-card-tap]")) return;
+          cardTapRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+          event.currentTarget.setPointerCapture(event.pointerId);
+          setCardPressed(true);
+        }}
+        onPointerMove={(event) => {
+          const tap = cardTapRef.current;
+          if (tap?.pointerId !== event.pointerId) return;
+          if (Math.hypot(event.clientX - tap.x, event.clientY - tap.y) > 10) {
+            cardTapRef.current = null;
+            setCardPressed(false);
+          }
+        }}
+        onPointerUp={(event) => {
+          const tap = cardTapRef.current;
+          if (tap?.pointerId !== event.pointerId) return;
+          cardTapRef.current = null;
+          setCardPressed(false);
+          if (Math.hypot(event.clientX - tap.x, event.clientY - tap.y) > 10) return;
+          hapticTap();
+          onOpenMarket(market);
+        }}
+        onLostPointerCapture={(event) => {
+          if (cardTapRef.current?.pointerId !== event.pointerId) return;
+          cardTapRef.current = null;
+          setCardPressed(false);
         }}
         onDragStart={() => {
           if (hasPosition) return;

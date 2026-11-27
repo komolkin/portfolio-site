@@ -28,6 +28,7 @@ import {
   outcomeStickerToneFromLabel,
 } from "@/components/worm-app-3/OutcomeSticker";
 import { SHEET_BACKDROP_ENTER_SECONDS, SHEET_ENTER_SPRING } from "@/components/worm-app-3/sheetMotion";
+import { playTradeConfirm, playTradeSuccess } from "@/components/worm-app-3/tradeSounds";
 
 const SUCCESS_GLIMM_YES = accentPair("#1DB954", "#6B4EFF");
 const SUCCESS_GLIMM_NO = accentPair("#FF3B5C", "#6B4EFF");
@@ -589,6 +590,7 @@ export default function TradeFlowModal({
 
   const submitTrade = () => {
     if (confirmingRef.current || !amountValid) return;
+    if (useMarketSheetMotion) playTradeConfirm();
     const finalAmount = amount;
     const finalShares = entryPrice > 0 ? finalAmount / entryPrice : 0;
     const caption = takeMessage.trim() || null;
@@ -622,6 +624,7 @@ export default function TradeFlowModal({
     };
 
     const revealSuccess = () => {
+      if (useMarketSheetMotion) playTradeSuccess();
       confirmingRef.current = false;
       setConfirmOrigin(null);
       setCompleted({ trade, position });
