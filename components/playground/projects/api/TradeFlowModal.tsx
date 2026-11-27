@@ -7,7 +7,6 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import confetti from "canvas-confetti";
 import NumberFlow from "@number-flow/react";
 import { accentPair } from "glimm";
 import { GlimmScope, type GlimmScopeHandle } from "glimm/react";
@@ -35,117 +34,6 @@ const QUICK_AMOUNTS = [5, 25, 100] as const;
 const nfMaskStyle = {
   ["--number-flow-mask-height" as string]: "0em",
 } as const;
-
-const CONFETTI_COLORS_LIGHT = [
-  "#1DB954",
-  "#6B4EFF",
-  "#FF3B5C",
-  "#111111",
-  "#FFD60A",
-  "#00C2FF",
-  "#FF8A3D",
-];
-
-const CONFETTI_COLORS_DARK = [
-  "#00D54B",
-  "#8B7CFF",
-  "#FF5C7A",
-  "#FFFFFF",
-  "#FFD60A",
-  "#5AD8FF",
-  "#FF9B57",
-];
-
-function SuccessConfetti({ light }: { light: boolean }) {
-  const hostRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const host = hostRef.current;
-    if (!host) return;
-
-    const canvas = document.createElement("canvas");
-    canvas.setAttribute("aria-hidden", "true");
-    Object.assign(canvas.style, {
-      position: "absolute",
-      inset: "0",
-      width: "100%",
-      height: "100%",
-      pointerEvents: "none",
-    });
-    host.appendChild(canvas);
-
-    const fire = confetti.create(canvas, {
-      resize: true,
-      disableForReducedMotion: true,
-    });
-    const colors = light ? CONFETTI_COLORS_LIGHT : CONFETTI_COLORS_DARK;
-    const base = {
-      colors,
-      disableForReducedMotion: true as const,
-      gravity: 0.95,
-      scalar: 0.92,
-      ticks: 240,
-      drift: 0.4,
-    };
-
-    // Spawn above the top edge so pieces enter from the sheet rim (no gap).
-    const top = -0.08;
-    void fire({
-      ...base,
-      particleCount: 70,
-      angle: 270,
-      spread: 110,
-      startVelocity: 28,
-      origin: { x: 0.5, y: top },
-    });
-    void fire({
-      ...base,
-      particleCount: 36,
-      angle: 295,
-      spread: 62,
-      startVelocity: 32,
-      origin: { x: 0.12, y: top },
-    });
-    void fire({
-      ...base,
-      particleCount: 36,
-      angle: 245,
-      spread: 62,
-      startVelocity: 32,
-      origin: { x: 0.88, y: top },
-    });
-
-    const end = Date.now() + 1400;
-    let raf = 0;
-    const shower = () => {
-      void fire({
-        ...base,
-        particleCount: 3,
-        angle: 270,
-        spread: 64,
-        startVelocity: 16 + Math.random() * 10,
-        origin: { x: 0.12 + Math.random() * 0.76, y: -0.1 },
-      });
-      if (Date.now() < end) raf = window.requestAnimationFrame(shower);
-    };
-    raf = window.requestAnimationFrame(shower);
-
-    return () => {
-      window.cancelAnimationFrame(raf);
-      fire.reset();
-      canvas.remove();
-    };
-  }, [light]);
-
-  return (
-    <div
-      ref={hostRef}
-      className="pointer-events-none absolute inset-x-0 top-0 bottom-0 z-[6] overflow-hidden rounded-[inherit]"
-      aria-hidden
-    />
-  );
-}
 
 const WIN_SPARKLES = [
   { top: "2%", left: "4%", size: 12, delay: "0ms", color: "#FFFFFF" },
@@ -1005,7 +893,6 @@ export default function TradeFlowModal({
               : `radial-gradient(140% 66% at 50% 100%, rgba(${glowCss}, 0.72) 0%, rgba(${glowCss}, 0.3) 42%, rgba(${glowCss}, 0) 80%)`,
           }}
         />
-        {success ? <SuccessConfetti light={light} /> : null}
         <div
           className={`relative flex shrink-0 touch-none flex-col px-5 pb-1 pt-2 transition-opacity duration-200 ${
             success && !light ? "pointer-events-none opacity-0" : ""

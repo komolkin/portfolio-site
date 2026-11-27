@@ -11,6 +11,7 @@ import {
   AnimatePresence,
   LayoutGroup,
   motion,
+  useAnimationControls,
   useDragControls,
   type PanInfo,
 } from "framer-motion";
@@ -453,8 +454,11 @@ function ContextNewsList({
   );
 }
 
-const DISMISS_OFFSET_PX = 100;
-const DISMISS_VELOCITY = 650;
+const DISMISS_OFFSET_PX = 80;
+const DISMISS_VELOCITY = 520;
+const BACK_OFFSET_PX = 72;
+const BACK_VELOCITY = 480;
+const SHEET_HEIGHT = "86%";
 
 /** Endpoint coords for Figma chart paths (viewBox 259×132). */
 const CHART_END_A = { x: 257.9, y: 1.35 };
@@ -793,7 +797,9 @@ export default function MarketScreen({
   const [cashingOut, setCashingOut] = useState(false);
   const cashOutTimerRef = useRef<number | null>(null);
   const dragControls = useDragControls();
+  const sheetControls = useAnimationControls();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const dismissingRef = useRef(false);
   const teamOptions = useMemo(
     () =>
       pick.options.filter(
@@ -975,32 +981,80 @@ export default function MarketScreen({
         setSheetPage("main");
         return;
       }
-      onBack();
+      if (dismissingRef.current) return;
+      dismissingRef.current = true;
+      void sheetControls
+        .start({
+          y: "110%",
+          transition: {
+            type: "spring",
+            stiffness: 420,
+            damping: 38,
+            mass: 0.85,
+          },
+        })
+        .then(() => onBack());
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onBack, sheetPage]);
+  }, [onBack, sheetControls, sheetPage]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
   }, [sheetPage]);
 
-  const onDragEnd = (_: unknown, info: PanInfo) => {
+  useEffect(() => {
+    void sheetControls.start({ y: 0 });
+  }, [sheetControls]);
+
+  const dismissSheet = () => {
+    if (dismissingRef.current) return;
+    dismissingRef.current = true;
+    void sheetControls
+      .start({
+        y: "110%",
+        transition: { type: "spring", stiffness: 420, damping: 38, mass: 0.85 },
+      })
+      .then(() => onBack());
+  };
+
+  const onSheetDragEnd = (_: unknown, info: PanInfo) => {
+    if (dismissingRef.current) return;
     if (
       info.offset.y > DISMISS_OFFSET_PX ||
       info.velocity.y > DISMISS_VELOCITY
     ) {
-      onBack();
+      dismissSheet();
+      return;
+    }
+    void sheetControls.start({
+      y: 0,
+      transition: { type: "spring", stiffness: 480, damping: 36 },
+    });
+  };
+
+  const onContextDragEnd = (_: unknown, info: PanInfo) => {
+    if (
+      info.offset.x > BACK_OFFSET_PX ||
+      info.velocity.x > BACK_VELOCITY
+    ) {
+      setSheetPage("main");
     }
   };
 
   const startSheetDrag = (event: ReactPointerEvent) => {
+    if (dismissingRef.current) return;
     const target = event.target as HTMLElement;
     if (target.closest("button, input, textarea, a, [data-no-sheet-drag]")) {
       return;
     }
+    // Always allow drag from the grab handle / top chrome.
+    if (target.closest("[data-sheet-handle]")) {
+      dragControls.start(event);
+      return;
+    }
     const scroller = scrollRef.current;
-    if (scroller && scroller.scrollTop > 0) return;
+    if (scroller && scroller.scrollTop > 2) return;
     dragControls.start(event);
   };
 
@@ -1016,34 +1070,44 @@ export default function MarketScreen({
         type="button"
         aria-label="Close market"
         className="absolute inset-0 bg-black/35"
-        onClick={onBack}
+        onClick={dismissSheet}
       />
       <motion.div
         role="dialog"
         aria-modal="true"
         aria-label={pick.title}
         initial={{ y: "100%" }}
-        animate={{ y: 0 }}
+        animate={sheetControls}
         exit={{ y: "100%" }}
         transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.9 }}
         drag="y"
         dragControls={dragControls}
         dragListener={false}
         dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={{ top: 0, bottom: 0.55 }}
-        onDragEnd={onDragEnd}
+        dragElastic={{ top: 0, bottom: 0.65 }}
+        dragMomentum={false}
+        onDragEnd={onSheetDragEnd}
         onPointerDown={startSheetDrag}
-        className={`relative z-[1] flex h-[96%] max-h-[96%] w-full max-w-[430px] flex-col overflow-hidden rounded-t-[28px] bg-white pb-[max(12px,env(safe-area-inset-bottom,0px))] text-black shadow-[0_-12px_40px_rgba(0,0,0,0.12)] ${allo.className}`}
+        className={`relative z-[1] flex w-full max-w-[430px] flex-col overflow-hidden rounded-t-[28px] bg-white pb-[max(12px,env(safe-area-inset-bottom,0px))] text-black shadow-[0_-12px_40px_rgba(0,0,0,0.12)] ${allo.className}`}
+        style={{ height: SHEET_HEIGHT, maxHeight: SHEET_HEIGHT }}
       >
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-[3] rounded-t-[28px] pt-2.5">
-          <div className="flex touch-none justify-center pb-1" aria-hidden>
-            <span className="h-1 w-10 rounded-full bg-black/15" />
+        <div className="absolute inset-x-0 top-0 z-[3] rounded-t-[28px] pt-1.5">
+          <div
+            data-sheet-handle
+            className="flex touch-none justify-center px-8 pb-1.5 pt-1"
+            aria-hidden
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              dragControls.start(event);
+            }}
+          >
+            <span className="h-1.5 w-11 rounded-full bg-black/15" />
           </div>
-          <header className="pointer-events-auto flex items-center justify-between px-4 pt-1">
+          <header className="flex items-center justify-between px-4 pt-0.5">
             <button
               type="button"
               onClick={() =>
-                sheetPage === "context" ? setSheetPage("main") : onBack()
+                sheetPage === "context" ? setSheetPage("main") : dismissSheet()
               }
               aria-label={sheetPage === "context" ? "Back to market" : "Back"}
               className="flex size-10 items-center justify-center rounded-full bg-black/[0.06] text-black backdrop-blur-md"
@@ -1107,11 +1171,24 @@ export default function MarketScreen({
         {sheetPage === "context" ? (
           <motion.div
             key="context-page"
-            initial={{ opacity: 0, x: 28 }}
+            initial={{ opacity: 0, x: "42%" }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 18 }}
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, x: "28%" }}
+            transition={{ type: "spring", stiffness: 420, damping: 38, mass: 0.85 }}
+            drag="x"
+            dragDirectionLock
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={{ left: 0.04, right: 0.72 }}
+            dragMomentum={false}
+            onDragEnd={onContextDragEnd}
+            className="relative min-h-full touch-pan-y"
           >
+            {/* iOS-style left-edge affordance for swipe-back */}
+            <div
+              aria-hidden
+              className="absolute inset-y-0 left-0 z-[2] w-4"
+              data-no-sheet-drag
+            />
             <p className="mt-5 text-[28px] font-semibold leading-tight tracking-[-0.02em] text-black">
               Context
             </p>
