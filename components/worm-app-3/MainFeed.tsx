@@ -40,6 +40,7 @@ import {
   type ComboSheetPick,
 } from "./ComboSheet";
 import MarketScreen, {
+  MARKET_SHEET_HEIGHT,
   type MarketScreenMarket,
   type MarketScreenOption,
   type MarketScreenPick,
@@ -2484,6 +2485,7 @@ export default function MainFeed() {
             referralCode="worm"
             maxAmount={Math.max(MAX_BET, balance)}
             theme="light"
+            sheetHeight={MARKET_SHEET_HEIGHT}
             onClose={closeTrade}
             onComplete={(trade) => {
               const outcome: Outcome =

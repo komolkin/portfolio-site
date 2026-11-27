@@ -478,7 +478,7 @@ const DISMISS_OFFSET_PX = 52;
 const DISMISS_VELOCITY = 360;
 const BACK_OFFSET_PX = 72;
 const BACK_VELOCITY = 480;
-const SHEET_HEIGHT = "92%";
+export const MARKET_SHEET_HEIGHT = "92%";
 
 /** Endpoint coords for Figma chart paths (viewBox 259×132). */
 const CHART_END_A = { x: 257.9, y: 1.35 };
@@ -1082,7 +1082,7 @@ export default function MarketScreen({
         onDragEnd={onSheetDragEnd}
         onPointerDown={startSheetDrag}
         className={`relative z-[1] flex w-full max-w-[430px] flex-col overflow-hidden rounded-t-[28px] bg-white pb-[max(12px,env(safe-area-inset-bottom,0px))] text-black shadow-[0_-12px_40px_rgba(0,0,0,0.12)] ${allo.className}`}
-        style={{ height: SHEET_HEIGHT, maxHeight: SHEET_HEIGHT }}
+        style={{ height: MARKET_SHEET_HEIGHT, maxHeight: MARKET_SHEET_HEIGHT }}
       >
         {position ? (
           <MarketCardAtmosphere

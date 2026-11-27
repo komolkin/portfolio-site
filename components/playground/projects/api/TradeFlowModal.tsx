@@ -448,6 +448,7 @@ export default function TradeFlowModal({
   maxAmount,
   nested = false,
   theme = "dark",
+  sheetHeight,
   onClose,
   onComplete,
   onShare,
@@ -462,6 +463,7 @@ export default function TradeFlowModal({
   maxAmount: number;
   nested?: boolean;
   theme?: "dark" | "light";
+  sheetHeight?: CSSProperties["height"];
   onClose: () => void;
   onComplete: (
     trade: UserPlacedTrade,
@@ -896,14 +898,14 @@ export default function TradeFlowModal({
             : `${ui.sheet} shadow-[0_-12px_40px_rgba(0,0,0,0.45)]`
         }`}
         style={{
-          height: light
+          height: sheetHeight ?? (light
             ? "80vh"
             : success
               ? "100%"
               : step === "amount"
                 ? "auto"
-                : "88%",
-          maxHeight: light ? "80vh" : success ? undefined : "92%",
+                : "88%"),
+          maxHeight: sheetHeight ?? (light ? "80vh" : success ? undefined : "92%"),
           borderTopLeftRadius: light || !success ? "1.75rem" : 0,
           borderTopRightRadius: light || !success ? "1.75rem" : 0,
           backgroundColor: success
