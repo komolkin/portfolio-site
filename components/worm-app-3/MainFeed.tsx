@@ -1559,17 +1559,12 @@ function MarketCard({
           </div>
         </div>
 
-        {chrome ? (
+        {chrome && !position ? (
           <div
             className="pointer-events-none relative z-[2] min-h-[180px] flex-1"
             aria-hidden
           />
-        ) : hasPosition ? (
-          <div
-            className="pointer-events-none relative z-[2] min-h-[72px] flex-1"
-            aria-hidden
-          />
-        ) : (
+        ) : !hasPosition ? (
           <motion.div
             className="relative z-[2] mb-2 mt-6"
             initial={false}
@@ -1580,7 +1575,7 @@ function MarketCard({
           >
             <ChanceGauge percent={gaugePercent} />
           </motion.div>
-        )}
+        ) : null}
 
         <AnimatePresence mode="wait" initial={false}>
           {position ? (
@@ -1590,7 +1585,11 @@ function MarketCard({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -12, scale: 0.98 }}
               transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-              className={chrome || hasPosition ? "mt-auto" : undefined}
+              className={
+                chrome || hasPosition
+                  ? "relative z-[2] mt-auto flex min-h-0 flex-1 flex-col"
+                  : undefined
+              }
             >
               <PositionFooter
                 position={position}
@@ -1601,7 +1600,7 @@ function MarketCard({
                 stickerReady={stickerReady}
                 onCashOut={startCashOut}
                 onAdjust={handleAdjust}
-                className={hasPosition && !chrome ? "mt-0" : undefined}
+                className={hasPosition || chrome ? "mt-0" : undefined}
               />
             </motion.div>
           ) : (
@@ -2163,19 +2162,19 @@ function BottomNav({
         className={`${item} rounded-full bg-black/[0.06] text-black`}
       >
         <svg viewBox="0 0 24 24" width={24} height={24} fill="none" aria-hidden>
+          {/* Amicons home (round/solid) — https://amicons.design/icons/home */}
           <path
-            d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z"
             fill="currentColor"
+            d="M11.019 1.959a2 2 0 0 1 2.09.079l7.11 4.74A4 4 0 0 1 22 10.104V19.5a2.5 2.5 0 0 1-2.5 2.5H17a2.5 2.5 0 0 1-2.5-2.5V17a1 1 0 0 0-1-1h-3a1 1 0 0 0-1 1v2.5A2.5 2.5 0 0 1 7 22H4.5A2.5 2.5 0 0 1 2 19.5v-9.395a4 4 0 0 1 1.781-3.328l7.11-4.74z"
           />
         </svg>
       </button>
-      <button type="button" aria-label="Leaderboard" className={`${item} text-black/45`}>
-        <svg viewBox="0 0 24 24" width={22} height={22} fill="none" aria-hidden>
+      <button type="button" aria-label="Search" className={`${item} text-black/45`}>
+        <svg viewBox="0 0 24 24" width={24} height={24} fill="none" aria-hidden>
+          {/* Amicons magnifying-glass — https://amicons.design/icons/magnifying-glass */}
           <path
-            d="M7 21V10M12 21V3M17 21v-7"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
+            fill="currentColor"
+            d="M11 2a9 9 0 0 1 7.03 14.616l3.677 3.677.068.076a1 1 0 0 1-1.406 1.406l-.076-.068-3.677-3.677A9 9 0 1 1 11 2m0 2a7 7 0 1 0 0 14 7 7 0 0 0 0-14"
           />
         </svg>
       </button>
@@ -2188,37 +2187,21 @@ function BottomNav({
           {balanceLabel}
         </span>
       </button>
-      <button type="button" aria-label="Notifications" className={`${item} text-black/45`}>
-        <svg viewBox="0 0 24 24" width={22} height={22} fill="none" aria-hidden>
+      <button type="button" aria-label="Bookmarks" className={`${item} text-black/45`}>
+        <svg viewBox="0 0 24 24" width={24} height={24} fill="none" aria-hidden>
+          {/* Amicons bookmark (round/line) — https://amicons.design/icons/bookmark */}
           <path
-            d="M6 9a6 6 0 1 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9Z"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M10 20a2 2 0 0 0 4 0"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
+            fill="currentColor"
+            d="M18 2a4 4 0 0 1 4 4v13.046c0 2.588-3.058 3.962-4.993 2.242L12 16.838l-5.007 4.45C5.058 23.008 2 21.634 2 19.046V6a4 4 0 0 1 4-4zM6 4a2 2 0 0 0-2 2v13.046c0 .863 1.02 1.32 1.664.748l5.007-4.451a2 2 0 0 1 2.658 0l5.007 4.45c.645.574 1.664.116 1.664-.747V6a2 2 0 0 0-2-2z"
           />
         </svg>
       </button>
       <button type="button" aria-label="Profile" className={`${item} text-black/45`}>
-        <svg viewBox="0 0 24 24" width={22} height={22} fill="none" aria-hidden>
+        <svg viewBox="0 0 24 24" width={24} height={24} fill="none" aria-hidden>
+          {/* Amicons person (round/line) — https://amicons.design/icons/person */}
           <path
-            d="M18 21v-2a4 4 0 0 0-4-4h-4a4 4 0 0 0-4 4v2"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <circle
-            cx="12"
-            cy="7"
-            r="4"
-            stroke="currentColor"
-            strokeWidth="2"
+            fill="currentColor"
+            d="M12 2a6 6 0 0 1 3.932 10.53c1.134.342 2.075.834 2.852 1.428 1.535 1.174 2.34 2.677 2.759 3.974a2.92 2.92 0 0 1-.645 2.93c-.668.723-1.664 1.138-2.71 1.138H5.811c-1.046 0-2.042-.415-2.71-1.139a2.92 2.92 0 0 1-.644-2.93c.418-1.296 1.223-2.799 2.758-3.973.777-.594 1.718-1.086 2.852-1.429A6 6 0 0 1 12 2m0 12c-2.707 0-4.443.684-5.57 1.546-1.132.866-1.742 1.983-2.07 2.999a.92.92 0 0 0 .21.96c.26.281.708.495 1.241.495h12.377c.533 0 .98-.214 1.24-.495.24-.26.333-.58.21-.96-.328-1.016-.937-2.133-2.07-3C16.443 14.685 14.707 14 12 14m0-10a4 4 0 1 0 0 8 4 4 0 0 0 0-8"
           />
         </svg>
       </button>

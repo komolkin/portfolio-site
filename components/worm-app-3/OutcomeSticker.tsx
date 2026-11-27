@@ -29,6 +29,11 @@ const SIZE = {
     outerStroke: 11,
     midStroke: 5.5,
   },
+  xl: {
+    className: "text-[72px] tracking-[-0.07em]",
+    outerStroke: 16,
+    midStroke: 8,
+  },
 } as const;
 
 export function outcomeStickerToneFromLabel(label: string): OutcomeStickerTone {
@@ -122,7 +127,7 @@ export function OutcomeSticker({
         mass: 0.72,
         opacity: { duration: 0.16, ease: [0.22, 1, 0.36, 1] },
       }}
-      className={`${sharedClass} origin-left`}
+      className={`${sharedClass} origin-center`}
       style={sharedStyle}
     >
       {layers}

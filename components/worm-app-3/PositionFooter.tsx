@@ -157,11 +157,12 @@ export function PositionFooter({
   // Mark-to-market: equals stake near entry, reaches full to-win only at 100%.
   const valueNow = cashOutValue(position, currentPercent);
   const valueLabel = formatCashUsdPrecise(valueNow);
-  const valueTone = video ? "text-white" : "text-black";
-  const valueCentsTone = video ? "text-white/45" : "text-black/35";
   const fill = Math.max(4, Math.min(100, currentPercent));
   const entryMark = Math.max(1, Math.min(99, position.entryPercent));
   const entryOverFill = entryMark <= fill;
+  const pnl = valueNow - position.stake;
+  const fillColor =
+    pnl > 0.005 ? YES_COLOR : pnl < -0.005 ? NO_COLOR : video ? "#fff" : "#000";
   const canDecrease = position.stake > MIN_POSITION_STAKE;
   const stickerTilt = outcomeStickerTilt(
     `${position.marketId}:${position.outcome}`,
@@ -172,86 +173,86 @@ export function PositionFooter({
 
   return (
     <div
-      className={`relative z-[2] flex flex-col gap-3 ${
+      className={`relative z-[2] flex min-h-0 flex-1 flex-col gap-3 ${
         className ?? (video ? "mt-auto" : "mt-8")
       }`}
     >
-      <div className="min-w-0">
-        <div className="mb-1.5 flex min-h-[54px] items-end overflow-visible pb-0.5 pl-0.5">
-          <AnimatePresence initial={false}>
-            {stickerReady ? (
-              <OutcomeSticker
-                key={`${position.marketId}-${position.outcome}`}
-                label={position.outcome}
-                tilt={stickerTilt}
-                size="lg"
-                animated
-              />
-            ) : null}
-          </AnimatePresence>
-        </div>
-        <p
-          aria-label={`${stakeLabel} → ${valueLabel}`}
-          className={`mt-1 text-[40px] font-semibold leading-none tabular-nums tracking-[-0.03em] ${
-            video ? "text-white/70" : "text-black/45"
-          }`}
-        >
-          <span
-            aria-hidden="true"
-            className="inline-flex items-baseline gap-x-1.5 tracking-normal"
-          >
-            <FlowUsd value={position.stake} className={valueTone} />
-            <span
-              className={`shrink-0 ${
-                video ? "text-white/55" : "text-black/35"
-              }`}
-            >
-              →
-            </span>
-            <FlowUsd
-              value={valueNow}
-              showCents
-              className={valueTone}
-              centsClassName={valueCentsTone}
+      <div className="flex min-h-[88px] flex-1 items-center justify-center overflow-visible">
+        <AnimatePresence initial={false}>
+          {stickerReady ? (
+            <OutcomeSticker
+              key={`${position.marketId}-${position.outcome}`}
+              label={position.outcome}
+              tilt={stickerTilt}
+              size="xl"
+              animated
             />
-          </span>
-        </p>
+          ) : null}
+        </AnimatePresence>
       </div>
 
       <div
-        className={`relative h-7 rounded-full ${
+        className={`relative h-[52px] overflow-hidden rounded-[18px] ${
           video ? "bg-white/[0.1]" : "bg-black/[0.06]"
         }`}
-        aria-label={`${displayPercent}% chance`}
+        aria-label={`${stakeLabel} → ${valueLabel}, ${displayPercent}% chance`}
       >
         <div
-          className={`absolute inset-y-0 left-0 flex items-center justify-end rounded-full pr-2.5 transition-[width] duration-500 ease-out ${
-            video ? "bg-white" : "bg-black"
-          }`}
-          style={{ width: `${fill}%` }}
-        >
-          <span aria-hidden="true" className="flex h-full items-center">
-            <FlowPercent
-              value={displayPercent}
-              className={`text-[12px] font-semibold tabular-nums ${
-                video ? "text-black" : "text-white"
-              }`}
-            />
-          </span>
-        </div>
+          className="absolute inset-y-0 left-0 rounded-[18px] transition-[width,background-color] duration-500 ease-out"
+          style={{ width: `${fill}%`, backgroundColor: fillColor }}
+        />
         <div
           aria-hidden
-          className={`absolute inset-y-1 z-[1] w-px border-l border-dashed ${
-            video
-              ? entryOverFill
-                ? "border-black/25"
-                : "border-white/45"
-              : entryOverFill
-                ? "border-white/35"
-                : "border-black/25"
+          className={`absolute inset-y-2 z-[1] w-px border-l border-dashed ${
+            entryOverFill ? "border-white/40" : video ? "border-white/45" : "border-black/25"
           }`}
           style={{ left: `${entryMark}%` }}
         />
+        {/* Dual clipped labels: light ink on track, white on colored fill. */}
+        {(
+          [
+            {
+              key: "track",
+              clipPath: `inset(0 0 0 ${fill}%)`,
+              ink: video ? "text-white" : "text-black",
+              muted: video ? "text-white/55" : "text-black/45",
+              cents: video ? "text-white/45" : "text-black/35",
+            },
+            {
+              key: "fill",
+              clipPath: `inset(0 ${100 - fill}% 0 0)`,
+              ink: "text-white",
+              muted: "text-white/70",
+              cents: "text-white/55",
+            },
+          ] as const
+        ).map((layer) => (
+          <div
+            key={layer.key}
+            aria-hidden="true"
+            className="absolute inset-0 z-[2] flex items-center justify-between gap-3 px-4"
+            style={{ clipPath: layer.clipPath }}
+          >
+            <p
+              className={`min-w-0 truncate text-[16px] font-semibold leading-none tabular-nums tracking-[-0.01em] ${layer.ink}`}
+            >
+              <span className="inline-flex items-baseline gap-x-1.5 tracking-normal">
+                <FlowUsd value={position.stake} className={layer.ink} />
+                <span className={layer.muted}>→</span>
+                <FlowUsd
+                  value={valueNow}
+                  showCents
+                  className={layer.ink}
+                  centsClassName={layer.cents}
+                />
+              </span>
+            </p>
+            <FlowPercent
+              value={displayPercent}
+              className={`shrink-0 text-[16px] font-semibold tabular-nums ${layer.ink}`}
+            />
+          </div>
+        ))}
       </div>
 
       <div className="grid grid-cols-4 gap-2.5">
