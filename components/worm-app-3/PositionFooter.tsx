@@ -400,67 +400,47 @@ export function PositionFooter({
       </motion.div>
 
       <div
-        className={`relative h-[52px] overflow-hidden rounded-[18px] ${
-          video ? "bg-white/[0.1]" : "bg-black/[0.06]"
-        }`}
+        className="flex flex-col gap-2"
+        role="group"
         aria-label={`${stakeLabel} → ${valueLabel}, ${displayPercent}% chance`}
       >
         <div
-          className="absolute inset-y-0 left-0 rounded-[18px] transition-[width,background-color] duration-500 ease-out"
-          style={{ width: `${fill}%`, backgroundColor: fillColor }}
-        />
-        <div
           aria-hidden
-          className={`absolute inset-y-2 z-[1] w-px border-l border-dashed ${
-            entryOverFill ? "border-white/40" : video ? "border-white/45" : "border-black/25"
+          className={`flex items-center justify-between gap-3 ${video ? "text-white" : "text-black"}`}
+        >
+          <p className="min-w-0 truncate text-[16px] font-semibold leading-none tabular-nums">
+            <span className="inline-flex items-baseline gap-x-1.5 tracking-normal">
+              <FlowUsd value={position.stake} />
+              <span className={video ? "text-white/55" : "text-black/45"}>→</span>
+              <FlowUsd
+                value={valueNow}
+                showCents
+                centsClassName={video ? "text-white/45" : "text-black/35"}
+              />
+            </span>
+          </p>
+          <FlowPercent
+            value={displayPercent}
+            className="shrink-0 text-[16px] font-semibold tabular-nums"
+          />
+        </div>
+        <div
+          className={`relative h-4 overflow-hidden rounded-full ${
+            video ? "bg-white/[0.1]" : "bg-black/[0.06]"
           }`}
-          style={{ left: `${entryMark}%` }}
-        />
-        {/* Dual clipped labels: light ink on track, white on colored fill. */}
-        {(
-          [
-            {
-              key: "track",
-              clipPath: `inset(0 0 0 ${fill}%)`,
-              ink: video ? "text-white" : "text-black",
-              muted: video ? "text-white/55" : "text-black/45",
-              cents: video ? "text-white/45" : "text-black/35",
-            },
-            {
-              key: "fill",
-              clipPath: `inset(0 ${100 - fill}% 0 0)`,
-              ink: "text-white",
-              muted: "text-white/70",
-              cents: "text-white/55",
-            },
-          ] as const
-        ).map((layer) => (
+          aria-hidden
+        >
           <div
-            key={layer.key}
-            aria-hidden="true"
-            className="absolute inset-0 z-[2] flex items-center justify-between gap-3 px-4"
-            style={{ clipPath: layer.clipPath }}
-          >
-            <p
-              className={`min-w-0 truncate text-[16px] font-semibold leading-none tabular-nums tracking-[-0.01em] ${layer.ink}`}
-            >
-              <span className="inline-flex items-baseline gap-x-1.5 tracking-normal">
-                <FlowUsd value={position.stake} className={layer.ink} />
-                <span className={layer.muted}>→</span>
-                <FlowUsd
-                  value={valueNow}
-                  showCents
-                  className={layer.ink}
-                  centsClassName={layer.cents}
-                />
-              </span>
-            </p>
-            <FlowPercent
-              value={displayPercent}
-              className={`shrink-0 text-[16px] font-semibold tabular-nums ${layer.ink}`}
-            />
-          </div>
-        ))}
+            className="absolute inset-y-0 left-0 rounded-full transition-[width,background-color] duration-500 ease-out"
+            style={{ width: `${fill}%`, backgroundColor: fillColor }}
+          />
+          <div
+            className={`absolute inset-y-1 z-[1] w-px border-l border-dashed ${
+              entryOverFill ? "border-white/40" : video ? "border-white/45" : "border-black/25"
+            }`}
+            style={{ left: `${entryMark}%` }}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-2.5">

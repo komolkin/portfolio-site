@@ -474,6 +474,11 @@ export default function TradeFlowModal({
   const oddsSides = useMemo(() => getMarketOddsSides(market), [market]);
   const [step, setStep] = useState<"amount" | "confirm" | "success">("amount");
   const [stepDir, setStepDir] = useState<1 | -1>(1);
+  const [confirmOrigin, setConfirmOrigin] = useState<CSSProperties | null>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
+  const confirmTimerRef = useRef<number | null>(null);
+  const confirmingRef = useRef(false);
   const [outcome] = useState(initialOutcome ?? oddsSides[0]?.label ?? "Yes");
   const [amountDigits, setAmountDigits] = useState(() => {
     const fallback = Math.min(1, Math.floor(maxAmount));
@@ -544,6 +549,7 @@ export default function TradeFlowModal({
   };
 
   const closeSheet = () => {
+    if (confirmingRef.current) return;
     setOpen(false);
     setDrawerOffset(0);
     setIsDragging(false);
@@ -565,6 +571,7 @@ export default function TradeFlowModal({
   amountValidRef.current = amountValid;
 
   const submitTrade = () => {
+    if (confirmingRef.current || !amountValid) return;
     const finalAmount = amount;
     const finalShares = entryPrice > 0 ? finalAmount / entryPrice : 0;
     const caption = takeMessage.trim() || null;
@@ -598,6 +605,8 @@ export default function TradeFlowModal({
     };
 
     const revealSuccess = () => {
+      confirmingRef.current = false;
+      setConfirmOrigin(null);
       setCompleted({ trade, position });
       onComplete(trade, position);
       goTo("success");
@@ -609,15 +618,36 @@ export default function TradeFlowModal({
       ? [box.width / 2, box.height - 20]
       : undefined;
 
-    if (!glimmScopeRef.current) {
-      revealSuccess();
+    const transitionToSuccess = () => {
+      if (glimmScopeRef.current) {
+        glimmScopeRef.current.play({ at, change: revealSuccess });
+      } else {
+        revealSuccess();
+      }
+    };
+
+    if (!light) {
+      transitionToSuccess();
       return;
     }
 
-    glimmScopeRef.current.play({
-      at,
-      change: revealSuccess,
-    });
+    const sheet = sheetRef.current?.getBoundingClientRect();
+    const button = confirmButtonRef.current?.getBoundingClientRect();
+    if (!sheet || !button) {
+      transitionToSuccess();
+      return;
+    }
+
+    confirmingRef.current = true;
+    setConfirmOrigin({
+      "--confirm-x": `${button.left - sheet.left + button.width / 2}px`,
+      "--confirm-y": `${button.top - sheet.top + button.height / 2}px`,
+      "--confirm-width": `${button.width}px`,
+    } as CSSProperties);
+    confirmTimerRef.current = window.setTimeout(() => {
+      confirmTimerRef.current = null;
+      transitionToSuccess();
+    }, 2000);
   };
 
   const submitTradeRef = useRef(submitTrade);
@@ -625,11 +655,17 @@ export default function TradeFlowModal({
 
   useEffect(() => {
     const id = window.requestAnimationFrame(() => setOpen(true));
-    return () => window.cancelAnimationFrame(id);
+    return () => {
+      window.cancelAnimationFrame(id);
+      if (confirmTimerRef.current !== null) {
+        window.clearTimeout(confirmTimerRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (confirmingRef.current) return;
       const target = e.target as HTMLElement | null;
       const typing = Boolean(target?.closest("input, textarea, [contenteditable]"));
       if (e.key === "Escape") {
@@ -694,6 +730,7 @@ export default function TradeFlowModal({
   const pendingSheetDragRef = useRef(false);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (confirmingRef.current) return;
     const target = e.target as HTMLElement;
     if (target.closest("button, input, textarea, a, [data-no-sheet-drag]")) {
       pendingSheetDragRef.current = false;
@@ -842,8 +879,10 @@ export default function TradeFlowModal({
         aria-hidden
       />
       <div
+        ref={sheetRef}
         role="dialog"
         aria-modal="true"
+        aria-busy={confirmOrigin !== null}
         aria-label={
           step === "amount"
             ? "Trade amount"
@@ -907,9 +946,10 @@ export default function TradeFlowModal({
         </div>
 
         <div
+          aria-hidden={confirmOrigin ? true : undefined}
           className={`relative flex min-h-0 flex-col ${
             light || step !== "amount" ? "flex-1" : ""
-          }`}
+          } ${confirmOrigin ? "invisible pointer-events-none" : ""}`}
         >
           <SheetPager
             step={step}
@@ -1040,6 +1080,7 @@ export default function TradeFlowModal({
                   />
 
                   <button
+                    ref={confirmButtonRef}
                     type="button"
                     disabled={!amountValid}
                     onClick={() => {
@@ -1288,8 +1329,37 @@ export default function TradeFlowModal({
             )}
           </SheetPager>
         </div>
+        {confirmOrigin && (
+          <div
+            role="status"
+            aria-label="Confirming prediction"
+            className="trade-confirm-loader absolute z-10 flex h-[52px] -translate-x-1/2 -translate-y-1/2 items-center justify-center bg-black text-white"
+            style={confirmOrigin}
+          >
+            <span aria-hidden className="trade-confirm-label absolute text-[16px] font-semibold">Confirm</span>
+            <span aria-hidden className="trade-confirm-spinner size-5 rounded-full border-2 border-white/30 border-t-white" />
+          </div>
+        )}
       </div>
       <style>{`
+        .trade-confirm-loader {
+          left: 50%;
+          top: 50%;
+          width: 52px;
+          border-radius: 26px;
+          animation: trade-confirm-morph 480ms cubic-bezier(0.32, 0.72, 0, 1) both;
+        }
+        @keyframes trade-confirm-morph {
+          from { left: var(--confirm-x); top: var(--confirm-y); width: var(--confirm-width); border-radius: 18px; }
+          35% { top: var(--confirm-y); width: 52px; border-radius: 26px; }
+        }
+        .trade-confirm-label { animation: trade-confirm-label-out 100ms ease-out both; }
+        @keyframes trade-confirm-label-out { to { opacity: 0; } }
+        .trade-confirm-spinner {
+          animation: trade-confirm-spin 700ms linear infinite, trade-confirm-spinner-in 150ms ease-out 100ms both;
+        }
+        @keyframes trade-confirm-spin { to { transform: rotate(360deg); } }
+        @keyframes trade-confirm-spinner-in { from { opacity: 0; } }
         @keyframes trade-win-pop {
           0% { opacity: 0; transform: scale(0.82); }
           70% { opacity: 1; transform: scale(1.04); }
@@ -1318,6 +1388,8 @@ export default function TradeFlowModal({
           animation-fill-mode: forwards;
         }
         @media (prefers-reduced-motion: reduce) {
+          .trade-confirm-loader, .trade-confirm-spinner { animation: none; }
+          .trade-confirm-label { display: none; }
           .trade-close-ring {
             animation: none !important;
             stroke-dashoffset: 0 !important;

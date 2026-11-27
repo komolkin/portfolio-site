@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "skills": {
+    "image-sphere": {
+      "source": "design.how",
+      "sourceUrl": "https://design.how/vault/image-sphere",
+      "sourceType": "well-known",
+      "computedHash": "967cceea4911ab36e27b8022c3b5c59e8b3c15504c51e72f7f35c722cd5ee57c",
+      "wellKnownDigest": "sha256:c1d97774156e57da745aec61122cfc28e300568e3087d150a456a3510cc1011e"
+    },
+    "liquid-ui": {
+      "source": "design.how",
+      "sourceUrl": "https://design.how/vault/liquid-ui",
+      "sourceType": "well-known",
+      "computedHash": "a2425f5e41ae1557deda62d20fc2559eb6cf1b77c395a4960191cba4717af9c9",
+      "wellKnownDigest": "sha256:6e8fb6fdc2bbeab6e1260239ac69dac49f7c46dfcbe40b0b870fe959256c43f2"
+    },
+    "roll-type": {
+      "source": "design.how",
+      "sourceUrl": "https://design.how/vault/roll-type",
+      "sourceType": "well-known",
+      "computedHash": "fbed08d11f8e50584c4a6278cd51c1207b8d9ba777a3ef0ee8a152f13a24e970",
+      "wellKnownDigest": "sha256:be0b0d5f68164c718d90ba8e96a784cc0b49ea7eb90aa325e74c0f312457de6e"
+    }
+  }
+}
