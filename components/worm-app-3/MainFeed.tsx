@@ -33,6 +33,7 @@ import {
   unlockHaptics,
 } from "@/lib/haptics";
 import type { PolymarketMarketData } from "@/lib/polymarketscan";
+import { OutcomeSticker } from "./OutcomeSticker";
 import TradeFlowModal from "@/components/playground/projects/api/TradeFlowModal";
 import {
   ComboSheet,
@@ -76,79 +77,6 @@ const AMOUNT_FONT_MIN = 36;
 const AMOUNT_FONT_MAX = 58;
 const MAX_COMBO_PICKS = 8;
 const MAX_CHIP_LOGOS = 3;
-
-type ComboShortcutLeg = {
-  marketId: string;
-  outcome: Outcome;
-};
-
-type ComboShortcut = {
-  id: string;
-  title: string;
-  legs: ComboShortcutLeg[];
-};
-
-/** Preset combos — folder tiles under search. */
-const COMBO_SHORTCUTS: ComboShortcut[] = [
-  {
-    id: "sports",
-    title: "Sports",
-    legs: [
-      { marketId: "nba-hawks", outcome: "No" },
-      { marketId: "lakers-celtics", outcome: "No" },
-      { marketId: "barca-madrid", outcome: "Yes" },
-      { marketId: "faze-wildcard", outcome: "Yes" },
-    ],
-  },
-  {
-    id: "actors",
-    title: "Actors",
-    legs: [
-      { marketId: "grammys-album", outcome: "No" },
-      { marketId: "oscars-best-picture", outcome: "No" },
-      { marketId: "stranger-things-finale", outcome: "Yes" },
-      { marketId: "met-gala-theme", outcome: "No" },
-    ],
-  },
-  {
-    id: "gta-vi",
-    title: "GTA VI",
-    legs: [
-      { marketId: "gta-vi-nov19", outcome: "Yes" },
-      { marketId: "gta-trailer-3", outcome: "Yes" },
-      { marketId: "fortnite-collab", outcome: "Yes" },
-      { marketId: "box-office-billion", outcome: "Yes" },
-    ],
-  },
-  {
-    id: "crypto",
-    title: "Crypto",
-    legs: [
-      { marketId: "btc-100k", outcome: "Yes" },
-      { marketId: "eth-5k", outcome: "No" },
-      { marketId: "sol-300", outcome: "No" },
-    ],
-  },
-  {
-    id: "politics",
-    title: "Politics",
-    legs: [
-      { marketId: "fed-cut", outcome: "Yes" },
-      { marketId: "scotus-ai", outcome: "Yes" },
-      { marketId: "midterm-turnout", outcome: "No" },
-      { marketId: "shutdown-week", outcome: "No" },
-    ],
-  },
-  {
-    id: "tech",
-    title: "Tech",
-    legs: [
-      { marketId: "nvidia-ceo", outcome: "No" },
-      { marketId: "openai-ipo", outcome: "No" },
-      { marketId: "apple-foldable", outcome: "No" },
-    ],
-  },
-];
 
 type Topic = "sports" | "crypto" | "culture" | "tech" | "politics";
 
@@ -1579,93 +1507,162 @@ function formatCompactBalance(value: number) {
   return `$${Math.round(safe)}`;
 }
 
-function resolveShortcutPicks(shortcut: ComboShortcut): ComboSheetPick[] {
-  const picks: ComboSheetPick[] = [];
-  for (const leg of shortcut.legs) {
-    const market = MARKETS.find((item) => item.id === leg.marketId);
-    if (!market) continue;
-    picks.push(toComboPick(market, leg.outcome));
-    if (picks.length >= MAX_COMBO_PICKS) break;
-  }
-  return picks;
-}
+const PREDICTION_STORIES = [
+  { name: "Nass", marketId: "nvidia-ceo", outcome: "Yes" },
+  { name: "Maya", marketId: "lakers-celtics", outcome: "No" },
+  { name: "Sam", marketId: "btc-100k", outcome: "Yes" },
+  { name: "Priya", marketId: "eth-5k", outcome: "Yes" },
+  { name: "Jordan", marketId: "nba-hawks", outcome: "No" },
+  { name: "Tanya", marketId: "fed-cut", outcome: "Yes" },
+] as const;
 
-function ComboShortcuts({
-  onSelect,
+const VIEWED_STORIES_KEY = "worm-app-3:viewed-prediction-stories";
+
+function PredictionStories({
+  onPredict,
 }: {
-  onSelect: (shortcut: ComboShortcut) => void;
+  onPredict: (market: Market, outcome: Outcome, amount: number) => void;
 }) {
-  const shortcuts = useMemo(
-    () =>
-      COMBO_SHORTCUTS.map((shortcut) => {
-        const picks = resolveShortcutPicks(shortcut);
-        const icons = picks
-          .map((pick) => pick.logo)
-          .filter((logo): logo is string => Boolean(logo))
-          .slice(0, 4);
-        const multiplier = comboMultiplier(
-          picks.map((pick) => pick.percent ?? 50),
-        );
-        return { shortcut, icons, multiplier, pickCount: picks.length };
-      }).filter((item) => item.pickCount >= 2),
-    [],
-  );
+  const [viewed, setViewed] = useState<string[]>([]);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const active = activeIndex === null ? null : PREDICTION_STORIES[activeIndex];
+  const market = active && MARKETS.find((item) => item.id === active.marketId);
 
-  if (shortcuts.length === 0) return null;
+  useEffect(() => {
+    try {
+      const saved: unknown = JSON.parse(localStorage.getItem(VIEWED_STORIES_KEY) ?? "[]");
+      if (Array.isArray(saved)) {
+        setViewed(saved.filter((id): id is string => typeof id === "string"));
+      }
+    } catch {
+      // The viewer still works when browser storage is unavailable.
+    }
+  }, []);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (activeIndex !== null && dialog && !dialog.open) dialog.showModal();
+  }, [activeIndex]);
+
+  function openStory(index: number) {
+    const { marketId } = PREDICTION_STORIES[index];
+    hapticTap();
+    setActiveIndex(index);
+    if (viewed.includes(marketId)) return;
+
+    const next = [...viewed, marketId];
+    setViewed(next);
+    try {
+      localStorage.setItem(VIEWED_STORIES_KEY, JSON.stringify(next));
+    } catch {
+      // Keep the viewed state for the current session.
+    }
+  }
 
   return (
-    <div className="relative -mx-4 min-w-0">
+    <>
       <div
-        className="flex gap-3 overflow-x-auto overscroll-x-contain px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        style={{ WebkitOverflowScrolling: "touch" }}
+        role="group"
+        aria-label="Prediction Stories"
+        className="-mx-4 flex gap-4 overflow-x-auto overscroll-x-contain px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {shortcuts.map(({ shortcut, icons, multiplier }) => (
-          <button
-            key={shortcut.id}
-            type="button"
-            onClick={() => {
-              hapticTap();
-              onSelect(shortcut);
-            }}
-            className="flex w-[calc((100%-2.25rem)/3.5)] shrink-0 flex-col items-center text-center transition-transform duration-150 ease-out active:scale-[0.94]"
-          >
-            <span
-              aria-hidden
-              className="flex aspect-square w-full items-center justify-center rounded-[24px] bg-black/[0.07]"
+        {PREDICTION_STORIES.map((story, index) => {
+          const seen = viewed.includes(story.marketId);
+          return (
+            <button
+              key={story.marketId}
+              type="button"
+              aria-label={story.name + (seen ? ", viewed story" : ", new story")}
+              onClick={() => openStory(index)}
+              className="flex w-[74px] shrink-0 flex-col items-center gap-1.5 rounded-xl text-center active:scale-95"
             >
-              <span className="grid size-[68%] grid-cols-2 gap-1">
-                {Array.from({ length: 4 }).map((_, index) => {
-                  const src = icons[index];
-                  return (
-                    <span
-                      key={`${shortcut.id}-slot-${index}`}
-                      className="relative overflow-hidden rounded-[7px] bg-black/[0.06]"
-                    >
-                      {src ? (
-                        <Image
-                          src={src}
-                          alt=""
-                          fill
-                          className="object-cover"
-                          sizes="36px"
-                          draggable={false}
-                        />
-                      ) : null}
-                    </span>
-                  );
-                })}
+              <span className={`rounded-full border-2 p-0.5 ${seen ? "border-black/25" : "border-black"}`}>
+                <Image
+                  src={`/worm-app-3/stories/${index + 1}.webp`}
+                  alt=""
+                  width={64}
+                  height={64}
+                  unoptimized
+                  className="size-16 rounded-full object-cover"
+                />
               </span>
-            </span>
-            <span className="mt-2 w-full truncate text-[13px] font-semibold leading-tight tracking-[-0.01em] text-black">
-              {shortcut.title}
-            </span>
-            <span className="mt-0.5 text-[12px] font-semibold tabular-nums text-black/40">
-              {multiplier.toFixed(multiplier >= 10 ? 1 : 2)}x
-            </span>
-          </button>
-        ))}
+              <span className="w-full truncate text-[13px] font-semibold">{story.name}</span>
+            </button>
+          );
+        })}
       </div>
-    </div>
+
+      <dialog
+        ref={dialogRef}
+        aria-label="Prediction Stories"
+        onClose={() => setActiveIndex(null)}
+        onKeyDown={(event) => {
+          if (activeIndex === null) return;
+          if (event.key === "ArrowLeft" && activeIndex > 0) openStory(activeIndex - 1);
+          if (event.key === "ArrowRight" && activeIndex < PREDICTION_STORIES.length - 1) {
+            openStory(activeIndex + 1);
+          }
+        }}
+        className={`fixed inset-0 m-auto h-dvh max-h-none w-full max-w-[430px] overflow-hidden bg-black text-white backdrop:bg-black/75 ${allo.className}`}
+      >
+        {active && market && activeIndex !== null && (
+          <div className="relative flex h-full flex-col px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-[max(16px,env(safe-area-inset-top))]">
+            <Image
+              key={market.id}
+              src={market.backdrop ?? market.thumb}
+              alt=""
+              fill
+              sizes="430px"
+              className="object-cover opacity-60"
+            />
+            <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/35 to-black/95" />
+            <div className="relative flex items-center gap-3">
+              <Image
+                src={`/worm-app-3/stories/${activeIndex + 1}.webp`}
+                alt=""
+                width={36}
+                height={36}
+                unoptimized
+                className="size-9 rounded-full object-cover"
+              />
+              <p className="flex-1 text-[16px] font-semibold">{active.name} predicted</p>
+              <button
+                type="button"
+                aria-label="Close story"
+                onClick={() => dialogRef.current?.close()}
+                className="flex size-11 items-center justify-center rounded-full bg-black/40 text-2xl"
+              >
+                <span aria-hidden>×</span>
+              </button>
+            </div>
+            <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-5 text-center">
+              <h2 className="text-balance text-[30px] font-semibold leading-tight">{market.question}</h2>
+              <OutcomeSticker label={active.outcome} size="xl" />
+            </div>
+            <div className="relative mb-3 flex justify-between">
+              <button type="button" aria-label="Previous story" disabled={activeIndex === 0} onClick={() => openStory(activeIndex - 1)} className="size-11 rounded-full bg-black/40 text-2xl disabled:invisible">‹</button>
+              <button type="button" aria-label="Next story" disabled={activeIndex === PREDICTION_STORIES.length - 1} onClick={() => openStory(activeIndex + 1)} className="size-11 rounded-full bg-black/40 text-2xl disabled:invisible">›</button>
+            </div>
+            <div className="relative grid grid-cols-2 gap-3">
+              {(["Yes", "No"] as const).map((outcome) => (
+                <button
+                  key={outcome}
+                  type="button"
+                  onClick={() => {
+                    dialogRef.current?.close();
+                    onPredict(market, outcome, 0);
+                  }}
+                  className="h-[52px] rounded-[18px] bg-white text-[16px] font-semibold text-black active:scale-95"
+                >
+                  {outcome} {outcome === "Yes" ? market.yesPercent : 100 - market.yesPercent}%
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </dialog>
+    </>
   );
 }
 
@@ -2350,15 +2347,6 @@ export default function MainFeed() {
     return !alreadyInGroup;
   }, []);
 
-  const applyComboShortcut = useCallback((shortcut: ComboShortcut) => {
-    const picks = resolveShortcutPicks(shortcut);
-    if (picks.length < 2) return;
-    comboPicksRef.current = picks;
-    setComboPicks(picks);
-    playComboAdd(picks.length);
-    hapticSuccess();
-  }, []);
-
   const openMarketScreen = openMarket
     ? toMarketScreenData(openMarket)
     : null;
@@ -2378,8 +2366,7 @@ export default function MainFeed() {
       >
         <div className="flex w-full min-w-0 flex-col gap-4 px-4">
           <div className="flex min-w-0 flex-col gap-3.5">
-            {/* SearchBar + CategoryTabs hidden for now */}
-            <ComboShortcuts onSelect={applyComboShortcut} />
+            <PredictionStories onPredict={openTrade} />
           </div>
           {visibleMarkets.length > 0 ? (
             visibleMarkets.map((market, index) => (
