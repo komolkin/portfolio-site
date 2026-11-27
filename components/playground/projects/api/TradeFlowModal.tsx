@@ -27,6 +27,8 @@ import {
 
 const SUCCESS_GLIMM_YES = accentPair("#1DB954", "#6B4EFF");
 const SUCCESS_GLIMM_NO = accentPair("#FF3B5C", "#6B4EFF");
+const SHEET_SLIDE_MS = 320;
+const SHEET_SLIDE_EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
 
 const CLOSE_THRESHOLD_PX = 72;
 const QUICK_AMOUNTS = [5, 25, 100] as const;
@@ -558,7 +560,7 @@ export default function TradeFlowModal({
     if (closeTimerRef.current !== null) {
       window.clearTimeout(closeTimerRef.current);
     }
-    closeTimerRef.current = window.setTimeout(() => onCloseRef.current(), 280);
+    closeTimerRef.current = window.setTimeout(() => onCloseRef.current(), SHEET_SLIDE_MS);
   };
 
   const pressKey = (key: string) => {
@@ -873,13 +875,14 @@ export default function TradeFlowModal({
       >
         <div className="relative h-full w-full">
       <div
-        className={`absolute inset-0 transition-opacity duration-300 ${
+        className={`absolute inset-0 ${
           nested
             ? "bg-transparent"
             : light
               ? "bg-black/25"
               : ui.backdrop
         } ${open ? "opacity-100" : "opacity-0"}`}
+        style={{ transition: `opacity ${SHEET_SLIDE_MS}ms ${SHEET_SLIDE_EASE}` }}
         onClick={closeSheet}
         aria-hidden
       />
@@ -919,7 +922,7 @@ export default function TradeFlowModal({
           transform: open ? `translateY(${drawerOffset}px)` : "translateY(100%)",
           transition: isDragging
             ? "none"
-            : "transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), height 0.55s cubic-bezier(0.32, 0.72, 0, 1), max-height 0.55s cubic-bezier(0.32, 0.72, 0, 1), border-radius 0.55s cubic-bezier(0.32, 0.72, 0, 1), background-color 0.6s ease",
+            : `transform ${SHEET_SLIDE_MS}ms ${SHEET_SLIDE_EASE}, height 0.55s ${SHEET_SLIDE_EASE}, max-height 0.55s ${SHEET_SLIDE_EASE}, border-radius 0.55s ${SHEET_SLIDE_EASE}, background-color 0.6s ease`,
           touchAction: "pan-y",
         }}
         onPointerDown={handlePointerDown}

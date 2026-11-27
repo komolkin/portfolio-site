@@ -1032,8 +1032,6 @@ function MarketCard({
   const [dragOutcome, setDragOutcome] = useState<Outcome | null>(null);
   const [comboArmed, setComboArmed] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [cashingOut, setCashingOut] = useState(false);
-  const cashOutTimerRef = useRef<number | null>(null);
   const yesInCombo = comboOutcomes.has("Yes");
   const noInCombo = comboOutcomes.has("No");
   const hasPosition = Boolean(position);
@@ -1049,9 +1047,6 @@ function MarketCard({
     cashOutValue(position, livePositionPercent) >= position.stake
       ? "green"
       : "red";
-  const lastAtmosphereRef = useRef<"green" | "red">(atmosphereVariant);
-  if (position) lastAtmosphereRef.current = atmosphereVariant;
-  const useAtmosphere = hasPosition;
   const chrome = immersive;
   const x = useMotionValue(0);
   const yesAmountMV = useMotionValue(0);
@@ -1091,14 +1086,6 @@ function MarketCard({
     return () => window.clearInterval(id);
   }, [hasPosition, position?.marketId, positionPercent]);
 
-  useEffect(() => {
-    return () => {
-      if (cashOutTimerRef.current !== null) {
-        window.clearTimeout(cashOutTimerRef.current);
-      }
-    };
-  }, []);
-
   const onOutcomeClick = useCallback(
     (outcome: Outcome) => {
       hapticTap();
@@ -1106,20 +1093,6 @@ function MarketCard({
     },
     [market, onCommitTrade],
   );
-
-  const startCashOut = useCallback(() => {
-    if (!position || cashingOut) return;
-    setCashingOut(true);
-    if (cashOutTimerRef.current !== null) {
-      window.clearTimeout(cashOutTimerRef.current);
-    }
-    // Collapse + fade first, then swap to Yes/No at the smaller size (no tall hold).
-    cashOutTimerRef.current = window.setTimeout(() => {
-      cashOutTimerRef.current = null;
-      onCashOut(position);
-      setCashingOut(false);
-    }, 380);
-  }, [cashingOut, onCashOut, position]);
 
   const gaugePercent = position
     ? position.outcome === "No"
@@ -1198,6 +1171,7 @@ function MarketCard({
       ) : null}
 
       <motion.article
+        layout="size"
         drag={hasPosition ? false : "x"}
         dragConstraints={{
           left: -(MAX_DRAG_PX + COMBO_OVERDRAG_PX),
@@ -1211,9 +1185,6 @@ function MarketCard({
         style={{
           x,
           touchAction: "pan-y",
-          transition: cashingOut
-            ? "min-height 0.38s cubic-bezier(0.22, 1, 0.36, 1)"
-            : undefined,
         }}
         onPointerDown={(event) => {
           const target = event.target as HTMLElement | null;
@@ -1300,16 +1271,12 @@ function MarketCard({
         }}
         className={`relative touch-pan-y overflow-hidden rounded-[28px] will-change-transform ${
           chrome
-            ? `flex flex-col bg-black px-5 pb-6 pt-5 text-white ${
-                cashingOut ? "min-h-0" : "min-h-[504px]"
-              }`
-            : hasPosition && !cashingOut
+            ? "flex min-h-[504px] flex-col bg-black px-5 pb-6 pt-5 text-white"
+            : hasPosition
               ? "flex min-h-[420px] flex-col bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
-              : hasPosition && cashingOut
-                ? "flex min-h-0 flex-col bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
-                : "bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
+              : "bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
         } ${
-          hasPosition || cashingOut
+          hasPosition
             ? "cursor-default"
             : dragging
               ? "cursor-grabbing"
@@ -1322,19 +1289,17 @@ function MarketCard({
           <MarketImageBg src={market.backdrop} />
         ) : null}
         <AnimatePresence>
-          {useAtmosphere || cashingOut ? (
+          {hasPosition ? (
             <motion.div
               key={`atmosphere-${market.id}`}
               className="pointer-events-none absolute inset-0 z-[1]"
               initial={{ opacity: 0 }}
-              animate={{ opacity: cashingOut ? 0 : 1 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
             >
               <MarketCardAtmosphere
-                variant={
-                  position ? atmosphereVariant : lastAtmosphereRef.current
-                }
+                variant={atmosphereVariant}
                 tone={immersive ? "media" : "light"}
               />
             </motion.div>
@@ -1379,39 +1344,26 @@ function MarketCard({
           />
         ) : null}
 
-        <AnimatePresence mode="wait" initial={false}>
+        <AnimatePresence mode="popLayout" initial={false}>
           {position ? (
             <motion.div
               key={`position-${position.marketId}`}
               initial={{ opacity: 0, y: 12 }}
-              animate={{
-                opacity: cashingOut ? 0 : 1,
-                y: cashingOut ? 6 : 0,
-              }}
-              exit={{ opacity: 0, height: 0, marginTop: 0, overflow: "hidden" }}
-              transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-              className={
-                chrome || hasPosition
-                  ? "relative z-[2] mt-auto flex min-h-0 flex-col overflow-hidden"
-                  : undefined
-              }
-              style={{
-                flexGrow: chrome || hasPosition ? (cashingOut ? 0 : 1) : undefined,
-                minHeight: 0,
-                transition: "flex-grow 0.34s cubic-bezier(0.22, 1, 0.36, 1)",
-              }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6, pointerEvents: "none" }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="relative z-[2] mt-auto flex min-h-0 w-full flex-1 flex-col overflow-hidden"
             >
               <PositionFooter
                 position={position}
                 currentPercent={livePositionPercent}
                 video={chrome}
                 canIncrease={balance >= POSITION_ADJUST_STEP}
-                cashingOut={cashingOut}
+                cashingOut={false}
                 stickerReady={stickerReady}
-                onCashOut={startCashOut}
+                onCashOut={() => onCashOut(position)}
                 onAdjust={(delta) => onAdjustPosition(market.id, delta)}
-                className={hasPosition || chrome ? "mt-0" : undefined}
-                collapsing={cashingOut}
+                className="mt-0"
               />
             </motion.div>
           ) : (
@@ -1755,9 +1707,11 @@ function PredictionStories({
               type="button"
               aria-label="Close story"
               onClick={() => dialogRef.current?.close()}
-              className="absolute right-5 top-[calc(max(10px,env(safe-area-inset-top))+12px)] z-10 flex size-11 items-center justify-center rounded-full bg-white/[0.06] text-2xl"
+              className="absolute right-5 top-[calc(max(10px,env(safe-area-inset-top))+12px)] z-10 grid size-11 touch-manipulation place-items-center rounded-full bg-white/[0.06] transition-transform duration-150 ease-out active:scale-[0.94] motion-reduce:transition-none"
             >
-              <span aria-hidden>×</span>
+              <svg aria-hidden width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M4 4l8 8m0-8-8 8" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+              </svg>
             </button>
             <button type="button" aria-label="Previous story" disabled={activeIndex === 0} onClick={() => openStory(activeIndex - 1)} className="absolute bottom-24 left-0 top-20 z-10 w-1/4 touch-manipulation focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white disabled:hidden" />
             <button type="button" aria-label="Next story" disabled={activeIndex === PREDICTION_STORIES.length - 1} onClick={() => openStory(activeIndex + 1)} className="absolute bottom-24 right-0 top-20 z-10 w-1/4 touch-manipulation focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white disabled:hidden" />
@@ -2350,6 +2304,10 @@ export default function MainFeed() {
   }, []);
 
   const cashOutPosition = useCallback((position: PlacedPosition) => {
+    if (!positionsRef.current[position.marketId]) return;
+    const remaining = { ...positionsRef.current };
+    delete remaining[position.marketId];
+    positionsRef.current = remaining;
     const market = MARKETS.find((item) => item.id === position.marketId);
     const currentPercent = market
       ? position.outcome === "Yes"
@@ -2538,6 +2496,7 @@ export default function MainFeed() {
               <motion.div
                 key={`${feedMotionKey}-${market.id}`}
                 data-market-wrap
+                layout="position"
                 className="relative min-w-0 overflow-visible"
                 initial={{ opacity: 0, y: 22 }}
                 animate={{ opacity: 1, y: 0 }}

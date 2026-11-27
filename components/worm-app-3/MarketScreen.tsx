@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -733,6 +734,7 @@ export default function MarketScreen({
   const cashOutTimerRef = useRef<number | null>(null);
   const dragControls = useDragControls();
   const sheetControls = useAnimationControls();
+  const backdropControls = useAnimationControls();
   const scrollRef = useRef<HTMLDivElement>(null);
   const dismissingRef = useRef(false);
   const sheetDraggingRef = useRef(false);
@@ -959,6 +961,16 @@ export default function MarketScreen({
     setSheetPage("main");
   }, [pick.id]);
 
+  const dismissSheet = useCallback(() => {
+    if (dismissingRef.current) return;
+    dismissingRef.current = true;
+    const transition = { duration: 0.32, ease: [0.32, 0.72, 0, 1] as const };
+    void Promise.all([
+      sheetControls.start({ y: "110%", transition }),
+      backdropControls.start({ opacity: 0, transition }),
+    ]).then(onBack);
+  }, [backdropControls, onBack, sheetControls]);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
@@ -966,23 +978,11 @@ export default function MarketScreen({
         setSheetPage("main");
         return;
       }
-      if (dismissingRef.current) return;
-      dismissingRef.current = true;
-      void sheetControls
-        .start({
-          y: "110%",
-          transition: {
-            type: "spring",
-            stiffness: 420,
-            damping: 38,
-            mass: 0.85,
-          },
-        })
-        .then(() => onBack());
+      dismissSheet();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onBack, sheetControls, sheetPage]);
+  }, [dismissSheet, sheetPage]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
@@ -990,18 +990,8 @@ export default function MarketScreen({
 
   useEffect(() => {
     void sheetControls.start({ y: 0 });
-  }, [sheetControls]);
-
-  const dismissSheet = () => {
-    if (dismissingRef.current) return;
-    dismissingRef.current = true;
-    void sheetControls
-      .start({
-        y: "110%",
-        transition: { type: "spring", stiffness: 420, damping: 38, mass: 0.85 },
-      })
-      .then(() => onBack());
-  };
+    void backdropControls.start({ opacity: 1, transition: { duration: 0.28 } });
+  }, [backdropControls, sheetControls]);
 
   const onSheetDragStart = () => {
     sheetDraggingRef.current = true;
@@ -1058,10 +1048,12 @@ export default function MarketScreen({
       exit={{ opacity: 0 }}
       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
     >
-      <button
+      <motion.button
         type="button"
         aria-label="Close market"
         className="absolute inset-0 bg-black/35"
+        initial={{ opacity: 0 }}
+        animate={backdropControls}
         onClick={dismissSheet}
       />
       <motion.div
