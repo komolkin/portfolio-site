@@ -6,6 +6,7 @@ import {
   motion,
   useMotionValue,
   useMotionValueEvent,
+  useReducedMotion,
   useTransform,
   type MotionValue,
 } from "framer-motion";
@@ -1507,14 +1508,41 @@ function formatCompactBalance(value: number) {
   return `$${Math.round(safe)}`;
 }
 
-const PREDICTION_STORIES = [
-  { name: "Nass", marketId: "nvidia-ceo", outcome: "Yes" },
-  { name: "Maya", marketId: "lakers-celtics", outcome: "No" },
-  { name: "Sam", marketId: "btc-100k", outcome: "Yes" },
-  { name: "Priya", marketId: "eth-5k", outcome: "Yes" },
-  { name: "Jordan", marketId: "nba-hawks", outcome: "No" },
-  { name: "Tanya", marketId: "fed-cut", outcome: "Yes" },
+const STORY_USERS = [
+  { name: "Nass", avatar: "1", predictions: [
+    { marketId: "nvidia-ceo", outcome: "Yes" },
+    { marketId: "scotus-ai", outcome: "Yes" },
+  ] },
+  { name: "Tanya", avatar: "6", predictions: [
+    { marketId: "fed-cut", outcome: "Yes" },
+  ] },
+  { name: "Leen", avatar: "leen", predictions: [
+    { marketId: "openai-ipo", outcome: "Yes" },
+    { marketId: "midterm-turnout", outcome: "No" },
+    { marketId: "met-gala-theme", outcome: "Yes" },
+  ] },
+  { name: "Maya", avatar: "2", predictions: [
+    { marketId: "lakers-celtics", outcome: "No" },
+    { marketId: "grammys-album", outcome: "Yes" },
+  ] },
+  { name: "Sam", avatar: "3", predictions: [
+    { marketId: "btc-100k", outcome: "Yes" },
+    { marketId: "netflix-top-title", outcome: "No" },
+  ] },
+  { name: "Priya", avatar: "4", predictions: [
+    { marketId: "eth-5k", outcome: "Yes" },
+    { marketId: "spotify-global-1", outcome: "Yes" },
+  ] },
+  { name: "Jordan", avatar: "5", predictions: [
+    { marketId: "nba-hawks", outcome: "No" },
+    { marketId: "stranger-things-finale", outcome: "Yes" },
+  ] },
 ] as const;
+
+const PREDICTION_STORIES = STORY_USERS.flatMap((user) =>
+  user.predictions.map((prediction, cardIndex) => ({ user, prediction, cardIndex })),
+);
+const STORY_DURATION_SECONDS = 8;
 
 const VIEWED_STORIES_KEY = "worm-app-3:viewed-prediction-stories";
 
@@ -1525,9 +1553,11 @@ function PredictionStories({
 }) {
   const [viewed, setViewed] = useState<string[]>([]);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [direction, setDirection] = useState(1);
+  const reducedMotion = useReducedMotion();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const active = activeIndex === null ? null : PREDICTION_STORIES[activeIndex];
-  const market = active && MARKETS.find((item) => item.id === active.marketId);
+  const market = active && MARKETS.find((item) => item.id === active.prediction.marketId);
 
   useEffect(() => {
     try {
@@ -1545,9 +1575,10 @@ function PredictionStories({
     if (activeIndex !== null && dialog && !dialog.open) dialog.showModal();
   }, [activeIndex]);
 
-  function openStory(index: number) {
-    const { marketId } = PREDICTION_STORIES[index];
-    hapticTap();
+  function openStory(index: number, automatic = false) {
+    const { marketId } = PREDICTION_STORIES[index].prediction;
+    if (!automatic) hapticTap();
+    setDirection(activeIndex !== null && index < activeIndex ? -1 : 1);
     setActiveIndex(index);
     if (viewed.includes(marketId)) return;
 
@@ -1565,21 +1596,24 @@ function PredictionStories({
       <div
         role="group"
         aria-label="Prediction Stories"
-        className="-mx-4 flex gap-4 overflow-x-auto overscroll-x-contain px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="-mx-4 flex gap-3 overflow-x-auto overscroll-x-contain px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {PREDICTION_STORIES.map((story, index) => {
-          const seen = viewed.includes(story.marketId);
+        {STORY_USERS.map((user) => {
+          const unread = user.predictions.find((prediction) => !viewed.includes(prediction.marketId));
+          const first = unread ?? user.predictions[0];
+          const index = PREDICTION_STORIES.findIndex(({ prediction }) => prediction === first);
+          const seen = !unread;
           return (
             <button
-              key={story.marketId}
+              key={user.name}
               type="button"
-              aria-label={story.name + (seen ? ", viewed story" : ", new story")}
+              aria-label={user.name + (seen ? ", viewed story" : ", new story")}
               onClick={() => openStory(index)}
               className="flex w-[74px] shrink-0 flex-col items-center gap-1.5 rounded-xl text-center active:scale-95"
             >
               <span className={`rounded-full border-2 p-0.5 ${seen ? "border-black/25" : "border-black"}`}>
                 <Image
-                  src={`/worm-app-3/stories/${index + 1}.webp`}
+                  src={`/worm-app-3/stories/${user.avatar}.webp`}
                   alt=""
                   width={64}
                   height={64}
@@ -1587,7 +1621,7 @@ function PredictionStories({
                   className="size-16 rounded-full object-cover"
                 />
               </span>
-              <span className="w-full truncate text-[13px] font-semibold">{story.name}</span>
+              <span className="w-full truncate text-xs font-semibold">{user.name}</span>
             </button>
           );
         })}
@@ -1607,59 +1641,107 @@ function PredictionStories({
         className={`fixed inset-0 m-auto h-dvh max-h-none w-full max-w-[430px] overflow-hidden bg-black text-white backdrop:bg-black/75 ${allo.className}`}
       >
         {active && market && activeIndex !== null && (
-          <div className="relative flex h-full flex-col px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-[max(16px,env(safe-area-inset-top))]">
-            <Image
-              key={market.id}
-              src={market.backdrop ?? market.thumb}
-              alt=""
-              fill
-              sizes="430px"
-              className="object-cover opacity-60"
-            />
-            <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/35 to-black/95" />
-            <div className="relative flex items-center gap-3">
-              <Image
-                src={`/worm-app-3/stories/${activeIndex + 1}.webp`}
-                alt=""
-                width={36}
-                height={36}
-                unoptimized
-                className="size-9 rounded-full object-cover"
-              />
-              <p className="flex-1 text-[16px] font-semibold">{active.name} predicted</p>
-              <button
-                type="button"
-                aria-label="Close story"
-                onClick={() => dialogRef.current?.close()}
-                className="flex size-11 items-center justify-center rounded-full bg-black/40 text-2xl"
-              >
-                <span aria-hidden>×</span>
-              </button>
-            </div>
-            <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-5 text-center">
-              <h2 className="text-balance text-[30px] font-semibold leading-tight">{market.question}</h2>
-              <OutcomeSticker label={active.outcome} size="xl" />
-            </div>
-            <div className="relative mb-3 flex justify-between">
-              <button type="button" aria-label="Previous story" disabled={activeIndex === 0} onClick={() => openStory(activeIndex - 1)} className="size-11 rounded-full bg-black/40 text-2xl disabled:invisible">‹</button>
-              <button type="button" aria-label="Next story" disabled={activeIndex === PREDICTION_STORIES.length - 1} onClick={() => openStory(activeIndex + 1)} className="size-11 rounded-full bg-black/40 text-2xl disabled:invisible">›</button>
-            </div>
-            <div className="relative grid grid-cols-2 gap-3">
-              {(["Yes", "No"] as const).map((outcome) => (
-                <button
-                  key={outcome}
-                  type="button"
-                  onClick={() => {
-                    dialogRef.current?.close();
-                    onPredict(market, outcome, 0);
-                  }}
-                  className="h-[52px] rounded-[18px] bg-white text-[16px] font-semibold text-black active:scale-95"
-                >
-                  {outcome} {outcome === "Yes" ? market.yesPercent : 100 - market.yesPercent}%
-                </button>
+          <>
+            <div
+              role="group"
+              aria-label={`Prediction ${active.cardIndex + 1} of ${active.user.predictions.length}`}
+              className="pointer-events-none absolute inset-x-5 top-[max(10px,env(safe-area-inset-top))] z-20 flex gap-1"
+            >
+              {active.user.predictions.map((prediction, index) => (
+                <span key={prediction.marketId} aria-hidden className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/30">
+                  {index === active.cardIndex ? (
+                    <motion.span
+                      className="block h-full origin-left rounded-full bg-white"
+                      initial={{ scaleX: 0 }}
+                      animate={{ scaleX: 1 }}
+                      transition={{ duration: STORY_DURATION_SECONDS, ease: "linear" }}
+                      onAnimationComplete={() => {
+                        if (!dialogRef.current?.open) return;
+                        if (activeIndex + 1 < PREDICTION_STORIES.length) {
+                          openStory(activeIndex + 1, true);
+                        } else {
+                          dialogRef.current.close();
+                        }
+                      }}
+                    />
+                  ) : index < active.cardIndex ? (
+                    <span className="block h-full rounded-full bg-white" />
+                  ) : null}
+                </span>
               ))}
             </div>
-          </div>
+            <div className="relative h-full [perspective:900px]">
+              <AnimatePresence initial={false} custom={direction}>
+                  <motion.div
+                      key={market.id}
+                      custom={direction}
+                      variants={{
+                        enter: (dir: number) => ({ x: `${dir * 85}%`, rotateY: dir * 60, originX: dir > 0 ? 0 : 1 }),
+                        center: { x: 0, rotateY: 0 },
+                        exit: (dir: number) => ({ x: `${-dir * 85}%`, rotateY: -dir * 60, originX: dir > 0 ? 1 : 0 }),
+                      }}
+                      initial={reducedMotion ? false : "enter"}
+                      animate="center"
+                      exit={reducedMotion ? undefined : "exit"}
+                      transition={{ duration: reducedMotion ? 0 : 0.28, ease: [0.25, 0.65, 0.35, 1] }}
+                      className="absolute inset-0 flex flex-col overflow-hidden bg-black px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-[calc(max(10px,env(safe-area-inset-top))+12px)] [backface-visibility:hidden]"
+                  >
+                      <Image
+                        key={market.id}
+                        src={market.backdrop ?? market.thumb}
+                        alt=""
+                        fill
+                        sizes="430px"
+                        className="object-cover opacity-60"
+                      />
+                      <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/35 to-black/95" />
+                      <div className="relative flex h-11 items-center gap-3 pr-14">
+                        <Image
+                          src={`/worm-app-3/stories/${active.user.avatar}.webp`}
+                          alt=""
+                          width={36}
+                          height={36}
+                          unoptimized
+                          className="size-9 rounded-full object-cover"
+                        />
+                        <p className="flex-1 text-[16px] font-semibold">{active.user.name} predicted</p>
+                      </div>
+                      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-5 text-center">
+                        <h2 className="text-balance text-[30px] font-semibold leading-tight">{market.question}</h2>
+                        <OutcomeSticker label={active.prediction.outcome} size="xl" />
+                      </div>
+                      <p className="relative mb-3 text-center text-[16px] font-semibold">
+                        What&apos;s your take?
+                      </p>
+                      <div className="relative grid grid-cols-2 gap-2.5">
+                        {(["Yes", "No"] as const).map((outcome) => (
+                          <button
+                            key={outcome}
+                            type="button"
+                            onClick={() => {
+                              dialogRef.current?.close();
+                              onPredict(market, outcome, 0);
+                            }}
+                            className="flex h-[52px] select-none items-center justify-center rounded-[18px] bg-white/[0.06] text-[16px] font-semibold text-white transition-transform duration-150 ease-out active:scale-[0.94]"
+                          >
+                            {outcome} {outcome === "Yes" ? market.yesPercent : 100 - market.yesPercent}%
+                          </button>
+                        ))}
+                      </div>
+                  </motion.div>
+              </AnimatePresence>
+            </div>
+            <button
+              type="button"
+              aria-label="Close story"
+              onClick={() => dialogRef.current?.close()}
+              className="absolute right-5 top-[calc(max(10px,env(safe-area-inset-top))+12px)] z-10 flex size-11 items-center justify-center rounded-full bg-white/[0.06] text-2xl"
+            >
+              <span aria-hidden>×</span>
+            </button>
+            <button type="button" aria-label="Previous story" disabled={activeIndex === 0} onClick={() => openStory(activeIndex - 1)} className="absolute bottom-24 left-0 top-20 z-10 w-1/4 touch-manipulation focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white disabled:hidden" />
+            <button type="button" aria-label="Next story" disabled={activeIndex === PREDICTION_STORIES.length - 1} onClick={() => openStory(activeIndex + 1)} className="absolute bottom-24 right-0 top-20 z-10 w-1/4 touch-manipulation focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white disabled:hidden" />
+          </>
         )}
       </dialog>
     </>
