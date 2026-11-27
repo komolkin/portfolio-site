@@ -8,6 +8,7 @@ import {
   type CSSProperties,
 } from "react";
 import NumberFlow from "@number-flow/react";
+import { motion } from "framer-motion";
 import { accentPair } from "glimm";
 import { GlimmScope, type GlimmScopeHandle } from "glimm/react";
 import { TextMorph } from "torph/react";
@@ -24,11 +25,13 @@ import {
   OutcomeSticker,
   outcomeStickerToneFromLabel,
 } from "@/components/worm-app-3/OutcomeSticker";
+import { SHEET_BACKDROP_ENTER_SECONDS, SHEET_ENTER_SPRING } from "@/components/worm-app-3/sheetMotion";
 
 const SUCCESS_GLIMM_YES = accentPair("#1DB954", "#6B4EFF");
 const SUCCESS_GLIMM_NO = accentPair("#FF3B5C", "#6B4EFF");
 const SHEET_SLIDE_MS = 320;
-const SHEET_SLIDE_EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
+const SHEET_SLIDE_CURVE = [0.32, 0.72, 0, 1] as const;
+const SHEET_SLIDE_EASE = `cubic-bezier(${SHEET_SLIDE_CURVE.join(", ")})`;
 
 const CLOSE_THRESHOLD_PX = 72;
 const QUICK_AMOUNTS = [5, 25, 100] as const;
@@ -474,6 +477,7 @@ export default function TradeFlowModal({
   onShare: (payload: SharePositionPayload) => void;
 }) {
   const light = theme === "light";
+  const useMarketSheetMotion = light && sheetHeight !== undefined;
   const appFont = light ? allo.className : instrumentSans.className;
   const oddsSides = useMemo(() => getMarketOddsSides(market), [market]);
   const [step, setStep] = useState<"amount" | "confirm" | "success">("amount");
@@ -882,12 +886,25 @@ export default function TradeFlowModal({
               ? "bg-black/25"
               : ui.backdrop
         } ${open ? "opacity-100" : "opacity-0"}`}
-        style={{ transition: `opacity ${SHEET_SLIDE_MS}ms ${SHEET_SLIDE_EASE}` }}
+        style={{
+          transition: useMarketSheetMotion && open
+            ? `opacity ${SHEET_BACKDROP_ENTER_SECONDS}s ease-out`
+            : `opacity ${SHEET_SLIDE_MS}ms ${SHEET_SLIDE_EASE}`,
+        }}
         onClick={closeSheet}
         aria-hidden
       />
-      <div
+      <motion.div
         ref={sheetRef}
+        initial={useMarketSheetMotion ? { y: "100%" } : false}
+        animate={useMarketSheetMotion ? { y: open ? drawerOffset : "100%" } : undefined}
+        transition={{
+          y: isDragging
+            ? { duration: 0 }
+            : open
+              ? SHEET_ENTER_SPRING
+              : { duration: SHEET_SLIDE_MS / 1000, ease: SHEET_SLIDE_CURVE },
+        }}
         role="dialog"
         aria-modal="true"
         aria-busy={confirmOrigin !== null}
@@ -919,10 +936,12 @@ export default function TradeFlowModal({
               ? "#F3F3F5"
               : "#0a0a0b"
             : undefined,
-          transform: open ? `translateY(${drawerOffset}px)` : "translateY(100%)",
+          transform: useMarketSheetMotion
+            ? undefined
+            : open ? `translateY(${drawerOffset}px)` : "translateY(100%)",
           transition: isDragging
             ? "none"
-            : `transform ${SHEET_SLIDE_MS}ms ${SHEET_SLIDE_EASE}, height 0.55s ${SHEET_SLIDE_EASE}, max-height 0.55s ${SHEET_SLIDE_EASE}, border-radius 0.55s ${SHEET_SLIDE_EASE}, background-color 0.6s ease`,
+            : `${useMarketSheetMotion ? "" : `transform ${SHEET_SLIDE_MS}ms ${SHEET_SLIDE_EASE}, `}height 0.55s ${SHEET_SLIDE_EASE}, max-height 0.55s ${SHEET_SLIDE_EASE}, border-radius 0.55s ${SHEET_SLIDE_EASE}, background-color 0.6s ease`,
           touchAction: "pan-y",
         }}
         onPointerDown={handlePointerDown}
@@ -1347,7 +1366,7 @@ export default function TradeFlowModal({
             <span aria-hidden className="trade-confirm-spinner size-5 rounded-full border-2 border-white/30 border-t-white" />
           </div>
         )}
-      </div>
+      </motion.div>
       <style>{`
         .trade-confirm-loader {
           left: 50%;

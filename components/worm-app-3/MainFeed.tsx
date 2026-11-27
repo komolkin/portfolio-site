@@ -2037,11 +2037,9 @@ function PicksChip({
 
 function BottomNav({
   balance,
-  hidden,
   onHomeClick,
 }: {
   balance: number;
-  hidden: boolean;
   onHomeClick?: () => void;
 }) {
   const item =
@@ -2049,18 +2047,9 @@ function BottomNav({
   const balanceLabel = formatCompactBalance(balance);
 
   return (
-    <motion.nav
+    <nav
       aria-label="Main sections"
-      aria-hidden={hidden}
-      initial={false}
-      animate={{
-        y: hidden ? 88 : 0,
-        opacity: hidden ? 0 : 1,
-      }}
-      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-      className={`mx-auto flex h-[56px] w-full max-w-[360px] items-center rounded-full bg-white/75 px-1 py-1 shadow-[0_10px_40px_rgba(0,0,0,0.12)] ring-1 ring-black/[0.04] backdrop-blur-[22px] will-change-transform ${
-        hidden ? "pointer-events-none" : ""
-      }`}
+      className="mx-auto flex h-[56px] w-full max-w-[360px] items-center rounded-full bg-white/75 px-1 py-1 shadow-[0_10px_40px_rgba(0,0,0,0.12)] ring-1 ring-black/[0.04] backdrop-blur-[22px]"
     >
       <button
         type="button"
@@ -2116,11 +2105,10 @@ function BottomNav({
           />
         </svg>
       </button>
-    </motion.nav>
+    </nav>
   );
 }
 
-/** Owns scroll-hide state so market cards don't re-render on every toggle. */
 function BottomChrome({
   feedRef,
   picks,
@@ -2137,35 +2125,6 @@ function BottomChrome({
   /** Sit above MarketScreen; keep combo chip, hide feed tab bar. */
   elevated?: boolean;
 }) {
-  const [tabHidden, setTabHidden] = useState(false);
-  const lastScrollY = useRef(0);
-  const hiddenRef = useRef(false);
-
-  useEffect(() => {
-    const feed = feedRef.current;
-    if (!feed) return;
-
-    const onScroll = () => {
-      const y = feed.scrollTop;
-      const delta = y - lastScrollY.current;
-      lastScrollY.current = y;
-
-      let next = hiddenRef.current;
-      if (y < 20) next = false;
-      else if (delta > 8) next = true;
-      else if (delta < -8) next = false;
-
-      if (next === hiddenRef.current) return;
-      hiddenRef.current = next;
-      setTabHidden(next);
-    };
-
-    feed.addEventListener("scroll", onScroll, { passive: true });
-    return () => feed.removeEventListener("scroll", onScroll);
-  }, [feedRef]);
-
-  const hideChrome = elevated ? false : tabHidden;
-
   return (
     <div
       className={`pointer-events-none absolute inset-x-0 bottom-0 ${
@@ -2180,7 +2139,7 @@ function BottomChrome({
         className="api-progressive-blur h-[150px]"
         data-edge="bottom"
         initial={false}
-        animate={{ opacity: elevated ? 0.85 : hideChrome ? 0 : 1 }}
+        animate={{ opacity: elevated ? 0.85 : 1 }}
         transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
       >
         <i />
@@ -2189,11 +2148,7 @@ function BottomChrome({
         <i />
       </motion.div>
       <div className="pointer-events-auto relative z-[1] flex flex-col items-center gap-3 px-5 pb-1">
-        <motion.div
-          initial={false}
-          animate={{ y: hideChrome ? 72 : 0 }}
-          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-        >
+        <div>
           <AnimatePresence initial={false}>
             {picks.length > 0 ? (
               <PicksChip
@@ -2204,11 +2159,10 @@ function BottomChrome({
               />
             ) : null}
           </AnimatePresence>
-        </motion.div>
+        </div>
         {elevated ? null : (
           <BottomNav
             balance={balance}
-            hidden={tabHidden}
             onHomeClick={() => {
               feedRef.current?.scrollTo({ top: 0, behavior: "smooth" });
             }}

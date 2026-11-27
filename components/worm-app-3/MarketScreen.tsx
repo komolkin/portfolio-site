@@ -24,6 +24,7 @@ import {
   WORD_STAGGER,
 } from "@/components/StreamingWords";
 import { MarketCardAtmosphere } from "./MarketCardAtmosphere";
+import { SHEET_BACKDROP_ENTER_SECONDS, SHEET_ENTER_SPRING } from "./sheetMotion";
 import {
   PositionFooter,
   POSITION_ADJUST_STEP,
@@ -990,7 +991,7 @@ export default function MarketScreen({
 
   useEffect(() => {
     void sheetControls.start({ y: 0 });
-    void backdropControls.start({ opacity: 1, transition: { duration: 0.28 } });
+    void backdropControls.start({ opacity: 1, transition: { duration: SHEET_BACKDROP_ENTER_SECONDS } });
   }, [backdropControls, sheetControls]);
 
   const onSheetDragStart = () => {
@@ -1063,7 +1064,7 @@ export default function MarketScreen({
         initial={{ y: "100%" }}
         animate={sheetControls}
         exit={{ y: "100%" }}
-        transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.9 }}
+        transition={SHEET_ENTER_SPRING}
         drag="y"
         dragControls={dragControls}
         dragListener={false}
