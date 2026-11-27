@@ -1263,17 +1263,10 @@ export default function TradeFlowModal({
                   </div>
 
                   <div className="mt-auto w-full pt-8 animate-[trade-success-fade_0.5s_cubic-bezier(0.32,0.72,0,1)_0.45s_both]">
-                    <p
-                      className={`mx-auto max-w-[250px] text-[14px] leading-snug ${
-                        light ? "text-black/50" : "text-white/60"
-                      }`}
-                    >
-                      Share and earn 30% of trading fees
-                    </p>
                     <button
                       type="button"
                       onClick={() => void nativeShare()}
-                      className={`mt-5 flex h-[52px] w-full items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,colors] duration-150 ease-out active:scale-[0.94] ${
+                      className={`mx-auto flex h-[52px] w-[min(100%,220px)] items-center justify-center rounded-[18px] text-[16px] font-semibold transition-[transform,colors] duration-150 ease-out active:scale-[0.94] ${
                         light
                           ? "bg-black text-white hover:bg-black/90"
                           : "bg-white text-black hover:bg-white/90"
@@ -1281,6 +1274,13 @@ export default function TradeFlowModal({
                     >
                       Share
                     </button>
+                    <p
+                      className={`mx-auto mt-3 max-w-[250px] text-center text-[14px] leading-snug ${
+                        light ? "text-black/50" : "text-white/60"
+                      }`}
+                    >
+                      Share and earn 30% of trading fees
+                    </p>
                   </div>
                   </div>
                 </div>
