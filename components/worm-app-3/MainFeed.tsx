@@ -15,6 +15,7 @@ import { createPortal } from "react-dom";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -1511,6 +1512,7 @@ function PredictionStories({
 }) {
   const [viewed, setViewed] = useState<string[]>([]);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [openingMask, setOpeningMask] = useState<[string, string] | null>(null);
   const [direction, setDirection] = useState(1);
   const reducedMotion = useReducedMotion();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -1530,7 +1532,7 @@ function PredictionStories({
     }
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const dialog = dialogRef.current;
     if (activeIndex !== null && dialog && !dialog.open) dialog.showModal();
   }, [activeIndex]);
@@ -1572,7 +1574,17 @@ function PredictionStories({
               key={user.name}
               type="button"
               aria-label={user.name + (seen ? ", viewed story" : ", new story")}
-              onClick={() => openStory(index)}
+              onClick={(event) => {
+                const avatar = event.currentTarget.firstElementChild?.getBoundingClientRect();
+                if (avatar) {
+                  const x = avatar.left + avatar.width / 2 - window.innerWidth / 2;
+                  const y = avatar.top + avatar.height / 2;
+                  const origin = `at calc(50% + ${x}px) ${y}px`;
+                  const radius = Math.ceil(Math.hypot(window.innerWidth, window.innerHeight));
+                  setOpeningMask([`circle(${avatar.width / 2}px ${origin})`, `circle(${radius}px ${origin})`]);
+                }
+                openStory(index);
+              }}
               className="flex w-[74px] shrink-0 flex-col items-center gap-1.5 rounded-xl text-center active:scale-95"
             >
               <span className={`rounded-full border-2 p-0.5 ${seen ? "border-black/25" : "border-black"}`}>
@@ -1594,7 +1606,10 @@ function PredictionStories({
       <dialog
         ref={dialogRef}
         aria-label="Prediction Stories"
-        onClose={() => setActiveIndex(null)}
+        onClose={() => {
+          setActiveIndex(null);
+          setOpeningMask(null);
+        }}
         onCancel={(event) => {
           if (paused) event.preventDefault();
         }}
@@ -1605,10 +1620,16 @@ function PredictionStories({
             openStory(activeIndex + 1);
           }
         }}
-        className={`fixed inset-0 m-auto h-dvh max-h-none w-full max-w-[430px] overflow-hidden bg-black text-white backdrop:bg-black/75 ${allo.className}`}
+        className={`worm-story-dialog fixed inset-0 m-auto h-dvh max-h-none w-full max-w-[430px] overflow-hidden bg-transparent text-white backdrop:bg-black/75 ${allo.className}`}
       >
         {active && market && activeIndex !== null && (
-          <div ref={storyContentRef} className="h-full">
+          <motion.div
+            ref={storyContentRef}
+            className="relative h-full bg-black"
+            initial={!reducedMotion && openingMask ? { clipPath: openingMask[0], opacity: 0.6 } : false}
+            animate={{ clipPath: openingMask?.[1] ?? "none", opacity: 1 }}
+            transition={{ duration: reducedMotion ? 0 : 0.38, ease: [0.22, 1, 0.36, 1] }}
+          >
             <div
               role="group"
               aria-label={`Prediction ${active.cardIndex + 1} of ${active.user.predictions.length}`}
@@ -1715,10 +1736,19 @@ function PredictionStories({
             </button>
             <button type="button" aria-label="Previous story" disabled={activeIndex === 0} onClick={() => openStory(activeIndex - 1)} className="absolute bottom-24 left-0 top-20 z-10 w-1/4 touch-manipulation focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white disabled:hidden" />
             <button type="button" aria-label="Next story" disabled={activeIndex === PREDICTION_STORIES.length - 1} onClick={() => openStory(activeIndex + 1)} className="absolute bottom-24 right-0 top-20 z-10 w-1/4 touch-manipulation focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white disabled:hidden" />
-          </div>
+          </motion.div>
         )}
       </dialog>
       <style>{`
+        @media (prefers-reduced-motion: no-preference) {
+          .worm-story-dialog[open]::backdrop {
+            animation: worm-story-backdrop-in 380ms ease-out both;
+          }
+        }
+        @keyframes worm-story-backdrop-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
         @keyframes worm-story-progress {
           from { transform: scaleX(0); }
           to { transform: scaleX(1); }
