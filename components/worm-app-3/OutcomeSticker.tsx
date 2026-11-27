@@ -1,6 +1,22 @@
 "use client";
 
 import { motion } from "framer-motion";
+import localFont from "next/font/local";
+import { instrumentSans } from "@/lib/fonts";
+
+const pixel = localFont({ src: "../../fonts/PressStart2P-Regular.ttf", preload: false });
+const glitch = localFont({ src: "../../fonts/RubikGlitch-Regular.ttf", preload: false });
+
+export const OUTCOME_STICKER_STYLES = ["Bubbly", "Pixelated", "Serif", "Sans", "Weird"] as const;
+export type OutcomeStickerStyle = (typeof OUTCOME_STICKER_STYLES)[number];
+
+const STICKER_FONTS = {
+  Bubbly: undefined,
+  Pixelated: pixel.style.fontFamily,
+  Serif: "Georgia, serif",
+  Sans: instrumentSans.style.fontFamily,
+  Weird: glitch.style.fontFamily,
+} satisfies Record<OutcomeStickerStyle, string | undefined>;
 
 export type OutcomeStickerTone = "yes" | "no";
 
@@ -20,16 +36,19 @@ const STICKER_TONES = {
 
 const SIZE = {
   md: {
+    fontSize: 24,
     className: "text-[24px] tracking-[-0.04em]",
     outerStroke: 8,
     midStroke: 4,
   },
   lg: {
+    fontSize: 42,
     className: "text-[42px] tracking-[-0.06em]",
     outerStroke: 11,
     midStroke: 5.5,
   },
   xl: {
+    fontSize: 72,
     className: "text-[72px] tracking-[-0.07em]",
     outerStroke: 16,
     midStroke: 8,
@@ -54,6 +73,7 @@ export function OutcomeSticker({
   tone: toneProp,
   tilt = 5,
   size = "lg",
+  stickerStyle = "Bubbly",
   animated = false,
   className = "",
 }: {
@@ -61,15 +81,23 @@ export function OutcomeSticker({
   tone?: OutcomeStickerTone;
   tilt?: number;
   size?: keyof typeof SIZE;
+  stickerStyle?: OutcomeStickerStyle;
   /** Pop-in spring used when the sticker lands after trade success. */
   animated?: boolean;
   className?: string;
 }) {
   const tone = STICKER_TONES[toneProp ?? outcomeStickerToneFromLabel(label)];
   const scale = SIZE[size];
+  const pixelated = stickerStyle === "Pixelated";
+  const fineOutline = pixelated || stickerStyle === "Weird";
+  const outlineScale = fineOutline ? 0.55 : 1;
   const sharedClass = `relative inline-block select-none font-extrabold leading-none ${scale.className} ${className}`;
   const sharedStyle = {
-    fontVariationSettings: '"ROND" 85, "wght" 850',
+    fontFamily: STICKER_FONTS[stickerStyle],
+    fontSize: pixelated ? scale.fontSize * 0.64 : undefined,
+    letterSpacing: pixelated ? "0.04em" : undefined,
+    fontWeight: fineOutline ? 400 : undefined,
+    fontVariationSettings: stickerStyle === "Bubbly" ? '"ROND" 85, "wght" 850' : undefined,
   } as const;
 
   const layers = (
@@ -79,7 +107,7 @@ export function OutcomeSticker({
         className="pointer-events-none absolute left-0 top-0 whitespace-nowrap"
         style={{
           color: tone.outer,
-          WebkitTextStroke: `${scale.outerStroke}px ${tone.outer}`,
+          WebkitTextStroke: `${scale.outerStroke * outlineScale}px ${tone.outer}`,
           paintOrder: "stroke fill",
         }}
       >
@@ -90,7 +118,7 @@ export function OutcomeSticker({
         className="pointer-events-none absolute left-0 top-0 whitespace-nowrap"
         style={{
           color: tone.mid,
-          WebkitTextStroke: `${scale.midStroke}px ${tone.mid}`,
+          WebkitTextStroke: `${scale.midStroke * outlineScale}px ${tone.mid}`,
           paintOrder: "stroke fill",
         }}
       >
@@ -106,6 +134,7 @@ export function OutcomeSticker({
     return (
       <span
         aria-label={label}
+        data-outcome-sticker
         className={`${sharedClass} origin-center`}
         style={{ ...sharedStyle, transform: `rotate(${tilt}deg)` }}
       >
@@ -117,6 +146,7 @@ export function OutcomeSticker({
   return (
     <motion.span
       aria-label={label}
+      data-outcome-sticker
       initial={{ scale: 1.72, opacity: 0, rotate: tilt - 4 }}
       animate={{ scale: 1, opacity: 1, rotate: tilt }}
       exit={{ scale: 0.85, opacity: 0 }}

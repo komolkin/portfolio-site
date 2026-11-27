@@ -23,6 +23,8 @@ import { GifThumb, TakeComposer } from "./richMessage";
 import { AmountKeypad, SheetPager, applyAmountKey, ui } from "./ui";
 import {
   OutcomeSticker,
+  OUTCOME_STICKER_STYLES,
+  type OutcomeStickerStyle,
   outcomeStickerToneFromLabel,
 } from "@/components/worm-app-3/OutcomeSticker";
 import { SHEET_BACKDROP_ENTER_SECONDS, SHEET_ENTER_SPRING } from "@/components/worm-app-3/sheetMotion";
@@ -447,6 +449,7 @@ export default function TradeFlowModal({
   market,
   initialOutcome,
   initialAmount,
+  initialStickerStyle,
   wallet,
   handle,
   referralCode,
@@ -462,6 +465,7 @@ export default function TradeFlowModal({
   initialOutcome: string | null;
   /** Prefills the amount keypad (whole dollars). */
   initialAmount?: number | null;
+  initialStickerStyle?: OutcomeStickerStyle;
   wallet: string;
   handle: string;
   referralCode: string;
@@ -473,6 +477,7 @@ export default function TradeFlowModal({
   onComplete: (
     trade: UserPlacedTrade,
     position: PolymarketWalletPosition,
+    stickerStyle: OutcomeStickerStyle,
   ) => void;
   onShare: (payload: SharePositionPayload) => void;
 }) {
@@ -481,6 +486,10 @@ export default function TradeFlowModal({
   const appFont = light ? allo.className : instrumentSans.className;
   const oddsSides = useMemo(() => getMarketOddsSides(market), [market]);
   const [step, setStep] = useState<"amount" | "confirm" | "success">("amount");
+  const [stickerStyle, setStickerStyle] = useState(initialStickerStyle ?? "Bubbly");
+  const nextStickerStyle = OUTCOME_STICKER_STYLES[
+    (OUTCOME_STICKER_STYLES.indexOf(stickerStyle) + 1) % OUTCOME_STICKER_STYLES.length
+  ];
   const [stepDir, setStepDir] = useState<1 | -1>(1);
   const [confirmOrigin, setConfirmOrigin] = useState<CSSProperties | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -616,7 +625,7 @@ export default function TradeFlowModal({
       confirmingRef.current = false;
       setConfirmOrigin(null);
       setCompleted({ trade, position });
-      onComplete(trade, position);
+      onComplete(trade, position, stickerStyle);
       goTo("success");
     };
 
@@ -688,7 +697,7 @@ export default function TradeFlowModal({
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (/^\d$/.test(e.key)) pressKeyRef.current(e.key);
       else if (e.key === "Backspace") pressKeyRef.current("back");
-      else if (e.key === "Enter" && amountValidRef.current) {
+      else if (e.key === "Enter" && !target?.closest("button") && amountValidRef.current) {
         if (light) submitTradeRef.current();
         else goTo("confirm");
       }
@@ -1020,12 +1029,22 @@ export default function TradeFlowModal({
                     {outcomeTitle}
                   </h2>
                   <div className="mt-3 flex justify-center overflow-visible pb-1">
-                    <OutcomeSticker
-                      label={outcome}
-                      tone={outcomeStickerTone}
-                      tilt={outcomeStickerTilt}
-                      size="lg"
-                    />
+                    {initialStickerStyle ? (
+                      <button
+                        type="button"
+                        aria-label={`${outcome} sticker: ${stickerStyle}. Switch to ${nextStickerStyle}.`}
+                        title="Change sticker font"
+                        onClick={() => {
+                          hapticTap();
+                          setStickerStyle(nextStickerStyle);
+                        }}
+                        className="grid min-h-11 min-w-24 touch-manipulation place-items-center rounded-xl px-3 transition-transform duration-150 ease-out active:scale-95"
+                      >
+                        <OutcomeSticker label={outcome} tone={outcomeStickerTone} tilt={outcomeStickerTilt} stickerStyle={stickerStyle} />
+                      </button>
+                    ) : (
+                      <OutcomeSticker label={outcome} tone={outcomeStickerTone} tilt={outcomeStickerTilt} />
+                    )}
                   </div>
                 </div>
 
@@ -1254,6 +1273,7 @@ export default function TradeFlowModal({
                           label={outcome}
                           tone={outcomeStickerTone}
                           tilt={outcomeStickerTilt}
+                          stickerStyle={stickerStyle}
                           size="lg"
                         />
                       </div>

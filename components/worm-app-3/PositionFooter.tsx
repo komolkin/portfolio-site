@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { hapticStep, hapticSuccess } from "@/lib/haptics";
 import {
   OutcomeSticker,
+  type OutcomeStickerStyle,
   outcomeStickerTilt,
 } from "@/components/worm-app-3/OutcomeSticker";
 
@@ -16,6 +17,7 @@ export type PlacedPosition = {
   outcome: PositionOutcome;
   stake: number;
   entryPercent: number;
+  stickerStyle?: OutcomeStickerStyle;
 };
 
 export const YES_COLOR = "#1DB954";
@@ -377,6 +379,7 @@ export function PositionFooter({
               <OutcomeSticker
                 key={`${position.marketId}-${position.outcome}`}
                 label={position.outcome}
+                stickerStyle={position.stickerStyle}
                 tilt={stickerTilt}
                 size="xl"
                 animated

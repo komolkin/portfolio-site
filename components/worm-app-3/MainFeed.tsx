@@ -1702,7 +1702,7 @@ function PredictionStories({
                       {position ? (
                         <div className="relative flex h-[52px] items-center justify-center gap-3 rounded-[18px] bg-white/[0.06] text-[16px] font-semibold">
                           <span>You predicted</span>
-                          <OutcomeSticker label={position.outcome} size="md" />
+                          <OutcomeSticker label={position.outcome} size="md" stickerStyle={position.stickerStyle} />
                         </div>
                       ) : (
                         <div className="relative grid grid-cols-2 gap-2.5">
@@ -2408,6 +2408,7 @@ export default function MainFeed() {
         market={tradeMarket}
         initialOutcome={tradeFlow.outcome}
         initialAmount={tradeFlow.amount}
+        initialStickerStyle={positions[tradeFlow.market.id]?.stickerStyle ?? "Bubbly"}
         wallet="local"
         handle="you"
         referralCode="worm"
@@ -2415,7 +2416,7 @@ export default function MainFeed() {
         theme="light"
         sheetHeight={MARKET_SHEET_HEIGHT}
         onClose={closeTrade}
-        onComplete={(trade) => {
+        onComplete={(trade, _position, stickerStyle) => {
           const outcome: Outcome =
             trade.outcome.toLowerCase() === "no" ? "No" : "Yes";
           const entryPercent = Math.round(
@@ -2435,6 +2436,7 @@ export default function MainFeed() {
               [tradeFlow.market.id]: {
                 marketId: tradeFlow.market.id,
                 outcome,
+                stickerStyle,
                 stake: sameSide
                   ? existing.stake + trade.amountUsd
                   : trade.amountUsd,
