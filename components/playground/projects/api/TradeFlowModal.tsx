@@ -1336,7 +1336,6 @@ export default function TradeFlowModal({
             className="trade-confirm-loader absolute z-10 flex h-[52px] -translate-x-1/2 -translate-y-1/2 items-center justify-center bg-black text-white"
             style={confirmOrigin}
           >
-            <span aria-hidden className="trade-confirm-label absolute text-[16px] font-semibold">Confirm</span>
             <span aria-hidden className="trade-confirm-spinner size-5 rounded-full border-2 border-white/30 border-t-white" />
           </div>
         )}
@@ -1353,13 +1352,10 @@ export default function TradeFlowModal({
           from { left: var(--confirm-x); top: var(--confirm-y); width: var(--confirm-width); border-radius: 18px; }
           35% { top: var(--confirm-y); width: 52px; border-radius: 26px; }
         }
-        .trade-confirm-label { animation: trade-confirm-label-out 100ms ease-out both; }
-        @keyframes trade-confirm-label-out { to { opacity: 0; } }
         .trade-confirm-spinner {
-          animation: trade-confirm-spin 700ms linear infinite, trade-confirm-spinner-in 150ms ease-out 100ms both;
+          animation: trade-confirm-spin 700ms linear infinite;
         }
         @keyframes trade-confirm-spin { to { transform: rotate(360deg); } }
-        @keyframes trade-confirm-spinner-in { from { opacity: 0; } }
         @keyframes trade-win-pop {
           0% { opacity: 0; transform: scale(0.82); }
           70% { opacity: 1; transform: scale(1.04); }
@@ -1389,7 +1385,6 @@ export default function TradeFlowModal({
         }
         @media (prefers-reduced-motion: reduce) {
           .trade-confirm-loader, .trade-confirm-spinner { animation: none; }
-          .trade-confirm-label { display: none; }
           .trade-close-ring {
             animation: none !important;
             stroke-dashoffset: 0 !important;
