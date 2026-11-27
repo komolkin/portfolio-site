@@ -1,7 +1,7 @@
 "use client";
 
 import NumberFlow from "@number-flow/react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { hapticStep, hapticSuccess } from "@/lib/haptics";
 import {
   OutcomeSticker,
@@ -137,6 +137,7 @@ export function PositionFooter({
   canIncrease,
   cashingOut,
   stickerReady,
+  stickerFaded = false,
   onCashOut,
   onAdjust,
   className,
@@ -148,6 +149,8 @@ export function PositionFooter({
   cashingOut: boolean;
   /** False while the success sheet is open — sticker lands when it becomes true. */
   stickerReady: boolean;
+  /** Hide sticker while the ±$1 center flash is visible. */
+  stickerFaded?: boolean;
   onCashOut: () => void;
   onAdjust: (delta: number) => void;
   className?: string;
@@ -180,13 +183,21 @@ export function PositionFooter({
       <div className="flex min-h-[88px] flex-1 items-center justify-center overflow-visible">
         <AnimatePresence initial={false}>
           {stickerReady ? (
-            <OutcomeSticker
-              key={`${position.marketId}-${position.outcome}`}
-              label={position.outcome}
-              tilt={stickerTilt}
-              size="xl"
-              animated
-            />
+            <motion.div
+              key={`${position.marketId}-${position.outcome}-wrap`}
+              initial={false}
+              animate={{ opacity: stickerFaded ? 0 : 1 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              className="flex items-center justify-center"
+            >
+              <OutcomeSticker
+                key={`${position.marketId}-${position.outcome}`}
+                label={position.outcome}
+                tilt={stickerTilt}
+                size="xl"
+                animated
+              />
+            </motion.div>
           ) : null}
         </AnimatePresence>
       </div>

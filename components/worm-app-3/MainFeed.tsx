@@ -1598,6 +1598,9 @@ function MarketCard({
                 canIncrease={balance >= POSITION_ADJUST_STEP}
                 cashingOut={cashingOut}
                 stickerReady={stickerReady}
+                stickerFaded={Boolean(
+                  sizeDeltaFlash && sizeDeltaFlash.amount !== 0,
+                )}
                 onCashOut={startCashOut}
                 onAdjust={handleAdjust}
                 className={hasPosition || chrome ? "mt-0" : undefined}
