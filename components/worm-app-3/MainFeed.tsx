@@ -11,6 +11,7 @@ import {
   type MotionValue,
 } from "framer-motion";
 import Image from "next/image";
+import { createPortal } from "react-dom";
 import {
   useCallback,
   useEffect,
@@ -102,6 +103,7 @@ type TradeFlowState = {
   market: Market;
   outcome: Outcome;
   amount: number;
+  storyDialog?: HTMLDialogElement;
 };
 
 type FeedCategory = {
@@ -1548,16 +1550,22 @@ const VIEWED_STORIES_KEY = "worm-app-3:viewed-prediction-stories";
 
 function PredictionStories({
   onPredict,
+  paused,
+  positions,
 }: {
-  onPredict: (market: Market, outcome: Outcome, amount: number) => void;
+  onPredict: (market: Market, outcome: Outcome, amount: number, storyDialog: HTMLDialogElement) => void;
+  paused: boolean;
+  positions: Readonly<Partial<Record<string, PlacedPosition>>>;
 }) {
   const [viewed, setViewed] = useState<string[]>([]);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [direction, setDirection] = useState(1);
   const reducedMotion = useReducedMotion();
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const storyContentRef = useRef<HTMLDivElement>(null);
   const active = activeIndex === null ? null : PREDICTION_STORIES[activeIndex];
   const market = active && MARKETS.find((item) => item.id === active.prediction.marketId);
+  const position = market ? positions[market.id] : undefined;
 
   useEffect(() => {
     try {
@@ -1574,6 +1582,10 @@ function PredictionStories({
     const dialog = dialogRef.current;
     if (activeIndex !== null && dialog && !dialog.open) dialog.showModal();
   }, [activeIndex]);
+
+  useEffect(() => {
+    if (storyContentRef.current) storyContentRef.current.inert = paused;
+  }, [paused]);
 
   function openStory(index: number, automatic = false) {
     const { marketId } = PREDICTION_STORIES[index].prediction;
@@ -1631,8 +1643,11 @@ function PredictionStories({
         ref={dialogRef}
         aria-label="Prediction Stories"
         onClose={() => setActiveIndex(null)}
+        onCancel={(event) => {
+          if (paused) event.preventDefault();
+        }}
         onKeyDown={(event) => {
-          if (activeIndex === null) return;
+          if (paused || activeIndex === null) return;
           if (event.key === "ArrowLeft" && activeIndex > 0) openStory(activeIndex - 1);
           if (event.key === "ArrowRight" && activeIndex < PREDICTION_STORIES.length - 1) {
             openStory(activeIndex + 1);
@@ -1641,7 +1656,7 @@ function PredictionStories({
         className={`fixed inset-0 m-auto h-dvh max-h-none w-full max-w-[430px] overflow-hidden bg-black text-white backdrop:bg-black/75 ${allo.className}`}
       >
         {active && market && activeIndex !== null && (
-          <>
+          <div ref={storyContentRef} className="h-full">
             <div
               role="group"
               aria-label={`Prediction ${active.cardIndex + 1} of ${active.user.predictions.length}`}
@@ -1650,13 +1665,14 @@ function PredictionStories({
               {active.user.predictions.map((prediction, index) => (
                 <span key={prediction.marketId} aria-hidden className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/30">
                   {index === active.cardIndex ? (
-                    <motion.span
+                    <span
                       className="block h-full origin-left rounded-full bg-white"
-                      initial={{ scaleX: 0 }}
-                      animate={{ scaleX: 1 }}
-                      transition={{ duration: STORY_DURATION_SECONDS, ease: "linear" }}
-                      onAnimationComplete={() => {
-                        if (!dialogRef.current?.open) return;
+                      style={{
+                        animation: `worm-story-progress ${STORY_DURATION_SECONDS}s linear both`,
+                        animationPlayState: paused ? "paused" : "running",
+                      }}
+                      onAnimationEnd={() => {
+                        if (paused || !dialogRef.current?.open) return;
                         if (activeIndex + 1 < PREDICTION_STORIES.length) {
                           openStory(activeIndex + 1, true);
                         } else {
@@ -1710,24 +1726,28 @@ function PredictionStories({
                         <h2 className="text-balance text-[30px] font-semibold leading-tight">{market.question}</h2>
                         <OutcomeSticker label={active.prediction.outcome} size="xl" />
                       </div>
-                      <p className="relative mb-3 text-center text-[16px] font-semibold">
-                        What&apos;s your take?
-                      </p>
-                      <div className="relative grid grid-cols-2 gap-2.5">
-                        {(["Yes", "No"] as const).map((outcome) => (
-                          <button
-                            key={outcome}
-                            type="button"
-                            onClick={() => {
-                              dialogRef.current?.close();
-                              onPredict(market, outcome, 0);
-                            }}
-                            className="flex h-[52px] select-none items-center justify-center rounded-[18px] bg-white/[0.06] text-[16px] font-semibold text-white transition-transform duration-150 ease-out active:scale-[0.94]"
-                          >
-                            {outcome} {outcome === "Yes" ? market.yesPercent : 100 - market.yesPercent}%
-                          </button>
-                        ))}
-                      </div>
+                      {position ? (
+                        <div className="relative flex h-[52px] items-center justify-center gap-3 rounded-[18px] bg-white/[0.06] text-[16px] font-semibold">
+                          <span>You predicted</span>
+                          <OutcomeSticker label={position.outcome} size="md" />
+                        </div>
+                      ) : (
+                        <div className="relative grid grid-cols-2 gap-2.5">
+                          {(["Yes", "No"] as const).map((outcome) => (
+                            <button
+                              key={outcome}
+                              type="button"
+                              onClick={() => {
+                                const dialog = dialogRef.current;
+                                if (dialog) onPredict(market, outcome, 0, dialog);
+                              }}
+                              className="flex h-[52px] select-none items-center justify-center rounded-[18px] bg-white/[0.06] text-[16px] font-semibold text-white transition-transform duration-150 ease-out active:scale-[0.94]"
+                            >
+                              {outcome} {outcome === "Yes" ? market.yesPercent : 100 - market.yesPercent}%
+                            </button>
+                          ))}
+                        </div>
+                      )}
                   </motion.div>
               </AnimatePresence>
             </div>
@@ -1741,9 +1761,15 @@ function PredictionStories({
             </button>
             <button type="button" aria-label="Previous story" disabled={activeIndex === 0} onClick={() => openStory(activeIndex - 1)} className="absolute bottom-24 left-0 top-20 z-10 w-1/4 touch-manipulation focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white disabled:hidden" />
             <button type="button" aria-label="Next story" disabled={activeIndex === PREDICTION_STORIES.length - 1} onClick={() => openStory(activeIndex + 1)} className="absolute bottom-24 right-0 top-20 z-10 w-1/4 touch-manipulation focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white disabled:hidden" />
-          </>
+          </div>
         )}
       </dialog>
+      <style>{`
+        @keyframes worm-story-progress {
+          from { transform: scaleX(0); }
+          to { transform: scaleX(1); }
+        }
+      `}</style>
     </>
   );
 }
@@ -2299,8 +2325,8 @@ export default function MainFeed() {
   }, []);
 
   const openTrade = useCallback(
-    (market: Market, outcome: Outcome, amount: number) => {
-      setTradeFlow({ market, outcome, amount });
+    (market: Market, outcome: Outcome, amount: number, storyDialog?: HTMLDialogElement) => {
+      setTradeFlow({ market, outcome, amount, storyDialog });
     },
     [],
   );
@@ -2433,6 +2459,59 @@ export default function MainFeed() {
     ? toMarketScreenData(openMarket)
     : null;
 
+  const tradeSheet = tradeFlow && tradeMarket ? (
+    <div className="absolute inset-0 z-50">
+      <TradeFlowModal
+        key={`${tradeFlow.market.id}-${tradeFlow.outcome}-${tradeFlow.amount}`}
+        market={tradeMarket}
+        initialOutcome={tradeFlow.outcome}
+        initialAmount={tradeFlow.amount}
+        wallet="local"
+        handle="you"
+        referralCode="worm"
+        maxAmount={Math.max(MAX_BET, balance)}
+        theme="light"
+        sheetHeight={MARKET_SHEET_HEIGHT}
+        onClose={closeTrade}
+        onComplete={(trade) => {
+          const outcome: Outcome =
+            trade.outcome.toLowerCase() === "no" ? "No" : "Yes";
+          const entryPercent = Math.round(
+            Math.max(1, Math.min(99, trade.price * 100)),
+          );
+          setBalance((prev) => Math.max(0, prev - trade.amountUsd));
+          setHeldStickers((prev) => {
+            const next = new Set(prev);
+            next.add(tradeFlow.market.id);
+            return next;
+          });
+          setPositions((prev) => {
+            const existing = prev[tradeFlow.market.id];
+            const sameSide = existing?.outcome === outcome;
+            return {
+              ...prev,
+              [tradeFlow.market.id]: {
+                marketId: tradeFlow.market.id,
+                outcome,
+                stake: sameSide
+                  ? existing.stake + trade.amountUsd
+                  : trade.amountUsd,
+                entryPercent: sameSide
+                  ? Math.round(
+                      (existing.entryPercent * existing.stake +
+                        entryPercent * trade.amountUsd) /
+                        (existing.stake + trade.amountUsd),
+                    )
+                  : entryPercent,
+              },
+            };
+          });
+        }}
+        onShare={() => {}}
+      />
+    </div>
+  ) : null;
+
   return (
     <div
       className={`relative h-full w-full overflow-x-clip overflow-y-hidden text-black ${allo.className}`}
@@ -2448,7 +2527,11 @@ export default function MainFeed() {
       >
         <div className="flex w-full min-w-0 flex-col gap-4 px-4">
           <div className="flex min-w-0 flex-col gap-3.5">
-            <PredictionStories onPredict={openTrade} />
+            <PredictionStories
+              onPredict={openTrade}
+              paused={Boolean(tradeFlow?.storyDialog)}
+              positions={positions}
+            />
           </div>
           {visibleMarkets.length > 0 ? (
             visibleMarkets.map((market, index) => (
@@ -2542,58 +2625,7 @@ export default function MainFeed() {
         ) : null}
       </AnimatePresence>
 
-      {tradeFlow && tradeMarket ? (
-        <div className="absolute inset-0 z-50">
-          <TradeFlowModal
-            key={`${tradeFlow.market.id}-${tradeFlow.outcome}-${tradeFlow.amount}`}
-            market={tradeMarket}
-            initialOutcome={tradeFlow.outcome}
-            initialAmount={tradeFlow.amount}
-            wallet="local"
-            handle="you"
-            referralCode="worm"
-            maxAmount={Math.max(MAX_BET, balance)}
-            theme="light"
-            sheetHeight={MARKET_SHEET_HEIGHT}
-            onClose={closeTrade}
-            onComplete={(trade) => {
-              const outcome: Outcome =
-                trade.outcome.toLowerCase() === "no" ? "No" : "Yes";
-              const entryPercent = Math.round(
-                Math.max(1, Math.min(99, trade.price * 100)),
-              );
-              setBalance((prev) => Math.max(0, prev - trade.amountUsd));
-              setHeldStickers((prev) => {
-                const next = new Set(prev);
-                next.add(tradeFlow.market.id);
-                return next;
-              });
-              setPositions((prev) => {
-                const existing = prev[tradeFlow.market.id];
-                const sameSide = existing?.outcome === outcome;
-                return {
-                  ...prev,
-                  [tradeFlow.market.id]: {
-                    marketId: tradeFlow.market.id,
-                    outcome,
-                    stake: sameSide
-                      ? existing.stake + trade.amountUsd
-                      : trade.amountUsd,
-                    entryPercent: sameSide
-                      ? Math.round(
-                          (existing.entryPercent * existing.stake +
-                            entryPercent * trade.amountUsd) /
-                            (existing.stake + trade.amountUsd),
-                        )
-                      : entryPercent,
-                  },
-                };
-              });
-            }}
-            onShare={() => {}}
-          />
-        </div>
-      ) : null}
+      {tradeFlow?.storyDialog ? createPortal(tradeSheet, tradeFlow.storyDialog) : tradeSheet}
     </div>
   );
 }

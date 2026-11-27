@@ -656,7 +656,10 @@ export default function TradeFlowModal({
   submitTradeRef.current = submitTrade;
 
   useEffect(() => {
-    const id = window.requestAnimationFrame(() => setOpen(true));
+    // Give a newly mounted sheet a frame at its offscreen position before sliding it in.
+    let id = window.requestAnimationFrame(() => {
+      id = window.requestAnimationFrame(() => setOpen(true));
+    });
     return () => {
       window.cancelAnimationFrame(id);
       if (confirmTimerRef.current !== null) {
