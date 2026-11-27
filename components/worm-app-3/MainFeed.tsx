@@ -64,8 +64,6 @@ const COMBO_OVERDRAG_PX = 72;
 const COMBO_ARM_PX = MAX_DRAG_PX + 28;
 const BET_STEP = 1;
 const COMMIT_AMOUNT = 1;
-const SIZE_DELTA_HOLD_MS = 900;
-const SIZE_DELTA_EXIT_MS = 480;
 const LIVE_PERCENT_HIGH_MIN = 75;
 const LIVE_PERCENT_HIGH_MAX = 88;
 const LIVE_PERCENT_BAND = 5;
@@ -150,13 +148,6 @@ const COMBO_SHORTCUTS: ComboShortcut[] = [
     ],
   },
 ];
-
-type SizeDeltaFlash = {
-  sessionId: number;
-  amount: number;
-  bumpId: number;
-  exiting: boolean;
-};
 
 type Topic = "sports" | "crypto" | "culture" | "tech" | "politics";
 
@@ -726,62 +717,6 @@ function formatToWin(value: number) {
   return `$${rounded.toLocaleString("en-US")}`;
 }
 
-function useAnimatedCount(target: number, durationMs = 140) {
-  const [display, setDisplay] = useState(0);
-  const displayRef = useRef(0);
-
-  useEffect(() => {
-    const from = displayRef.current;
-    if (from === target) {
-      setDisplay(target);
-      return;
-    }
-    const start = performance.now();
-    let raf = 0;
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / durationMs);
-      const eased = 1 - (1 - t) ** 3;
-      const next = Math.round(from + (target - from) * eased);
-      displayRef.current = next;
-      setDisplay(next);
-      if (t < 1) raf = requestAnimationFrame(tick);
-      else {
-        displayRef.current = target;
-        setDisplay(target);
-      }
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, durationMs]);
-
-  return display;
-}
-
-function SizeDeltaFlashLabel({
-  amount,
-  exiting,
-  video,
-}: {
-  amount: number;
-  exiting: boolean;
-  video: boolean;
-}) {
-  const animatedAbs = useAnimatedCount(Math.abs(amount));
-  const exitClass =
-    amount > 0 ? "worm-size-delta-exit-up" : "worm-size-delta-exit-down";
-
-  return (
-    <span
-      className={`inline-flex items-baseline text-[72px] font-semibold leading-none tracking-tight tabular-nums ${
-        video ? "text-white" : "text-black"
-      } ${exiting ? exitClass : "worm-size-delta-enter"}`}
-    >
-      {amount > 0 ? "+$" : "-$"}
-      {animatedAbs.toLocaleString("en-US")}
-    </span>
-  );
-}
-
 function livePercentBounds(anchor: number): [number, number] {
   const a = Math.max(1, Math.min(99, anchor));
   // High-probability sides keep the fuller 75–88 bar; others hug true odds.
@@ -1165,9 +1100,6 @@ function MarketCard({
   const [dragOutcome, setDragOutcome] = useState<Outcome | null>(null);
   const [comboArmed, setComboArmed] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [sizeDeltaFlash, setSizeDeltaFlash] = useState<SizeDeltaFlash | null>(
-    null,
-  );
   const [cashingOut, setCashingOut] = useState(false);
   const cashOutTimerRef = useRef<number | null>(null);
   const yesInCombo = comboOutcomes.has("Yes");
@@ -1197,11 +1129,6 @@ function MarketCard({
   const lastOutcomeRef = useRef<Outcome | null>(null);
   const lastComboArmedRef = useRef(false);
   const [cardPressed, setCardPressed] = useState(false);
-  const sizeDeltaSessionRef = useRef(0);
-  const sizeDeltaStackedRef = useRef(0);
-  const sizeDeltaBumpRef = useRef(0);
-  const sizeDeltaHoldTimerRef = useRef<number | null>(null);
-  const sizeDeltaExitTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     setLivePositionPercent(clampLivePercent(positionPercent, positionPercent));
@@ -1234,12 +1161,6 @@ function MarketCard({
 
   useEffect(() => {
     return () => {
-      if (sizeDeltaHoldTimerRef.current !== null) {
-        window.clearTimeout(sizeDeltaHoldTimerRef.current);
-      }
-      if (sizeDeltaExitTimerRef.current !== null) {
-        window.clearTimeout(sizeDeltaExitTimerRef.current);
-      }
       if (cashOutTimerRef.current !== null) {
         window.clearTimeout(cashOutTimerRef.current);
       }
@@ -1260,14 +1181,12 @@ function MarketCard({
     if (cashOutTimerRef.current !== null) {
       window.clearTimeout(cashOutTimerRef.current);
     }
-    // 1) Fade position UI out, 2) clear position, 3) hold layout while height morphs.
+    // Collapse + fade first, then swap to Yes/No at the smaller size (no tall hold).
     cashOutTimerRef.current = window.setTimeout(() => {
+      cashOutTimerRef.current = null;
       onCashOut(position);
-      cashOutTimerRef.current = window.setTimeout(() => {
-        cashOutTimerRef.current = null;
-        setCashingOut(false);
-      }, 460);
-    }, 480);
+      setCashingOut(false);
+    }, 380);
   }, [cashingOut, onCashOut, position]);
 
   const gaugePercent = position
@@ -1275,54 +1194,6 @@ function MarketCard({
       ? 100 - livePositionPercent
       : livePositionPercent
     : market.yesPercent;
-
-  const flashSizeDelta = useCallback((applied: number) => {
-    if (applied === 0) return;
-
-    const isNewSession =
-      sizeDeltaHoldTimerRef.current === null &&
-      sizeDeltaExitTimerRef.current === null;
-    if (isNewSession) {
-      sizeDeltaSessionRef.current += 1;
-      sizeDeltaStackedRef.current = applied;
-    } else {
-      sizeDeltaStackedRef.current += applied;
-    }
-
-    sizeDeltaBumpRef.current += 1;
-    setSizeDeltaFlash({
-      sessionId: sizeDeltaSessionRef.current,
-      amount: sizeDeltaStackedRef.current,
-      bumpId: sizeDeltaBumpRef.current,
-      exiting: false,
-    });
-
-    if (sizeDeltaHoldTimerRef.current !== null) {
-      window.clearTimeout(sizeDeltaHoldTimerRef.current);
-    }
-    if (sizeDeltaExitTimerRef.current !== null) {
-      window.clearTimeout(sizeDeltaExitTimerRef.current);
-      sizeDeltaExitTimerRef.current = null;
-    }
-
-    sizeDeltaHoldTimerRef.current = window.setTimeout(() => {
-      sizeDeltaHoldTimerRef.current = null;
-      setSizeDeltaFlash((prev) => (prev ? { ...prev, exiting: true } : null));
-      sizeDeltaExitTimerRef.current = window.setTimeout(() => {
-        setSizeDeltaFlash(null);
-        sizeDeltaStackedRef.current = 0;
-        sizeDeltaExitTimerRef.current = null;
-      }, SIZE_DELTA_EXIT_MS);
-    }, SIZE_DELTA_HOLD_MS);
-  }, []);
-
-  const handleAdjust = useCallback(
-    (delta: number) => {
-      const applied = onAdjustPosition(market.id, delta);
-      flashSizeDelta(applied);
-    },
-    [flashSizeDelta, market.id, onAdjustPosition],
-  );
 
   const yesOpacity = useTransform(x, [0, 20, 48], [0, 0.7, 1]);
   const noOpacity = useTransform(x, [0, -20, -48], [0, 0.7, 1]);
@@ -1395,7 +1266,6 @@ function MarketCard({
       ) : null}
 
       <motion.article
-        layout
         drag={hasPosition ? false : "x"}
         dragConstraints={{
           left: -(MAX_DRAG_PX + COMBO_OVERDRAG_PX),
@@ -1405,11 +1275,14 @@ function MarketCard({
         dragDirectionLock
         dragMomentum={false}
         animate={{ scale: cardPressed || dragging ? 0.97 : 1 }}
-        transition={{
-          layout: { duration: 0.48, ease: [0.22, 1, 0.36, 1] },
-          scale: { type: "spring", stiffness: 480, damping: 36 },
+        transition={{ type: "spring", stiffness: 480, damping: 36 }}
+        style={{
+          x,
+          touchAction: "pan-y",
+          transition: cashingOut
+            ? "min-height 0.38s cubic-bezier(0.22, 1, 0.36, 1)"
+            : undefined,
         }}
-        style={{ x, touchAction: "pan-y" }}
         onPointerDown={(event) => {
           const target = event.target as HTMLElement | null;
           // Controls keep their own press scale — don't shrink the whole card.
@@ -1495,10 +1368,14 @@ function MarketCard({
         }}
         className={`relative touch-pan-y overflow-hidden rounded-[28px] will-change-transform ${
           chrome
-            ? "flex min-h-[504px] flex-col bg-black px-5 pb-6 pt-5 text-white"
-            : hasPosition || cashingOut
+            ? `flex flex-col bg-black px-5 pb-6 pt-5 text-white ${
+                cashingOut ? "min-h-0" : "min-h-[504px]"
+              }`
+            : hasPosition && !cashingOut
               ? "flex min-h-[420px] flex-col bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
-              : "bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
+              : hasPosition && cashingOut
+                ? "flex min-h-0 flex-col bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
+                : "bg-white px-5 pb-6 pt-5 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
         } ${
           hasPosition || cashingOut
             ? "cursor-default"
@@ -1531,20 +1408,6 @@ function MarketCard({
             </motion.div>
           ) : null}
         </AnimatePresence>
-
-        {sizeDeltaFlash && sizeDeltaFlash.amount !== 0 ? (
-          <div
-            key={sizeDeltaFlash.sessionId}
-            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center -translate-y-10"
-            aria-hidden
-          >
-            <SizeDeltaFlashLabel
-              amount={sizeDeltaFlash.amount}
-              exiting={sizeDeltaFlash.exiting}
-              video={chrome}
-            />
-          </div>
-        ) : null}
 
         <div className="relative z-[2] flex min-w-0 items-start gap-3">
           {!chrome ? (
@@ -1582,37 +1445,29 @@ function MarketCard({
             className="pointer-events-none relative z-[2] min-h-[180px] flex-1"
             aria-hidden
           />
-        ) : !hasPosition ? (
-          <motion.div
-            className="relative z-[2] mb-2 mt-6"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{
-              opacity: sizeDeltaFlash && sizeDeltaFlash.amount !== 0 ? 0 : 1,
-              y: 0,
-            }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <ChanceGauge percent={gaugePercent} />
-          </motion.div>
         ) : null}
 
         <AnimatePresence mode="wait" initial={false}>
           {position ? (
             <motion.div
               key={`position-${position.marketId}`}
-              initial={{ opacity: 0, y: 16, scale: 0.98 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{
                 opacity: cashingOut ? 0 : 1,
-                y: cashingOut ? 14 : 0,
-                scale: cashingOut ? 0.96 : 1,
+                y: cashingOut ? 6 : 0,
               }}
-              exit={{ opacity: 0, y: 12, scale: 0.97 }}
-              transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+              exit={{ opacity: 0, height: 0, marginTop: 0, overflow: "hidden" }}
+              transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
               className={
                 chrome || hasPosition
-                  ? "relative z-[2] mt-auto flex min-h-0 flex-1 flex-col"
+                  ? "relative z-[2] mt-auto flex min-h-0 flex-col overflow-hidden"
                   : undefined
               }
+              style={{
+                flexGrow: chrome || hasPosition ? (cashingOut ? 0 : 1) : undefined,
+                minHeight: 0,
+                transition: "flex-grow 0.34s cubic-bezier(0.22, 1, 0.36, 1)",
+              }}
             >
               <PositionFooter
                 position={position}
@@ -1621,23 +1476,25 @@ function MarketCard({
                 canIncrease={balance >= POSITION_ADJUST_STEP}
                 cashingOut={cashingOut}
                 stickerReady={stickerReady}
-                stickerFaded={
-                  cashingOut ||
-                  Boolean(sizeDeltaFlash && sizeDeltaFlash.amount !== 0)
-                }
                 onCashOut={startCashOut}
-                onAdjust={handleAdjust}
+                onAdjust={(delta) => onAdjustPosition(market.id, delta)}
                 className={hasPosition || chrome ? "mt-0" : undefined}
+                collapsing={cashingOut}
               />
             </motion.div>
           ) : (
             <motion.div
               key="trade-actions"
-              initial={{ opacity: 0, y: 18, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.98 }}
-              transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
             >
+              {!chrome ? (
+                <div className="relative z-[2] mb-2 mt-6">
+                  <ChanceGauge percent={gaugePercent} />
+                </div>
+              ) : null}
               <div
                 className={`relative z-[2] grid grid-cols-2 gap-2.5 ${
                   chrome ? "mt-auto" : "mt-8"
@@ -1704,39 +1561,6 @@ function MarketCard({
           )}
         </AnimatePresence>
       </motion.article>
-      <style>{`
-        @keyframes worm-size-delta-enter {
-          0% { opacity: 0; transform: translate3d(0, 18px, 0) scale(0.72); }
-          55% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.08); }
-          100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-        }
-        @keyframes worm-size-delta-exit-up {
-          0% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-          100% { opacity: 0; transform: translate3d(0, -42px, 0) scale(0.92); }
-        }
-        @keyframes worm-size-delta-exit-down {
-          0% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-          100% { opacity: 0; transform: translate3d(0, 42px, 0) scale(0.92); }
-        }
-        .worm-size-delta-enter {
-          animation: worm-size-delta-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
-        }
-        .worm-size-delta-exit-up {
-          animation: worm-size-delta-exit-up 480ms cubic-bezier(0.4, 0, 0.2, 1) both;
-        }
-        .worm-size-delta-exit-down {
-          animation: worm-size-delta-exit-down 480ms cubic-bezier(0.4, 0, 0.2, 1) both;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .worm-size-delta-enter,
-          .worm-size-delta-exit-up,
-          .worm-size-delta-exit-down {
-            animation: none !important;
-            opacity: 1;
-            transform: none;
-          }
-        }
-      `}</style>
     </div>
   );
 }
@@ -2628,17 +2452,6 @@ export default function MainFeed() {
             key={openMarket.id}
             market={openMarketScreen.market}
             pick={openMarketScreen.pick}
-            selectedIds={
-              new Set(
-                [...(comboByMarket.get(openMarket.id) ?? [])].map(
-                  (outcome) => `${openMarket.id}-${outcome}`,
-                ),
-              )
-            }
-            atLimit={
-              comboPicks.length >= MAX_COMBO_PICKS &&
-              !comboByMarket.get(openMarket.id)?.size
-            }
             position={positions[openMarket.id] ?? null}
             balance={balance}
             stickerReady={!heldStickers.has(openMarket.id)}

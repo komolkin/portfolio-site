@@ -501,7 +501,7 @@ export default function DepositModal({
                   </h2>
                 </div>
 
-                <div className="flex min-h-0 flex-1 items-center justify-center">
+                <div className="flex shrink-0 items-center justify-center py-6">
                   <p
                     className={`inline-flex items-baseline text-[64px] font-semibold leading-none tracking-tight text-white ${instrumentSans.className}`}
                     aria-live="polite"

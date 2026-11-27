@@ -460,6 +460,18 @@ export function ComboSheet({
                       ? "Pick 1 more market"
                       : "Choose amount"}
                   </button>
+                  {picks.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClear();
+                        onOpenChange(false);
+                      }}
+                      className="mt-2 h-11 w-full rounded-full text-sm font-semibold text-white/70 transition-transform duration-150 ease-out active:scale-[0.98]"
+                    >
+                      Reset
+                    </button>
+                  ) : null}
                 </>
               ) : null}
             </div>

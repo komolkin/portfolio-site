@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import NumberFlow from "@number-flow/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { hapticStep, hapticSuccess } from "@/lib/haptics";
@@ -21,6 +22,72 @@ export const YES_COLOR = "#1DB954";
 export const NO_COLOR = "#FF3B5C";
 export const MIN_POSITION_STAKE = 1;
 export const POSITION_ADJUST_STEP = 1;
+
+const SIZE_DELTA_HOLD_MS = 900;
+const SIZE_DELTA_EXIT_MS = 480;
+
+type SizeDeltaFlash = {
+  sessionId: number;
+  amount: number;
+  bumpId: number;
+  exiting: boolean;
+};
+
+function useAnimatedCount(target: number, durationMs = 140) {
+  const [display, setDisplay] = useState(0);
+  const displayRef = useRef(0);
+
+  useEffect(() => {
+    const from = displayRef.current;
+    if (from === target) {
+      setDisplay(target);
+      return;
+    }
+    const start = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - (1 - t) ** 3;
+      const next = Math.round(from + (target - from) * eased);
+      displayRef.current = next;
+      setDisplay(next);
+      if (t < 1) raf = requestAnimationFrame(tick);
+      else {
+        displayRef.current = target;
+        setDisplay(target);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, durationMs]);
+
+  return display;
+}
+
+function SizeDeltaFlashLabel({
+  amount,
+  exiting,
+  video,
+}: {
+  amount: number;
+  exiting: boolean;
+  video: boolean;
+}) {
+  const animatedAbs = useAnimatedCount(Math.abs(amount));
+  const exitClass =
+    amount > 0 ? "worm-size-delta-exit-up" : "worm-size-delta-exit-down";
+
+  return (
+    <span
+      className={`inline-flex items-baseline text-[72px] font-semibold leading-none tracking-tight tabular-nums ${
+        video ? "text-white" : "text-black"
+      } ${exiting ? exitClass : "worm-size-delta-enter"}`}
+    >
+      {amount > 0 ? "+$" : "-$"}
+      {animatedAbs.toLocaleString("en-US")}
+    </span>
+  );
+}
 
 /**
  * Mark-to-market value at the current chance of your outcome.
@@ -138,6 +205,7 @@ export function PositionFooter({
   cashingOut,
   stickerReady,
   stickerFaded = false,
+  collapsing = false,
   onCashOut,
   onAdjust,
   className,
@@ -151,8 +219,11 @@ export function PositionFooter({
   stickerReady: boolean;
   /** Hide sticker while the ±$1 center flash is visible. */
   stickerFaded?: boolean;
+  /** Collapse sticker space during cash-out so the card shrinks once. */
+  collapsing?: boolean;
   onCashOut: () => void;
-  onAdjust: (delta: number) => void;
+  /** Returns the applied stake delta (0 if none). */
+  onAdjust: (delta: number) => number;
   className?: string;
 }) {
   const displayPercent = Math.round(currentPercent);
@@ -174,19 +245,132 @@ export function PositionFooter({
     video ? "bg-white/[0.06] text-white" : "bg-black/[0.06] text-black"
   }`;
 
+  const [sizeDeltaFlash, setSizeDeltaFlash] = useState<SizeDeltaFlash | null>(
+    null,
+  );
+  const sizeDeltaSessionRef = useRef(0);
+  const sizeDeltaStackedRef = useRef(0);
+  const sizeDeltaBumpRef = useRef(0);
+  const sizeDeltaHoldTimerRef = useRef<number | null>(null);
+  const sizeDeltaExitTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (sizeDeltaHoldTimerRef.current !== null) {
+        window.clearTimeout(sizeDeltaHoldTimerRef.current);
+      }
+      if (sizeDeltaExitTimerRef.current !== null) {
+        window.clearTimeout(sizeDeltaExitTimerRef.current);
+      }
+    };
+  }, []);
+
+  const flashSizeDelta = useCallback((applied: number) => {
+    if (applied === 0) return;
+
+    const isNewSession =
+      sizeDeltaHoldTimerRef.current === null &&
+      sizeDeltaExitTimerRef.current === null;
+    if (isNewSession) {
+      sizeDeltaSessionRef.current += 1;
+      sizeDeltaStackedRef.current = applied;
+    } else {
+      sizeDeltaStackedRef.current += applied;
+    }
+
+    sizeDeltaBumpRef.current += 1;
+    setSizeDeltaFlash({
+      sessionId: sizeDeltaSessionRef.current,
+      amount: sizeDeltaStackedRef.current,
+      bumpId: sizeDeltaBumpRef.current,
+      exiting: false,
+    });
+
+    if (sizeDeltaHoldTimerRef.current !== null) {
+      window.clearTimeout(sizeDeltaHoldTimerRef.current);
+    }
+    if (sizeDeltaExitTimerRef.current !== null) {
+      window.clearTimeout(sizeDeltaExitTimerRef.current);
+      sizeDeltaExitTimerRef.current = null;
+    }
+
+    sizeDeltaHoldTimerRef.current = window.setTimeout(() => {
+      sizeDeltaHoldTimerRef.current = null;
+      setSizeDeltaFlash((prev) => (prev ? { ...prev, exiting: true } : null));
+      sizeDeltaExitTimerRef.current = window.setTimeout(() => {
+        setSizeDeltaFlash(null);
+        sizeDeltaStackedRef.current = 0;
+        sizeDeltaExitTimerRef.current = null;
+      }, SIZE_DELTA_EXIT_MS);
+    }, SIZE_DELTA_HOLD_MS);
+  }, []);
+
+  const handleAdjust = (delta: number) => {
+    const applied = onAdjust(delta);
+    flashSizeDelta(applied);
+  };
+
+  const flashVisible = Boolean(sizeDeltaFlash && sizeDeltaFlash.amount !== 0);
+  const hideSticker = stickerFaded || collapsing || flashVisible;
+
   return (
     <div
       className={`relative z-[2] flex min-h-0 flex-1 flex-col gap-3 ${
         className ?? (video ? "mt-auto" : "mt-8")
       }`}
     >
-      <div className="flex min-h-[88px] flex-1 items-center justify-center overflow-visible p-6">
+      <style>{`
+        @keyframes worm-size-delta-enter {
+          0% { opacity: 0; transform: translate3d(0, 18px, 0) scale(0.72); }
+          55% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.08); }
+          100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        }
+        @keyframes worm-size-delta-exit-up {
+          0% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+          100% { opacity: 0; transform: translate3d(0, -42px, 0) scale(0.92); }
+        }
+        @keyframes worm-size-delta-exit-down {
+          0% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+          100% { opacity: 0; transform: translate3d(0, 42px, 0) scale(0.92); }
+        }
+        .worm-size-delta-enter {
+          animation: worm-size-delta-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        .worm-size-delta-exit-up {
+          animation: worm-size-delta-exit-up 480ms cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+        .worm-size-delta-exit-down {
+          animation: worm-size-delta-exit-down 480ms cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .worm-size-delta-enter,
+          .worm-size-delta-exit-up,
+          .worm-size-delta-exit-down {
+            animation: none !important;
+            opacity: 1;
+            transform: none;
+          }
+        }
+      `}</style>
+      <motion.div
+        initial={false}
+        animate={{
+          flexGrow: collapsing ? 0 : 1,
+          minHeight: collapsing ? 0 : 88,
+          opacity: collapsing ? 0 : 1,
+          paddingTop: collapsing ? 0 : 24,
+          paddingBottom: collapsing ? 0 : 24,
+        }}
+        transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
+        className="relative flex items-center justify-center overflow-hidden"
+        style={{ flexGrow: collapsing ? 0 : 1 }}
+      >
         <AnimatePresence initial={false}>
           {stickerReady ? (
             <motion.div
               key={`${position.marketId}-${position.outcome}-wrap`}
               initial={false}
-              animate={{ opacity: stickerFaded ? 0 : 1 }}
+              animate={{ opacity: hideSticker ? 0 : 1 }}
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               className="flex items-center justify-center"
             >
@@ -200,7 +384,20 @@ export function PositionFooter({
             </motion.div>
           ) : null}
         </AnimatePresence>
-      </div>
+        {flashVisible && sizeDeltaFlash ? (
+          <div
+            key={sizeDeltaFlash.sessionId}
+            className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center"
+            aria-hidden
+          >
+            <SizeDeltaFlashLabel
+              amount={sizeDeltaFlash.amount}
+              exiting={sizeDeltaFlash.exiting}
+              video={video}
+            />
+          </div>
+        ) : null}
+      </motion.div>
 
       <div
         className={`relative h-[52px] overflow-hidden rounded-[18px] ${
@@ -275,7 +472,7 @@ export function PositionFooter({
           onClick={() => {
             if (!canDecrease || cashingOut) return;
             hapticStep();
-            onAdjust(-POSITION_ADJUST_STEP);
+            handleAdjust(-POSITION_ADJUST_STEP);
           }}
           className={`${actionBtn} col-span-1 tabular-nums`}
         >
@@ -289,7 +486,7 @@ export function PositionFooter({
           onClick={() => {
             if (!canIncrease || cashingOut) return;
             hapticStep();
-            onAdjust(POSITION_ADJUST_STEP);
+            handleAdjust(POSITION_ADJUST_STEP);
           }}
           className={`${actionBtn} col-span-1 tabular-nums`}
         >

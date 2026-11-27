@@ -154,14 +154,40 @@ type PickCard = {
 
 type MarketCard = {
   id: string;
-  kind: "sports" | "crypto";
+  kind: "sports" | "crypto" | "topic";
   title: string;
   subtitle?: string;
-  logo: string;
+  logo?: string;
   picks: PickCard[];
 };
 
 const MARKETS: MarketCard[] = [
+  {
+    id: "nvidia-jensen",
+    kind: "topic",
+    title: "Jensen Huang out as NVIDIA CEO again by...?",
+    picks: [
+      {
+        id: "nvidia-jensen-dates",
+        title: "Jensen Huang out as NVIDIA CEO again by...?",
+        background: "/worm-app-2/bg/jensen-huang.jpg",
+        options: [
+          {
+            id: "jensen-dec-2026",
+            label: "December 31, 2026",
+            percent: 45,
+            color: "#5a5253",
+          },
+          {
+            id: "jensen-mar-2027",
+            label: "March 31, 2027",
+            percent: 55,
+            color: "#633a3a",
+          },
+        ],
+      },
+    ],
+  },
   {
     id: "nba",
     kind: "sports",
@@ -638,31 +664,47 @@ function matchupSides(pick: PickCard): [PickOption | undefined, PickOption | und
   return [teams[0], teams[1] ?? teams[teams.length - 1]];
 }
 
+function matchupLabel(pick: PickCard) {
+  const sides = pick.options.filter(
+    (option) => option.label.trim().toLowerCase() !== "draw",
+  );
+  if (sides.length >= 2) {
+    return `${sides[0]!.label} v ${sides[sides.length - 1]!.label}`;
+  }
+  return sides[0]?.label ?? pick.title;
+}
+
 function toTradeMarket(
   market: MarketCard,
   pick: PickCard,
 ): PolymarketMarketData {
   const [left, right] = matchupSides(pick);
   const threeWay = pick.options.length > 2;
+  const topic = market.kind === "topic";
   return {
     marketId: pick.id,
-    title: pick.crypto
-      ? pick.title
+    title: pick.crypto || topic
+      ? market.title
       : `${left?.label ?? ""} vs ${right?.label ?? ""}`.trim(),
     slug: pick.id,
-    category: market.kind === "crypto" ? "Crypto" : market.title,
+    category:
+      market.kind === "crypto"
+        ? "Crypto"
+        : topic
+          ? "Politics"
+          : market.title,
     yesPrice: (left?.percent ?? 50) / 100,
     noPrice: (right?.percent ?? 50) / 100,
     volumeUsd: 0,
     volume24h: 0,
     liquidityUsd: 0,
-    image: left?.logo ?? market.logo,
+    image: left?.logo ?? market.logo ?? pick.background ?? null,
     closesAt: null,
     isResolved: false,
     price24hChange: null,
     eventTitle: market.title,
     // Keep null for 3-way soccer so all outcomes (incl. Draw) stay tradable.
-    groupItemTitle: threeWay ? null : pick.title,
+    groupItemTitle: threeWay || topic ? null : pick.title,
     outcomes: pick.options.map((option) => ({
       label: option.label,
       price: option.percent / 100,
@@ -818,6 +860,7 @@ function TeamPicksCard({
   onToggle,
   onOpen,
   onTrade,
+  wide = false,
 }: {
   pick: PickCard;
   selectedIds: Set<string>;
@@ -825,12 +868,13 @@ function TeamPicksCard({
   onToggle: (pick: ComboPick) => void;
   onOpen: () => void;
   onTrade: (option: PickOption) => void;
+  wide?: boolean;
 }) {
   return (
     <div
       role="link"
       tabIndex={0}
-      aria-label={`Open ${pick.title}`}
+      aria-label={`Open ${wide ? pick.title : matchupLabel(pick)}`}
       onClick={onOpen}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -838,9 +882,10 @@ function TeamPicksCard({
           onOpen();
         }
       }}
-      className="w-[min(311px,82vw)] shrink-0 origin-center cursor-pointer rounded-[20px] bg-[rgba(55,55,55,0.7)] p-4 backdrop-blur-md transition-transform duration-150 ease-out motion-safe:active:scale-[0.96] motion-safe:has-[button:active]:scale-100"
+      className={`${
+        wide ? "w-[min(366px,calc(100vw-36px))]" : "w-[min(311px,82vw)]"
+      } shrink-0 origin-center cursor-pointer rounded-[20px] bg-[rgba(55,55,55,0.7)] p-4 backdrop-blur-md transition-transform duration-150 ease-out motion-safe:active:scale-[0.96] motion-safe:has-[button:active]:scale-100`}
     >
-      <p className="mb-2 text-[16px] font-medium text-white">{pick.title}</p>
       <div className="flex flex-col gap-2">
         {pick.options.map((option) => {
           const selected = selectedIds.has(option.id);
@@ -1353,9 +1398,28 @@ const MarketPreview = memo(function MarketPreview({
     };
   }, [market.id, market.picks.length]);
 
+  const advanceAfterAdd = useCallback(
+    (fromIndex: number) => {
+      const scroller = scrollerRef.current;
+      if (!scroller) return;
+      const nextIndex = fromIndex + 1;
+      if (nextIndex < market.picks.length) {
+        const slide = scroller.children[nextIndex] as HTMLElement | undefined;
+        if (!slide) return;
+        scroller.scrollTo({ left: slide.offsetLeft, behavior: "smooth" });
+        return;
+      }
+      // Last pick in this league — jump the feed to the next market card.
+      const wrap = scroller.closest("article")?.parentElement;
+      const nextCard = wrap?.nextElementSibling?.querySelector("article");
+      nextCard?.scrollIntoView({ behavior: "smooth", block: "center" });
+    },
+    [market.picks.length],
+  );
+
   return (
     <article className="relative h-[min(580px,74vh)] w-full origin-center overflow-hidden rounded-[24px] bg-[#131313] transition-transform duration-150 ease-out motion-safe:has-[[data-market-open]:active]:scale-[0.96]">
-      {market.kind === "sports" ? (
+      {market.kind !== "crypto" ? (
         <>
           {market.picks.map((pick, index) => {
             const active = index === activeIndex;
@@ -1378,7 +1442,10 @@ const MarketPreview = memo(function MarketPreview({
                   src={pick.background}
                   alt=""
                   fill
-                  priority={market.id === "nba" && index === 0}
+                  priority={
+                    (market.id === "nvidia-jensen" || market.id === "nba") &&
+                    index === 0
+                  }
                   className={`object-cover transition-opacity duration-300 ease-out ${
                     active ? "opacity-100" : "opacity-0"
                   }`}
@@ -1390,7 +1457,17 @@ const MarketPreview = memo(function MarketPreview({
           })}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-24 bg-gradient-to-b from-[rgba(27,27,27,0.65)] to-transparent"
+            className="api-progressive-blur z-[1] h-[26%]"
+            data-edge="top"
+          >
+            <i />
+            <i />
+            <i />
+            <i />
+          </div>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[26%] bg-gradient-to-b from-black/35 via-black/10 to-transparent"
           />
           {/* Bottom progressive blur lives on SportsVideoBg; stills get a soft scrim. */}
           <div
@@ -1482,27 +1559,54 @@ const MarketPreview = memo(function MarketPreview({
         <button
           type="button"
           onClick={() => onOpenMarket(market, activePick)}
-          className="absolute left-4 top-4 z-[3] flex items-center gap-3 text-left"
-          aria-label={`Open ${market.title}`}
+          className={`absolute left-4 top-4 z-[3] flex text-left ${
+            market.kind === "topic"
+              ? "max-w-[min(295px,78%)] items-start"
+              : "items-center gap-3"
+          }`}
+          aria-label={`Open ${
+            market.kind === "sports"
+              ? `${activePick.title} · ${matchupLabel(activePick)}`
+              : market.title
+          }`}
         >
-          <div className="relative size-[49px] shrink-0">
-            <Image
-              src={market.logo}
-              alt=""
-              fill
-              className="object-contain"
-              sizes="49px"
-            />
-          </div>
+          {market.logo ? (
+            <div className="relative size-[49px] shrink-0">
+              <Image
+                src={market.logo}
+                alt=""
+                fill
+                className="object-contain"
+                sizes="49px"
+              />
+            </div>
+          ) : null}
           <div className="min-w-0">
-            <p className="text-[24px] font-semibold leading-none text-white">
-              {market.title}
-            </p>
-            {market.kind === "sports" && market.subtitle ? (
-              <p className="mt-0.5 text-[14px] font-medium text-white/80">
-                {market.subtitle}
+            {market.kind === "sports" ? (
+              <>
+                <p className="text-[14px] font-medium leading-none text-white/80">
+                  {activePick.title}
+                </p>
+                <p className="mt-0.5 truncate text-[24px] font-semibold leading-none text-white">
+                  {matchupLabel(activePick)}
+                </p>
+              </>
+            ) : market.kind === "topic" ? (
+              <p className="text-[24px] font-semibold leading-[1.2] text-white">
+                {market.title}
               </p>
-            ) : null}
+            ) : (
+              <>
+                <p className="text-[24px] font-semibold leading-none text-white">
+                  {market.title}
+                </p>
+                {market.subtitle ? (
+                  <p className="mt-0.5 text-[14px] font-medium text-white/80">
+                    {market.subtitle}
+                  </p>
+                ) : null}
+              </>
+            )}
           </div>
         </button>
       ) : null}
@@ -1521,7 +1625,14 @@ const MarketPreview = memo(function MarketPreview({
                 pick={pick}
                 selectedIds={selectedIds}
                 atLimit={atLimit}
-                onToggle={onToggle}
+                wide={market.picks.length === 1}
+                onToggle={(comboPick) => {
+                  const adding = !selectedIds.has(comboPick.id);
+                  onToggle(comboPick);
+                  if (adding) {
+                    window.requestAnimationFrame(() => advanceAfterAdd(index));
+                  }
+                }}
                 onOpen={() => onOpenMarket(market, pick)}
                 onTrade={(option) => onOpenTrade(market, pick, option)}
               />

@@ -703,93 +703,10 @@ function MatchOddsChart({
   );
 }
 
-/** Matches feed OptionRow add control (size-12 circle + / check). */
-function ComboAddButton({
-  selected,
-  blocked,
-  label,
-  onToggle,
-}: {
-  selected: boolean;
-  blocked: boolean;
-  label: string;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={selected ? `Remove ${label}` : `Add ${label}`}
-      aria-pressed={selected}
-      disabled={blocked}
-      onClick={onToggle}
-      className={`relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full transition-[transform,colors] duration-150 ease-out active:scale-[0.94] disabled:opacity-35 disabled:active:scale-100 ${
-        selected ? "bg-black text-white" : "bg-black/[0.06] text-black"
-      }`}
-    >
-      <AnimatePresence initial={false} mode="popLayout">
-        {selected ? (
-          <motion.span
-            key="check"
-            className="absolute inset-0 flex items-center justify-center"
-            initial={{ opacity: 0, scale: 0.55, rotate: -12 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            exit={{ opacity: 0, scale: 0.55, rotate: 12 }}
-            transition={{ type: "spring", stiffness: 520, damping: 28 }}
-          >
-            <svg
-              viewBox="0 0 20 20"
-              width={20}
-              height={20}
-              className="size-5"
-              fill="none"
-              aria-hidden
-            >
-              <path
-                d="M4.5 10.5 8.2 14.2 15.5 5.8"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </motion.span>
-        ) : (
-          <motion.span
-            key="plus"
-            className="absolute inset-0 flex items-center justify-center"
-            initial={{ opacity: 0, scale: 0.55 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.55 }}
-            transition={{ type: "spring", stiffness: 520, damping: 28 }}
-          >
-            <svg
-              viewBox="0 0 20 20"
-              width={20}
-              height={20}
-              className="size-5"
-              fill="none"
-              aria-hidden
-            >
-              <path
-                d="M10 4v12M4 10h12"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </motion.span>
-        )}
-      </AnimatePresence>
-    </button>
-  );
-}
-
 /** Market detail sheet — swipe down or tap backdrop to close. */
 export default function MarketScreen({
   market,
   pick,
-  selectedIds,
-  atLimit,
   position,
   balance,
   stickerReady = true,
@@ -801,8 +718,6 @@ export default function MarketScreen({
 }: {
   market: MarketScreenMarket;
   pick: MarketScreenPick;
-  selectedIds: Set<string>;
-  atLimit: boolean;
   position?: PlacedPosition | null;
   balance?: number;
   stickerReady?: boolean;
@@ -1426,7 +1341,9 @@ export default function MarketScreen({
             stickerReady={stickerReady}
             className="mt-5"
             onCashOut={startCashOut}
-            onAdjust={(delta) => onAdjustPosition?.(position.marketId, delta)}
+            onAdjust={(delta) =>
+              onAdjustPosition?.(position.marketId, delta) ?? 0
+            }
           />
         ) : isLive ? (
           <div className="mt-6 flex flex-col gap-2">
@@ -1459,98 +1376,49 @@ export default function MarketScreen({
             ))}
           </div>
         ) : pick.options.length === 2 ? (
-          <div className="mt-6 flex items-center gap-2">
-            {(() => {
-              const left = pick.options[0]!;
-              const right = pick.options[1]!;
-              const leftSelected = selectedIds.has(left.id);
-              const rightSelected = selectedIds.has(right.id);
-              return (
-                <>
-                  <ComboAddButton
-                    selected={leftSelected}
-                    blocked={!leftSelected && atLimit}
-                    label={left.label}
-                    onToggle={() => onToggle(left)}
-                  />
-                  {[left, right].map((option) => (
-                    <button
-                      key={option.id}
-                      type="button"
-                      aria-label={`Trade ${option.label} · ${option.percent}%`}
-                      onClick={() => onTrade?.(option)}
-                      className="relative flex h-[52px] min-w-0 flex-1 origin-center items-center justify-between overflow-hidden rounded-[18px] bg-black/[0.06] px-3 text-left transition-transform duration-150 ease-out active:scale-[0.94]"
-                    >
-                      <div
-                        aria-hidden
-                        className="absolute inset-y-0 left-0 bg-black/[0.12]"
-                        style={{ width: `${option.percent}%` }}
-                      />
-                      <span className="relative z-[1] truncate text-[16px] font-semibold text-black">
-                        {option.label}
-                      </span>
-                      <span className="relative z-[1] shrink-0 text-[16px] font-semibold tabular-nums text-black">
-                        {option.percent}%
-                      </span>
-                    </button>
-                  ))}
-                  <ComboAddButton
-                    selected={rightSelected}
-                    blocked={!rightSelected && atLimit}
-                    label={right.label}
-                    onToggle={() => onToggle(right)}
-                  />
-                </>
-              );
-            })()}
+          <div className="mt-6 grid grid-cols-2 gap-2.5">
+            {pick.options.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                aria-label={`Trade ${option.label} · ${option.percent}%`}
+                onClick={() => onTrade?.(option)}
+                className="flex h-[52px] origin-center select-none items-center justify-center rounded-[18px] bg-black/[0.06] px-3 text-[16px] font-semibold text-black transition-transform duration-150 ease-out active:scale-[0.94]"
+              >
+                <span className="truncate tabular-nums">
+                  {option.label} {option.percent}%
+                </span>
+              </button>
+            ))}
           </div>
         ) : (
           <div className="mt-6 flex flex-col gap-2">
-            {pick.options.map((option) => {
-              const selected = selectedIds.has(option.id);
-              const blocked = !selected && atLimit;
-              return (
-                <div
-                  key={option.id}
-                  className="flex w-full items-start gap-2 overflow-hidden"
-                >
-                  <button
-                    type="button"
-                    aria-label={`Trade ${option.label} · ${option.percent}%`}
-                    onClick={() => onTrade?.(option)}
-                    className="relative flex h-[52px] min-w-0 flex-1 origin-center items-center justify-between overflow-hidden rounded-[18px] bg-black/[0.06] px-4 text-left transition-transform duration-150 ease-out active:scale-[0.94]"
-                  >
-                    <div
-                      aria-hidden
-                      className="absolute inset-y-0 left-0 bg-black/[0.12]"
-                      style={{ width: `${option.percent}%` }}
+            {pick.options.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                aria-label={`Trade ${option.label} · ${option.percent}%`}
+                onClick={() => onTrade?.(option)}
+                className="flex h-[52px] w-full origin-center items-center justify-between rounded-[18px] bg-black/[0.06] px-4 text-left transition-transform duration-150 ease-out active:scale-[0.94]"
+              >
+                <div className="flex min-w-0 items-center gap-2.5 overflow-hidden">
+                  {option.logo || option.mark ? (
+                    <Emblem
+                      logo={option.logo}
+                      mark={option.mark}
+                      label={option.label}
+                      size={24}
                     />
-                    <div className="relative z-[1] flex items-center gap-2.5 overflow-hidden">
-                      {option.logo || option.mark ? (
-                        <Emblem
-                          logo={option.logo}
-                          mark={option.mark}
-                          label={option.label}
-                          size={24}
-                        />
-                      ) : null}
-                      <span className="truncate text-[16px] font-semibold text-black">
-                        {option.label}
-                      </span>
-                    </div>
-                    <span className="relative z-[1] shrink-0 text-[16px] font-semibold tabular-nums text-black">
-                      {option.percent}%
-                    </span>
-                  </button>
-                  <ComboAddButton
-                    selected={selected}
-                    blocked={blocked}
-                    label={option.label}
-                    onToggle={() => onToggle(option)}
-                  />
+                  ) : null}
+                  <span className="truncate text-[16px] font-semibold text-black">
+                    {option.label}
+                  </span>
                 </div>
-              );
-            })}
+                <span className="shrink-0 text-[16px] font-semibold tabular-nums text-black">
+                  {option.percent}%
+                </span>
+              </button>
+            ))}
           </div>
         )}
 

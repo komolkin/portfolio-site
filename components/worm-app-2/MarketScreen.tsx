@@ -44,10 +44,10 @@ export type MarketScreenPick = {
 
 export type MarketScreenMarket = {
   id: string;
-  kind: "sports" | "crypto";
+  kind: "sports" | "crypto" | "topic";
   title: string;
   subtitle?: string;
-  logo: string;
+  logo?: string;
 };
 
 function hashString(value: string): number {
@@ -85,6 +85,11 @@ function splitKickoff(title: string): { day: string; time: string } | null {
 
 function marketCategory(market: MarketScreenMarket): string {
   if (market.kind === "crypto") return "Crypto";
+  if (market.kind === "topic") {
+    const key = `${market.id} ${market.title}`.toLowerCase();
+    if (key.includes("nvidia") || key.includes("ceo")) return "Tech";
+    return "Politics";
+  }
   const key = `${market.id} ${market.title}`.toLowerCase();
   if (key.includes("nba") || key.includes("basketball")) return "Basketball";
   if (key.includes("laliga") || key.includes("soccer") || key.includes("football"))
@@ -393,10 +398,12 @@ export default function MarketScreen({
               />
             </svg>
           </button>
-          <p className="text-[14px] font-medium text-white/55">
+          <p className="min-w-0 truncate px-2 text-center text-[14px] font-medium text-white/55">
             <span className="text-white/40">{marketCategory(market)}</span>
             <span className="mx-1.5 text-white/25">›</span>
-            <span className="text-white">{market.title}</span>
+            <span className="text-white">
+              {market.kind === "topic" ? "NVIDIA" : market.title}
+            </span>
           </p>
           <button
             type="button"
@@ -510,7 +517,7 @@ export default function MarketScreen({
         ) : (
           <div className="mt-5 text-center">
             <p className="text-[20px] font-semibold leading-snug text-white">
-              {pick.title}
+              {market.kind === "topic" ? market.title : pick.title}
             </p>
             {pick.crypto ? (
               <p className="mt-2 text-[14px] text-white/50">
@@ -520,8 +527,8 @@ export default function MarketScreen({
           </div>
         )}
 
-        {/* Odds chart */}
-        {left && right ? (
+        {/* Odds chart — sports matchups only */}
+        {market.kind === "sports" && left && right ? (
           <div className="mt-7">
             <MatchOddsChart left={left} right={right} />
             <p className="mt-2 text-[12px] tabular-nums text-white/40">
@@ -665,7 +672,9 @@ export default function MarketScreen({
           <p className="mt-4 text-[14px] leading-relaxed text-white/70">
             {market.kind === "sports"
               ? `This market resolves to the side that wins. ${pick.title}. Overtime and series maps count.`
-              : `This market resolves to Yes if the target is met at the listed deadline, otherwise No.`}
+              : market.kind === "topic"
+                ? `This market resolves to the listed date if the event occurs by then, otherwise later outcomes.`
+                : `This market resolves to Yes if the target is met at the listed deadline, otherwise No.`}
           </p>
         )}
       </div>
