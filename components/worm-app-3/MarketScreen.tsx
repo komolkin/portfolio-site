@@ -454,11 +454,11 @@ function ContextNewsList({
   );
 }
 
-const DISMISS_OFFSET_PX = 80;
-const DISMISS_VELOCITY = 520;
+const DISMISS_OFFSET_PX = 52;
+const DISMISS_VELOCITY = 360;
 const BACK_OFFSET_PX = 72;
 const BACK_VELOCITY = 480;
-const SHEET_HEIGHT = "86%";
+const SHEET_HEIGHT = "92%";
 
 /** Endpoint coords for Figma chart paths (viewBox 259×132). */
 const CHART_END_A = { x: 257.9, y: 1.35 };
@@ -800,6 +800,51 @@ export default function MarketScreen({
   const sheetControls = useAnimationControls();
   const scrollRef = useRef<HTMLDivElement>(null);
   const dismissingRef = useRef(false);
+  const sheetDraggingRef = useRef(false);
+  const touchStartYRef = useRef(0);
+
+  const lockSheetScroll = () => {
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+    scroller.style.overflowY = "hidden";
+    scroller.style.overscrollBehaviorY = "none";
+  };
+
+  const unlockSheetScroll = () => {
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+    scroller.style.overflowY = "";
+    scroller.style.overscrollBehaviorY = "";
+  };
+
+  // Non-passive touchmove so we can block iOS rubber-band at the top.
+  useEffect(() => {
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+
+    const onTouchStart = (event: TouchEvent) => {
+      touchStartYRef.current = event.touches[0]?.clientY ?? 0;
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (sheetDraggingRef.current) {
+        event.preventDefault();
+        return;
+      }
+      if (scroller.scrollTop > 1) return;
+      const y = event.touches[0]?.clientY ?? 0;
+      if (y - touchStartYRef.current > 6) {
+        event.preventDefault();
+      }
+    };
+
+    scroller.addEventListener("touchstart", onTouchStart, { passive: true });
+    scroller.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => {
+      scroller.removeEventListener("touchstart", onTouchStart);
+      scroller.removeEventListener("touchmove", onTouchMove);
+    };
+  }, []);
   const teamOptions = useMemo(
     () =>
       pick.options.filter(
@@ -1018,7 +1063,14 @@ export default function MarketScreen({
       .then(() => onBack());
   };
 
+  const onSheetDragStart = () => {
+    sheetDraggingRef.current = true;
+    lockSheetScroll();
+  };
+
   const onSheetDragEnd = (_: unknown, info: PanInfo) => {
+    sheetDraggingRef.current = false;
+    if (!dismissingRef.current) unlockSheetScroll();
     if (dismissingRef.current) return;
     if (
       info.offset.y > DISMISS_OFFSET_PX ||
@@ -1029,7 +1081,7 @@ export default function MarketScreen({
     }
     void sheetControls.start({
       y: 0,
-      transition: { type: "spring", stiffness: 480, damping: 36 },
+      transition: { type: "spring", stiffness: 520, damping: 42 },
     });
   };
 
@@ -1054,7 +1106,7 @@ export default function MarketScreen({
       return;
     }
     const scroller = scrollRef.current;
-    if (scroller && scroller.scrollTop > 2) return;
+    if (scroller && scroller.scrollTop > 1) return;
     dragControls.start(event);
   };
 
@@ -1084,8 +1136,9 @@ export default function MarketScreen({
         dragControls={dragControls}
         dragListener={false}
         dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={{ top: 0, bottom: 0.65 }}
+        dragElastic={{ top: 0, bottom: 0.42 }}
         dragMomentum={false}
+        onDragStart={onSheetDragStart}
         onDragEnd={onSheetDragEnd}
         onPointerDown={startSheetDrag}
         className={`relative z-[1] flex w-full max-w-[430px] flex-col overflow-hidden rounded-t-[28px] bg-white pb-[max(12px,env(safe-area-inset-bottom,0px))] text-black shadow-[0_-12px_40px_rgba(0,0,0,0.12)] ${allo.className}`}
@@ -1094,7 +1147,7 @@ export default function MarketScreen({
         <div className="absolute inset-x-0 top-0 z-[3] rounded-t-[28px] pt-1.5">
           <div
             data-sheet-handle
-            className="flex touch-none justify-center px-8 pb-1.5 pt-1"
+            className="flex touch-none justify-center px-8 pb-3 pt-2"
             aria-hidden
             onPointerDown={(event) => {
               event.stopPropagation();
@@ -1103,7 +1156,10 @@ export default function MarketScreen({
           >
             <span className="h-1.5 w-11 rounded-full bg-black/15" />
           </div>
-          <header className="flex items-center justify-between px-4 pt-0.5">
+          <header
+            data-sheet-handle
+            className="flex touch-none items-center justify-between px-4 pt-0.5"
+          >
             <button
               type="button"
               onClick={() =>
@@ -1165,7 +1221,7 @@ export default function MarketScreen({
 
         <div
           ref={scrollRef}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-[58px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-none px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-[58px] [overscroll-behavior-y:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
         <AnimatePresence mode="wait" initial={false}>
         {sheetPage === "context" ? (
